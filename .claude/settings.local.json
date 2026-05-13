@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(php artisan *)",
-      "Bash(vendor/bin/pint --dirty --format agent)"
+      "Bash(vendor/bin/pint --dirty --format agent)",
+      "Bash(git tag *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(composer require *)",
+      "Bash(npm run *)"
     ]
   }
 }
