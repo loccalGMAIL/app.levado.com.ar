@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Tenant extends Model
@@ -24,6 +25,18 @@ class Tenant extends Model
     public function settings(): HasMany
     {
         return $this->hasMany(TenantSetting::class);
+    }
+
+    public function tenantUsers(): HasMany
+    {
+        return $this->hasMany(TenantUser::class);
+    }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'tenant_users')
+            ->withPivot(['role', 'active', 'created_at'])
+            ->wherePivot('active', true);
     }
 
     public function getSetting(string $key, mixed $default = null): mixed
