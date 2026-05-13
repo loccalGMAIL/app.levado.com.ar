@@ -11,8 +11,18 @@ export default {
 
     theme: {
         extend: {
+            colors: {
+                'masa-madre': '#6B5B45',
+                'corteza':    '#3D2B1F',
+                'harina':     '#FAF7F2',
+                'miga':       '#F2EAD8',
+                'horno':      '#C8622A',
+                'membrillo':  '#E8A820',
+            },
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans:  ['Inter', ...defaultTheme.fontFamily.sans],
+                serif: ['Lora', ...defaultTheme.fontFamily.serif],
+                mono:  ['JetBrains Mono', ...defaultTheme.fontFamily.mono],
             },
         },
     },
