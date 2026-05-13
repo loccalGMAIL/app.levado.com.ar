@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\TenantUserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -29,5 +30,22 @@ class User extends Authenticatable
     public function tenantUsers(): HasMany
     {
         return $this->hasMany(TenantUser::class);
+    }
+
+    public function roleInTenant(Tenant $tenant): ?TenantUserRole
+    {
+        $tenantUser = $this->tenantUsers()
+            ->where('tenant_id', $tenant->id)
+            ->where('active', true)
+            ->first();
+
+        return $tenantUser?->role;
+    }
+
+    public function hasRoleInTenant(Tenant $tenant, TenantUserRole ...$roles): bool
+    {
+        $role = $this->roleInTenant($tenant);
+
+        return $role !== null && in_array($role, $roles);
     }
 }
