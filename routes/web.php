@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TeamController;
@@ -22,6 +23,12 @@ Route::middleware('auth')->group(function () {
 // Aceptar invitación (sin auth — el usuario puede no tener cuenta aún)
 Route::get('/invitations/{token}', [InvitationController::class, 'show'])->name('invitations.accept');
 Route::post('/invitations/{token}', [InvitationController::class, 'accept']);
+
+// Mi negocio (solo owner y super_admin pueden editar)
+Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner'])->group(function () {
+    Route::get('/business', [BusinessController::class, 'edit'])->name('business.edit');
+    Route::patch('/business', [BusinessController::class, 'update'])->name('business.update');
+});
 
 // Mi equipo (requiere auth + tenant resuelto + rol manage-team)
 Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
