@@ -10,17 +10,12 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SetTenantContext
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  Closure(Request): (Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $tenant = $this->resolveTenant($request);
 
         if ($tenant === null) {
-            abort(404);
+            return redirect()->route('login');
         }
 
         if (! $tenant->active) {
@@ -34,15 +29,14 @@ class SetTenantContext
 
     private function resolveTenant(Request $request): ?Tenant
     {
-        // En desarrollo usamos el tenant del usuario autenticado.
-        // En producción se puede extender para resolver por subdominio.
         $user = $request->user();
 
         if ($user === null) {
             return null;
         }
 
-        $tenantId = $user->tenantUsers()->value('tenant_id');
+        // Solo TenantUsers activos pueden resolver el tenant
+        $tenantId = $user->tenantUsers()->where('active', true)->value('tenant_id');
 
         if ($tenantId === null) {
             return null;
