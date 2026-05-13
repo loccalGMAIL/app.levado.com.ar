@@ -17,11 +17,8 @@
 
         <div class="mb-8">
             <a href="/" class="text-corteza hover:text-horno transition-colors">
-                <x-application-logo class="h-8 w-auto" />
+                <x-application-logo class="h-12 w-auto" />
             </a>
-            <p class="text-center text-xs text-masa-madre mt-1 font-sans tracking-wide">
-                Costos reales para tu panadería
-            </p>
         </div>
 
         <div class="w-full sm:max-w-md px-6 py-8 bg-white shadow-sm rounded-xl border border-miga">
