@@ -32,6 +32,11 @@ class Tenant extends Model
         return $this->hasMany(TenantUser::class);
     }
 
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(Invitation::class);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'tenant_users')
