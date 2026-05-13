@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levado — Que tu panadería siga creciendo.</title>
+    <meta name="description" content="Levado es el sistema de gestión para panaderías y pastelerías que te ayuda a calcular costos, administrar recetas y hacer crecer tu negocio.">
+    <meta property="og:title" content="Levado — Que tu panadería siga creciendo.">
+    <meta property="og:description" content="Sistema de gestión para panaderías y pastelerías. Próximamente.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://levado.com.ar">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --masa-madre: #6B5B45;
+            --corteza:    #3D2B1F;
+            --harina:     #FAF7F2;
+            --miga:       #F2EAD8;
+            --horno:      #C8622A;
+            --membrillo:  #E8A820;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--harina);
+            color: var(--corteza);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        main {
+            text-align: center;
+            max-width: 480px;
+        }
+
+        .wordmark {
+            font-family: 'Lora', serif;
+            font-size: 3rem;
+            font-weight: 600;
+            color: var(--masa-madre);
+            letter-spacing: -0.02em;
+            line-height: 1;
+            margin-bottom: 1.25rem;
+        }
+
+        .tagline {
+            font-family: 'Lora', serif;
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: var(--masa-madre);
+            margin-bottom: 2rem;
+            opacity: 0.85;
+        }
+
+        .description {
+            font-size: 0.975rem;
+            line-height: 1.7;
+            color: var(--corteza);
+            opacity: 0.7;
+        }
+
+        .app-link {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.75rem;
+            font-size: 0.8rem;
+            color: var(--masa-madre);
+            text-decoration: none;
+            opacity: 0.4;
+            transition: opacity 0.2s;
+        }
+
+        .app-link:hover { opacity: 0.8; }
+
+        footer {
+            position: fixed;
+            bottom: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--corteza);
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+
+    <a class="app-link" href="https://app.levado.com.ar">→ Ingresar</a>
+
+    <main>
+        <div class="wordmark">Levado</div>
+        <p class="tagline">Que tu panadería siga creciendo.</p>
+        <p class="description">
+            Estamos construyendo algo para que los panaderos puedan enfocarse en lo que saben hacer.<br>
+            Pronto abrimos las puertas.
+        </p>
+    </main>
+
+    <footer>© 2026 Levado</footer>
+
+</body>
+</html>
