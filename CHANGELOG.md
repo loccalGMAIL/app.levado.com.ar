@@ -39,6 +39,17 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.4.1] — 2026-05-19
+
+### Fix — Onboarding tour no arrancaba en el dashboard
+
+#### Corregido
+
+- El tour guiado nunca se iniciaba al entrar al dashboard porque la condición en `onboarding-tour.js` solo disparaba cuando `step === 0`. Los tenants nuevos tienen `productive_hours_month = 160` (valor por defecto de la BD), por lo que el backend calculaba `step = 1` y el bloque JS nunca coincidía.
+- El bloque de dashboard ahora cubre todos los steps pendientes (`step` 0–4): muestra el mensaje de bienvenida apropiado y dirige al usuario a la sección correcta según su estado actual.
+
+---
+
 ## [0.4.0] — 2026-05-18
 
 ### Etapas 2.4–2.7 completas — Módulo de Costos (cierre) + Recetas + Dashboard

@@ -22,25 +22,38 @@ if (window.levadoOnboarding) {
 
     const goTo = (url) => () => { window.location.href = url; };
 
-    // ── Step 0, dashboard ───────────────────────────────────────────────────
-    if (step === 0 && route === 'dashboard') {
+    // ── Dashboard (any incomplete step) ────────────────────────────────────
+    if (route === 'dashboard') {
+        const stepConfig = [
+            { sidebar: '#sidebar-negocio',      url: '/business',     btnLabel: 'Ir a Mi negocio →',    title: 'Paso 1 de 5 — Tu negocio',       text: 'Indicá cuántas horas por mes trabaja tu panadería. Esto nos permite distribuir los gastos fijos en cada receta.' },
+            { sidebar: '#sidebar-gastos-fijos',  url: '/fixed-costs',  btnLabel: 'Ir a Gastos Fijos →',  title: 'Paso 2 de 5 — Gastos fijos',     text: 'Registrá tus gastos fijos mensuales: alquiler, servicios, personal. Se distribuyen entre todas tus recetas.' },
+            { sidebar: '#sidebar-mano-de-obra',  url: '/labor-types',  btnLabel: 'Ir a Mano de Obra →',  title: 'Paso 3 de 5 — Mano de obra',     text: 'Definí los roles de trabajo y su costo por hora: panadero, ayudante, etc.' },
+            { sidebar: '#sidebar-ingredientes',  url: '/ingredients',  btnLabel: 'Ir a Ingredientes →',  title: 'Paso 4 de 5 — Insumos',          text: 'Cargá tus insumos: harina, levadura, manteca… con su precio por unidad.' },
+            { sidebar: '#sidebar-recetas',       url: '/recipes',      btnLabel: 'Ir a Recetas →',       title: 'Paso 5 de 5 — Primera receta',   text: 'Creá tu primera receta, agregá los ingredientes y la mano de obra. El costo de producción se calcula solo.' },
+        ];
+        const config = stepConfig[step];
+        const welcomeTitle = step === 0 ? 'Bienvenido a Levado' : '¡Seguimos configurando!';
+        const welcomeText  = step === 0
+            ? 'En 5 pasos vas a tener tu primera receta con su costo calculado. Empezamos con la capacidad productiva de tu panadería.'
+            : 'Falta poco para tener tu primera receta con el costo calculado. Continuemos desde donde lo dejamos.';
+
         tour.addStep({
             id: 'welcome',
-            title: 'Bienvenido a Levado',
-            text: 'En 5 pasos vas a tener tu primera receta con su costo calculado. Empezamos con la capacidad productiva de tu panadería.',
+            title: welcomeTitle,
+            text: welcomeText,
             buttons: [
                 btn('Empezar →', tour.next.bind(tour)),
                 btn('Ahora no', tour.cancel.bind(tour), true),
             ],
         });
         tour.addStep({
-            id: 'go-business',
-            title: 'Paso 1 de 5 — Tu negocio',
-            text: 'Indicá cuántas horas por mes trabaja tu panadería. Esto nos permite distribuir los gastos fijos en cada receta.',
-            attachTo: { element: '#sidebar-negocio', on: 'right' },
-            advanceOn: { selector: '#sidebar-negocio', event: 'click' },
+            id: 'go-next-step',
+            title: config.title,
+            text: config.text,
+            attachTo: { element: config.sidebar, on: 'right' },
+            advanceOn: { selector: config.sidebar, event: 'click' },
             buttons: [
-                btn('Ir a Mi negocio →', goTo('/business')),
+                btn(config.btnLabel, goTo(config.url)),
                 btn('Ahora no', tour.cancel.bind(tour), true),
             ],
         });
