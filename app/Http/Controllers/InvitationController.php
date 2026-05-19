@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AcceptInvitationRequest;
 use App\Http\Requests\InviteTeamMemberRequest;
 use App\Mail\TeamInvitation;
+use App\Mail\WelcomeMail;
 use App\Models\Invitation;
 use App\Models\Tenant;
 use App\Models\TenantUser;
@@ -77,6 +78,12 @@ class InvitationController extends Controller
                 'password' => bcrypt($request->validated('password')),
             ],
         );
+
+        if ($user->wasRecentlyCreated) {
+            $user->email_verified_at = now();
+            $user->save();
+            Mail::to($user->email)->send(new WelcomeMail($user, $invitation->tenant));
+        }
 
         TenantUser::firstOrCreate(
             ['tenant_id' => $invitation->tenant_id, 'user_id' => $user->id],
