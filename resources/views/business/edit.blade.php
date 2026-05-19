@@ -153,6 +153,29 @@
 
                 </div>
 
+                {{-- Mensaje personalizado de invitación --}}
+                <div class="bg-white rounded-lg shadow p-6 space-y-5">
+                    <div>
+                        <h2 class="text-base font-semibold text-corteza mb-1">Mensaje de invitación</h2>
+                        <p class="text-sm text-masa-madre">
+                            Texto opcional que se incluye en los correos de invitación que reciben los nuevos miembros de tu equipo.
+                        </p>
+                    </div>
+                    <div>
+                        <x-input-label for="invitation_message" value="Mensaje personalizado" />
+                        <textarea
+                            id="invitation_message"
+                            name="invitation_message"
+                            rows="4"
+                            maxlength="1000"
+                            class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm"
+                            placeholder="Ej: ¡Bienvenido/a al equipo! Ante cualquier consulta escribinos a info@..."
+                        >{{ old('invitation_message', $invitationMessage) }}</textarea>
+                        <x-input-error :messages="$errors->get('invitation_message')" class="mt-2" />
+                        <p class="mt-1 text-xs text-masa-madre">Máximo 1000 caracteres.</p>
+                    </div>
+                </div>
+
                 {{-- Capacidad productiva --}}
                 <div class="bg-white rounded-lg shadow p-6" id="field-horas-productivas">
                     <div class="flex items-start justify-between gap-8">

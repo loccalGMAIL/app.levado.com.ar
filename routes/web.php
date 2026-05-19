@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\MailPreviewController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\TenantController as AdminTenantController;
@@ -128,6 +129,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'super-a
 
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+
+    Route::get('mails', [MailPreviewController::class, 'index'])->name('mails.index');
+    Route::get('mails/preview/team-invitation', [MailPreviewController::class, 'teamInvitation'])->name('mails.preview.team-invitation');
+    Route::get('mails/preview/welcome', [MailPreviewController::class, 'welcome'])->name('mails.preview.welcome');
 });
 
 require __DIR__.'/auth.php';

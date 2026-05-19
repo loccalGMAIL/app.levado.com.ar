@@ -16,6 +16,12 @@
             en Levado con el rol <strong>{{ $role }}</strong>.
         </p>
 
+        @if(!empty($customMessage))
+        <p style="color: #6B5B45; border-left: 3px solid #C8622A; padding-left: 12px; margin: 16px 0;">
+            {{ $customMessage }}
+        </p>
+        @endif
+
         <p style="margin: 32px 0;">
             <a href="{{ $acceptUrl }}"
                style="background: #C8622A; color: #fff; text-decoration: none;

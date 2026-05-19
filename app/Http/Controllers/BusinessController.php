@@ -18,7 +18,9 @@ class BusinessController extends Controller
             ? (float) $totalFixedCosts / $tenant->productive_hours_month
             : null;
 
-        return view('business.edit', compact('tenant', 'totalFixedCosts', 'overheadPerHour'));
+        $invitationMessage = $tenant->getSetting('invitation_message', '');
+
+        return view('business.edit', compact('tenant', 'totalFixedCosts', 'overheadPerHour', 'invitationMessage'));
     }
 
     public function update(UpdateBusinessRequest $request): RedirectResponse
@@ -36,6 +38,8 @@ class BusinessController extends Controller
         }
 
         $tenant->update($data);
+
+        $tenant->setSetting('invitation_message', $request->validated('invitation_message') ?? '');
 
         return back()->with('status', 'business-updated');
     }

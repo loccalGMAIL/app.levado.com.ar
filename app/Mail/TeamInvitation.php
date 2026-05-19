@@ -31,6 +31,7 @@ class TeamInvitation extends Mailable
                 'tenantName' => $this->invitation->tenant->name,
                 'role' => $this->invitation->role->label(),
                 'expiresAt' => $this->invitation->expires_at->format('d/m/Y'),
+                'customMessage' => $this->invitation->tenant->getSetting('invitation_message'),
             ],
         );
     }

@@ -26,6 +26,7 @@ class UpdateBusinessRequest extends FormRequest
             'currency' => ['required', 'string', 'size:3'],
             'productive_hours_month' => ['required', 'integer', 'min:1', 'max:744'],
             'logo' => ['nullable', 'image', 'max:2048'],
+            'invitation_message' => ['nullable', 'string', 'max:1000'],
         ];
     }
 }

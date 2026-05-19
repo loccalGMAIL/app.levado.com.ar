@@ -35,6 +35,10 @@
                             class="text-sm {{ request()->routeIs('admin.audit-logs.*') ? 'text-white font-medium' : 'text-orange-200 hover:text-white' }} transition-colors">
                             Auditoría
                         </a>
+                        <a href="{{ route('admin.mails.index') }}"
+                            class="text-sm {{ request()->routeIs('admin.mails.*') ? 'text-white font-medium' : 'text-orange-200 hover:text-white' }} transition-colors">
+                            Emails
+                        </a>
                     </div>
                     <div class="flex items-center gap-4 text-sm">
                         <span class="text-orange-200">{{ Auth::user()->name }}</span>
