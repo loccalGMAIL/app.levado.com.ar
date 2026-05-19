@@ -21,7 +21,7 @@ class MailPreviewController extends Controller
 
     public function teamInvitation(): TeamInvitation
     {
-        $tenant = Tenant::factory()->make(['name' => 'Panadería El Trigo de Oro']);
+        $tenant = new Tenant(['name' => 'Panaderia El Trigo de Oro']);
         $tenant->id = 0;
 
         $invitation = new Invitation([
@@ -32,13 +32,15 @@ class MailPreviewController extends Controller
         $invitation->setRelation('tenant', $tenant);
         $invitation->role = TenantUserRole::Admin;
 
-        return new TeamInvitation($invitation);
+        return (new TeamInvitation($invitation))->with([
+            'customMessage' => 'Nos alegra sumarte al equipo. Ante cualquier consulta, escribinos directamente.',
+        ]);
     }
 
     public function welcome(): WelcomeMail
     {
-        $tenant = Tenant::factory()->make(['name' => 'Panadería El Trigo de Oro']);
-        $user = User::factory()->make(['name' => 'María González']);
+        $tenant = new Tenant(['name' => 'Panaderia El Trigo de Oro']);
+        $user = new User(['name' => 'Maria Gonzalez']);
 
         return new WelcomeMail($user, $tenant);
     }

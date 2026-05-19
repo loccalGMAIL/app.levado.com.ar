@@ -29,7 +29,7 @@ test('super admin puede previsualizar el email de invitación', function () {
     $this->actingAs(superAdminUser())
         ->get(route('admin.mails.preview.team-invitation'))
         ->assertOk()
-        ->assertSee('Panadería El Trigo de Oro')
+        ->assertSee('Panaderia El Trigo de Oro')
         ->assertSee('Aceptar invitación');
 });
 
@@ -37,7 +37,7 @@ test('super admin puede previsualizar el email de bienvenida', function () {
     $this->actingAs(superAdminUser())
         ->get(route('admin.mails.preview.welcome'))
         ->assertOk()
-        ->assertSee('María González')
+        ->assertSee('Maria Gonzalez')
         ->assertSee('Ingresar a Levado');
 });
 
