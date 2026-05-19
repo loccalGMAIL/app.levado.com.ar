@@ -52,7 +52,7 @@ class TenantController extends Controller
             'email' => $request->validated('owner_email'),
             'role' => 'owner',
             'token' => Str::random(64),
-            'expires_at' => now()->addDays(7),
+            'expires_at' => now()->addHours(24),
         ]);
 
         Mail::to($invitation->email)->send(new TeamInvitation($invitation));

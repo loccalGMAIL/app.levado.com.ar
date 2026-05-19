@@ -37,7 +37,7 @@ class InvitationController extends Controller
                 'role' => $request->validated('role'),
                 'token' => Str::random(64),
                 'accepted_at' => null,
-                'expires_at' => now()->addDays(7),
+                'expires_at' => now()->addHours(24),
             ],
         );
 

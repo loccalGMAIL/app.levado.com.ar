@@ -27,7 +27,7 @@ class MailPreviewController extends Controller
         $invitation = new Invitation([
             'email' => 'ejemplo@correo.com',
             'token' => Str::random(64),
-            'expires_at' => now()->addDays(7),
+            'expires_at' => now()->addHours(24),
         ]);
         $invitation->setRelation('tenant', $tenant);
         $invitation->role = TenantUserRole::Admin;

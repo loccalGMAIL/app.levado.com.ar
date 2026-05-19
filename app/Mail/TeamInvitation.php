@@ -30,7 +30,7 @@ class TeamInvitation extends Mailable
                 'acceptUrl' => route('invitations.accept', $this->invitation->token),
                 'tenantName' => $this->invitation->tenant->name,
                 'role' => $this->invitation->role->label(),
-                'expiresAt' => $this->invitation->expires_at->format('d/m/Y'),
+                'expiresAt' => $this->invitation->expires_at->format('d/m/Y H:i'),
                 'customMessage' => $this->invitation->tenant->getSetting('invitation_message'),
             ],
         );
