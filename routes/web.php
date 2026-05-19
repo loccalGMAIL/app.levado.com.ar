@@ -1,8 +1,19 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Admin\TenantController as AdminTenantController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\FixedCostCategoryController;
+use App\Http\Controllers\FixedCostController;
+use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\LocationController;
+use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,10 +37,46 @@ Route::middleware('auth')->group(function () {
 Route::get('/invitations/{token}', [InvitationController::class, 'show'])->name('invitations.accept');
 Route::post('/invitations/{token}', [InvitationController::class, 'accept']);
 
-// Mi negocio (solo owner y super_admin pueden editar)
+// Costos — lectura (todos los roles con tenant)
+Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
+    Route::get('ingredients', [IngredientController::class, 'index'])->name('ingredients.index');
+    Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+    Route::get('packaging', [PackagingController::class, 'index'])->name('packaging.index');
+    Route::get('fixed-costs', [FixedCostController::class, 'index'])->name('fixed-costs.index');
+});
+
+// Costos — escritura (owner y admin)
+Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
+    Route::post('ingredients', [IngredientController::class, 'store'])->name('ingredients.store');
+    Route::put('ingredients/{ingredient}', [IngredientController::class, 'update'])->name('ingredients.update');
+    Route::patch('ingredients/{ingredient}/toggle-active', [IngredientController::class, 'toggleActive'])->name('ingredients.toggle-active');
+
+    Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+    Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
+    Route::patch('suppliers/{supplier}/toggle-active', [SupplierController::class, 'toggleActive'])->name('suppliers.toggle-active');
+
+    Route::post('packaging', [PackagingController::class, 'store'])->name('packaging.store');
+    Route::put('packaging/{packaging}', [PackagingController::class, 'update'])->name('packaging.update');
+    Route::patch('packaging/{packaging}/toggle-active', [PackagingController::class, 'toggleActive'])->name('packaging.toggle-active');
+
+    Route::post('fixed-costs', [FixedCostController::class, 'store'])->name('fixed-costs.store');
+    Route::put('fixed-costs/{fixedCost}', [FixedCostController::class, 'update'])->name('fixed-costs.update');
+    Route::patch('fixed-costs/{fixedCost}/toggle-active', [FixedCostController::class, 'toggleActive'])->name('fixed-costs.toggle-active');
+
+    Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
+    Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');
+    Route::delete('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'destroy'])->name('fixed-cost-categories.destroy');
+});
+
+// Mi negocio y sucursales (solo owner y super_admin)
 Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner'])->group(function () {
     Route::get('/business', [BusinessController::class, 'edit'])->name('business.edit');
     Route::patch('/business', [BusinessController::class, 'update'])->name('business.update');
+
+    Route::get('locations', [LocationController::class, 'index'])->name('locations.index');
+    Route::post('locations', [LocationController::class, 'store'])->name('locations.store');
+    Route::put('locations/{location}', [LocationController::class, 'update'])->name('locations.update');
+    Route::patch('locations/{location}/toggle-active', [LocationController::class, 'toggleActive'])->name('locations.toggle-active');
 });
 
 // Mi equipo (requiere auth + tenant resuelto + rol manage-team)
@@ -40,6 +87,20 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('/team/members/{tenantUser}/role', [TeamController::class, 'updateRole'])->name('team.members.role');
     Route::patch('/team/members/{tenantUser}/deactivate', [TeamController::class, 'deactivate'])->name('team.members.deactivate');
     Route::patch('/team/members/{tenantUser}/activate', [TeamController::class, 'activate'])->name('team.members.activate');
+});
+
+// Backoffice de administración (solo super admins)
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'super-admin'])->group(function () {
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::resource('tenants', AdminTenantController::class)->except(['destroy']);
+    Route::patch('tenants/{tenant}/toggle-active', [AdminTenantController::class, 'toggleActive'])->name('tenants.toggle-active');
+
+    Route::post('impersonate/{tenant}', [ImpersonationController::class, 'start'])->name('impersonate.start');
+    Route::post('impersonate/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
+
+    Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 });
 
 require __DIR__.'/auth.php';

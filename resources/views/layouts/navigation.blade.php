@@ -1,73 +1,99 @@
+@php
+    try {
+        $navTenant = app(\App\Models\Tenant::class);
+    } catch (\Throwable) {
+        $navTenant = null;
+    }
+@endphp
+
 <nav x-data="{ open: false }" class="bg-white border-b border-miga">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-14">
+    <div class="flex h-16">
 
-            {{-- Logo + links primarios --}}
-            <div class="flex">
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}" class="text-corteza hover:text-horno transition-colors">
-                        <x-application-logo class="h-7 w-auto" />
-                    </a>
-                </div>
+        {{-- Bloque de marca — mismo ancho que el sidebar --}}
+        <a href="{{ route('dashboard') }}"
+            class="hidden sm:flex w-52 shrink-0 border-r border-miga flex-col items-center justify-center px-4
+                   hover:bg-harina transition-colors">
+            @if($navTenant?->logo_path)
+                <img src="{{ Storage::url($navTenant->logo_path) }}"
+                     alt="{{ $navTenant->name }}"
+                     class="h-7 w-auto max-w-[140px] object-contain">
+                <span class="text-[11px] text-masa-madre mt-1 truncate max-w-full text-center leading-none">
+                    {{ $navTenant->name }}
+                </span>
+            @else
+                <x-application-logo class="h-7 w-auto" />
+            @endif
+        </a>
 
-                <div class="hidden space-x-6 sm:-my-px sm:ms-8 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        Inicio
-                    </x-nav-link>
-
-                    @can('manage-team')
-                        <x-nav-link :href="route('team.index')" :active="request()->routeIs('team.*')">
-                            Mi equipo
-                        </x-nav-link>
-                    @endcan
-
-                    @can('edit-settings')
-                        <x-nav-link :href="route('business.edit')" :active="request()->routeIs('business.*')">
-                            Mi negocio
-                        </x-nav-link>
-                    @endcan
-                </div>
-            </div>
-
-            {{-- Dropdown usuario --}}
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-masa-madre hover:text-corteza hover:bg-harina focus:outline-none transition duration-150">
-                            {{ Auth::user()->name }}
-                            <svg class="ms-1 h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            Mi perfil
-                        </x-dropdown-link>
-
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <x-dropdown-link :href="route('logout')"
-                                onclick="event.preventDefault(); this.closest('form').submit();">
-                                Cerrar sesión
-                            </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
-            </div>
-
-            {{-- Hamburger --}}
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open"
-                    class="inline-flex items-center justify-center p-2 rounded-md text-masa-madre hover:bg-miga focus:outline-none transition duration-150">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{'hidden': open, 'inline-flex': ! open}" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{'hidden': ! open, 'inline-flex': open}" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
+        {{-- Logo móvil --}}
+        <div class="flex items-center px-4 sm:hidden">
+            <a href="{{ route('dashboard') }}" class="text-corteza hover:text-horno transition-colors">
+                <x-application-logo class="h-7 w-auto" />
+            </a>
         </div>
+
+        {{-- Secciones (desktop) --}}
+        <div class="hidden flex-1 sm:flex sm:items-stretch sm:px-6 gap-1">
+            <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                Inicio
+            </x-nav-link>
+
+            @can('edit-settings')
+                <x-nav-link :href="route('business.edit')" :active="request()->routeIs('business.*', 'team.*', 'locations.*')">
+                    Mi negocio
+                </x-nav-link>
+            @endcan
+
+            <x-nav-link :href="route('ingredients.index')" :active="request()->routeIs('ingredients.*', 'suppliers.*', 'packaging.*', 'fixed-costs.*')">
+                Costos
+            </x-nav-link>
+
+            @if(Auth::user()->isSuperAdmin())
+                <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
+                    Backoffice
+                </x-nav-link>
+            @endif
+        </div>
+
+        {{-- Usuario (desktop) --}}
+        <div class="hidden sm:flex sm:items-center sm:px-4">
+            <x-dropdown align="right" width="48">
+                <x-slot name="trigger">
+                    <button class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-masa-madre hover:text-corteza hover:bg-harina focus:outline-none transition duration-150">
+                        {{ Auth::user()->name }}
+                        <svg class="ms-1 h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </x-slot>
+
+                <x-slot name="content">
+                    <x-dropdown-link :href="route('profile.edit')">
+                        Mi perfil
+                    </x-dropdown-link>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <x-dropdown-link :href="route('logout')"
+                            onclick="event.preventDefault(); this.closest('form').submit();">
+                            Cerrar sesión
+                        </x-dropdown-link>
+                    </form>
+                </x-slot>
+            </x-dropdown>
+        </div>
+
+        {{-- Hamburger (móvil) --}}
+        <div class="flex-1 flex items-center justify-end px-4 sm:hidden">
+            <button @click="open = ! open"
+                class="inline-flex items-center justify-center p-2 rounded-md text-masa-madre hover:bg-miga focus:outline-none transition duration-150">
+                <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                    <path :class="{'hidden': open, 'inline-flex': ! open}" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    <path :class="{'hidden': ! open, 'inline-flex': open}" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
     </div>
 
     {{-- Menú responsive --}}
@@ -77,17 +103,39 @@
                 Inicio
             </x-responsive-nav-link>
 
-            @can('manage-team')
-                <x-responsive-nav-link :href="route('team.index')" :active="request()->routeIs('team.*')">
-                    Mi equipo
+            @can('edit-settings')
+                <x-responsive-nav-link :href="route('business.edit')" :active="request()->routeIs('business.*')">
+                    Mi negocio — General
                 </x-responsive-nav-link>
             @endcan
 
-            @can('edit-settings')
-                <x-responsive-nav-link :href="route('business.edit')" :active="request()->routeIs('business.*')">
-                    Mi negocio
+            @can('manage-team')
+                <x-responsive-nav-link :href="route('team.index')" :active="request()->routeIs('team.*')">
+                    Mi negocio — Personal
                 </x-responsive-nav-link>
             @endcan
+
+            <x-responsive-nav-link :href="route('ingredients.index')" :active="request()->routeIs('ingredients.*')">
+                Costos — Ingredientes
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('suppliers.index')" :active="request()->routeIs('suppliers.*')">
+                Costos — Proveedores
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('packaging.index')" :active="request()->routeIs('packaging.*')">
+                Costos — Envases
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('fixed-costs.index')" :active="request()->routeIs('fixed-costs.*')">
+                Costos — Gastos Fijos
+            </x-responsive-nav-link>
+
+            @if(Auth::user()->isSuperAdmin())
+                <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
+                    Backoffice
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <div class="pt-4 pb-1 border-t border-miga">
