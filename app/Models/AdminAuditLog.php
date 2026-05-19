@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AdminAuditLog extends Model
 {
-    public $updatedAt = false;
+    public const UPDATED_AT = null;
 
     protected $fillable = [
         'actor_user_id',
