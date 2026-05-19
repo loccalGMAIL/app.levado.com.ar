@@ -6,13 +6,16 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\TenantController as AdminTenantController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\LaborTypeController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -23,9 +26,9 @@ Route::get('/', function () {
         : redirect()->route('login');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified', 'tenant'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified', 'tenant'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -43,6 +46,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
     Route::get('packaging', [PackagingController::class, 'index'])->name('packaging.index');
     Route::get('fixed-costs', [FixedCostController::class, 'index'])->name('fixed-costs.index');
+    Route::get('labor-types', [LaborTypeController::class, 'index'])->name('labor-types.index');
+
+    Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
+    Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
 });
 
 // Costos — escritura (owner y admin)
@@ -62,6 +69,23 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('fixed-costs', [FixedCostController::class, 'store'])->name('fixed-costs.store');
     Route::put('fixed-costs/{fixedCost}', [FixedCostController::class, 'update'])->name('fixed-costs.update');
     Route::patch('fixed-costs/{fixedCost}/toggle-active', [FixedCostController::class, 'toggleActive'])->name('fixed-costs.toggle-active');
+
+    Route::post('labor-types', [LaborTypeController::class, 'store'])->name('labor-types.store');
+    Route::put('labor-types/{laborType}', [LaborTypeController::class, 'update'])->name('labor-types.update');
+    Route::patch('labor-types/{laborType}/toggle-active', [LaborTypeController::class, 'toggleActive'])->name('labor-types.toggle-active');
+
+    Route::post('recipes', [RecipeController::class, 'store'])->name('recipes.store');
+    Route::put('recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
+    Route::patch('recipes/{recipe}/toggle-active', [RecipeController::class, 'toggleActive'])->name('recipes.toggle-active');
+
+    Route::post('recipes/{recipe}/ingredient-lines', [RecipeController::class, 'storeIngredientLine'])->name('recipes.ingredient-lines.store');
+    Route::delete('recipes/{recipe}/ingredient-lines/{line}', [RecipeController::class, 'destroyIngredientLine'])->name('recipes.ingredient-lines.destroy');
+
+    Route::post('recipes/{recipe}/packaging-lines', [RecipeController::class, 'storePackagingLine'])->name('recipes.packaging-lines.store');
+    Route::delete('recipes/{recipe}/packaging-lines/{line}', [RecipeController::class, 'destroyPackagingLine'])->name('recipes.packaging-lines.destroy');
+
+    Route::post('recipes/{recipe}/labor-lines', [RecipeController::class, 'storeLaborLine'])->name('recipes.labor-lines.store');
+    Route::delete('recipes/{recipe}/labor-lines/{line}', [RecipeController::class, 'destroyLaborLine'])->name('recipes.labor-lines.destroy');
 
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
     Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');
