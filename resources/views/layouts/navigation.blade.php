@@ -9,61 +9,36 @@
 <nav x-data="{ open: false }" class="bg-white border-b border-miga">
     <div class="flex h-16">
 
-        {{-- Bloque de marca — mismo ancho que el sidebar --}}
+        {{-- Bloque de marca — mismo ancho que el sidebar, fondo oscuro para continuidad visual --}}
         <a href="{{ route('dashboard') }}"
-            class="hidden sm:flex w-52 shrink-0 border-r border-miga flex-col items-center justify-center px-4
-                   hover:bg-harina transition-colors">
+            class="hidden sm:flex w-52 shrink-0 bg-masa-madre border-r border-white/10 flex-col items-center justify-center px-4
+                   hover:bg-masa-madre/90 transition-colors">
             @if($navTenant?->logo_path)
                 <img src="{{ Storage::url($navTenant->logo_path) }}"
                      alt="{{ $navTenant->name }}"
                      class="h-7 w-auto max-w-[140px] object-contain">
-                <span class="text-[11px] text-masa-madre mt-1 truncate max-w-full text-center leading-none">
-                    {{ $navTenant->name }}
-                </span>
             @else
-                <x-application-logo class="h-7 w-auto" />
+                <span class="font-serif text-xl text-harina tracking-tight">levado</span>
+                <span class="text-[10px] italic text-harina/50 mt-0.5">Que tu panadería siga creciendo.</span>
             @endif
         </a>
 
         {{-- Logo móvil --}}
         <div class="flex items-center px-4 sm:hidden">
-            <a href="{{ route('dashboard') }}" class="text-corteza hover:text-horno transition-colors">
-                <x-application-logo class="h-7 w-auto" />
+            <a href="{{ route('dashboard') }}" class="font-serif text-xl text-corteza">
+                levado
             </a>
         </div>
 
-        {{-- Secciones (desktop) --}}
-        <div class="hidden flex-1 sm:flex sm:items-stretch sm:px-6 gap-1">
-            <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                Inicio
-            </x-nav-link>
-
-            @can('edit-settings')
-                <x-nav-link :href="route('business.edit')" :active="request()->routeIs('business.*', 'team.*', 'locations.*')">
-                    Mi negocio
-                </x-nav-link>
-            @endcan
-
-            <x-nav-link :href="route('ingredients.index')" :active="request()->routeIs('ingredients.*', 'suppliers.*', 'packaging.*', 'fixed-costs.*', 'labor-types.*')">
-                Costos
-            </x-nav-link>
-
-            <x-nav-link :href="route('recipes.index')" :active="request()->routeIs('recipes.*')">
-                Recetas
-            </x-nav-link>
-
-            @if(Auth::user()->isSuperAdmin())
-                <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
-                    Backoffice
-                </x-nav-link>
-            @endif
+        {{-- Espacio central (desktop) — los links están en el sidebar --}}
+        <div class="hidden flex-1 sm:flex sm:items-center sm:px-6">
         </div>
 
         {{-- Usuario (desktop) --}}
         <div class="hidden sm:flex sm:items-center sm:px-4">
             <x-dropdown align="right" width="48">
                 <x-slot name="trigger">
-                    <button class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-masa-madre hover:text-corteza hover:bg-harina focus:outline-none transition duration-150">
+                    <button class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-masa-madre hover:text-corteza hover:bg-miga focus:outline-none transition duration-150">
                         {{ Auth::user()->name }}
                         <svg class="ms-1 h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -100,24 +75,16 @@
 
     </div>
 
-    {{-- Menú responsive --}}
+    {{-- Menú responsive (móvil) --}}
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden border-t border-miga">
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 Inicio
             </x-responsive-nav-link>
 
-            @can('edit-settings')
-                <x-responsive-nav-link :href="route('business.edit')" :active="request()->routeIs('business.*')">
-                    Mi negocio — General
-                </x-responsive-nav-link>
-            @endcan
-
-            @can('manage-team')
-                <x-responsive-nav-link :href="route('team.index')" :active="request()->routeIs('team.*')">
-                    Mi negocio — Personal
-                </x-responsive-nav-link>
-            @endcan
+            <x-responsive-nav-link :href="route('recipes.index')" :active="request()->routeIs('recipes.*')">
+                Recetas
+            </x-responsive-nav-link>
 
             <x-responsive-nav-link :href="route('ingredients.index')" :active="request()->routeIs('ingredients.*')">
                 Costos — Ingredientes
@@ -139,15 +106,25 @@
                 Costos — Mano de Obra
             </x-responsive-nav-link>
 
-            <x-responsive-nav-link :href="route('recipes.index')" :active="request()->routeIs('recipes.*')">
-                Recetas
-            </x-responsive-nav-link>
+            @can('edit-settings')
+                <x-responsive-nav-link :href="route('business.edit')" :active="request()->routeIs('business.*')">
+                    Negocio — General
+                </x-responsive-nav-link>
+            @endcan
 
+            @can('manage-team')
+                <x-responsive-nav-link :href="route('team.index')" :active="request()->routeIs('team.*')">
+                    Negocio — Mi equipo
+                </x-responsive-nav-link>
+            @endcan
+
+            @auth
             @if(Auth::user()->isSuperAdmin())
                 <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
                     Backoffice
                 </x-responsive-nav-link>
             @endif
+            @endauth
         </div>
 
         <div class="pt-4 pb-1 border-t border-miga">

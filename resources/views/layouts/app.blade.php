@@ -27,7 +27,7 @@
 
         @include('layouts.navigation')
 
-        <div class="flex" style="min-height: calc(100vh - 4rem)">
+        <div class="flex min-h-[calc(100vh-4rem)]">
 
             <x-sidebar />
 
