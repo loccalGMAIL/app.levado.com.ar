@@ -1,14 +1,9 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Mi equipo
-        </h2>
-    </x-slot>
+    <x-slot name="title">Personal</x-slot>
 
-    <div class="py-12">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-8">
+    <div class="py-8 px-6 lg:px-8">
+        <div class="space-y-6">
 
-            {{-- Mensajes de estado --}}
             @if (session('status'))
                 <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
                     {{ session('status') }}
@@ -17,7 +12,7 @@
 
             {{-- Invitar miembro --}}
             <div class="bg-white shadow rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Invitar persona</h3>
+                <h2 class="text-base font-semibold text-corteza mb-4">Invitar persona</h2>
 
                 <form method="POST" action="{{ route('team.invitations.store') }}" class="flex gap-3 items-end flex-wrap">
                     @csrf
@@ -30,7 +25,7 @@
                     <div>
                         <x-input-label for="role" value="Rol" />
                         <select id="role" name="role"
-                            class="mt-1 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                            class="mt-1 border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
                             @foreach($roles as $role)
                                 @if($role->value !== 'super_admin')
                                     <option value="{{ $role->value }}" @selected(old('role') === $role->value)>
@@ -48,9 +43,9 @@
             {{-- Invitaciones pendientes --}}
             @if($pendingInvitations->isNotEmpty())
                 <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Invitaciones pendientes</h3>
+                    <h2 class="text-base font-semibold text-corteza mb-4">Invitaciones pendientes</h2>
                     <table class="w-full text-sm text-left">
-                        <thead class="text-gray-500 border-b">
+                        <thead class="text-masa-madre border-b border-miga">
                             <tr>
                                 <th class="pb-2">Email</th>
                                 <th class="pb-2">Rol</th>
@@ -58,12 +53,12 @@
                                 <th class="pb-2"></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y">
+                        <tbody class="divide-y divide-miga">
                             @foreach($pendingInvitations as $invitation)
                                 <tr>
-                                    <td class="py-2 text-gray-700">{{ $invitation->email }}</td>
-                                    <td class="py-2 text-gray-700">{{ $invitation->role->label() }}</td>
-                                    <td class="py-2 text-gray-500">{{ $invitation->expires_at->format('d/m/Y') }}</td>
+                                    <td class="py-2 text-corteza">{{ $invitation->email }}</td>
+                                    <td class="py-2 text-masa-madre">{{ $invitation->role->label() }}</td>
+                                    <td class="py-2 text-masa-madre">{{ $invitation->expires_at->format('d/m/Y') }}</td>
                                     <td class="py-2 text-right">
                                         <form method="POST"
                                             action="{{ route('team.invitations.destroy', $invitation) }}">
@@ -84,9 +79,9 @@
 
             {{-- Miembros del equipo --}}
             <div class="bg-white shadow rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Miembros</h3>
+                <h2 class="text-base font-semibold text-corteza mb-4">Miembros</h2>
                 <table class="w-full text-sm text-left">
-                    <thead class="text-gray-500 border-b">
+                    <thead class="text-masa-madre border-b border-miga">
                         <tr>
                             <th class="pb-2">Nombre</th>
                             <th class="pb-2">Email</th>
@@ -95,11 +90,11 @@
                             <th class="pb-2"></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y">
+                    <tbody class="divide-y divide-miga">
                         @foreach($members as $member)
                             <tr class="{{ $member->active ? '' : 'opacity-50' }}">
-                                <td class="py-2 text-gray-800">{{ $member->user->name }}</td>
-                                <td class="py-2 text-gray-600">{{ $member->user->email }}</td>
+                                <td class="py-2 text-corteza">{{ $member->user->name }}</td>
+                                <td class="py-2 text-masa-madre">{{ $member->user->email }}</td>
                                 <td class="py-2">
                                     @if($member->user->id !== $currentUser->id)
                                         <form method="POST"
@@ -108,7 +103,7 @@
                                             @csrf
                                             @method('PATCH')
                                             <select name="role" onchange="this.form.submit()"
-                                                class="text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500">
+                                                class="text-sm border-gray-300 rounded-md shadow-sm focus:ring-horno">
                                                 @foreach($roles as $role)
                                                     @if($role->value !== 'super_admin')
                                                         <option value="{{ $role->value }}"
@@ -120,7 +115,7 @@
                                             </select>
                                         </form>
                                     @else
-                                        <span class="text-gray-600">{{ $member->role->label() }}</span>
+                                        <span class="text-masa-madre">{{ $member->role->label() }}</span>
                                     @endif
                                 </td>
                                 <td class="py-2">
@@ -146,7 +141,7 @@
                                                 action="{{ route('team.members.activate', $member) }}">
                                                 @csrf
                                                 @method('PATCH')
-                                                <button type="submit" class="text-indigo-600 hover:underline text-xs">
+                                                <button type="submit" class="text-horno hover:underline text-xs">
                                                     Reactivar
                                                 </button>
                                             </form>
