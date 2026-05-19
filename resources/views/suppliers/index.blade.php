@@ -1,0 +1,110 @@
+<x-app-layout>
+    <x-slot name="title">Proveedores</x-slot>
+
+    @php
+        $errorsInCreate = $errors->hasAny(['name', 'phone', 'email', 'notes']) && old('_form') === 'create';
+        $errorsInEdit   = $errors->hasAny(['name', 'phone', 'email', 'notes']) && old('_form') === 'edit';
+        $editingDefault = ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'notes' => ''];
+        $editingOnError = $errorsInEdit ? [
+            'id'    => old('supplier_id'),
+            'name'  => old('name'),
+            'phone' => old('phone'),
+            'email' => old('email'),
+            'notes' => old('notes'),
+        ] : $editingDefault;
+    @endphp
+
+    <div class="py-8 px-6 lg:px-8"
+        x-data="{
+            editing: {{ Js::from($editingOnError) }},
+            openEdit(record) {
+                this.editing = record;
+                $dispatch('open-modal', 'supplier-edit');
+            }
+        }">
+
+        <div class="space-y-6">
+
+            @if(session('status'))
+                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-semibold text-corteza">Proveedores</h2>
+                    <p class="text-sm text-masa-madre mt-0.5">Empresas y personas de quienes comprás insumos.</p>
+                </div>
+                @can('manage-costs')
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'supplier-create')"
+                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        + Nuevo proveedor
+                    </button>
+                @endcan
+            </div>
+
+            @if($suppliers->isEmpty())
+                <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
+                    Todavía no hay proveedores. Agregá el primero.
+                </div>
+            @else
+                <div class="space-y-3">
+                    @foreach($suppliers as $supplier)
+                        <div class="bg-white rounded-lg shadow px-5 py-4 flex items-start justify-between gap-4 {{ $supplier->active ? '' : 'opacity-50' }}">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-medium text-corteza text-sm">{{ $supplier->name }}</span>
+                                    @if(!$supplier->active)
+                                        <span class="text-[11px] text-gray-400">inactivo</span>
+                                    @endif
+                                </div>
+                                @if($supplier->phone || $supplier->email)
+                                    <p class="text-xs text-masa-madre mt-0.5">
+                                        {{ collect([$supplier->phone, $supplier->email])->filter()->implode(' · ') }}
+                                    </p>
+                                @endif
+                                @if($supplier->notes)
+                                    <p class="text-xs text-masa-madre mt-0.5 truncate max-w-sm">{{ $supplier->notes }}</p>
+                                @endif
+                            </div>
+                            @can('manage-costs')
+                                <div class="flex items-center gap-3 shrink-0">
+                                    <button type="button"
+                                        @click="openEdit({{ Js::from([
+                                            'id'    => $supplier->id,
+                                            'name'  => $supplier->name,
+                                            'phone' => $supplier->phone ?? '',
+                                            'email' => $supplier->email ?? '',
+                                            'notes' => $supplier->notes ?? '',
+                                        ]) }})"
+                                        class="text-xs text-masa-madre hover:text-corteza hover:underline">
+                                        Editar
+                                    </button>
+                                    <form method="POST" action="{{ route('suppliers.toggle-active', $supplier) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                            class="text-xs text-masa-madre hover:text-corteza hover:underline">
+                                            {{ $supplier->active ? 'Desactivar' : 'Activar' }}
+                                        </button>
+                                    </form>
+                                </div>
+                            @endcan
+                        </div>
+                    @endforeach
+                </div>
+
+                <p class="text-xs text-masa-madre">{{ $suppliers->count() }} proveedor(es) en total.</p>
+            @endif
+
+        </div>
+
+        @can('manage-costs')
+            @include('suppliers.modals.create')
+            @include('suppliers.modals.edit')
+        @endcan
+
+    </div>
+</x-app-layout>
