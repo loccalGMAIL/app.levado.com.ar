@@ -39,8 +39,9 @@
 
                     <div>
                         <x-input-label for="productive_hours_month" value="Horas productivas por mes" />
+                        <p class="text-xs text-masa-madre mb-1">Opcional. Si se deja vacío, el tenant lo configurará durante el onboarding.</p>
                         <x-text-input id="productive_hours_month" name="productive_hours_month" type="number"
-                            class="mt-1 block w-full" :value="old('productive_hours_month', 160)" min="1" max="744" required />
+                            class="mt-1 block w-full" :value="old('productive_hours_month')" min="1" max="744" placeholder="Ej: 160" />
                         <x-input-error :messages="$errors->get('productive_hours_month')" class="mt-1" />
                     </div>
 

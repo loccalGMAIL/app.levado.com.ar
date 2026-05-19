@@ -17,7 +17,7 @@ class StoreTenantRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'country' => ['required', 'string', 'size:2'],
             'currency' => ['required', 'string', 'size:3'],
-            'productive_hours_month' => ['required', 'integer', 'min:1', 'max:744'],
+            'productive_hours_month' => ['nullable', 'integer', 'min:1', 'max:744'],
             'owner_email' => ['required', 'email', 'max:255'],
             'invitation_message' => ['nullable', 'string', 'max:1000'],
         ];

@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
                     return;
                 }
                 $step = match (true) {
-                    $tenant->productive_hours_month === 0 => 0,
+                    ! $tenant->productive_hours_month => 0,
                     $tenant->fixedCosts()->count() === 0 => 1,
                     $tenant->laborTypes()->count() === 0 => 2,
                     $tenant->ingredients()->count() === 0 => 3,
