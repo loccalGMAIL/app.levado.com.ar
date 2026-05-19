@@ -85,7 +85,7 @@
                     </div>
                     <div>
                         <dt class="text-masa-madre font-medium">Horas productivas/mes</dt>
-                        <dd class="mt-1 text-corteza">{{ $tenant->productive_hours_month }}h</dd>
+                        <dd class="mt-1 text-corteza">{{ $tenant->productive_hours_month ? $tenant->productive_hours_month . 'h' : '—' }}</dd>
                     </div>
                     <div>
                         <dt class="text-masa-madre font-medium">Creado</dt>
