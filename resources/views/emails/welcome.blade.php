@@ -37,7 +37,7 @@
         </p>
 
         <hr style="border: none; border-top: 1px solid #F2EAD8; margin: 32px 0;">
-        <p style="color: #9c897a; font-size: 12px; margin: 0;">Sistema de costos para panaderías</p>
+        <p style="color: #9c897a; font-size: 12px; margin: 0;">Que tu panadería siga creciendo.</p>
     </div>
 </body>
 </html>
