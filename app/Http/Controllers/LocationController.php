@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreLocationRequest;
+use App\Http\Requests\UpdateLocationRequest;
+use App\Models\Location;
+use App\Models\Tenant;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+
+class LocationController extends Controller
+{
+    public function index(): View
+    {
+        $tenant = app(Tenant::class);
+        $locations = $tenant->locations()->orderByDesc('is_default')->orderBy('name')->get();
+
+        return view('locations.index', compact('locations'));
+    }
+
+    public function store(StoreLocationRequest $request): RedirectResponse
+    {
+        $tenant = app(Tenant::class);
+        $data = $request->validated();
+
+        $isDefault = (bool) ($data['is_default'] ?? false);
+
+        if ($isDefault) {
+            $tenant->locations()->update(['is_default' => false]);
+        }
+
+        if ($tenant->locations()->count() === 0) {
+            $isDefault = true;
+        }
+
+        $tenant->locations()->create(array_merge($data, ['is_default' => $isDefault]));
+
+        return redirect()->route('locations.index')->with('status', 'Sucursal creada.');
+    }
+
+    public function update(UpdateLocationRequest $request, Location $location): RedirectResponse
+    {
+        $this->authorizeLocation($location);
+
+        $data = $request->validated();
+        $isDefault = (bool) ($data['is_default'] ?? false);
+
+        if ($isDefault) {
+            app(Tenant::class)->locations()->where('id', '!=', $location->id)->update(['is_default' => false]);
+        }
+
+        $location->update(array_merge($data, ['is_default' => $isDefault]));
+
+        return redirect()->route('locations.index')->with('status', 'Sucursal actualizada.');
+    }
+
+    public function toggleActive(Location $location): RedirectResponse
+    {
+        $this->authorizeLocation($location);
+
+        if ($location->is_default && $location->active) {
+            return back()->with('error', 'No se puede desactivar la sucursal principal.');
+        }
+
+        $location->update(['active' => ! $location->active]);
+
+        $label = $location->active ? 'activada' : 'desactivada';
+
+        return back()->with('status', "Sucursal {$label}.");
+    }
+
+    private function authorizeLocation(Location $location): void
+    {
+        abort_unless($location->tenant_id === app(Tenant::class)->id, 403);
+    }
+}

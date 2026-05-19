@@ -12,22 +12,50 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        @if(isset($onboardingStep) && $onboardingStep !== null)
+        <script>
+            window.levadoOnboarding = {
+                step: {{ $onboardingStep }},
+                route: '{{ request()->route()?->getName() ?? '' }}'
+            };
+        </script>
+        @endif
     </head>
     <body class="font-sans antialiased bg-harina text-corteza">
 
+        @if(session('impersonating_tenant_id'))
+            <div class="bg-horno text-white text-sm text-center py-2 px-4 flex items-center justify-center gap-4">
+                <span>Impersonando: <strong>{{ app(\App\Models\Tenant::class)->name }}</strong></span>
+                <form method="POST" action="{{ route('admin.impersonate.stop') }}">
+                    @csrf
+                    <button type="submit" class="underline hover:no-underline">Salir de impersonación →</button>
+                </form>
+            </div>
+        @endif
+
         @include('layouts.navigation')
 
-        @isset($header)
-            <header class="bg-white border-b border-miga">
-                <div class="max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
-                    {{ $header }}
-                </div>
-            </header>
-        @endisset
+        <div class="flex min-h-[calc(100vh-4rem)]">
 
-        <main>
-            {{ $slot }}
-        </main>
+            <x-sidebar />
+
+            <div class="flex-1 min-w-0 flex flex-col">
+
+                @isset($header)
+                    <header class="bg-white border-b border-miga">
+                        <div class="py-5 px-6 lg:px-8">
+                            {{ $header }}
+                        </div>
+                    </header>
+                @endisset
+
+                <main class="flex-1">
+                    {{ $slot }}
+                </main>
+
+            </div>
+        </div>
 
     </body>
 </html>

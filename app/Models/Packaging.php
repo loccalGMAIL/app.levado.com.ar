@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Models;
+
+use Database\Factories\PackagingFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Packaging extends Model
+{
+    /** @use HasFactory<PackagingFactory> */
+    use HasFactory;
+
+    protected $fillable = [
+        'tenant_id',
+        'name',
+        'brand',
+        'supplier_id',
+        'cost_per_unit',
+        'active',
+    ];
+
+    protected $casts = [
+        'cost_per_unit' => 'decimal:4',
+        'active' => 'boolean',
+    ];
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function priceLogs(): HasMany
+    {
+        return $this->hasMany(PackagingPriceLog::class);
+    }
+}

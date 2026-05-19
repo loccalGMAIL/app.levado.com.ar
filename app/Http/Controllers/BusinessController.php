@@ -12,9 +12,13 @@ class BusinessController extends Controller
 {
     public function edit(): View
     {
-        return view('business.edit', [
-            'tenant' => app(Tenant::class),
-        ]);
+        $tenant = app(Tenant::class);
+        $totalFixedCosts = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
+        $overheadPerHour = $tenant->productive_hours_month > 0
+            ? (float) $totalFixedCosts / $tenant->productive_hours_month
+            : null;
+
+        return view('business.edit', compact('tenant', 'totalFixedCosts', 'overheadPerHour'));
     }
 
     public function update(UpdateBusinessRequest $request): RedirectResponse
