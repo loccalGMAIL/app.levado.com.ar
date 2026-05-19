@@ -8,10 +8,7 @@
 <body style="font-family: sans-serif; background: #FAF7F2; margin: 0; padding: 40px 0;">
     <div style="max-width: 520px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 40px;">
         <div style="margin-bottom: 28px;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="60 40 360 90" aria-label="Levado" style="height: 36px; width: auto;">
-                <text x="240" y="105" font-family="Georgia, 'Times New Roman', serif" font-size="84" font-weight="500" text-anchor="middle" fill="#3D2B1F" letter-spacing="-2">levado</text>
-                <path d="M 175 122 Q 240 130 305 122" stroke="#C8622A" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85"/>
-            </svg>
+            <span style="display: inline-block; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 600; color: #3D2B1F; letter-spacing: -1px; border-bottom: 2px solid #C8622A; padding-bottom: 4px;">levado</span>
         </div>
 
         <h1 style="font-size: 22px; color: #3D2B1F; margin-top: 0;">
