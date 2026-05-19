@@ -30,8 +30,65 @@
             </a>
         </div>
 
-        {{-- Espacio central (desktop) — los links están en el sidebar --}}
-        <div class="hidden flex-1 sm:flex sm:items-center sm:px-6">
+        {{-- Breadcrumbs (desktop) --}}
+        <div class="hidden flex-1 sm:flex sm:items-center sm:px-6 gap-1.5 text-sm overflow-hidden">
+            @auth
+            @php
+                $crumbs = [];
+
+                if (request()->routeIs('dashboard')) {
+                    // no extra crumbs
+                } elseif (request()->routeIs('recipes.show')) {
+                    $crumbs[] = ['label' => 'Recetas', 'href' => route('recipes.index')];
+                    $recipe = request()->route('recipe');
+                    if ($recipe) { $crumbs[] = ['label' => $recipe->name, 'href' => null]; }
+                } elseif (request()->routeIs('recipes.*')) {
+                    $crumbs[] = ['label' => 'Recetas', 'href' => null];
+                } elseif (request()->routeIs('ingredients.*')) {
+                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Ingredientes', 'href' => null];
+                } elseif (request()->routeIs('suppliers.*')) {
+                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Proveedores', 'href' => null];
+                } elseif (request()->routeIs('packaging.*')) {
+                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Envases', 'href' => null];
+                } elseif (request()->routeIs('fixed-costs.*')) {
+                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Gastos Fijos', 'href' => null];
+                } elseif (request()->routeIs('labor-types.*')) {
+                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Mano de Obra', 'href' => null];
+                } elseif (request()->routeIs('business.*')) {
+                    $crumbs[] = ['label' => 'Negocio', 'href' => null];
+                    $crumbs[] = ['label' => 'Mi negocio', 'href' => null];
+                } elseif (request()->routeIs('team.*')) {
+                    $crumbs[] = ['label' => 'Negocio', 'href' => null];
+                    $crumbs[] = ['label' => 'Mi equipo', 'href' => null];
+                } elseif (request()->routeIs('locations.*')) {
+                    $crumbs[] = ['label' => 'Negocio', 'href' => null];
+                    $crumbs[] = ['label' => 'Sucursales', 'href' => null];
+                } elseif (request()->routeIs('profile.*')) {
+                    $crumbs[] = ['label' => 'Mi perfil', 'href' => null];
+                } elseif (request()->routeIs('admin.*')) {
+                    $crumbs[] = ['label' => 'Sistema', 'href' => null];
+                    $crumbs[] = ['label' => 'Backoffice', 'href' => null];
+                }
+            @endphp
+
+            <a href="{{ route('dashboard') }}" class="font-medium text-corteza truncate shrink-0 hover:text-masa-madre transition-colors">
+                {{ $navTenant?->name ?? config('app.name') }}
+            </a>
+
+            @foreach($crumbs as $crumb)
+                <span class="text-corteza/30 shrink-0">›</span>
+                @if($crumb['href'])
+                    <a href="{{ $crumb['href'] }}" class="text-masa-madre hover:text-corteza transition-colors truncate shrink-0">{{ $crumb['label'] }}</a>
+                @else
+                    <span class="text-corteza/70 truncate {{ $loop->last ? '' : 'shrink-0' }}">{{ $crumb['label'] }}</span>
+                @endif
+            @endforeach
+            @endauth
         </div>
 
         {{-- Usuario (desktop) --}}

@@ -11,18 +11,6 @@
 
 <aside class="hidden sm:flex flex-col w-52 shrink-0 bg-masa-madre min-h-full">
 
-    {{-- Tenant info --}}
-    @auth
-    <div class="px-5 py-4 border-b border-white/10">
-        <div class="text-[11px] font-semibold uppercase tracking-widest text-horno truncate">
-            {{ $sidebarTenant?->name ?? config('app.name') }}
-        </div>
-        <div class="text-[11px] text-harina/50 mt-0.5 truncate">
-            {{ Auth::user()->name }}
-        </div>
-    </div>
-    @endauth
-
     {{-- Navigation --}}
     <nav class="flex-1 py-3 overflow-y-auto">
 
