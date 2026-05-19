@@ -54,6 +54,16 @@
                         <x-input-error :messages="$errors->get('owner_email')" class="mt-1" />
                     </div>
 
+                    <div>
+                        <x-input-label for="invitation_message" value="Mensaje de bienvenida (opcional)" />
+                        <p class="text-xs text-masa-madre mb-1">Se incluirá en el email de invitación al propietario.</p>
+                        <textarea id="invitation_message" name="invitation_message" rows="3" maxlength="1000"
+                            class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm"
+                            placeholder="Ej: Bienvenido a Levado. Ante cualquier consulta estamos a disposición."
+                        >{{ old('invitation_message') }}</textarea>
+                        <x-input-error :messages="$errors->get('invitation_message')" class="mt-1" />
+                    </div>
+
                     <div class="flex justify-end gap-3 pt-2">
                         <a href="{{ route('admin.tenants.index') }}"
                             class="px-4 py-2 text-sm text-masa-madre hover:text-corteza">Cancelar</a>

@@ -41,7 +41,11 @@ class TenantController extends Controller
 
     public function store(StoreTenantRequest $request): RedirectResponse
     {
-        $tenant = Tenant::create($request->validated());
+        $tenant = Tenant::create($request->safe()->except('owner_email', 'invitation_message'));
+
+        if ($request->filled('invitation_message')) {
+            $tenant->setSetting('invitation_message', $request->validated('invitation_message'));
+        }
 
         $invitation = Invitation::create([
             'tenant_id' => $tenant->id,

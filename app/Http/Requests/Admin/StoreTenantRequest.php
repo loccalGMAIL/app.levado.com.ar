@@ -19,6 +19,7 @@ class StoreTenantRequest extends FormRequest
             'currency' => ['required', 'string', 'size:3'],
             'productive_hours_month' => ['required', 'integer', 'min:1', 'max:744'],
             'owner_email' => ['required', 'email', 'max:255'],
+            'invitation_message' => ['nullable', 'string', 'max:1000'],
         ];
     }
 }
