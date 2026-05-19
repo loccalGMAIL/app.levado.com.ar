@@ -5,6 +5,45 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.4.0] — 2026-05-18
+
+### Etapas 2.4–2.7 completas — Módulo de Costos (cierre) + Recetas + Dashboard
+
+#### Agregado
+
+**Etapa 2.4 — Tipos de Mano de Obra**
+- Tabla `labor_types` por tenant: nombre y costo por hora
+- CRUD completo con toggle active; Gate `manage-costs` (owner+admin escriben, viewer lee)
+- 10 tests de roles, validación y aislamiento
+
+**Etapa 2.5 — UnitConverter**
+- Servicio `App\Services\UnitConverter` para conversión entre unidades compatibles
+- Dimensiones: peso (gr / kg), volumen (ml / L / cc), unidad (u)
+- `convert()` retorna `null` para unidades incompatibles; `compatible()` para validar
+- 16 tests unitarios
+
+**Etapa 2.6 — Recetas**
+- 4 tablas: `recipes`, `recipe_ingredient_lines` (cantidad + unidad), `recipe_packaging_lines`, `recipe_labor_lines`
+- `RecipeController`: index, store, show, update, toggleActive + 6 métodos de líneas (store/destroy × 3 tipos)
+- Cálculo de costo en tiempo real: UnitConverter convierte unidades de ingredientes al agregar líneas
+- Vista detalle: resumen de costos (ingredientes / envases / mano de obra / total), desglose por sección, botones para agregar/quitar líneas
+- `selling_price` (nullable) en recetas; campo en modales de crear y editar
+- Sección "Recetas" en sidebar context-aware y top nav
+- 22 tests de CRUD, roles, líneas, conversión de unidades y aislamiento
+
+**Etapa 2.7 — Dashboard de Rentabilidad**
+- `RecipeCostCalculator`: servicio reutilizable que encapsula el cálculo de costos por receta
+- Dashboard principal reemplaza el placeholder: tabla de recetas activas con costo/u, precio de venta, margen $ y margen % (semáforo: verde ≥ 30 % / amarillo 15–29 % / rojo < 15 %)
+- Tarjetas de resumen: recetas activas, total gastos fijos/mes, horas productivas/mes, overhead/hora
+- Link directo a configurar horas productivas cuando están en cero
+- 11 tests del dashboard (costo, margen, gastos fijos, overhead, aislamiento)
+
+#### Técnico
+- Suite completa: **161 tests**, todos verdes
+- `RecipeCostCalculator` inyectado como dependencia en `DashboardController` y `RecipeController`
+
+---
+
 ## [0.2.0] — 2026-05-13
 
 ### Etapa 1 completa — Fundación Web
