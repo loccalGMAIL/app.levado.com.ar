@@ -44,8 +44,12 @@
                 </x-nav-link>
             @endcan
 
-            <x-nav-link :href="route('ingredients.index')" :active="request()->routeIs('ingredients.*', 'suppliers.*', 'packaging.*', 'fixed-costs.*')">
+            <x-nav-link :href="route('ingredients.index')" :active="request()->routeIs('ingredients.*', 'suppliers.*', 'packaging.*', 'fixed-costs.*', 'labor-types.*')">
                 Costos
+            </x-nav-link>
+
+            <x-nav-link :href="route('recipes.index')" :active="request()->routeIs('recipes.*')">
+                Recetas
             </x-nav-link>
 
             @if(Auth::user()->isSuperAdmin())
@@ -129,6 +133,14 @@
 
             <x-responsive-nav-link :href="route('fixed-costs.index')" :active="request()->routeIs('fixed-costs.*')">
                 Costos — Gastos Fijos
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('labor-types.index')" :active="request()->routeIs('labor-types.*')">
+                Costos — Mano de Obra
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('recipes.index')" :active="request()->routeIs('recipes.*')">
+                Recetas
             </x-responsive-nav-link>
 
             @if(Auth::user()->isSuperAdmin())

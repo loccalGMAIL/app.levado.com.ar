@@ -60,6 +60,16 @@ class Tenant extends Model
         return $this->hasMany(FixedCostCategory::class);
     }
 
+    public function laborTypes(): HasMany
+    {
+        return $this->hasMany(LaborType::class);
+    }
+
+    public function recipes(): HasMany
+    {
+        return $this->hasMany(Recipe::class);
+    }
+
     public function settings(): HasMany
     {
         return $this->hasMany(TenantSetting::class);
