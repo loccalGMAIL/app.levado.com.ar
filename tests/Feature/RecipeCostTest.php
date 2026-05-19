@@ -186,15 +186,17 @@ test('costo total se calcula correctamente en la vista', function () {
         'hours' => 1,
     ]);
 
-    // Ingredient cost: 0.5 kg * $1000/kg = $500
+    // Ingredient cost: 0.5 kg * $1000/kg = $500  → costPerLineUnit = 1.0 $/gr
     // Packaging cost: 2 * $50 = $100
     // Labor cost: 1h * $200/h = $200
     // Total: $800, per unit: $80
+    // @js() wraps in JSON.parse('...') and escapes " as "
     $this->actingAs($user)
         ->get(route('recipes.show', $recipe))
         ->assertOk()
-        ->assertSee('800,00')
-        ->assertSee('80,00');
+        ->assertSee('\u0022costPerLineUnit\u0022:1', false)
+        ->assertSee('\u0022hourlyRate\u0022:200', false)
+        ->assertSee('\u0022costPerUnit\u0022:50', false);
 });
 
 test('aislamiento: ingrediente de otro tenant no se puede agregar', function () {

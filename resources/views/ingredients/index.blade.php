@@ -39,7 +39,7 @@
                     <p class="text-sm text-masa-madre mt-0.5">Materia prima con su costo por unidad.</p>
                 </div>
                 @can('manage-costs')
-                    <button type="button"
+                    <button type="button" id="btn-nuevo-ingrediente"
                         @click="$dispatch('open-modal', 'ingredient-create')"
                         class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nuevo ingrediente

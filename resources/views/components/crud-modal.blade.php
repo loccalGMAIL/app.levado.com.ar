@@ -3,9 +3,10 @@
     'title',
     'maxWidth' => 'lg',
     'show' => false,
+    'z' => 50,
 ])
 
-<x-modal :name="$name" :max-width="$maxWidth" :show="$show" focusable>
+<x-modal :name="$name" :max-width="$maxWidth" :show="$show" :z="$z" focusable>
     <div class="bg-white rounded-lg">
         <div class="flex items-center justify-between px-6 py-4 border-b border-miga">
             <h3 class="text-base font-semibold text-corteza">{{ $title }}</h3>

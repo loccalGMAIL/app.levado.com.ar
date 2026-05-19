@@ -37,7 +37,7 @@
                     <p class="text-sm text-masa-madre mt-0.5">Empresas y personas de quienes comprás insumos.</p>
                 </div>
                 @can('manage-costs')
-                    <button type="button"
+                    <button type="button" id="btn-nuevo-proveedor"
                         @click="$dispatch('open-modal', 'supplier-create')"
                         class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nuevo proveedor

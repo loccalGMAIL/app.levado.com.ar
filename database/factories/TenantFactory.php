@@ -18,6 +18,7 @@ class TenantFactory extends Factory
             'currency' => 'ARS',
             'productive_hours_month' => 160,
             'active' => true,
+            'onboarding_completed_at' => now(),
         ];
     }
 

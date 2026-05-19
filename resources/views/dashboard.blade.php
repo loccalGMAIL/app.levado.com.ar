@@ -133,5 +133,17 @@
             @endif
         </div>
 
+        @if($activeRecipeCount > 0 && $packagingCount === 0)
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-amber-800">¿Usás envases en tus productos?</p>
+                <p class="text-xs text-amber-700 mt-0.5">Cargalos para incluir su costo en el cálculo de cada receta.</p>
+            </div>
+            <a href="{{ route('packaging.index') }}" class="text-sm text-amber-800 hover:underline font-medium shrink-0 ml-4">
+                Ir a Envases →
+            </a>
+        </div>
+        @endif
+
     </div>
 </x-app-layout>

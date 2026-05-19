@@ -5,6 +5,40 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.5.0] — 2026-05-19
+
+### Onboarding tour + Receta rediseñada + UX
+
+#### Agregado
+
+**Onboarding tour (Shepherd.js)**
+- Tour guiado de 5 pasos para tenants nuevos: Mi negocio → Gastos fijos → Mano de obra → Insumos → Primera receta
+- `onboarding_completed_at` en `tenants`; se marca automáticamente al crear la primera receta
+- `ViewComposer` calcula el paso activo desde el estado de la base de datos (sin wizard bloqueante)
+- `window.levadoOnboarding` inyectado en `<head>` cuando el tour está activo; Alpine.js queda libre
+- 12 tests de step computation, tracking de completion y aislamiento
+
+**Detalle de receta rediseñado**
+- Layout dos columnas: tablas de líneas (ingredientes / mano de obra / envases) + sidebar de costos fijo (`sticky top-4`)
+- Edición de cantidades inline (spinner) con guardado automático vía PATCH (`/recipes/{id}/…-lines/{line}`)
+- Cálculo de costos en tiempo real con Alpine.js: ingredientes, mano de obra, envases, gastos fijos proporcionales
+- Simulador de margen: slider 0–80 % con precio sugerido y barra de color (verde / ámbar / rojo)
+- Endpoints PATCH para `ingredient-lines`, `packaging-lines` y `labor-lines`
+
+#### Mejorado
+
+- **Modales apilados:** el modal de proveedor (quick-create) aparece sobre el modal de ingrediente sin cerrarlo; z-index vía `style` inline para evitar limitaciones de purge de Tailwind
+- **Gastos fijos:** creación de categoría inline dentro del modal de nuevo/editar gasto, sin salir del flujo
+- **Mi negocio:** sección "Capacidad productiva" reubicada debajo de los datos del negocio y fiscales
+- **Navbar:** logo SVG de Levado como fallback cuando el tenant no tiene logo subido; logo ocupa todo el bloque de marca
+
+#### Técnico
+- `FixedCostCategoryController::store()` y `SupplierController::store()` retornan JSON cuando `Accept: application/json`
+- `modal.blade.php` y `crud-modal.blade.php` reciben prop `z` (int) para z-index configurable
+- Suite completa: **173 tests**, todos verdes
+
+---
+
 ## [0.4.0] — 2026-05-18
 
 ### Etapas 2.4–2.7 completas — Módulo de Costos (cierre) + Recetas + Dashboard

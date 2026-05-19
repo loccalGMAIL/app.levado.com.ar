@@ -1,6 +1,7 @@
-@props(['href', 'label', 'active' => false, 'icon' => ''])
+@props(['href', 'label', 'active' => false, 'icon' => '', 'id' => null])
 
 <a href="{{ $href }}"
+    @if($id) id="{{ $id }}" @endif
     class="flex items-center gap-2.5 px-4 py-2 text-[13.5px] transition-colors
         border-l-[3px]
         {{ $active

@@ -22,12 +22,14 @@ class Tenant extends Model
         'logo_path',
         'productive_hours_month',
         'active',
+        'onboarding_completed_at',
     ];
 
     protected $casts = [
         'active' => 'boolean',
         'productive_hours_month' => 'integer',
         'condicion_iva' => CondicionIva::class,
+        'onboarding_completed_at' => 'datetime',
     ];
 
     public function locations(): HasMany
@@ -90,6 +92,12 @@ class Tenant extends Model
         return $this->belongsToMany(User::class, 'tenant_users')
             ->withPivot(['role', 'active', 'created_at'])
             ->wherePivot('active', true);
+    }
+
+    public function hasCompletedOnboarding(): bool
+    {
+        return $this->onboarding_completed_at !== null
+            || $this->recipes()->exists();
     }
 
     public function getSetting(string $key, mixed $default = null): mixed

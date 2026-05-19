@@ -30,13 +30,15 @@
                         <div>
                             <x-input-label for="logo" value="Logo del negocio" />
 
-                            @if ($tenant->logo_path)
-                                <div class="mt-2 mb-3">
+                            <div class="mt-2 mb-3">
+                                @if ($tenant->logo_path)
                                     <img src="{{ Storage::url($tenant->logo_path) }}"
                                          alt="Logo actual"
                                          class="h-16 w-auto rounded object-contain border border-miga p-1">
-                                </div>
-                            @endif
+                                @else
+                                    <x-application-logo class="h-12 w-auto text-corteza opacity-40" />
+                                @endif
+                            </div>
 
                             <input id="logo" name="logo" type="file" accept="image/*"
                                    class="mt-1 block w-full text-sm text-masa-madre
@@ -105,19 +107,6 @@
                             </div>
                         </div>
 
-                        {{-- Horas productivas --}}
-                        <div class="hidden">
-                            <x-input-label for="productive_hours_month" value="Horas productivas por mes" />
-                            <x-text-input id="productive_hours_month" name="productive_hours_month"
-                                type="number" min="1" max="744"
-                                class="mt-1 block w-36"
-                                :value="old('productive_hours_month', $tenant->productive_hours_month)"
-                                required />
-                            <p class="mt-1 text-xs text-masa-madre">
-                                Se usa para prorratear los gastos fijos en el cálculo de costos.
-                            </p>
-                            <x-input-error :messages="$errors->get('productive_hours_month')" class="mt-2" />
-                        </div>
                     </div>
 
                     {{-- Datos fiscales --}}
@@ -162,6 +151,45 @@
                         </div>
                     </div>
 
+                </div>
+
+                {{-- Capacidad productiva --}}
+                <div class="bg-white rounded-lg shadow p-6" id="field-horas-productivas">
+                    <div class="flex items-start justify-between gap-8">
+                        <div class="flex-1 space-y-1">
+                            <h2 class="text-base font-semibold text-corteza">Capacidad productiva</h2>
+                            <p class="text-sm text-masa-madre">
+                                ¿Cuántas horas por mes trabaja tu panadería? Se usa para distribuir los gastos fijos y calcular el costo por hora de producción.
+                            </p>
+                            <div class="flex items-center gap-4 pt-2">
+                                <div>
+                                    <x-input-label for="productive_hours_month" value="Horas productivas / mes" />
+                                    <x-text-input id="productive_hours_month" name="productive_hours_month"
+                                        type="number" min="1" max="744"
+                                        class="mt-1 block w-32"
+                                        :value="old('productive_hours_month', $tenant->productive_hours_month ?: '')"
+                                        placeholder="ej. 160" />
+                                    <x-input-error :messages="$errors->get('productive_hours_month')" class="mt-2" />
+                                </div>
+                            </div>
+                        </div>
+                        @if($overheadPerHour !== null)
+                        <div class="bg-miga rounded-lg px-5 py-4 text-right shrink-0">
+                            <p class="text-xs text-masa-madre">Overhead / hora</p>
+                            <p class="text-xl font-semibold text-corteza font-mono mt-0.5">
+                                $ {{ number_format($overheadPerHour, 2, ',', '.') }}
+                            </p>
+                            <p class="text-[11px] text-masa-madre mt-1">
+                                Gastos fijos: $ {{ number_format((float)$totalFixedCosts, 2, ',', '.') }} / mes
+                            </p>
+                        </div>
+                        @elseif($tenant->productive_hours_month > 0)
+                        <div class="bg-miga rounded-lg px-5 py-4 text-right shrink-0">
+                            <p class="text-xs text-masa-madre">Overhead / hora</p>
+                            <p class="text-sm text-masa-madre mt-1">Sin gastos fijos activos</p>
+                        </div>
+                        @endif
+                    </div>
                 </div>
 
                 <div class="pb-2">

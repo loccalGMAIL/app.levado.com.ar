@@ -50,6 +50,7 @@ class DashboardController extends Controller
         $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : null;
 
         $activeRecipeCount = $recipes->where('active', true)->count();
+        $packagingCount = $tenant->packagings()->where('active', true)->count();
 
         return view('dashboard', compact(
             'recipeRows',
@@ -57,6 +58,7 @@ class DashboardController extends Controller
             'productiveHours',
             'overheadPerHour',
             'activeRecipeCount',
+            'packagingCount',
         ));
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
 use App\Models\Supplier;
 use App\Models\Tenant;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -19,9 +20,13 @@ class SupplierController extends Controller
         return view('suppliers.index', compact('suppliers'));
     }
 
-    public function store(StoreSupplierRequest $request): RedirectResponse
+    public function store(StoreSupplierRequest $request): RedirectResponse|JsonResponse
     {
-        app(Tenant::class)->suppliers()->create($request->validated());
+        $supplier = app(Tenant::class)->suppliers()->create($request->validated());
+
+        if ($request->wantsJson()) {
+            return response()->json(['id' => $supplier->id, 'name' => $supplier->name], 201);
+        }
 
         return back()->with('status', 'Proveedor creado.');
     }

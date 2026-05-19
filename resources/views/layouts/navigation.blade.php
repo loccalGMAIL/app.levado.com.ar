@@ -11,15 +11,14 @@
 
         {{-- Bloque de marca — mismo ancho que el sidebar, fondo oscuro para continuidad visual --}}
         <a href="{{ route('dashboard') }}"
-            class="hidden sm:flex w-52 shrink-0 bg-masa-madre border-r border-white/10 flex-col items-center justify-center px-4
+            class="hidden sm:flex w-52 shrink-0 bg-masa-madre border-r border-white/10 items-center justify-center p-2
                    hover:bg-masa-madre/90 transition-colors">
             @if($navTenant?->logo_path)
                 <img src="{{ Storage::url($navTenant->logo_path) }}"
                      alt="{{ $navTenant->name }}"
-                     class="h-7 w-auto max-w-[140px] object-contain">
+                     class="w-full h-full object-contain">
             @else
-                <span class="font-serif text-xl text-harina tracking-tight">levado</span>
-                <span class="text-[10px] italic text-harina/50 mt-0.5">Que tu panadería siga creciendo.</span>
+                <x-application-logo class="w-full h-full text-harina" />
             @endif
         </a>
 

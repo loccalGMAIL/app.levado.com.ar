@@ -13,6 +13,7 @@ use App\Models\RecipePackagingLine;
 use App\Models\Tenant;
 use App\Services\RecipeCostCalculator;
 use App\Services\UnitConverter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,12 @@ class RecipeController extends Controller
 
     public function store(StoreRecipeRequest $request): RedirectResponse
     {
-        $recipe = app(Tenant::class)->recipes()->create($request->validated());
+        $tenant = app(Tenant::class);
+        $recipe = $tenant->recipes()->create($request->validated());
+
+        if ($tenant->onboarding_completed_at === null) {
+            $tenant->update(['onboarding_completed_at' => now()]);
+        }
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Receta creada.');
     }
@@ -41,12 +47,51 @@ class RecipeController extends Controller
     {
         $this->authorizeRecipe($recipe);
 
+        $recipe->loadMissing([
+            'ingredientLines.ingredient.supplier',
+            'packagingLines.packaging',
+            'laborLines.laborType',
+        ]);
+
         $costs = (new RecipeCostCalculator(new UnitConverter))->calculate($recipe);
 
         $tenant = app(Tenant::class);
         $ingredients = $tenant->ingredients()->where('active', true)->orderBy('name')->get();
         $packagings = $tenant->packagings()->where('active', true)->orderBy('name')->get();
         $laborTypes = $tenant->laborTypes()->where('active', true)->orderBy('name')->get();
+
+        $totalFixedCosts = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
+        $productiveHours = (int) $tenant->productive_hours_month;
+        $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : 0.0;
+
+        $converter = new UnitConverter;
+
+        $ingredientLinesData = $recipe->ingredientLines->map(fn ($line) => [
+            'id' => $line->id,
+            'name' => $line->ingredient->name,
+            'code' => 'ING-'.str_pad($line->ingredient->id, 3, '0', STR_PAD_LEFT),
+            'supplier' => $line->ingredient->supplier?->name,
+            'quantity' => (float) $line->quantity,
+            'unit' => $line->unit->value,
+            'unitLabel' => $line->unit->short(),
+            'costPerLineUnit' => $converter->convert(1.0, $line->unit, $line->ingredient->unit) * (float) $line->ingredient->cost_per_unit,
+            'refCost' => (float) $line->ingredient->cost_per_unit,
+            'refUnit' => $line->ingredient->unit->short(),
+        ]);
+
+        $laborLinesData = $recipe->laborLines->map(fn ($line) => [
+            'id' => $line->id,
+            'name' => $line->laborType->name,
+            'hours' => (float) $line->hours,
+            'hourlyRate' => (float) $line->laborType->hourly_rate,
+        ]);
+
+        $packagingLinesData = $recipe->packagingLines->map(fn ($line) => [
+            'id' => $line->id,
+            'name' => $line->packaging->name,
+            'quantity' => (float) $line->quantity,
+            'costPerUnit' => (float) $line->packaging->cost_per_unit,
+        ]);
 
         return view('recipes.show', [
             'recipe' => $recipe,
@@ -55,9 +100,13 @@ class RecipeController extends Controller
             'laborCost' => $costs['labor_cost'],
             'totalCost' => $costs['total_cost'],
             'costPerUnit' => $costs['cost_per_unit'],
+            'overheadPerHour' => $overheadPerHour,
             'ingredients' => $ingredients,
             'packagings' => $packagings,
             'laborTypes' => $laborTypes,
+            'ingredientLinesData' => $ingredientLinesData,
+            'laborLinesData' => $laborLinesData,
+            'packagingLinesData' => $packagingLinesData,
         ]);
     }
 
@@ -163,6 +212,39 @@ class RecipeController extends Controller
         $line->delete();
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Mano de obra eliminada.');
+    }
+
+    public function updateIngredientLine(Request $request, Recipe $recipe, RecipeIngredientLine $line): JsonResponse
+    {
+        $this->authorizeRecipe($recipe);
+        abort_unless($line->recipe_id === $recipe->id, 403);
+
+        $data = $request->validate(['quantity' => ['required', 'numeric', 'min:0.001']]);
+        $line->update($data);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function updatePackagingLine(Request $request, Recipe $recipe, RecipePackagingLine $line): JsonResponse
+    {
+        $this->authorizeRecipe($recipe);
+        abort_unless($line->recipe_id === $recipe->id, 403);
+
+        $data = $request->validate(['quantity' => ['required', 'numeric', 'min:0.001']]);
+        $line->update($data);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function updateLaborLine(Request $request, Recipe $recipe, RecipeLaborLine $line): JsonResponse
+    {
+        $this->authorizeRecipe($recipe);
+        abort_unless($line->recipe_id === $recipe->id, 403);
+
+        $data = $request->validate(['hours' => ['required', 'numeric', 'min:0.01']]);
+        $line->update($data);
+
+        return response()->json(['ok' => true]);
     }
 
     private function authorizeRecipe(Recipe $recipe): void

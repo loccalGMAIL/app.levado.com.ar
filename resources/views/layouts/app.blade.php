@@ -12,6 +12,15 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        @if(isset($onboardingStep) && $onboardingStep !== null)
+        <script>
+            window.levadoOnboarding = {
+                step: {{ $onboardingStep }},
+                route: '{{ request()->route()?->getName() ?? '' }}'
+            };
+        </script>
+        @endif
     </head>
     <body class="font-sans antialiased bg-harina text-corteza">
 

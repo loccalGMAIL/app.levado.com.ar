@@ -79,12 +79,15 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('recipes/{recipe}/toggle-active', [RecipeController::class, 'toggleActive'])->name('recipes.toggle-active');
 
     Route::post('recipes/{recipe}/ingredient-lines', [RecipeController::class, 'storeIngredientLine'])->name('recipes.ingredient-lines.store');
+    Route::patch('recipes/{recipe}/ingredient-lines/{line}', [RecipeController::class, 'updateIngredientLine'])->name('recipes.ingredient-lines.update');
     Route::delete('recipes/{recipe}/ingredient-lines/{line}', [RecipeController::class, 'destroyIngredientLine'])->name('recipes.ingredient-lines.destroy');
 
     Route::post('recipes/{recipe}/packaging-lines', [RecipeController::class, 'storePackagingLine'])->name('recipes.packaging-lines.store');
+    Route::patch('recipes/{recipe}/packaging-lines/{line}', [RecipeController::class, 'updatePackagingLine'])->name('recipes.packaging-lines.update');
     Route::delete('recipes/{recipe}/packaging-lines/{line}', [RecipeController::class, 'destroyPackagingLine'])->name('recipes.packaging-lines.destroy');
 
     Route::post('recipes/{recipe}/labor-lines', [RecipeController::class, 'storeLaborLine'])->name('recipes.labor-lines.store');
+    Route::patch('recipes/{recipe}/labor-lines/{line}', [RecipeController::class, 'updateLaborLine'])->name('recipes.labor-lines.update');
     Route::delete('recipes/{recipe}/labor-lines/{line}', [RecipeController::class, 'destroyLaborLine'])->name('recipes.labor-lines.destroy');
 
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');

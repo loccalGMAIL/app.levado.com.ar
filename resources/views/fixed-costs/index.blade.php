@@ -43,7 +43,7 @@
                             class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                             Categorías
                         </button>
-                        <button type="button"
+                        <button type="button" id="btn-nuevo-gasto"
                             @click="$dispatch('open-modal', 'fixed-cost-create')"
                             class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                             + Nuevo gasto

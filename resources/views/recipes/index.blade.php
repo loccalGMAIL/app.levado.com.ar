@@ -20,7 +20,7 @@
                     <p class="text-sm text-masa-madre mt-0.5">Cada receta calcula el costo de producción a partir de ingredientes, envases y mano de obra.</p>
                 </div>
                 @can('manage-costs')
-                    <button type="button"
+                    <button type="button" id="btn-nueva-receta"
                         @click="$dispatch('open-modal', 'recipe-create')"
                         class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nueva receta

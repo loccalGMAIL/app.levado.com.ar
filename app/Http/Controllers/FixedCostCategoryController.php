@@ -4,16 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\FixedCostCategory;
 use App\Models\Tenant;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class FixedCostCategoryController extends Controller
 {
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $request->validate(['name' => ['required', 'string', 'max:255']]);
 
-        app(Tenant::class)->fixedCostCategories()->create($request->only('name'));
+        $category = app(Tenant::class)->fixedCostCategories()->create($request->only('name'));
+
+        if ($request->wantsJson()) {
+            return response()->json(['id' => $category->id, 'name' => $category->name], 201);
+        }
 
         return redirect()->route('fixed-costs.index')
             ->with('reopen_categories', true)

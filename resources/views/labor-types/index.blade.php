@@ -35,7 +35,7 @@
                     <p class="text-sm text-masa-madre mt-0.5">Roles de trabajo con su costo por hora para calcular el costo de producción.</p>
                 </div>
                 @can('manage-costs')
-                    <button type="button"
+                    <button type="button" id="btn-nuevo-tipo-labor"
                         @click="$dispatch('open-modal', 'labor-type-create')"
                         class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nuevo tipo
