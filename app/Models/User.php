@@ -48,4 +48,12 @@ class User extends Authenticatable
 
         return $role !== null && in_array($role, $roles);
     }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->tenantUsers()
+            ->where('role', TenantUserRole::SuperAdmin->value)
+            ->where('active', true)
+            ->exists();
+    }
 }

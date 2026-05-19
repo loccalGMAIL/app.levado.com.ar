@@ -40,6 +40,17 @@ class AppServiceProvider extends ServiceProvider
                 TenantUserRole::Owner,
             );
         });
+
+        Gate::define('manage-costs', function (User $user) {
+            $tenant = $this->resolveTenant();
+
+            return $tenant && $user->hasRoleInTenant(
+                $tenant,
+                TenantUserRole::SuperAdmin,
+                TenantUserRole::Owner,
+                TenantUserRole::Admin,
+            );
+        });
     }
 
     private function resolveTenant(): ?Tenant

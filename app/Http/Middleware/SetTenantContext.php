@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Tenant;
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -31,11 +32,15 @@ class SetTenantContext
     {
         $user = $request->user();
 
-        if ($user === null) {
+        if (! $user instanceof User) {
             return null;
         }
 
-        // Solo TenantUsers activos pueden resolver el tenant
+        // Super admins pueden impersonar otro tenant desde el backoffice
+        if ($user->isSuperAdmin() && $request->session()->has('impersonating_tenant_id')) {
+            return Tenant::find($request->session()->get('impersonating_tenant_id'));
+        }
+
         $tenantId = $user->tenantUsers()->where('active', true)->value('tenant_id');
 
         if ($tenantId === null) {
