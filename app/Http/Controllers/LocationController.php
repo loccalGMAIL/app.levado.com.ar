@@ -6,11 +6,14 @@ use App\Http\Requests\StoreLocationRequest;
 use App\Http\Requests\UpdateLocationRequest;
 use App\Models\Location;
 use App\Models\Tenant;
+use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class LocationController extends Controller
 {
+    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+
     public function index(): View
     {
         $tenant = app(Tenant::class);
@@ -34,7 +37,16 @@ class LocationController extends Controller
             $isDefault = true;
         }
 
-        $tenant->locations()->create(array_merge($data, ['is_default' => $isDefault]));
+        $location = $tenant->locations()->create(array_merge($data, ['is_default' => $isDefault]));
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'location',
+            targetId: $location->id,
+            action: 'location.created',
+            payload: ['name' => $location->name],
+            tenantId: $tenant->id,
+        );
 
         return redirect()->route('locations.index')->with('status', 'Sucursal creada.');
     }
@@ -52,6 +64,15 @@ class LocationController extends Controller
 
         $location->update(array_merge($data, ['is_default' => $isDefault]));
 
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'location',
+            targetId: $location->id,
+            action: 'location.updated',
+            payload: ['name' => $location->name],
+            tenantId: $location->tenant_id,
+        );
+
         return redirect()->route('locations.index')->with('status', 'Sucursal actualizada.');
     }
 
@@ -64,6 +85,16 @@ class LocationController extends Controller
         }
 
         $location->update(['active' => ! $location->active]);
+        $action = $location->active ? 'location.activated' : 'location.deactivated';
+
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'location',
+            targetId: $location->id,
+            action: $action,
+            payload: ['name' => $location->name],
+            tenantId: $location->tenant_id,
+        );
 
         $label = $location->active ? 'activada' : 'desactivada';
 

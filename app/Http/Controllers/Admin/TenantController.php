@@ -63,6 +63,7 @@ class TenantController extends Controller
             targetId: $tenant->id,
             action: 'tenant.created',
             payload: ['name' => $tenant->name, 'owner_email' => $invitation->email],
+            tenantId: $tenant->id,
         );
 
         return redirect()->route('admin.tenants.show', $tenant)
@@ -97,6 +98,7 @@ class TenantController extends Controller
             targetId: $tenant->id,
             action: 'tenant.updated',
             payload: $request->validated(),
+            tenantId: $tenant->id,
         );
 
         return redirect()->route('admin.tenants.show', $tenant)
@@ -114,6 +116,7 @@ class TenantController extends Controller
             targetType: 'tenant',
             targetId: $tenant->id,
             action: $action,
+            tenantId: $tenant->id,
         );
 
         $label = $tenant->active ? 'activado' : 'desactivado';

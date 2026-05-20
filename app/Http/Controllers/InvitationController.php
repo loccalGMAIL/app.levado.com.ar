@@ -10,6 +10,7 @@ use App\Models\Invitation;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
+use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -18,6 +19,8 @@ use Illuminate\View\View;
 
 class InvitationController extends Controller
 {
+    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+
     public function store(InviteTeamMemberRequest $request): RedirectResponse
     {
         $tenant = app(Tenant::class);
@@ -42,6 +45,15 @@ class InvitationController extends Controller
         );
 
         Mail::to($email)->send(new TeamInvitation($invitation));
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'invitation',
+            targetId: $invitation->id,
+            action: 'invitation.sent',
+            payload: ['email' => $email, 'role' => $invitation->role],
+            tenantId: $tenant->id,
+        );
 
         return back()->with('status', "Invitación enviada a {$email}.");
     }
@@ -99,6 +111,15 @@ class InvitationController extends Controller
 
     public function destroy(Invitation $invitation): RedirectResponse
     {
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'invitation',
+            targetId: $invitation->id,
+            action: 'invitation.cancelled',
+            payload: ['email' => $invitation->email, 'role' => $invitation->role],
+            tenantId: $invitation->tenant_id,
+        );
+
         $invitation->delete();
 
         return back()->with('status', 'Invitación cancelada.');

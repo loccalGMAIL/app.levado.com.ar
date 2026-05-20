@@ -6,12 +6,15 @@ use App\Http\Requests\StoreFixedCostRequest;
 use App\Http\Requests\UpdateFixedCostRequest;
 use App\Models\FixedCost;
 use App\Models\Tenant;
+use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
 use Illuminate\View\View;
 
 class FixedCostController extends Controller
 {
+    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+
     public function index(): View
     {
         $tenant = app(Tenant::class);
@@ -31,12 +34,22 @@ class FixedCostController extends Controller
     public function store(StoreFixedCostRequest $request): RedirectResponse
     {
         $data = $request->validated();
-        $fixedCost = app(Tenant::class)->fixedCosts()->create(Arr::except($data, ['valid_from']));
+        $tenant = app(Tenant::class);
+        $fixedCost = $tenant->fixedCosts()->create(Arr::except($data, ['valid_from']));
 
         $fixedCost->logs()->create([
             'monthly_amount' => $fixedCost->monthly_amount,
             'valid_from' => $data['valid_from'],
         ]);
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'fixed_cost',
+            targetId: $fixedCost->id,
+            action: 'fixed_cost.created',
+            payload: ['name' => $fixedCost->name],
+            tenantId: $tenant->id,
+        );
 
         return redirect()->route('fixed-costs.index')->with('status', 'Gasto fijo creado.');
     }
@@ -56,6 +69,15 @@ class FixedCostController extends Controller
 
         $fixedCost->update(Arr::except($data, ['valid_from']));
 
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'fixed_cost',
+            targetId: $fixedCost->id,
+            action: 'fixed_cost.updated',
+            payload: ['name' => $fixedCost->name],
+            tenantId: $fixedCost->tenant_id,
+        );
+
         return redirect()->route('fixed-costs.index')->with('status', 'Gasto fijo actualizado.');
     }
 
@@ -64,6 +86,16 @@ class FixedCostController extends Controller
         $this->authorizeFixedCost($fixedCost);
 
         $fixedCost->update(['active' => ! $fixedCost->active]);
+        $action = $fixedCost->active ? 'fixed_cost.activated' : 'fixed_cost.deactivated';
+
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'fixed_cost',
+            targetId: $fixedCost->id,
+            action: $action,
+            payload: ['name' => $fixedCost->name],
+            tenantId: $fixedCost->tenant_id,
+        );
 
         $label = $fixedCost->active ? 'activado' : 'desactivado';
 

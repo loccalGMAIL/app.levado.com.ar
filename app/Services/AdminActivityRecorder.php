@@ -16,9 +16,11 @@ class AdminActivityRecorder
         int $targetId,
         string $action,
         array $payload = [],
+        ?int $tenantId = null,
     ): void {
         AdminAuditLog::create([
             'actor_user_id' => $actor->id,
+            'tenant_id' => $tenantId,
             'target_type' => $targetType,
             'target_id' => $targetId,
             'action' => $action,

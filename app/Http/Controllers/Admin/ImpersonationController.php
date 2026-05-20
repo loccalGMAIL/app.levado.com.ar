@@ -22,6 +22,7 @@ class ImpersonationController extends Controller
             targetType: 'tenant',
             targetId: $tenant->id,
             action: 'impersonation.started',
+            tenantId: $tenant->id,
         );
 
         return redirect()->route('dashboard');
@@ -37,6 +38,7 @@ class ImpersonationController extends Controller
                 targetType: 'tenant',
                 targetId: $tenantId,
                 action: 'impersonation.stopped',
+                tenantId: $tenantId,
             );
         }
 
