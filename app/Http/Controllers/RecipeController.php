@@ -11,6 +11,7 @@ use App\Models\RecipeIngredientLine;
 use App\Models\RecipeLaborLine;
 use App\Models\RecipePackagingLine;
 use App\Models\Tenant;
+use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostCalculator;
 use App\Services\UnitConverter;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,8 @@ use Illuminate\View\View;
 
 class RecipeController extends Controller
 {
+    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+
     public function index(): View
     {
         $recipes = app(Tenant::class)->recipes()
@@ -39,6 +42,15 @@ class RecipeController extends Controller
         if ($tenant->onboarding_completed_at === null) {
             $tenant->update(['onboarding_completed_at' => now()]);
         }
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'recipe',
+            targetId: $recipe->id,
+            action: 'recipe.created',
+            payload: ['name' => $recipe->name],
+            tenantId: $tenant->id,
+        );
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Receta creada.');
     }
@@ -115,6 +127,15 @@ class RecipeController extends Controller
         $this->authorizeRecipe($recipe);
         $recipe->update($request->validated());
 
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'recipe',
+            targetId: $recipe->id,
+            action: 'recipe.updated',
+            payload: ['name' => $recipe->name],
+            tenantId: $recipe->tenant_id,
+        );
+
         return redirect()->route('recipes.show', $recipe)->with('status', 'Receta actualizada.');
     }
 
@@ -122,6 +143,17 @@ class RecipeController extends Controller
     {
         $this->authorizeRecipe($recipe);
         $recipe->update(['active' => ! $recipe->active]);
+        $action = $recipe->active ? 'recipe.activated' : 'recipe.deactivated';
+
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'recipe',
+            targetId: $recipe->id,
+            action: $action,
+            payload: ['name' => $recipe->name],
+            tenantId: $recipe->tenant_id,
+        );
+
         $label = $recipe->active ? 'activada' : 'desactivada';
 
         return back()->with('status', "Receta {$label}.");

@@ -6,12 +6,15 @@ use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
 use App\Models\Supplier;
 use App\Models\Tenant;
+use App\Services\AdminActivityRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class SupplierController extends Controller
 {
+    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+
     public function index(): View
     {
         $tenant = app(Tenant::class);
@@ -22,7 +25,17 @@ class SupplierController extends Controller
 
     public function store(StoreSupplierRequest $request): RedirectResponse|JsonResponse
     {
-        $supplier = app(Tenant::class)->suppliers()->create($request->validated());
+        $tenant = app(Tenant::class);
+        $supplier = $tenant->suppliers()->create($request->validated());
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'supplier',
+            targetId: $supplier->id,
+            action: 'supplier.created',
+            payload: ['name' => $supplier->name],
+            tenantId: $tenant->id,
+        );
 
         if ($request->wantsJson()) {
             return response()->json(['id' => $supplier->id, 'name' => $supplier->name], 201);
@@ -37,6 +50,15 @@ class SupplierController extends Controller
 
         $supplier->update($request->validated());
 
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'supplier',
+            targetId: $supplier->id,
+            action: 'supplier.updated',
+            payload: ['name' => $supplier->name],
+            tenantId: $supplier->tenant_id,
+        );
+
         return redirect()->route('suppliers.index')->with('status', 'Proveedor actualizado.');
     }
 
@@ -45,6 +67,16 @@ class SupplierController extends Controller
         $this->authorizeSupplier($supplier);
 
         $supplier->update(['active' => ! $supplier->active]);
+        $action = $supplier->active ? 'supplier.activated' : 'supplier.deactivated';
+
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'supplier',
+            targetId: $supplier->id,
+            action: $action,
+            payload: ['name' => $supplier->name],
+            tenantId: $supplier->tenant_id,
+        );
 
         $label = $supplier->active ? 'activado' : 'desactivado';
 

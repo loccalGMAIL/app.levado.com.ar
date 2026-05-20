@@ -6,11 +6,14 @@ use App\Http\Requests\StorePackagingRequest;
 use App\Http\Requests\UpdatePackagingRequest;
 use App\Models\Packaging;
 use App\Models\Tenant;
+use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class PackagingController extends Controller
 {
+    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+
     public function index(): View
     {
         $tenant = app(Tenant::class);
@@ -25,12 +28,22 @@ class PackagingController extends Controller
 
     public function store(StorePackagingRequest $request): RedirectResponse
     {
-        $packaging = app(Tenant::class)->packagings()->create($request->validated());
+        $tenant = app(Tenant::class);
+        $packaging = $tenant->packagings()->create($request->validated());
 
         $packaging->priceLogs()->create([
             'cost_per_unit' => $packaging->cost_per_unit,
             'recorded_at' => now(),
         ]);
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'packaging',
+            targetId: $packaging->id,
+            action: 'packaging.created',
+            payload: ['name' => $packaging->name],
+            tenantId: $tenant->id,
+        );
 
         return redirect()->route('packaging.index')->with('status', 'Envase creado.');
     }
@@ -50,6 +63,15 @@ class PackagingController extends Controller
 
         $packaging->update($data);
 
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'packaging',
+            targetId: $packaging->id,
+            action: 'packaging.updated',
+            payload: ['name' => $packaging->name],
+            tenantId: $packaging->tenant_id,
+        );
+
         return redirect()->route('packaging.index')->with('status', 'Envase actualizado.');
     }
 
@@ -58,6 +80,16 @@ class PackagingController extends Controller
         $this->authorizePackaging($packaging);
 
         $packaging->update(['active' => ! $packaging->active]);
+        $action = $packaging->active ? 'packaging.activated' : 'packaging.deactivated';
+
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'packaging',
+            targetId: $packaging->id,
+            action: $action,
+            payload: ['name' => $packaging->name],
+            tenantId: $packaging->tenant_id,
+        );
 
         $label = $packaging->active ? 'activado' : 'desactivado';
 

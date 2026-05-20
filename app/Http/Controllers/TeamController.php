@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Enums\TenantUserRole;
 use App\Models\Tenant;
 use App\Models\TenantUser;
+use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class TeamController extends Controller
 {
+    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+
     public function index(Request $request): View
     {
         $tenant = app(Tenant::class);
@@ -42,6 +45,15 @@ class TeamController extends Controller
 
         $tenantUser->update(['role' => $validated['role']]);
 
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'tenant_user',
+            targetId: $tenantUser->id,
+            action: 'team_member.role_updated',
+            payload: ['user_id' => $tenantUser->user_id, 'role' => $validated['role']],
+            tenantId: $tenantUser->tenant_id,
+        );
+
         return back()->with('status', 'Rol actualizado correctamente.');
     }
 
@@ -49,12 +61,30 @@ class TeamController extends Controller
     {
         $tenantUser->update(['active' => false]);
 
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'tenant_user',
+            targetId: $tenantUser->id,
+            action: 'team_member.deactivated',
+            payload: ['user_id' => $tenantUser->user_id],
+            tenantId: $tenantUser->tenant_id,
+        );
+
         return back()->with('status', 'Usuario desactivado.');
     }
 
     public function activate(TenantUser $tenantUser): RedirectResponse
     {
         $tenantUser->update(['active' => true]);
+
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'tenant_user',
+            targetId: $tenantUser->id,
+            action: 'team_member.activated',
+            payload: ['user_id' => $tenantUser->user_id],
+            tenantId: $tenantUser->tenant_id,
+        );
 
         return back()->with('status', 'Usuario reactivado.');
     }

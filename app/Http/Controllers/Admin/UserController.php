@@ -63,6 +63,7 @@ class UserController extends Controller
             targetId: $user->id,
             action: $userExists ? 'user.tenant_associated' : 'user.created',
             payload: ['email' => $user->email, 'tenant' => $tenant->name, 'role' => $request->validated('role')],
+            tenantId: $tenant->id,
         );
 
         $action = $userExists ? 'asociado a' : 'creado y asociado a';
