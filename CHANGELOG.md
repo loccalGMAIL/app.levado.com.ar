@@ -39,14 +39,17 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
-## [0.4.1] — 2026-05-19
+## [0.4.1] — 2026-05-22
 
 ### Fix — Onboarding tour no arrancaba en el dashboard
 
 #### Corregido
 
-- El tour guiado nunca se iniciaba al entrar al dashboard porque la condición en `onboarding-tour.js` solo disparaba cuando `step === 0`. Los tenants nuevos tienen `productive_hours_month = 160` (valor por defecto de la BD), por lo que el backend calculaba `step = 1` y el bloque JS nunca coincidía.
-- El bloque de dashboard ahora cubre todos los steps pendientes (`step` 0–4): muestra el mensaje de bienvenida apropiado y dirige al usuario a la sección correcta según su estado actual.
+- **Root cause**: `productive_hours_month` tenía `default(160)` en la BD, por lo que el backend calculaba siempre `step ≥ 1` y el bloque JS del dashboard (que solo escuchaba `step === 0`) nunca disparaba el tour.
+- `productive_hours_month` pasa a nullable sin default; los tenants nuevos arrancan con `null` y caen en step 0. Migración incluida. Tenants existentes conservan su valor.
+- `AppServiceProvider`: condición `=== 0` reemplazada por `!$productive_hours_month` (cubre `null` y `0`).
+- `onboarding-tour.js`: el bloque del dashboard ahora cubre cualquier step pendiente (0–4) con título, texto y sidebar de destino apropiados para cada uno.
+- Admin panel (crear tenant): campo de horas productivas pasa a ser opcional; el tenant lo completa durante el onboarding.
 
 ---
 
