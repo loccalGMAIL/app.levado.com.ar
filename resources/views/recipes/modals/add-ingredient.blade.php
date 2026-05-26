@@ -1,5 +1,23 @@
 <x-crud-modal name="recipe-add-ingredient" title="Agregar ingrediente" :show="$errorsInAddIngredient">
-    <form method="POST" action="{{ route('recipes.ingredient-lines.store', $recipe) }}" class="space-y-4">
+    <form method="POST" action="{{ route('recipes.ingredient-lines.store', $recipe) }}" class="space-y-4"
+        x-data="{
+            groups: { gr: 'weight', kg: 'weight', ml: 'volume', L: 'volume', cc: 'volume', u: 'unit' },
+            selectedGroup: null,
+            init() {
+                const preselected = this.$el.querySelector('#add_ing_id option[selected]');
+                if (preselected) {
+                    this.selectedGroup = this.groups[preselected.dataset.unit] ?? null;
+                }
+            },
+            onIngredientChange(event) {
+                const option = event.target.selectedOptions[0];
+                this.selectedGroup = option?.dataset?.unit ? (this.groups[option.dataset.unit] ?? null) : null;
+            },
+            isCompatible(unit) {
+                if (!this.selectedGroup) return true;
+                return this.groups[unit] === this.selectedGroup;
+            }
+        }">
         @csrf
         <input type="hidden" name="_form" value="add-ingredient">
 
@@ -7,6 +25,7 @@
             <x-input-label for="add_ing_id" value="Ingrediente" />
             <select id="add_ing_id" name="ingredient_id"
                 class="mt-1 block w-full border-gray-300 focus:border-corteza focus:ring-corteza rounded-md shadow-sm text-sm"
+                @change="onIngredientChange($event)"
                 required>
                 <option value="">— seleccionar —</option>
                 @foreach($ingredients as $ingredient)
@@ -36,7 +55,9 @@
                     class="mt-1 block w-full border-gray-300 focus:border-corteza focus:ring-corteza rounded-md shadow-sm text-sm"
                     required>
                     @foreach(\App\Enums\Unit::cases() as $unit)
-                        <option value="{{ $unit->value }}" {{ old('unit') === $unit->value ? 'selected' : '' }}>
+                        <option value="{{ $unit->value }}"
+                            x-show="isCompatible('{{ $unit->value }}')"
+                            {{ old('unit') === $unit->value ? 'selected' : '' }}>
                             {{ $unit->label() }}
                         </option>
                     @endforeach
@@ -44,7 +65,6 @@
                 <x-input-error :messages="$errors->get('unit')" class="mt-2" />
             </div>
         </div>
-        <p class="text-xs text-masa-madre">La unidad debe ser compatible con la del ingrediente (peso, volumen o unidad).</p>
 
         <div class="flex gap-3 pt-2">
             <x-primary-button>Agregar</x-primary-button>

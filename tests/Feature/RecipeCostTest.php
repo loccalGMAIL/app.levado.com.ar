@@ -70,7 +70,7 @@ test('unidad incompatible es rechazada al agregar ingrediente', function () {
             'quantity' => '500',
             'unit' => Unit::Mililitro->value,
         ])
-        ->assertStatus(422);
+        ->assertSessionHasErrors(['unit']);
 
     expect($recipe->ingredientLines()->count())->toBe(0);
 });
