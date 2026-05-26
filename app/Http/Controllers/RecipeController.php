@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class RecipeController extends Controller
@@ -174,11 +175,12 @@ class RecipeController extends Controller
 
         $ingredient = Ingredient::find($data['ingredient_id']);
         $converter = new UnitConverter;
-        abort_unless(
-            $converter->compatible(Unit::from($data['unit']), $ingredient->unit),
-            422,
-            'La unidad seleccionada no es compatible con la unidad del ingrediente.'
-        );
+
+        if (! $converter->compatible(Unit::from($data['unit']), $ingredient->unit)) {
+            throw ValidationException::withMessages([
+                'unit' => 'La unidad seleccionada no es compatible con la unidad del ingrediente.',
+            ]);
+        }
 
         $recipe->ingredientLines()->create($data);
 

@@ -5,6 +5,18 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.5.1] — 2026-05-26
+
+### Fix — Unidad incompatible al agregar ingrediente en receta
+
+#### Corregido
+
+- **Root cause**: al seleccionar un ingrediente con unidad de volumen (ej. agua en ml) y enviar el formulario con una unidad de peso (kg), el backend lanzaba `abort_unless()` con código 422, mostrando la pantalla de error técnica de Laravel en lugar de un mensaje amigable.
+- `storeIngredientLine()` reemplaza `abort_unless()` por `ValidationException::withMessages()`: el error ahora aparece debajo del campo "Unidad" dentro del mismo modal.
+- El dropdown de unidades se filtra dinámicamente con Alpine.js al seleccionar un ingrediente: solo muestra las unidades del mismo grupo de compatibilidad (peso: gr/kg · volumen: ml/L/cc · unidad: u).
+
+---
+
 ## [0.5.0] — 2026-05-19
 
 ### Onboarding tour + Receta rediseñada + UX
