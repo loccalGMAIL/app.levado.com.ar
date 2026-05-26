@@ -5,6 +5,30 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.6.2] — 2026-05-26
+
+### Interfaz — Responsividad mobile y consistencia visual
+
+#### Corregido
+
+**Tablas sin scroll horizontal**
+- Todas las vistas de listado (`ingredients`, `packaging`, `recipes`, `fixed-costs`, `labor-types`, `admin/tenants`, `admin/users`, `admin/audit-logs`, tabla de usuarios en detalle de tenant) usaban `overflow-hidden`, que recortaba el contenido en lugar de permitir scroll. Se cambia a `overflow-x-auto` para que las tablas sean navegables horizontalmente en mobile.
+
+**Layouts de dos columnas que no se apilaban en mobile**
+- `recipes/show`: el sidebar de resumen de costos (antes `w-64` fijo) ahora ocupa ancho completo en mobile y vuelve a posicionarse como columna lateral sticky desde pantallas `lg` (≥ 1024px).
+- `business/edit`: las secciones "Datos del negocio" y "Datos fiscales" se apilan en una columna en mobile y se muestran en grilla de dos columnas desde `sm` (≥ 640px).
+- `admin/tenants/show` (tab Configuración): ídem — grilla `grid-cols-1 sm:grid-cols-2`.
+
+**Colores genéricos en componentes heredados de Breeze**
+- `text-input`: focus ring e border cambiados de `indigo-500` a `corteza`.
+- `primary-button`: fondo cambiado de `gray-800` a `corteza`; hover de `gray-700` a `horno`; focus ring de `indigo` a `corteza`.
+- `secondary-button`: focus ring de `indigo-500` a `corteza`.
+
+#### Técnico
+- Suite completa: **216 tests**, todos verdes
+
+---
+
 ## [0.6.1] — 2026-05-26
 
 ### Seguridad — Correcciones identificadas en code review
