@@ -128,7 +128,7 @@
         </div>
 
         {{-- Two-column layout --}}
-        <div class="flex gap-6 items-start">
+        <div class="flex flex-col lg:flex-row gap-6 items-start">
 
             {{-- Left: line sections --}}
             <div class="flex-1 min-w-0 space-y-4">
@@ -401,7 +401,7 @@
             </div>{{-- /left --}}
 
             {{-- Right: sticky sidebar --}}
-            <div class="w-64 shrink-0 sticky top-4 space-y-3">
+            <div class="w-full lg:w-64 lg:shrink-0 lg:sticky lg:top-4 space-y-3">
 
                 {{-- Resumen --}}
                 <div class="bg-white rounded-lg shadow p-4 space-y-2">

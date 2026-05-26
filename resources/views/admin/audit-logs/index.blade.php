@@ -62,7 +62,7 @@
             </form>
 
             {{-- Tabla --}}
-            <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="bg-white shadow rounded-lg overflow-x-auto">
                 <table class="w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>

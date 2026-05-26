@@ -52,7 +52,7 @@
                     Todavía no hay ingredientes. Agregá el primero.
                 </div>
             @else
-                <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="bg-white rounded-lg shadow overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>

@@ -15,7 +15,7 @@
                 @csrf
                 @method('PATCH')
 
-                <div class="grid grid-cols-2 gap-6 items-start">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
 
                     {{-- Datos del negocio --}}
                     <div class="bg-white rounded-lg shadow p-6 space-y-5">
