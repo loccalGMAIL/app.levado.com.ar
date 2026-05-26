@@ -9,7 +9,7 @@ class RecipeCostCalculator
     public function __construct(private UnitConverter $converter) {}
 
     /**
-     * @return array{ingredient_cost: float, packaging_cost: float, labor_cost: float, total_cost: float, cost_per_unit: float|null}
+     * @return array{ingredient_cost: float, packaging_cost: float, labor_cost: float, subrecipe_cost: float, total_cost: float, cost_per_unit: float|null}
      */
     public function calculate(Recipe $recipe): array
     {
@@ -17,6 +17,7 @@ class RecipeCostCalculator
             'ingredientLines.ingredient',
             'packagingLines.packaging',
             'laborLines.laborType',
+            'subrecipeLines.childRecipe',
         ]);
 
         $ingredientCost = 0.0;
@@ -39,7 +40,23 @@ class RecipeCostCalculator
             fn ($l) => (float) $l->hours * (float) $l->laborType->hourly_rate
         );
 
-        $totalCost = $ingredientCost + $packagingCost + $laborCost;
+        $subrecipeCost = 0.0;
+        foreach ($recipe->subrecipeLines as $line) {
+            $child = $line->childRecipe;
+            if ($child->unit_cost === null) {
+                continue;
+            }
+            $converted = $this->converter->convert(
+                (float) $line->quantity_used,
+                $line->unit,
+                $child->yield_unit
+            );
+            if ($converted !== null) {
+                $subrecipeCost += $converted * (float) $child->unit_cost;
+            }
+        }
+
+        $totalCost = $ingredientCost + $packagingCost + $laborCost + $subrecipeCost;
         $costPerUnit = (float) $recipe->yield_quantity > 0
             ? $totalCost / (float) $recipe->yield_quantity
             : null;
@@ -48,6 +65,7 @@ class RecipeCostCalculator
             'ingredient_cost' => $ingredientCost,
             'packaging_cost' => $packagingCost,
             'labor_cost' => $laborCost,
+            'subrecipe_cost' => $subrecipeCost,
             'total_cost' => $totalCost,
             'cost_per_unit' => $costPerUnit,
         ];

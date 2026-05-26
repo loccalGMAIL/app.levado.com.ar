@@ -19,6 +19,13 @@ class RecipeFactory extends Factory
             'yield_quantity' => fake()->randomFloat(0, 6, 60),
             'yield_unit' => Unit::Unidad->value,
             'active' => true,
+            'is_semi_elaborate' => false,
+            'unit_cost' => null,
         ];
+    }
+
+    public function semiElaborate(): static
+    {
+        return $this->state(['is_semi_elaborate' => true]);
     }
 }

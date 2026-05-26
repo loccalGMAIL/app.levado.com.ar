@@ -91,6 +91,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('recipes/{recipe}/labor-lines/{line}', [RecipeController::class, 'updateLaborLine'])->name('recipes.labor-lines.update');
     Route::delete('recipes/{recipe}/labor-lines/{line}', [RecipeController::class, 'destroyLaborLine'])->name('recipes.labor-lines.destroy');
 
+    Route::post('recipes/{recipe}/subrecipe-lines', [RecipeController::class, 'storeSubrecipeLine'])->name('recipes.subrecipe-lines.store');
+    Route::patch('recipes/{recipe}/subrecipe-lines/{line}', [RecipeController::class, 'updateSubrecipeLine'])->name('recipes.subrecipe-lines.update');
+    Route::delete('recipes/{recipe}/subrecipe-lines/{line}', [RecipeController::class, 'destroySubrecipeLine'])->name('recipes.subrecipe-lines.destroy');
+
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
     Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');
     Route::delete('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'destroy'])->name('fixed-cost-categories.destroy');

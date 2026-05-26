@@ -7,12 +7,16 @@ use App\Http\Requests\UpdatePackagingRequest;
 use App\Models\Packaging;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\RecipeCostPropagator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class PackagingController extends Controller
 {
-    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+    public function __construct(
+        private readonly AdminActivityRecorder $recorder,
+        private readonly RecipeCostPropagator $propagator,
+    ) {}
 
     public function index(): View
     {
@@ -54,7 +58,9 @@ class PackagingController extends Controller
 
         $data = $request->validated();
 
-        if ((float) $packaging->cost_per_unit !== (float) $data['cost_per_unit']) {
+        $costChanged = (float) $packaging->cost_per_unit !== (float) $data['cost_per_unit'];
+
+        if ($costChanged) {
             $packaging->priceLogs()->create([
                 'cost_per_unit' => $data['cost_per_unit'],
                 'recorded_at' => now(),
@@ -62,6 +68,10 @@ class PackagingController extends Controller
         }
 
         $packaging->update($data);
+
+        if ($costChanged) {
+            $this->propagator->propagateFromPackaging($packaging->id);
+        }
 
         $this->recorder->record(
             actor: $request->user(),
