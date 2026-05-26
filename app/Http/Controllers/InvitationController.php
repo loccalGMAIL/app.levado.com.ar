@@ -87,7 +87,7 @@ class InvitationController extends Controller
             ['email' => $invitation->email],
             [
                 'name' => $request->validated('name'),
-                'password' => bcrypt($request->validated('password')),
+                'password' => $request->validated('password'),
             ],
         );
 
@@ -111,6 +111,8 @@ class InvitationController extends Controller
 
     public function destroy(Invitation $invitation): RedirectResponse
     {
+        abort_unless($invitation->tenant_id === app(Tenant::class)->id, 403);
+
         $this->recorder->record(
             actor: request()->user(),
             targetType: 'invitation',
