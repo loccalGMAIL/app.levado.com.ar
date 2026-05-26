@@ -7,12 +7,16 @@ use App\Http\Requests\UpdateIngredientRequest;
 use App\Models\Ingredient;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\RecipeCostPropagator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class IngredientController extends Controller
 {
-    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+    public function __construct(
+        private readonly AdminActivityRecorder $recorder,
+        private readonly RecipeCostPropagator $propagator,
+    ) {}
 
     public function index(): View
     {
@@ -54,7 +58,9 @@ class IngredientController extends Controller
 
         $data = $request->validated();
 
-        if ((float) $ingredient->cost_per_unit !== (float) $data['cost_per_unit']) {
+        $costChanged = (float) $ingredient->cost_per_unit !== (float) $data['cost_per_unit'];
+
+        if ($costChanged) {
             $ingredient->priceLogs()->create([
                 'cost_per_unit' => $data['cost_per_unit'],
                 'recorded_at' => now(),
@@ -62,6 +68,10 @@ class IngredientController extends Controller
         }
 
         $ingredient->update($data);
+
+        if ($costChanged) {
+            $this->propagator->propagateFromIngredient($ingredient->id);
+        }
 
         $this->recorder->record(
             actor: $request->user(),

@@ -10,20 +10,27 @@ use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
 use App\Models\RecipeLaborLine;
 use App\Models\RecipePackagingLine;
+use App\Models\RecipeSubrecipeLine;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostCalculator;
+use App\Services\RecipeCostPropagator;
 use App\Services\UnitConverter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class RecipeController extends Controller
 {
-    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+    public function __construct(
+        private readonly AdminActivityRecorder $recorder,
+        private readonly RecipeCostPropagator $propagator,
+    ) {}
 
     public function index(): View
     {
@@ -64,6 +71,7 @@ class RecipeController extends Controller
             'ingredientLines.ingredient.supplier',
             'packagingLines.packaging',
             'laborLines.laborType',
+            'subrecipeLines.childRecipe',
         ]);
 
         $costs = (new RecipeCostCalculator(new UnitConverter))->calculate($recipe);
@@ -106,11 +114,32 @@ class RecipeController extends Controller
             'costPerUnit' => (float) $line->packaging->cost_per_unit,
         ]);
 
+        $subrecipeLinesData = $recipe->subrecipeLines->map(function ($line) use ($converter) {
+            $child = $line->childRecipe;
+            $childUnitCost = (float) ($child->unit_cost ?? 0);
+            $factor = $converter->convert(1.0, $line->unit, $child->yield_unit);
+            $costPerLineUnit = ($factor !== null) ? $factor * $childUnitCost : 0.0;
+
+            return [
+                'id' => $line->id,
+                'name' => $child->name,
+                'quantity' => (float) $line->quantity_used,
+                'unit' => $line->unit->value,
+                'unitLabel' => $line->unit->short(),
+                'unitCost' => $childUnitCost,
+                'costPerLineUnit' => $costPerLineUnit,
+                'childYieldUnit' => $child->yield_unit->short(),
+            ];
+        });
+
+        $semiElaborates = $this->availableSemiElaborates($recipe, $tenant);
+
         return view('recipes.show', [
             'recipe' => $recipe,
             'ingredientCost' => $costs['ingredient_cost'],
             'packagingCost' => $costs['packaging_cost'],
             'laborCost' => $costs['labor_cost'],
+            'subrecipeCost' => $costs['subrecipe_cost'],
             'totalCost' => $costs['total_cost'],
             'costPerUnit' => $costs['cost_per_unit'],
             'overheadPerHour' => $overheadPerHour,
@@ -120,6 +149,8 @@ class RecipeController extends Controller
             'ingredientLinesData' => $ingredientLinesData,
             'laborLinesData' => $laborLinesData,
             'packagingLinesData' => $packagingLinesData,
+            'subrecipeLinesData' => $subrecipeLinesData,
+            'semiElaborates' => $semiElaborates,
         ]);
     }
 
@@ -143,6 +174,23 @@ class RecipeController extends Controller
     public function toggleActive(Recipe $recipe): RedirectResponse
     {
         $this->authorizeRecipe($recipe);
+
+        if ($recipe->active && $recipe->is_semi_elaborate) {
+            $blockedBy = DB::table('recipe_subrecipe_lines')
+                ->join('recipes', 'recipes.id', '=', 'recipe_subrecipe_lines.recipe_id')
+                ->where('recipe_subrecipe_lines.child_recipe_id', $recipe->id)
+                ->where('recipes.active', true)
+                ->pluck('recipes.name')
+                ->toArray();
+
+            if (! empty($blockedBy)) {
+                return back()->withErrors([
+                    'toggle' => 'No podés desactivar esta sub-receta porque está siendo usada por: '
+                        .implode(', ', $blockedBy).'.',
+                ]);
+            }
+        }
+
         $recipe->update(['active' => ! $recipe->active]);
         $action = $recipe->active ? 'recipe.activated' : 'recipe.deactivated';
 
@@ -183,6 +231,7 @@ class RecipeController extends Controller
         }
 
         $recipe->ingredientLines()->create($data);
+        $this->propagator->propagateFrom($recipe);
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Ingrediente agregado.');
     }
@@ -192,6 +241,7 @@ class RecipeController extends Controller
         $this->authorizeRecipe($recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
         $line->delete();
+        $this->propagator->propagateFrom($recipe);
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Ingrediente eliminado.');
     }
@@ -209,6 +259,7 @@ class RecipeController extends Controller
         ]);
 
         $recipe->packagingLines()->create($data);
+        $this->propagator->propagateFrom($recipe);
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Envase agregado.');
     }
@@ -218,6 +269,7 @@ class RecipeController extends Controller
         $this->authorizeRecipe($recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
         $line->delete();
+        $this->propagator->propagateFrom($recipe);
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Envase eliminado.');
     }
@@ -235,6 +287,7 @@ class RecipeController extends Controller
         ]);
 
         $recipe->laborLines()->create($data);
+        $this->propagator->propagateFrom($recipe);
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Mano de obra agregada.');
     }
@@ -244,6 +297,7 @@ class RecipeController extends Controller
         $this->authorizeRecipe($recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
         $line->delete();
+        $this->propagator->propagateFrom($recipe);
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Mano de obra eliminada.');
     }
@@ -255,6 +309,7 @@ class RecipeController extends Controller
 
         $data = $request->validate(['quantity' => ['required', 'numeric', 'min:0.001']]);
         $line->update($data);
+        $this->propagator->propagateFrom($recipe);
 
         return response()->json(['ok' => true]);
     }
@@ -266,6 +321,7 @@ class RecipeController extends Controller
 
         $data = $request->validate(['quantity' => ['required', 'numeric', 'min:0.001']]);
         $line->update($data);
+        $this->propagator->propagateFrom($recipe);
 
         return response()->json(['ok' => true]);
     }
@@ -277,8 +333,80 @@ class RecipeController extends Controller
 
         $data = $request->validate(['hours' => ['required', 'numeric', 'min:0.01']]);
         $line->update($data);
+        $this->propagator->propagateFrom($recipe);
 
         return response()->json(['ok' => true]);
+    }
+
+    public function storeSubrecipeLine(Request $request, Recipe $recipe): RedirectResponse
+    {
+        $this->authorizeRecipe($recipe);
+        $tenant = app(Tenant::class);
+
+        $data = $request->validate([
+            'child_recipe_id' => [
+                'required', 'integer',
+                Rule::exists('recipes', 'id')
+                    ->where('tenant_id', $tenant->id)
+                    ->where('is_semi_elaborate', true)
+                    ->where('active', true),
+            ],
+            'quantity_used' => ['required', 'numeric', 'min:0.001'],
+            'unit' => ['required', Rule::enum(Unit::class)],
+        ]);
+
+        $child = Recipe::find($data['child_recipe_id']);
+        $converter = new UnitConverter;
+
+        if (! $converter->compatible(Unit::from($data['unit']), $child->yield_unit)) {
+            throw ValidationException::withMessages([
+                'unit' => 'La unidad debe ser compatible con la unidad de rendimiento de la sub-receta ('.$child->yield_unit->short().').',
+            ]);
+        }
+
+        if ($this->propagator->isAncestor((int) $data['child_recipe_id'], $recipe->id, $tenant->id)) {
+            throw ValidationException::withMessages([
+                'child_recipe_id' => 'Esta sub-receta crearía un ciclo en el árbol de recetas.',
+            ]);
+        }
+
+        $recipe->subrecipeLines()->create($data);
+        $this->propagator->propagateFrom($recipe);
+
+        return redirect()->route('recipes.show', $recipe)->with('status', 'Sub-receta agregada.');
+    }
+
+    public function updateSubrecipeLine(Request $request, Recipe $recipe, RecipeSubrecipeLine $line): JsonResponse
+    {
+        $this->authorizeRecipe($recipe);
+        abort_unless($line->recipe_id === $recipe->id, 403);
+
+        $data = $request->validate(['quantity_used' => ['required', 'numeric', 'min:0.001']]);
+        $line->update($data);
+        $this->propagator->propagateFrom($recipe);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function destroySubrecipeLine(Recipe $recipe, RecipeSubrecipeLine $line): RedirectResponse
+    {
+        $this->authorizeRecipe($recipe);
+        abort_unless($line->recipe_id === $recipe->id, 403);
+        $line->delete();
+        $this->propagator->propagateFrom($recipe);
+
+        return redirect()->route('recipes.show', $recipe)->with('status', 'Sub-receta eliminada.');
+    }
+
+    private function availableSemiElaborates(Recipe $recipe, Tenant $tenant): Collection
+    {
+        return $tenant->recipes()
+            ->where('is_semi_elaborate', true)
+            ->where('active', true)
+            ->where('id', '!=', $recipe->id)
+            ->get()
+            ->filter(fn ($candidate) => ! $this->propagator->isAncestor($candidate->id, $recipe->id, $tenant->id))
+            ->values();
     }
 
     private function authorizeRecipe(Recipe $recipe): void

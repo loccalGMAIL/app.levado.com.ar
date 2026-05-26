@@ -6,6 +6,7 @@
         $errorsInAddIngredient = $errors->hasAny(['ingredient_id', 'quantity', 'unit']) && old('_form') === 'add-ingredient';
         $errorsInAddPackaging  = $errors->hasAny(['packaging_id', 'quantity']) && old('_form') === 'add-packaging';
         $errorsInAddLabor      = $errors->hasAny(['labor_type_id', 'hours']) && old('_form') === 'add-labor';
+        $errorsInAddSubrecipe  = $errors->hasAny(['child_recipe_id', 'quantity_used', 'unit']) && old('_form') === 'add-subrecipe';
         $recipeCode = 'REC-' . str_pad($recipe->id, 3, '0', STR_PAD_LEFT);
     @endphp
 
@@ -14,6 +15,7 @@
             ingredientLines: @js($ingredientLinesData),
             laborLines:      @js($laborLinesData),
             packagingLines:  @js($packagingLinesData),
+            subrecipeLines:  @js($subrecipeLinesData),
             overheadPerHour: @js($overheadPerHour),
             yieldQty:        @js((float) $recipe->yield_quantity),
             sellingPrice:    @js((float) ($recipe->selling_price ?? 0)),
@@ -28,6 +30,9 @@
             get packagingCost() {
                 return this.packagingLines.reduce((s, l) => s + l.quantity * l.costPerUnit, 0);
             },
+            get subrecipeCost() {
+                return this.subrecipeLines.reduce((s, l) => s + l.quantity * l.costPerLineUnit, 0);
+            },
             get totalLaborHours() {
                 return this.laborLines.reduce((s, l) => s + l.hours, 0);
             },
@@ -35,7 +40,7 @@
                 return this.totalLaborHours * this.overheadPerHour;
             },
             get totalCost() {
-                return this.ingredientCost + this.laborCost + this.packagingCost + this.fixedCost;
+                return this.ingredientCost + this.laborCost + this.packagingCost + this.subrecipeCost + this.fixedCost;
             },
             get costPerUnit() {
                 return this.yieldQty > 0 ? this.totalCost / this.yieldQty : null;
@@ -74,6 +79,13 @@
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                     body: JSON.stringify({ hours: line.hours }),
+                });
+            },
+            async saveSubrecipeLine(line) {
+                await fetch('/recipes/{{ $recipe->id }}/subrecipe-lines/' + line.id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                    body: JSON.stringify({ quantity_used: line.quantity }),
                 });
             },
         }">
@@ -317,6 +329,75 @@
                     @endif
                 </div>
 
+                {{-- Sub-recetas --}}
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
+                        <h3 class="text-sm font-semibold text-corteza">Sub-recetas</h3>
+                        @can('manage-costs')
+                            <button type="button"
+                                @click="$dispatch('open-modal', 'recipe-add-subrecipe')"
+                                class="text-xs text-corteza hover:underline">
+                                + Agregar
+                            </button>
+                        @endcan
+                    </div>
+                    <template x-if="subrecipeLines.length === 0">
+                        <p class="px-4 py-4 text-sm text-masa-madre">Sin sub-recetas todavía.</p>
+                    </template>
+                    <template x-if="subrecipeLines.length > 0">
+                        <table class="w-full text-sm">
+                            <thead class="bg-miga text-masa-madre">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Sub-receta</th>
+                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
+                                    <th class="px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-wide w-20">Unidad</th>
+                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
+                                    @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-miga">
+                                <template x-for="line in subrecipeLines" :key="line.id">
+                                    <tr>
+                                        <td class="px-4 py-2.5">
+                                            <div class="font-medium text-corteza" x-text="line.name"></div>
+                                            <div class="text-[11px] text-masa-madre mt-0.5">
+                                                <span x-text="'$' + fmt(line.unitCost) + '/' + line.childYieldUnit"></span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-2.5 text-right">
+                                            <input type="number"
+                                                x-model.number="line.quantity"
+                                                @change="saveSubrecipeLine(line)"
+                                                min="0.001" step="any"
+                                                class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
+                                        </td>
+                                        <td class="px-4 py-2.5 text-center">
+                                            <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono" x-text="line.unitLabel"></span>
+                                        </td>
+                                        <td class="px-4 py-2.5 text-right font-mono text-corteza">
+                                            <span x-text="'$ ' + fmt(line.quantity * line.costPerLineUnit)"></span>
+                                        </td>
+                                        @can('manage-costs')
+                                            <td class="px-4 py-2.5 text-center">
+                                                <form method="POST"
+                                                    :action="'{{ route('recipes.subrecipe-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        @endcan
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </template>
+                </div>
+
             </div>{{-- /left --}}
 
             {{-- Right: sticky sidebar --}}
@@ -339,6 +420,12 @@
                             <div class="flex justify-between">
                                 <span class="text-masa-madre">Envases</span>
                                 <span class="font-mono text-corteza" x-text="'$ ' + fmt(packagingCost)"></span>
+                            </div>
+                        </template>
+                        <template x-if="subrecipeLines.length > 0">
+                            <div class="flex justify-between">
+                                <span class="text-masa-madre">Sub-recetas</span>
+                                <span class="font-mono text-corteza" x-text="'$ ' + fmt(subrecipeCost)"></span>
                             </div>
                         </template>
                         <template x-if="overheadPerHour > 0">
@@ -432,6 +519,7 @@
         @include('recipes.modals.add-ingredient')
         @include('recipes.modals.add-packaging')
         @include('recipes.modals.add-labor')
+        @include('recipes.modals.add-subrecipe')
     @endcan
 
 </x-app-layout>

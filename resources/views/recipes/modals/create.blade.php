@@ -57,6 +57,20 @@
             <x-input-error :messages="$errors->get('selling_price')" class="mt-2" />
         </div>
 
+        <div class="flex items-start gap-3 pt-1">
+            <input type="hidden" name="is_semi_elaborate" value="0">
+            <input id="create_recipe_semi" name="is_semi_elaborate" type="checkbox" value="1"
+                class="mt-0.5 rounded border-gray-300 text-corteza focus:ring-corteza"
+                {{ old('is_semi_elaborate', false) ? 'checked' : '' }}>
+            <div>
+                <x-input-label for="create_recipe_semi" value="Es una semi-elaboración" />
+                <p class="text-xs text-masa-madre mt-0.5">
+                    Marcá esto para poder usar esta receta como ingrediente dentro de otras recetas.
+                </p>
+            </div>
+        </div>
+        <x-input-error :messages="$errors->get('is_semi_elaborate')" class="mt-2" />
+
         <div class="flex gap-3 pt-2">
             <x-primary-button>Crear receta</x-primary-button>
             <button type="button"

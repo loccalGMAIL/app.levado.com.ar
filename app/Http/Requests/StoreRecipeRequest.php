@@ -21,6 +21,7 @@ class StoreRecipeRequest extends FormRequest
             'yield_quantity' => ['required', 'numeric', 'min:0.001'],
             'yield_unit' => ['required', new Enum(Unit::class)],
             'selling_price' => ['nullable', 'numeric', 'min:0'],
+            'is_semi_elaborate' => ['boolean'],
         ];
     }
 }

@@ -49,6 +49,9 @@
                                     <td class="px-4 py-3 font-medium text-corteza">
                                         <a href="{{ route('recipes.show', $recipe) }}" class="hover:underline">
                                             {{ $recipe->name }}
+                                            @if($recipe->is_semi_elaborate)
+                                                <span class="ml-1 text-[10px] font-medium bg-amber-100 text-amber-700 rounded px-1 py-0.5">semi</span>
+                                            @endif
                                         </a>
                                     </td>
                                     <td class="px-4 py-3 text-right text-corteza font-mono">

@@ -22,6 +22,8 @@ class Recipe extends Model
         'yield_unit',
         'selling_price',
         'active',
+        'is_semi_elaborate',
+        'unit_cost',
     ];
 
     protected $casts = [
@@ -29,6 +31,8 @@ class Recipe extends Model
         'yield_unit' => Unit::class,
         'selling_price' => 'decimal:2',
         'active' => 'boolean',
+        'is_semi_elaborate' => 'boolean',
+        'unit_cost' => 'decimal:4',
     ];
 
     public function tenant(): BelongsTo
@@ -49,5 +53,15 @@ class Recipe extends Model
     public function laborLines(): HasMany
     {
         return $this->hasMany(RecipeLaborLine::class);
+    }
+
+    public function subrecipeLines(): HasMany
+    {
+        return $this->hasMany(RecipeSubrecipeLine::class);
+    }
+
+    public function parentSubrecipeLines(): HasMany
+    {
+        return $this->hasMany(RecipeSubrecipeLine::class, 'child_recipe_id');
     }
 }

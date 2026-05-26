@@ -7,12 +7,16 @@ use App\Http\Requests\UpdateLaborTypeRequest;
 use App\Models\LaborType;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\RecipeCostPropagator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class LaborTypeController extends Controller
 {
-    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+    public function __construct(
+        private readonly AdminActivityRecorder $recorder,
+        private readonly RecipeCostPropagator $propagator,
+    ) {}
 
     public function index(): View
     {
@@ -45,7 +49,14 @@ class LaborTypeController extends Controller
     {
         $this->authorizeLaborType($laborType);
 
-        $laborType->update($request->validated());
+        $data = $request->validated();
+        $rateChanged = (float) $laborType->hourly_rate !== (float) ($data['hourly_rate'] ?? $laborType->hourly_rate);
+
+        $laborType->update($data);
+
+        if ($rateChanged) {
+            $this->propagator->propagateFromLaborType($laborType->id);
+        }
 
         $this->recorder->record(
             actor: $request->user(),
