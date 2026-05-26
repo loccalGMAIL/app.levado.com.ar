@@ -39,6 +39,8 @@ class TeamController extends Controller
 
     public function updateRole(Request $request, TenantUser $tenantUser): RedirectResponse
     {
+        abort_unless($tenantUser->tenant_id === app(Tenant::class)->id, 403);
+
         $validated = $request->validate([
             'role' => ['required', 'string', 'in:'.implode(',', array_column(TenantUserRole::cases(), 'value'))],
         ]);
@@ -59,6 +61,8 @@ class TeamController extends Controller
 
     public function deactivate(TenantUser $tenantUser): RedirectResponse
     {
+        abort_unless($tenantUser->tenant_id === app(Tenant::class)->id, 403);
+
         $tenantUser->update(['active' => false]);
 
         $this->recorder->record(
@@ -75,6 +79,8 @@ class TeamController extends Controller
 
     public function activate(TenantUser $tenantUser): RedirectResponse
     {
+        abort_unless($tenantUser->tenant_id === app(Tenant::class)->id, 403);
+
         $tenantUser->update(['active' => true]);
 
         $this->recorder->record(

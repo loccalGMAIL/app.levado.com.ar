@@ -12,13 +12,16 @@ class AuditLogController extends Controller
 {
     public function index(): View
     {
+        $from = request('from');
+        $to = request('to');
+
         $logs = AdminAuditLog::with('actor', 'tenant')
             ->when(request('actor_id'), fn ($q, $id) => $q->where('actor_user_id', $id))
             ->when(request('tenant_id'), fn ($q, $id) => $q->where('tenant_id', $id))
             ->when(request('target_type'), fn ($q, $type) => $q->where('target_type', $type))
             ->when(request('action'), fn ($q, $action) => $q->where('action', 'like', "%{$action}%"))
-            ->when(request('from'), fn ($q, $from) => $q->whereDate('created_at', '>=', $from))
-            ->when(request('to'), fn ($q, $to) => $q->whereDate('created_at', '<=', $to))
+            ->when($from && strtotime($from), fn ($q) => $q->whereDate('created_at', '>=', $from))
+            ->when($to && strtotime($to), fn ($q) => $q->whereDate('created_at', '<=', $to))
             ->latest()
             ->paginate(50)
             ->withQueryString();

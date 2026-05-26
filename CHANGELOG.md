@@ -5,6 +5,34 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.6.1] — 2026-05-26
+
+### Seguridad — Correcciones identificadas en code review
+
+#### Corregido
+
+**Críticos**
+- **Escalada de privilegios vía invitación de equipo:** la validación del campo `role` aceptaba `super_admin`, permitiendo que un owner o admin creara un super admin del sistema invitando a un usuario con ese rol. Ahora solo se permiten `owner`, `admin` y `viewer`.
+- **Doble hashing de contraseña al aceptar invitación:** se usaba `bcrypt()` explícito junto al cast `hashed` del modelo `User`, generando un doble hash que impedía el login a todo usuario nuevo registrado por invitación.
+
+**Altos**
+- **IDOR en cancelación de invitaciones:** `InvitationController::destroy` no verificaba que la invitación perteneciera al tenant actual, permitiendo que un admin de otro tenant la eliminara por ID. Corregido con `abort_unless` de pertenencia.
+- **Rutas de gestión de equipo siempre retornaban 404:** `TenantUser` tenía `$primaryKey = null` sin columna `id`, lo que rompía el route model binding silenciosamente. Se agrega columna `id` autoincremental mediante migración de recreación de tabla.
+- **Falta de verificación de tenant en `TeamController`:** los métodos `updateRole`, `deactivate` y `activate` aceptaban un `TenantUser` de cualquier tenant vía route binding sin verificar pertenencia. Corregido con `abort_unless` en los tres métodos.
+
+**Medios**
+- **Sin rate limiting en reset de contraseña:** las rutas `POST /forgot-password` y `POST /reset-password` carecían de throttle, exponiéndolas a flooding de emails. Se agrega `throttle:6,1` en ambas.
+- **`AcceptInvitationRequest` pedía name/password incondicionalmente:** los usuarios existentes que aceptaban una invitación recibían errores de validación porque el formulario no mostraba esos campos para ellos. La validación ahora es condicional según si el usuario ya tiene cuenta.
+
+**Bajos**
+- **Wildcard injection en búsquedas de backoffice:** los términos `%` y `_` en el campo de búsqueda de tenants y usuarios pasaban sin escapar a la cláusula `LIKE`, permitiendo queries más costosas. Los wildcards ahora se escapan antes del binding.
+- **Filtros de fecha sin validar en logs de auditoría:** los parámetros `from` y `to` se pasaban directamente a `whereDate()` sin verificar formato, pudiendo generar errores de base de datos con valores inválidos.
+
+#### Técnico
+- Suite completa: **216 tests**, todos verdes
+
+---
+
 ## [0.6.0] — 2026-05-26
 
 ### Semi-elaboraciones — Recetas como ingrediente de otras recetas

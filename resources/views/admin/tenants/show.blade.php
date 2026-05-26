@@ -70,7 +70,7 @@
 
             {{-- Tab: Configuración --}}
             <div x-show="tab === 'config'" class="bg-white shadow rounded-lg p-6">
-                <dl class="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                     <div>
                         <dt class="text-masa-madre font-medium">Nombre</dt>
                         <dd class="mt-1 text-corteza">{{ $tenant->name }}</dd>
@@ -99,7 +99,7 @@
             </div>
 
             {{-- Tab: Usuarios --}}
-            <div x-show="tab === 'users'" class="bg-white shadow rounded-lg overflow-hidden">
+            <div x-show="tab === 'users'" class="bg-white shadow rounded-lg overflow-x-auto">
                 <table class="w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>

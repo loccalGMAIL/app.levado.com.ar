@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\TenantUserRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rule;
 
 class InviteTeamMemberRequest extends FormRequest
 {
@@ -19,7 +19,11 @@ class InviteTeamMemberRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email', 'max:255'],
-            'role' => ['required', new Enum(TenantUserRole::class)],
+            'role' => ['required', Rule::enum(TenantUserRole::class)->only([
+                TenantUserRole::Owner->value,
+                TenantUserRole::Admin->value,
+                TenantUserRole::Viewer->value,
+            ])],
         ];
     }
 }

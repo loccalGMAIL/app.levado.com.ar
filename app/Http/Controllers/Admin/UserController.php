@@ -20,9 +20,12 @@ class UserController extends Controller
     public function index(): View
     {
         $users = User::with(['tenantUsers.tenant'])
-            ->when(request('search'), fn ($q, $search) => $q
-                ->where('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%"))
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where('name', 'like', "%{$escaped}%")
+                    ->orWhere('email', 'like', "%{$escaped}%");
+            })
             ->latest()
             ->paginate(30)
             ->withQueryString();

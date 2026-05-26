@@ -23,10 +23,6 @@ class TenantUser extends Model
         'created_at' => 'datetime',
     ];
 
-    protected $primaryKey = null;
-
-    public $incrementing = false;
-
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
