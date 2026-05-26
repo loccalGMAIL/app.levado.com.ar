@@ -5,6 +5,40 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.6.0] — 2026-05-26
+
+### Semi-elaboraciones — Recetas como ingrediente de otras recetas
+
+#### Agregado
+
+**Semi-elaboraciones**
+- Flag `is_semi_elaborate` en recetas: al marcarlo, la receta puede usarse como componente de costo dentro de otras recetas
+- Tabla `recipe_subrecipe_lines`: `recipe_id` (padre), `child_recipe_id` (semi-elaboración), `quantity_used`, `unit`, `cost_calculated`
+- Sección "Sub-recetas" en el editor de receta con la misma UX que ingredientes: selector, cantidad inline editable, costo calculado en tiempo real
+- Modal "Agregar sub-receta" con filtro de unidades compatible con el rendimiento de la semi (Alpine.js)
+- Badge "semi" visible en el listado de recetas
+- Checkbox "Es una semi-elaboración" en los modales de crear y editar receta
+
+**Motor de costos (4.º término)**
+- `RecipeCostCalculator` suma un cuarto término: `Σ convert(quantity_used → child.yield_unit) × child.unit_cost`
+- El padre lee el `unit_cost` ya persistido del hijo — sin recursión
+
+**Propagación de costos (síncrona)**
+- `recipes.unit_cost` (decimal 10,4): costo unitario cacheado, escrito automáticamente por el propagador
+- Nuevo servicio `RecipeCostPropagator`: al mutar cualquier línea de una receta, recalcula su `unit_cost` y luego BFS hacia arriba propagando a todas las recetas padres en orden topológico
+- Triggers en `IngredientController`, `PackagingController` y `LaborTypeController`: cambio de precio → propaga a todas las recetas que usan ese recurso y sus cadenas de padres
+
+**Validaciones e integridad**
+- Detección de ciclos: `isAncestor()` hace BFS hacia arriba antes de insertar una nueva sub-receta; bloquea con error de validación si generaría un ciclo (DAG garantizado)
+- Solo recetas con `is_semi_elaborate = true` y activas pueden usarse como sub-receta (validado server-side y filtrado en el dropdown)
+- Baja lógica bloqueada: no se puede desactivar una semi-elaboración que está siendo usada por recetas activas; el error lista los nombres de las recetas bloqueantes
+
+#### Técnico
+- 29 nuevos tests en 4 archivos: `RecipeSubrecipeLineTest`, `RecipeToggleActiveGuardTest`, `RecipeCostPropagatorTest`, `RecipeCostCalculatorSubrecipeTest`
+- Suite completa: **216 tests**, todos verdes
+
+---
+
 ## [0.5.1] — 2026-05-26
 
 ### Fix — Unidad incompatible al agregar ingrediente en receta
