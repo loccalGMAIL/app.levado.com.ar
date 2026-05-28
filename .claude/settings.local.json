@@ -14,5 +14,9 @@
       "Bash(git merge *)",
       "Bash(git stash *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "laravel-boost"
+  ],
+  "enableAllProjectMcpServers": true
 }
