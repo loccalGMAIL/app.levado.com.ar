@@ -412,7 +412,7 @@
             </div>{{-- /left --}}
 
             {{-- Right: sticky sidebar --}}
-            <div class="w-full lg:w-64 lg:shrink-0 lg:sticky lg:top-4 space-y-3">
+            <div class="w-full lg:w-64 lg:shrink-0 lg:sticky lg:top-20 space-y-3">
 
                 {{-- Resumen --}}
                 <div class="bg-white rounded-lg shadow p-4 space-y-2">
