@@ -10,7 +10,9 @@
       "Bash(composer require *)",
       "Bash(npm run *)",
       "Bash(ls \"d:\\\\DESARROLLO\\\\CoDiGo\\\\levado.com.ar\\\\site\\\\\")",
-      "Read(//d/DESARROLLO/CoDiGo/levado.com.ar/**)"
+      "Read(//d/DESARROLLO/CoDiGo/levado.com.ar/**)",
+      "Bash(git merge *)",
+      "Bash(git stash *)"
     ]
   }
 }
