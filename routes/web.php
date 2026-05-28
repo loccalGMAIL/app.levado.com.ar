@@ -76,6 +76,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('labor-types/{laborType}/toggle-active', [LaborTypeController::class, 'toggleActive'])->name('labor-types.toggle-active');
 
     Route::post('recipes', [RecipeController::class, 'store'])->name('recipes.store');
+    Route::post('recipes/{recipe}/copy', [RecipeController::class, 'copy'])->name('recipes.copy');
     Route::put('recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
     Route::patch('recipes/{recipe}/toggle-active', [RecipeController::class, 'toggleActive'])->name('recipes.toggle-active');
 

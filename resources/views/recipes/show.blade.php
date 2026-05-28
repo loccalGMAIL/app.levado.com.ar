@@ -96,8 +96,8 @@
             </div>
         @endif
 
-        {{-- Header --}}
-        <div class="flex items-start justify-between gap-4 mb-6">
+        {{-- Header sticky --}}
+        <div class="sticky top-0 z-20 -mx-6 lg:-mx-8 px-6 lg:px-8 py-3 mb-6 bg-harina border-b border-miga flex items-center justify-between gap-4 flex-wrap">
             <div>
                 <h1 class="text-xl font-semibold text-corteza leading-tight">{{ $recipe->name }}
                     @if(!$recipe->active)
@@ -109,18 +109,29 @@
                 </p>
             </div>
             @can('manage-costs')
-                <div class="flex items-center gap-2 shrink-0">
+                <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                    <button type="submit" form="form-precio-venta"
+                        class="px-3 py-1.5 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors">
+                        Guardar precio
+                    </button>
                     <form method="POST" action="{{ route('recipes.toggle-active', $recipe) }}">
                         @csrf
                         @method('PATCH')
                         <button type="submit"
-                            class="px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-harina transition-colors">
+                            class="px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors">
                             {{ $recipe->active ? 'Desactivar' : 'Activar' }}
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('recipes.copy', $recipe) }}">
+                        @csrf
+                        <button type="submit"
+                            class="px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors">
+                            Copiar
                         </button>
                     </form>
                     <button type="button"
                         @click="$dispatch('open-modal', 'recipe-edit-info')"
-                        class="px-3 py-1.5 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors">
+                        class="px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors">
                         Editar info
                     </button>
                 </div>
@@ -134,7 +145,7 @@
             <div class="flex-1 min-w-0 space-y-4">
 
                 {{-- Ingredientes --}}
-                <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="bg-white rounded-lg shadow overflow-x-auto">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Ingredientes</h3>
                         @can('manage-costs')
@@ -207,7 +218,7 @@
                 </div>
 
                 {{-- Mano de obra --}}
-                <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="bg-white rounded-lg shadow overflow-x-auto">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Mano de obra</h3>
                         @can('manage-costs')
@@ -271,7 +282,7 @@
                 </div>
 
                 {{-- Envases --}}
-                <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="bg-white rounded-lg shadow overflow-x-auto">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Envases</h3>
                         @can('manage-costs')
@@ -330,7 +341,7 @@
                 </div>
 
                 {{-- Sub-recetas --}}
-                <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="bg-white rounded-lg shadow overflow-x-auto">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Sub-recetas</h3>
                         @can('manage-costs')
@@ -447,7 +458,7 @@
                 <div class="bg-white rounded-lg shadow p-4 space-y-3">
                     <p class="text-xs font-semibold text-masa-madre uppercase tracking-wide">Precio de venta</p>
 
-                    <form method="POST" action="{{ route('recipes.update', $recipe) }}">
+                    <form id="form-precio-venta" method="POST" action="{{ route('recipes.update', $recipe) }}">
                         @csrf
                         @method('PUT')
                         <input type="hidden" name="name" value="{{ $recipe->name }}">
@@ -460,10 +471,6 @@
                                 step="0.01" min="0"
                                 placeholder="0,00"
                                 class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono text-right" />
-                            <button type="submit"
-                                class="px-2.5 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors shrink-0">
-                                Guardar
-                            </button>
                         </div>
                     </form>
 

@@ -21,9 +21,17 @@ class LaborTypeController extends Controller
     public function index(): View
     {
         $laborTypes = app(Tenant::class)->laborTypes()
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where('name', 'like', "%{$escaped}%");
+            })
+            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->orderByDesc('active')
             ->orderBy('name')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('labor-types.index', compact('laborTypes'));
     }

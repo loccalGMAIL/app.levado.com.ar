@@ -35,11 +35,73 @@ class RecipeController extends Controller
     public function index(): View
     {
         $recipes = app(Tenant::class)->recipes()
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where('name', 'like', "%{$escaped}%");
+            })
+            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->orderByDesc('active')
             ->orderBy('name')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('recipes.index', compact('recipes'));
+    }
+
+    public function copy(Recipe $recipe): RedirectResponse
+    {
+        $this->authorizeRecipe($recipe);
+
+        $recipe->load(['ingredientLines', 'laborLines', 'packagingLines', 'subrecipeLines']);
+
+        $newRecipe = $recipe->replicate(['unit_cost']);
+        $newRecipe->name = $recipe->name.' (copia)';
+        $newRecipe->active = false;
+        $newRecipe->unit_cost = null;
+        $newRecipe->save();
+
+        foreach ($recipe->ingredientLines as $line) {
+            $newRecipe->ingredientLines()->create([
+                'ingredient_id' => $line->ingredient_id,
+                'quantity' => $line->quantity,
+                'unit' => $line->unit,
+            ]);
+        }
+        foreach ($recipe->laborLines as $line) {
+            $newRecipe->laborLines()->create([
+                'labor_type_id' => $line->labor_type_id,
+                'hours' => $line->hours,
+            ]);
+        }
+        foreach ($recipe->packagingLines as $line) {
+            $newRecipe->packagingLines()->create([
+                'packaging_id' => $line->packaging_id,
+                'quantity' => $line->quantity,
+            ]);
+        }
+        foreach ($recipe->subrecipeLines as $line) {
+            $newRecipe->subrecipeLines()->create([
+                'child_recipe_id' => $line->child_recipe_id,
+                'quantity_used' => $line->quantity_used,
+                'unit' => $line->unit,
+            ]);
+        }
+
+        $this->propagator->propagateFrom($newRecipe);
+
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'recipe',
+            targetId: $newRecipe->id,
+            action: 'recipe.copied',
+            payload: ['name' => $newRecipe->name, 'source_id' => $recipe->id],
+            tenantId: $newRecipe->tenant_id,
+        );
+
+        return redirect()->route('recipes.show', $newRecipe)
+            ->with('status', 'Receta copiada. Revisá el nombre y activala cuando esté lista.');
     }
 
     public function store(StoreRecipeRequest $request): RedirectResponse

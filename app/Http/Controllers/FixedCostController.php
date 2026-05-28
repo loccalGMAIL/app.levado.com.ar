@@ -20,9 +20,17 @@ class FixedCostController extends Controller
         $tenant = app(Tenant::class);
         $fixedCosts = $tenant->fixedCosts()
             ->with('category')
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where('name', 'like', "%{$escaped}%");
+            })
+            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->orderByDesc('active')
             ->orderBy('name')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         $totalActive = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
         $categories = $tenant->fixedCostCategories()->orderBy('name')->get();

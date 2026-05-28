@@ -52,9 +52,33 @@
                 @endcan
             </div>
 
+            <form method="GET" class="flex gap-3 items-end flex-wrap">
+                <div class="flex-1 min-w-48">
+                    <input type="text" name="search" value="{{ request('search') }}"
+                        placeholder="Buscar por nombre..."
+                        class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                </div>
+                <select name="status"
+                    class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                    <option value="">Todos</option>
+                    <option value="active"   @selected(request('status') === 'active')>Activos</option>
+                    <option value="inactive" @selected(request('status') === 'inactive')>Inactivos</option>
+                </select>
+                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                    Filtrar
+                </button>
+                @if(request('search') || request('status'))
+                    <a href="{{ route('fixed-costs.index') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
+                @endif
+            </form>
+
             @if($fixedCosts->isEmpty())
                 <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
-                    Todavía no hay gastos fijos. Agregá el primero.
+                    @if(request('search') || request('status'))
+                        No se encontraron gastos con esos filtros.
+                    @else
+                        Todavía no hay gastos fijos. Agregá el primero.
+                    @endif
                 </div>
             @else
                 <div class="bg-white rounded-lg shadow overflow-x-auto">
@@ -73,7 +97,23 @@
                         <tbody class="divide-y divide-miga">
                             @foreach($fixedCosts as $fixedCost)
                                 <tr class="{{ $fixedCost->active ? '' : 'opacity-50' }}">
-                                    <td class="px-4 py-3 font-medium text-corteza">{{ $fixedCost->name }}</td>
+                                    <td class="px-4 py-3 font-medium text-corteza">
+                                        @can('manage-costs')
+                                            <button type="button"
+                                                @click="openEdit({{ Js::from([
+                                                    'id'                     => $fixedCost->id,
+                                                    'name'                   => $fixedCost->name,
+                                                    'fixed_cost_category_id' => $fixedCost->fixed_cost_category_id ?? '',
+                                                    'monthly_amount'         => $fixedCost->monthly_amount,
+                                                    'valid_from'             => date('Y-m-d'),
+                                                ]) }})"
+                                                class="hover:underline text-left">
+                                                {{ $fixedCost->name }}
+                                            </button>
+                                        @else
+                                            {{ $fixedCost->name }}
+                                        @endcan
+                                    </td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $fixedCost->category?->name ?? '—' }}</td>
                                     <td class="px-4 py-3 text-right text-corteza font-mono">
                                         $ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }}
@@ -123,9 +163,15 @@
                             </tr>
                         </tfoot>
                     </table>
+
+                    @if($fixedCosts->hasPages())
+                        <div class="px-4 py-3 border-t border-miga">
+                            {{ $fixedCosts->links() }}
+                        </div>
+                    @endif
                 </div>
 
-                <p class="text-xs text-masa-madre">{{ $fixedCosts->count() }} gasto(s) en total.</p>
+                <p class="text-xs text-masa-madre">{{ $fixedCosts->total() }} gasto(s) en total.</p>
             @endif
 
         </div>

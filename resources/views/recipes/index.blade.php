@@ -28,9 +28,33 @@
                 @endcan
             </div>
 
+            <form method="GET" class="flex gap-3 items-end flex-wrap">
+                <div class="flex-1 min-w-48">
+                    <input type="text" name="search" value="{{ request('search') }}"
+                        placeholder="Buscar por nombre..."
+                        class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                </div>
+                <select name="status"
+                    class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                    <option value="">Todos</option>
+                    <option value="active"   @selected(request('status') === 'active')>Activas</option>
+                    <option value="inactive" @selected(request('status') === 'inactive')>Inactivas</option>
+                </select>
+                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                    Filtrar
+                </button>
+                @if(request('search') || request('status'))
+                    <a href="{{ route('recipes.index') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
+                @endif
+            </form>
+
             @if($recipes->isEmpty())
                 <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
-                    Todavía no hay recetas. Creá la primera para empezar a calcular costos.
+                    @if(request('search') || request('status'))
+                        No se encontraron recetas con esos filtros.
+                    @else
+                        Todavía no hay recetas. Creá la primera para empezar a calcular costos.
+                    @endif
                 </div>
             @else
                 <div class="bg-white rounded-lg shadow overflow-x-auto">
@@ -71,6 +95,13 @@
                                                 Ver detalle
                                             </a>
                                             @can('manage-costs')
+                                                <form method="POST" action="{{ route('recipes.copy', $recipe) }}">
+                                                    @csrf
+                                                    <button type="submit"
+                                                        class="text-xs text-masa-madre hover:text-corteza hover:underline">
+                                                        Copiar
+                                                    </button>
+                                                </form>
                                                 <form method="POST" action="{{ route('recipes.toggle-active', $recipe) }}">
                                                     @csrf
                                                     @method('PATCH')
@@ -86,9 +117,15 @@
                             @endforeach
                         </tbody>
                     </table>
+
+                    @if($recipes->hasPages())
+                        <div class="px-4 py-3 border-t border-miga">
+                            {{ $recipes->links() }}
+                        </div>
+                    @endif
                 </div>
 
-                <p class="text-xs text-masa-madre">{{ $recipes->count() }} receta(s) en total.</p>
+                <p class="text-xs text-masa-madre">{{ $recipes->total() }} receta(s) en total.</p>
             @endif
 
         </div>

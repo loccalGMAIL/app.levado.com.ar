@@ -23,8 +23,16 @@ class IngredientController extends Controller
         $tenant = app(Tenant::class);
         $ingredients = $tenant->ingredients()
             ->with('supplier')
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where('name', 'like', "%{$escaped}%");
+            })
+            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->orderBy('name')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
         $suppliers = $tenant->suppliers()->where('active', true)->orderBy('name')->get();
 
         return view('ingredients.index', compact('ingredients', 'suppliers'));
