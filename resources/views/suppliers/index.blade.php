@@ -45,9 +45,33 @@
                 @endcan
             </div>
 
+            <form method="GET" class="flex gap-3 items-end flex-wrap">
+                <div class="flex-1 min-w-48">
+                    <input type="text" name="search" value="{{ request('search') }}"
+                        placeholder="Buscar por nombre..."
+                        class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                </div>
+                <select name="status"
+                    class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                    <option value="">Todos</option>
+                    <option value="active"   @selected(request('status') === 'active')>Activos</option>
+                    <option value="inactive" @selected(request('status') === 'inactive')>Inactivos</option>
+                </select>
+                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                    Filtrar
+                </button>
+                @if(request('search') || request('status'))
+                    <a href="{{ route('suppliers.index') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
+                @endif
+            </form>
+
             @if($suppliers->isEmpty())
                 <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
-                    Todavía no hay proveedores. Agregá el primero.
+                    @if(request('search') || request('status'))
+                        No se encontraron proveedores con esos filtros.
+                    @else
+                        Todavía no hay proveedores. Agregá el primero.
+                    @endif
                 </div>
             @else
                 <div class="space-y-3">
@@ -55,7 +79,21 @@
                         <div class="bg-white rounded-lg shadow px-5 py-4 flex items-start justify-between gap-4 {{ $supplier->active ? '' : 'opacity-50' }}">
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2">
-                                    <span class="font-medium text-corteza text-sm">{{ $supplier->name }}</span>
+                                    @can('manage-costs')
+                                        <button type="button"
+                                            @click="openEdit({{ Js::from([
+                                                'id'    => $supplier->id,
+                                                'name'  => $supplier->name,
+                                                'phone' => $supplier->phone ?? '',
+                                                'email' => $supplier->email ?? '',
+                                                'notes' => $supplier->notes ?? '',
+                                            ]) }})"
+                                            class="font-medium text-corteza text-sm hover:underline text-left">
+                                            {{ $supplier->name }}
+                                        </button>
+                                    @else
+                                        <span class="font-medium text-corteza text-sm">{{ $supplier->name }}</span>
+                                    @endcan
                                     @if(!$supplier->active)
                                         <span class="text-[11px] text-gray-400">inactivo</span>
                                     @endif
@@ -96,7 +134,13 @@
                     @endforeach
                 </div>
 
-                <p class="text-xs text-masa-madre">{{ $suppliers->count() }} proveedor(es) en total.</p>
+                @if($suppliers->hasPages())
+                    <div class="bg-white rounded-lg shadow px-4 py-3">
+                        {{ $suppliers->links() }}
+                    </div>
+                @endif
+
+                <p class="text-xs text-masa-madre">{{ $suppliers->total() }} proveedor(es) en total.</p>
             @endif
 
         </div>

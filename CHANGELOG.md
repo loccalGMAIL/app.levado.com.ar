@@ -5,6 +5,37 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.6.3] — 2026-05-28
+
+### UX — Tablas con búsqueda, paginación y edición mejorada
+
+#### Agregado
+
+- **Búsqueda y filtro de estado** en todas las secciones del módulo de costos: Recetas, Ingredientes, Mano de obra, Envases, Gastos fijos y Proveedores. Cada listado acepta `?search=` (nombre) y `?status=active|inactive`.
+- **Paginación de 20 ítems** con `withQueryString()` en los seis módulos; el pie muestra el total real con `->total()`.
+- **Botón "Copiar" en recetas:** clona la receta (nombre + `(copia)`, inactiva por defecto) con todos sus renglones (ingredientes, mano de obra, envases y sub-recetas) y recalcula el costo. Disponible en el listado y en el detalle.
+- **Header sticky en detalle de receta:** el bloque con nombre, Desactivar/Activar, Copiar, Editar info y Guardar precio queda fijo al hacer scroll.
+- **Botón "Guardar precio" en el header** de la receta, asociado al formulario del sidebar vía atributo HTML `form=`; no requiere JavaScript adicional.
+- **Nombre clickeable** en las tablas de Ingredientes, Envases, Mano de obra, Gastos fijos y Proveedores: abre el modal de edición directamente.
+
+#### Corregido
+
+- **Super admin sin permisos al impersonar:** `Gate::before()` ahora devuelve `true` para usuarios con `isSuperAdmin()`, permitiendo que el admin vea y use todos los controles de edición al operar como cualquier tenant.
+- **"Volver al admin" en banner de impersonación:** eliminado. El banner muestra únicamente "Salir de impersonación →".
+- **Scroll horizontal en detalle de receta:** las tarjetas de Ingredientes, Mano de obra, Envases y Sub-recetas cambian de `overflow-hidden` a `overflow-x-auto`; el header usa `flex-wrap` para no desbordarse en móvil.
+
+---
+
+## [0.6.2] — 2026-05-27
+
+### Fix — Impersonación y acceso al backoffice
+
+#### Corregido
+
+- **Impersonación desde el detalle de tenant:** el botón "Operar como este tenant" redirigía correctamente pero la ruta de stop-impersonate estaba mal ordenada respecto al middleware `super-admin`, resultando en 403 intermitente. Corregido con reordenamiento y botón de acceso rápido en el listado de tenants.
+
+---
+
 ## [0.6.1] — 2026-05-26
 
 ### Seguridad — Correcciones identificadas en code review

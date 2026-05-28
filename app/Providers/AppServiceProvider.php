@@ -37,6 +37,12 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
+        Gate::before(function (User $user) {
+            if ($user->isSuperAdmin()) {
+                return true;
+            }
+        });
+
         Gate::define('super-admin', function (User $user) {
             $tenant = $this->resolveTenant();
 

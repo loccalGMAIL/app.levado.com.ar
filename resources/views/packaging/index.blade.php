@@ -46,9 +46,33 @@
                 @endcan
             </div>
 
+            <form method="GET" class="flex gap-3 items-end flex-wrap">
+                <div class="flex-1 min-w-48">
+                    <input type="text" name="search" value="{{ request('search') }}"
+                        placeholder="Buscar por nombre..."
+                        class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                </div>
+                <select name="status"
+                    class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                    <option value="">Todos</option>
+                    <option value="active"   @selected(request('status') === 'active')>Activos</option>
+                    <option value="inactive" @selected(request('status') === 'inactive')>Inactivos</option>
+                </select>
+                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                    Filtrar
+                </button>
+                @if(request('search') || request('status'))
+                    <a href="{{ route('packaging.index') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
+                @endif
+            </form>
+
             @if($packagings->isEmpty())
                 <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
-                    Todavía no hay envases. Agregá el primero.
+                    @if(request('search') || request('status'))
+                        No se encontraron envases con esos filtros.
+                    @else
+                        Todavía no hay envases. Agregá el primero.
+                    @endif
                 </div>
             @else
                 <div class="bg-white rounded-lg shadow overflow-x-auto">
@@ -68,7 +92,23 @@
                         <tbody class="divide-y divide-miga">
                             @foreach($packagings as $packaging)
                                 <tr class="{{ $packaging->active ? '' : 'opacity-50' }}">
-                                    <td class="px-4 py-3 font-medium text-corteza">{{ $packaging->name }}</td>
+                                    <td class="px-4 py-3 font-medium text-corteza">
+                                        @can('manage-costs')
+                                            <button type="button"
+                                                @click="openEdit({{ Js::from([
+                                                    'id'            => $packaging->id,
+                                                    'name'          => $packaging->name,
+                                                    'brand'         => $packaging->brand ?? '',
+                                                    'supplier_id'   => $packaging->supplier_id ?? '',
+                                                    'cost_per_unit' => $packaging->cost_per_unit,
+                                                ]) }})"
+                                                class="hover:underline text-left">
+                                                {{ $packaging->name }}
+                                            </button>
+                                        @else
+                                            {{ $packaging->name }}
+                                        @endcan
+                                    </td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->brand ?? '—' }}</td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->supplier?->name ?? '—' }}</td>
                                     <td class="px-4 py-3 text-right text-corteza font-mono">
@@ -110,9 +150,15 @@
                             @endforeach
                         </tbody>
                     </table>
+
+                    @if($packagings->hasPages())
+                        <div class="px-4 py-3 border-t border-miga">
+                            {{ $packagings->links() }}
+                        </div>
+                    @endif
                 </div>
 
-                <p class="text-xs text-masa-madre">{{ $packagings->count() }} envase(s) en total.</p>
+                <p class="text-xs text-masa-madre">{{ $packagings->total() }} envase(s) en total.</p>
             @endif
 
         </div>

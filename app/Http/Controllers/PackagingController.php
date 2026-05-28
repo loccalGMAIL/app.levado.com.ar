@@ -23,8 +23,17 @@ class PackagingController extends Controller
         $tenant = app(Tenant::class);
         $packagings = $tenant->packagings()
             ->with('supplier')
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where('name', 'like', "%{$escaped}%");
+            })
+            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
+            ->orderByDesc('active')
             ->orderBy('name')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
         $suppliers = $tenant->suppliers()->where('active', true)->orderBy('name')->get();
 
         return view('packaging.index', compact('packagings', 'suppliers'));

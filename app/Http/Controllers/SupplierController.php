@@ -18,7 +18,18 @@ class SupplierController extends Controller
     public function index(): View
     {
         $tenant = app(Tenant::class);
-        $suppliers = $tenant->suppliers()->orderBy('name')->get();
+        $suppliers = $tenant->suppliers()
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where('name', 'like', "%{$escaped}%");
+            })
+            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
+            ->orderByDesc('active')
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
 
         return view('suppliers.index', compact('suppliers'));
     }
