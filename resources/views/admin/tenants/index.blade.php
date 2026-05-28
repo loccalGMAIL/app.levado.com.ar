@@ -84,8 +84,18 @@
                                     {{ $tenant->created_at->format('d/m/Y') }}
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <a href="{{ route('admin.tenants.show', $tenant) }}"
-                                        class="text-horno hover:underline text-xs">Ver →</a>
+                                    <div class="flex items-center justify-end gap-3">
+                                        @if($tenant->active)
+                                            <form method="POST" action="{{ route('admin.impersonate.start', $tenant) }}">
+                                                @csrf
+                                                <button type="submit" class="text-xs text-horno hover:underline">
+                                                    Operar →
+                                                </button>
+                                            </form>
+                                        @endif
+                                        <a href="{{ route('admin.tenants.show', $tenant) }}"
+                                            class="text-horno hover:underline text-xs">Ver →</a>
+                                    </div>
                                 </td>
                             </tr>
                         @empty

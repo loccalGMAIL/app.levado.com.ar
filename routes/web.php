@@ -128,8 +128,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'super-a
     Route::resource('tenants', AdminTenantController::class)->except(['destroy']);
     Route::patch('tenants/{tenant}/toggle-active', [AdminTenantController::class, 'toggleActive'])->name('tenants.toggle-active');
 
-    Route::post('impersonate/{tenant}', [ImpersonationController::class, 'start'])->name('impersonate.start');
     Route::post('impersonate/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
+    Route::post('impersonate/{tenant}', [ImpersonationController::class, 'start'])->name('impersonate.start');
 
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
     Route::post('users', [AdminUserController::class, 'store'])->name('users.store');
