@@ -50,11 +50,20 @@
                     <input type="date" name="to" value="{{ request('to') }}"
                         class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
+                <div>
+                    <label class="block text-xs text-masa-madre mb-1">Impersonando</label>
+                    <select name="was_impersonating"
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                        <option value="">Todos</option>
+                        <option value="1" @selected(request('was_impersonating') === '1')>Sí</option>
+                        <option value="0" @selected(request('was_impersonating') === '0')>No</option>
+                    </select>
+                </div>
                 <button type="submit"
                     class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
-                @if(request()->hasAny(['actor_id', 'tenant_id', 'target_type', 'action', 'from', 'to']))
+                @if(request()->hasAny(['actor_id', 'tenant_id', 'target_type', 'action', 'from', 'to', 'was_impersonating']))
                     <a href="{{ route('admin.audit-logs.index') }}" class="text-sm text-masa-madre hover:underline">
                         Limpiar
                     </a>
@@ -107,6 +116,8 @@
                                 <td class="px-4 py-3">
                                     @if($log->was_impersonating)
                                         <span class="text-xs text-horno font-medium">impersonando</span>
+                                    @else
+                                        <span class="text-masa-madre">—</span>
                                     @endif
                                 </td>
                             </tr>

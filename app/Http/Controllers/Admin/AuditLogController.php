@@ -22,6 +22,7 @@ class AuditLogController extends Controller
             ->when(request('action'), fn ($q, $action) => $q->where('action', 'like', "%{$action}%"))
             ->when($from && strtotime($from), fn ($q) => $q->whereDate('created_at', '>=', $from))
             ->when($to && strtotime($to), fn ($q) => $q->whereDate('created_at', '<=', $to))
+            ->when(request('was_impersonating') !== null && request('was_impersonating') !== '', fn ($q) => $q->where('was_impersonating', (bool) request('was_impersonating')))
             ->latest()
             ->paginate(50)
             ->withQueryString();
