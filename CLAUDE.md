@@ -1,3 +1,6 @@
+## Memory System
+Write all project memories to `.claude/memory/` (inside the project root) instead of the global `~/.claude/projects/` path. This keeps memories version-controlled and portable across devices and apps. Always update `MEMORY.md` index when adding or modifying memory files.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
