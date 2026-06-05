@@ -15,6 +15,11 @@ class CheckTenantRole
         $user = $request->user();
         $tenant = app(Tenant::class);
 
+        // Super admins impersonating a tenant bypass role restrictions
+        if ($user->isSuperAdmin() && $request->session()->has('impersonating_tenant_id')) {
+            return $next($request);
+        }
+
         $requiredRoles = array_map(
             fn (string $role) => TenantUserRole::from($role),
             $roles,

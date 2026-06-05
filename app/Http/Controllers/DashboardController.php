@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Tenant;
 use App\Services\RecipeCostCalculator;
 use App\Services\UnitConverter;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -14,16 +15,25 @@ class DashboardController extends Controller
         $tenant = app(Tenant::class);
         $calculator = new RecipeCostCalculator(new UnitConverter);
 
+        $sortable = ['name', 'selling_price', 'yield_quantity', 'cost_per_unit', 'margin', 'margin_pct'];
+        $sort = in_array(request('sort'), $sortable) ? request('sort') : 'name';
+        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+
         $recipes = $tenant->recipes()
             ->with([
                 'ingredientLines.ingredient',
                 'packagingLines.packaging',
                 'laborLines.laborType',
             ])
-            ->orderBy('name')
+            ->where('active', true)
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where('name', 'like', "%{$escaped}%");
+            })
             ->get();
 
-        $recipeRows = $recipes->map(function ($recipe) use ($calculator) {
+        $allRows = $recipes->map(function ($recipe) use ($calculator) {
             $costs = $calculator->calculate($recipe);
             $sellingPrice = $recipe->selling_price !== null ? (float) $recipe->selling_price : null;
             $costPerUnit = $costs['cost_per_unit'];
@@ -45,11 +55,55 @@ class DashboardController extends Controller
             ];
         });
 
+        $sortValue = function (array $row) use ($sort): mixed {
+            return match ($sort) {
+                'name' => $row['recipe']->name,
+                'yield_quantity' => (float) $row['recipe']->yield_quantity,
+                'selling_price' => $row['selling_price'],
+                'cost_per_unit' => $row['cost_per_unit'],
+                'margin' => $row['margin'],
+                'margin_pct' => $row['margin_pct'],
+                default => $row['recipe']->name,
+            };
+        };
+
+        $sortedRows = $allRows->sort(function (array $a, array $b) use ($sortValue, $dir): int {
+            $aVal = $sortValue($a);
+            $bVal = $sortValue($b);
+
+            if ($aVal === null && $bVal === null) {
+                return 0;
+            }
+            if ($aVal === null) {
+                return 1;
+            }
+            if ($bVal === null) {
+                return -1;
+            }
+
+            $cmp = $aVal <=> $bVal;
+
+            return $dir === 'desc' ? -$cmp : $cmp;
+        });
+
+        $perPage = 20;
+        $page = max(1, (int) request('page', 1));
+        $total = $sortedRows->count();
+        $items = $sortedRows->slice(($page - 1) * $perPage, $perPage)->values();
+
+        $recipeRows = new LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->except('page')],
+        );
+
         $totalFixedCosts = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
         $productiveHours = $tenant->productive_hours_month ?? 0;
         $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : null;
 
-        $activeRecipeCount = $recipes->where('active', true)->count();
+        $activeRecipeCount = $tenant->recipes()->where('active', true)->count();
         $packagingCount = $tenant->packagings()->where('active', true)->count();
 
         return view('dashboard', compact(

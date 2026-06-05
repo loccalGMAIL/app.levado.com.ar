@@ -34,6 +34,10 @@ class RecipeController extends Controller
 
     public function index(): View
     {
+        $sortable = ['name', 'yield_quantity', 'selling_price'];
+        $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
+        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+
         $recipes = app(Tenant::class)->recipes()
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
@@ -42,8 +46,7 @@ class RecipeController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->orderByDesc('active')
-            ->orderBy('name')
+            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
 
@@ -231,6 +234,44 @@ class RecipeController extends Controller
         );
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Receta actualizada.');
+    }
+
+    public function updateSellingPrice(Request $request, Recipe $recipe): JsonResponse
+    {
+        $this->authorizeRecipe($recipe);
+
+        $validated = $request->validate([
+            'selling_price' => ['nullable', 'numeric', 'min:0', 'max:9999999.99'],
+        ]);
+
+        $recipe->update(['selling_price' => $validated['selling_price']]);
+
+        $calculator = new RecipeCostCalculator(new UnitConverter);
+        $recipe->load(['ingredientLines.ingredient', 'packagingLines.packaging', 'laborLines.laborType']);
+        $costs = $calculator->calculate($recipe);
+
+        $sellingPrice = $recipe->selling_price !== null ? (float) $recipe->selling_price : null;
+        $costPerUnit = $costs['cost_per_unit'];
+
+        $margin = null;
+        $marginPct = null;
+        $marginColor = 'text-masa-madre';
+
+        if ($sellingPrice !== null && $costPerUnit !== null && $sellingPrice > 0) {
+            $margin = $sellingPrice - $costPerUnit;
+            $marginPct = ($margin / $sellingPrice) * 100;
+            $marginColor = $marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500');
+        }
+
+        return response()->json([
+            'selling_price' => $sellingPrice,
+            'selling_price_formatted' => $sellingPrice !== null ? number_format($sellingPrice, 2, ',', '.') : null,
+            'margin' => $margin,
+            'margin_formatted' => $margin !== null ? number_format($margin, 2, ',', '.') : null,
+            'margin_pct' => $marginPct,
+            'margin_pct_formatted' => $marginPct !== null ? number_format($marginPct, 1, ',', '.') : null,
+            'margin_color' => $marginColor,
+        ]);
     }
 
     public function toggleActive(Recipe $recipe): RedirectResponse
