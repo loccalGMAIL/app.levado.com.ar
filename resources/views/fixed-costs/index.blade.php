@@ -53,6 +53,8 @@
             </div>
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
+                <input type="hidden" name="sort" value="{{ request('sort') }}">
+                <input type="hidden" name="dir" value="{{ request('dir') }}">
                 <div class="flex-1 min-w-48">
                     <input type="text" name="search" value="{{ request('search') }}"
                         placeholder="Buscar por nombre..."
@@ -72,6 +74,18 @@
                 @endif
             </form>
 
+            @php
+                $sort = request('sort', 'name');
+                $dir  = request('dir', 'asc');
+                $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
+                    array_merge(request()->except(['sort', 'dir', 'page']), [
+                        'sort' => $col,
+                        'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
+                    ])
+                );
+                $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
+            @endphp
+
             @if($fixedCosts->isEmpty())
                 <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
                     @if(request('search') || request('status'))
@@ -85,9 +99,17 @@
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
-                                <th class="px-4 py-3 font-medium">Nombre</th>
+                                <th class="px-4 py-3 font-medium">
+                                    <a href="{{ $sortUrl('name') }}" class="hover:text-corteza inline-flex items-center gap-1">
+                                        Nombre <span class="text-xs">{{ $sortIcon('name') }}</span>
+                                    </a>
+                                </th>
                                 <th class="px-4 py-3 font-medium">Categoría</th>
-                                <th class="px-4 py-3 font-medium text-right">Monto mensual</th>
+                                <th class="px-4 py-3 font-medium text-right">
+                                    <a href="{{ $sortUrl('monthly_amount') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
+                                        Monto mensual <span class="text-xs">{{ $sortIcon('monthly_amount') }}</span>
+                                    </a>
+                                </th>
                                 <th class="px-4 py-3 font-medium">Estado</th>
                                 @can('manage-costs')
                                     <th class="px-4 py-3"></th>

@@ -21,6 +21,10 @@ class IngredientController extends Controller
     public function index(): View
     {
         $tenant = app(Tenant::class);
+        $sortable = ['name', 'cost_per_unit'];
+        $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
+        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+
         $ingredients = $tenant->ingredients()
             ->with('supplier')
             ->when(request('search'), function ($q, $search) {
@@ -30,7 +34,7 @@ class IngredientController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->orderBy('name')
+            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
         $suppliers = $tenant->suppliers()->where('active', true)->orderBy('name')->get();

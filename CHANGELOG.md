@@ -238,6 +238,26 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.6.4] — 2026-06-05
+
+### UX — Ordenamiento completo en tablas + edición inline de precio de venta
+
+#### Agregado
+
+- **Ordenamiento asc/desc en todas las datatables:** Ingredientes, Envases, Gastos fijos, Mano de obra, Recetas y Proveedores. Las columnas sortables se marcan con ↑/↓ y preservan el filtro/búsqueda activos.
+- **Búsqueda en el dashboard:** el listado de rentabilidad acepta `?search=` por nombre de receta, consistente con el resto de los módulos.
+- **Ordenamiento de columnas calculadas en el dashboard:** Costo/u, Margen y Margen % ahora son ordenables. Al ser valores calculados en PHP (no columnas SQL), el controlador carga todas las recetas activas, computa los costos, ordena la colección en memoria (nulls siempre al final) y pagina manualmente con `LengthAwarePaginator`.
+- **Precio de venta editable inline en el dashboard:** clic sobre el precio abre un input; Enter o blur guardan vía `PATCH /recipes/{id}/selling-price`. El margen y margen % de la fila se actualizan reactivamente sin recargar la página.
+- **Precio de venta editable inline en el listado de recetas:** misma UX que el dashboard; columna "Precio venta / u" visible y editable directamente desde el índice.
+- **Recetas inactivas ocultas del dashboard:** solo recetas con `active = true` aparecen en la tabla de rentabilidad; el índice de recetas las sigue mostrando al final.
+
+#### Corregido
+
+- **Super admin bloqueado al impersonar:** `CheckTenantRole` ahora cortocircuita el chequeo de rol cuando el usuario es super admin con sesión de impersonación activa, permitiendo acceder a rutas de owner (`/business`, etc.) sin necesitar entrada en `tenant_users`.
+- **Input de precio quedaba en blanco sin cambios:** eliminado `x-model` del input numérico (bug conocido de Alpine.js v3 con `type="number"`). Ahora se usa `x-ref` + lectura imperativa del DOM; `isDirty` evita enviar la petición si el usuario no modificó el valor.
+
+---
+
 ## [Unreleased]
 
 ---

@@ -47,31 +47,147 @@
                 </a>
             </div>
 
-            @if($recipeRows->isEmpty())
+            {{-- Buscador --}}
+            <form method="GET" class="flex gap-3 items-end flex-wrap mb-4">
+                <input type="hidden" name="sort" value="{{ request('sort') }}">
+                <input type="hidden" name="dir" value="{{ request('dir') }}">
+                <div class="flex-1 min-w-48">
+                    <input type="text" name="search" value="{{ request('search') }}"
+                        placeholder="Buscar por nombre..."
+                        class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                    Buscar
+                </button>
+                @if(request('search'))
+                    <a href="{{ route('dashboard') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
+                @endif
+            </form>
+
+            @php
+                $sort = request('sort', 'name');
+                $dir  = request('dir', 'asc');
+                $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
+                    array_merge(request()->except(['sort', 'dir', 'page']), [
+                        'sort' => $col,
+                        'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
+                    ])
+                );
+                $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
+            @endphp
+
+            @if($recipeRows->total() === 0)
                 <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
-                    Todavía no hay recetas.
-                    @can('manage-costs')
-                        <a href="{{ route('recipes.index') }}" class="text-corteza hover:underline">Crear la primera receta →</a>
-                    @endcan
+                    @if(request('search'))
+                        No se encontraron recetas con ese nombre.
+                    @else
+                        Todavía no hay recetas.
+                        @can('manage-costs')
+                            <a href="{{ route('recipes.index') }}" class="text-corteza hover:underline">Crear la primera receta →</a>
+                        @endcan
+                    @endif
                 </div>
             @else
                 <div class="bg-white rounded-lg shadow overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
-                                <th class="px-4 py-3 font-medium">Receta</th>
-                                <th class="px-4 py-3 font-medium text-right">Rinde</th>
+                                <th class="px-4 py-3 font-medium">
+                                    <a href="{{ $sortUrl('name') }}" class="hover:text-corteza inline-flex items-center gap-1">
+                                        Receta <span class="text-xs">{{ $sortIcon('name') }}</span>
+                                    </a>
+                                </th>
+                                <th class="px-4 py-3 font-medium text-right">
+                                    <a href="{{ $sortUrl('yield_quantity') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
+                                        Rinde <span class="text-xs">{{ $sortIcon('yield_quantity') }}</span>
+                                    </a>
+                                </th>
                                 <th class="px-4 py-3 font-medium text-right">Costo total</th>
-                                <th class="px-4 py-3 font-medium text-right">Costo / u</th>
-                                <th class="px-4 py-3 font-medium text-right">Precio venta / u</th>
-                                <th class="px-4 py-3 font-medium text-right">Margen</th>
-                                <th class="px-4 py-3 font-medium text-right">Margen %</th>
+                                <th class="px-4 py-3 font-medium text-right">
+                                    <a href="{{ $sortUrl('cost_per_unit') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
+                                        Costo / u <span class="text-xs">{{ $sortIcon('cost_per_unit') }}</span>
+                                    </a>
+                                </th>
+                                <th class="px-4 py-3 font-medium text-right">
+                                    <a href="{{ $sortUrl('selling_price') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
+                                        Precio venta / u <span class="text-xs">{{ $sortIcon('selling_price') }}</span>
+                                    </a>
+                                </th>
+                                <th class="px-4 py-3 font-medium text-right">
+                                    <a href="{{ $sortUrl('margin') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
+                                        Margen <span class="text-xs">{{ $sortIcon('margin') }}</span>
+                                    </a>
+                                </th>
+                                <th class="px-4 py-3 font-medium text-right">
+                                    <a href="{{ $sortUrl('margin_pct') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
+                                        Margen % <span class="text-xs">{{ $sortIcon('margin_pct') }}</span>
+                                    </a>
+                                </th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-miga">
                             @foreach($recipeRows as $row)
-                                @php $recipe = $row['recipe']; @endphp
-                                <tr class="{{ $recipe->active ? '' : 'opacity-40' }}">
+                                @php
+                                    $recipe = $row['recipe'];
+                                    $pct = $row['margin_pct'];
+                                    $initMarginColor = $pct !== null
+                                        ? ($pct >= 30 ? 'text-green-600' : ($pct >= 15 ? 'text-amber-600' : 'text-red-500'))
+                                        : 'text-masa-madre';
+                                    $initPriceInput     = $row['selling_price'] !== null ? number_format($row['selling_price'], 2, '.', '') : '';
+                                    $initPriceFormatted = $row['selling_price'] !== null ? number_format($row['selling_price'], 2, ',', '.') : '';
+                                    $initMarginFormatted    = $row['margin'] !== null ? number_format($row['margin'], 2, ',', '.') : '';
+                                    $initMarginPctFormatted = $pct !== null ? number_format($pct, 1, ',', '.') : '';
+                                @endphp
+                                <tr
+                                    x-data="{
+                                        editing: false,
+                                        saving: false,
+                                        isDirty: false,
+                                        price: {{ $row['selling_price'] ?? 'null' }},
+                                        priceFormatted: '{{ $initPriceFormatted }}',
+                                        margin: {{ $row['margin'] ?? 'null' }},
+                                        marginFormatted: '{{ $initMarginFormatted }}',
+                                        marginPct: {{ $row['margin_pct'] ?? 'null' }},
+                                        marginPctFormatted: '{{ $initMarginPctFormatted }}',
+                                        marginColor: '{{ $initMarginColor }}',
+                                        startEdit() {
+                                            this.isDirty = false;
+                                            this.$refs.priceInput.value = this.price !== null ? parseFloat(this.price).toFixed(2) : '';
+                                            this.editing = true;
+                                            this.$nextTick(() => this.$refs.priceInput.select());
+                                        },
+                                        async savePrice() {
+                                            if (this.saving) return;
+                                            if (!this.isDirty) { this.editing = false; return; }
+                                            const raw = this.$refs.priceInput.value.trim();
+                                            const payload = raw !== '' ? raw : null;
+                                            this.saving = true;
+                                            this.editing = false;
+                                            try {
+                                                const res = await fetch('{{ route('recipes.selling-price.update', $recipe) }}', {
+                                                    method: 'PATCH',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                                        'Accept': 'application/json',
+                                                    },
+                                                    body: JSON.stringify({ selling_price: payload })
+                                                });
+                                                const data = await res.json();
+                                                this.price = data.selling_price;
+                                                this.priceFormatted = data.selling_price_formatted ?? '';
+                                                this.margin = data.margin;
+                                                this.marginFormatted = data.margin_formatted ?? '';
+                                                this.marginPct = data.margin_pct;
+                                                this.marginPctFormatted = data.margin_pct_formatted ?? '';
+                                                this.marginColor = data.margin_color ?? 'text-masa-madre';
+                                            } finally {
+                                                this.saving = false;
+                                            }
+                                        }
+                                    }"
+                                    class="{{ $recipe->active ? '' : 'opacity-40' }}"
+                                >
                                     <td class="px-4 py-3 font-medium text-corteza">
                                         <a href="{{ route('recipes.show', $recipe) }}" class="hover:underline">
                                             {{ $recipe->name }}
@@ -91,44 +207,64 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono text-corteza">
-                                        @if($row['selling_price'] !== null)
-                                            $ {{ number_format($row['selling_price'], 2, ',', '.') }}
+                                        @can('manage-costs')
+                                            <div x-show="!editing && !saving"
+                                                @click="startEdit()"
+                                                class="cursor-pointer hover:text-horno select-none">
+                                                <span x-show="price !== null"
+                                                    x-text="'$ ' + priceFormatted"></span>
+                                                <span x-show="price === null"
+                                                    class="text-xs text-masa-madre hover:text-corteza">
+                                                    Agregar →
+                                                </span>
+                                            </div>
+                                            <input
+                                                x-show="editing"
+                                                x-ref="priceInput"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                @input="isDirty = true"
+                                                @keydown.enter.prevent="savePrice()"
+                                                @keydown.escape="editing = false; isDirty = false"
+                                                @blur="savePrice()"
+                                                class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                            <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
                                         @else
-                                            <a href="{{ route('recipes.show', $recipe) }}"
-                                                class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                                                Agregar →
-                                            </a>
-                                        @endif
+                                            @if($row['selling_price'] !== null)
+                                                $ {{ $initPriceFormatted }}
+                                            @else
+                                                <span class="text-masa-madre">—</span>
+                                            @endif
+                                        @endcan
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono">
-                                        @if($row['margin'] !== null)
-                                            <span class="{{ $row['margin'] >= 0 ? 'text-green-600' : 'text-red-500' }}">
-                                                $ {{ number_format($row['margin'], 2, ',', '.') }}
-                                            </span>
-                                        @else
-                                            <span class="text-masa-madre">—</span>
-                                        @endif
+                                        <span x-show="margin !== null"
+                                            :class="margin !== null && margin >= 0 ? 'text-green-600' : 'text-red-500'"
+                                            x-text="margin !== null ? '$ ' + marginFormatted : ''"></span>
+                                        <span x-show="margin === null" class="text-masa-madre">—</span>
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono">
-                                        @if($row['margin_pct'] !== null)
-                                            @php
-                                                $pct = $row['margin_pct'];
-                                                $color = $pct >= 30 ? 'text-green-600' : ($pct >= 15 ? 'text-amber-600' : 'text-red-500');
-                                            @endphp
-                                            <span class="{{ $color }} font-medium">
-                                                {{ number_format($pct, 1, ',', '.') }} %
-                                            </span>
-                                        @else
-                                            <span class="text-masa-madre">—</span>
-                                        @endif
+                                        <span x-show="marginPct !== null"
+                                            :class="marginColor"
+                                            class="font-medium"
+                                            x-text="marginPct !== null ? marginPctFormatted + ' %' : ''"></span>
+                                        <span x-show="marginPct === null" class="text-masa-madre">—</span>
                                     </td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+
+                    @if($recipeRows->hasPages())
+                        <div class="px-4 py-3 border-t border-miga">
+                            {{ $recipeRows->links() }}
+                        </div>
+                    @endif
                 </div>
+
                 <p class="mt-2 text-xs text-masa-madre">
-                    Verde ≥ 30 % · Amarillo 15–29 % · Rojo &lt; 15 %. Para editar el precio de venta, entrá a la receta.
+                    Verde ≥ 30 % · Amarillo 15–29 % · Rojo &lt; 15 %. Hacé clic en el precio de venta para editarlo.
                 </p>
             @endif
         </div>

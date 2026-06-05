@@ -65,6 +65,26 @@
                 @endif
             </form>
 
+            @if(!$suppliers->isEmpty())
+                @php
+                    $sort = request('sort', 'name');
+                    $dir  = request('dir', 'asc');
+                    $nextDir = ($sort === 'name' && $dir === 'asc') ? 'desc' : 'asc';
+                    $sortNameUrl = request()->url() . '?' . http_build_query(
+                        array_merge(request()->except(['sort', 'dir', 'page']), ['sort' => 'name', 'dir' => $nextDir])
+                    );
+                @endphp
+                <div class="flex items-center gap-2 text-xs text-masa-madre">
+                    <span>Ordenar por:</span>
+                    <a href="{{ $sortNameUrl }}" class="hover:text-corteza hover:underline">
+                        Nombre
+                        @if($sort === 'name')
+                            <span>{{ $dir === 'asc' ? '↑' : '↓' }}</span>
+                        @endif
+                    </a>
+                </div>
+            @endif
+
             @if($suppliers->isEmpty())
                 <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
                     @if(request('search') || request('status'))
