@@ -6,7 +6,7 @@
     }
 @endphp
 
-<nav x-data="{ open: false }" class="bg-white border-b border-miga">
+<nav class="bg-white border-b border-miga">
     <div class="flex h-16">
 
         {{-- Bloque de marca — mismo ancho que el sidebar, fondo oscuro para continuidad visual --}}
@@ -118,90 +118,5 @@
             </x-dropdown>
         </div>
 
-        {{-- Hamburger (móvil) --}}
-        <div class="flex-1 flex items-center justify-end px-4 sm:hidden">
-            <button @click="open = ! open"
-                class="inline-flex items-center justify-center p-2 rounded-md text-masa-madre hover:bg-miga focus:outline-none transition duration-150">
-                <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                    <path :class="{'hidden': open, 'inline-flex': ! open}" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    <path :class="{'hidden': ! open, 'inline-flex': open}" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
-
-    </div>
-
-    {{-- Menú responsive (móvil) --}}
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden border-t border-miga">
-        <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                Inicio
-            </x-responsive-nav-link>
-
-            <x-responsive-nav-link :href="route('recipes.index')" :active="request()->routeIs('recipes.*')">
-                Recetas
-            </x-responsive-nav-link>
-
-            <x-responsive-nav-link :href="route('ingredients.index')" :active="request()->routeIs('ingredients.*')">
-                Costos — Ingredientes
-            </x-responsive-nav-link>
-
-            <x-responsive-nav-link :href="route('suppliers.index')" :active="request()->routeIs('suppliers.*')">
-                Costos — Proveedores
-            </x-responsive-nav-link>
-
-            <x-responsive-nav-link :href="route('packaging.index')" :active="request()->routeIs('packaging.*')">
-                Costos — Envases
-            </x-responsive-nav-link>
-
-            <x-responsive-nav-link :href="route('fixed-costs.index')" :active="request()->routeIs('fixed-costs.*')">
-                Costos — Gastos Fijos
-            </x-responsive-nav-link>
-
-            <x-responsive-nav-link :href="route('labor-types.index')" :active="request()->routeIs('labor-types.*')">
-                Costos — Mano de Obra
-            </x-responsive-nav-link>
-
-            @can('edit-settings')
-                <x-responsive-nav-link :href="route('business.edit')" :active="request()->routeIs('business.*')">
-                    Negocio — General
-                </x-responsive-nav-link>
-            @endcan
-
-            @can('manage-team')
-                <x-responsive-nav-link :href="route('team.index')" :active="request()->routeIs('team.*')">
-                    Negocio — Mi equipo
-                </x-responsive-nav-link>
-            @endcan
-
-            @auth
-            @if(Auth::user()->isSuperAdmin())
-                <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
-                    Backoffice
-                </x-responsive-nav-link>
-            @endif
-            @endauth
-        </div>
-
-        <div class="pt-4 pb-1 border-t border-miga">
-            <div class="px-4">
-                <div class="font-medium text-base text-corteza">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-masa-madre">{{ Auth::user()->email }}</div>
-            </div>
-
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
-                    Mi perfil
-                </x-responsive-nav-link>
-
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <x-responsive-nav-link :href="route('logout')"
-                        onclick="event.preventDefault(); this.closest('form').submit();">
-                        Cerrar sesión
-                    </x-responsive-nav-link>
-                </form>
-            </div>
-        </div>
     </div>
 </nav>

@@ -5,6 +5,25 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.6.5] — 2026-06-08
+
+### Mobile — Barra de navegación inferior + fixes responsive
+
+#### Agregado
+
+- **Bottom navigation bar en mobile:** barra fija en el fondo de pantalla con los accesos directos a Inicio, Recetas, Ingredientes y Gastos Fijos. Reemplaza el menú hamburguesa del top nav en pantallas < 640px, dando una experiencia de app nativa.
+- **Drawer "Más":** panel deslizable desde abajo que agrupa el resto de la navegación (Envases, Mano de Obra, Proveedores, Negocio, Mi equipo, Sucursales) con overlay oscuro y cierre al tocar afuera. Respeta los permisos `@can` del sidebar.
+
+#### Corregido
+
+- **Tablas en Mi equipo sin scroll horizontal:** ambas tablas (invitaciones pendientes y miembros) envueltas con `overflow-x-auto` para no romper el layout en mobile.
+- **Formulario de invitación:** cambia de `flex-row` a `flex-col` en mobile para que los campos no queden comprimidos.
+- **Modal sin ancho completo en mobile:** el componente `modal.blade.php` ahora aplica `w-full` en mobile (antes solo lo hacía en `sm:`).
+- **Bloque capacidad productiva en Mi negocio:** colapsa a columna vertical en mobile (`flex-col sm:flex-row`).
+- **Botones del header de receta:** texto adaptativo con `whitespace-nowrap` para que no se deformen. En mobile muestran etiquetas cortas ("precio", "Desact.", "Editar") y el nombre de la receta se trunca con `truncate` cediendo espacio a los botones.
+
+---
+
 ## [0.6.3] — 2026-05-28
 
 ### UX — Tablas con búsqueda, paginación y edición mejorada

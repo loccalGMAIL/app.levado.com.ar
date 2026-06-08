@@ -40,7 +40,7 @@
 
             <x-sidebar />
 
-            <div class="flex-1 min-w-0 flex flex-col">
+            <div class="flex-1 min-w-0 flex flex-col pb-16 sm:pb-0">
 
                 @isset($header)
                     <header class="bg-white border-b border-miga">
@@ -56,6 +56,8 @@
 
             </div>
         </div>
+
+        <x-mobile-bottom-nav />
 
     </body>
 </html>

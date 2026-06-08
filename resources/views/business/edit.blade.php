@@ -178,7 +178,7 @@
 
                 {{-- Capacidad productiva --}}
                 <div class="bg-white rounded-lg shadow p-6" id="field-horas-productivas">
-                    <div class="flex items-start justify-between gap-8">
+                    <div class="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-8">
                         <div class="flex-1 space-y-1">
                             <h2 class="text-base font-semibold text-corteza">Capacidad productiva</h2>
                             <p class="text-sm text-masa-madre">

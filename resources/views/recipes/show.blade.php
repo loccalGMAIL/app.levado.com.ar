@@ -97,42 +97,43 @@
         @endif
 
         {{-- Header sticky --}}
-        <div class="sticky top-0 z-20 -mx-6 lg:-mx-8 px-6 lg:px-8 py-3 mb-6 bg-harina border-b border-miga flex items-center justify-between gap-4 flex-wrap">
-            <div>
-                <h1 class="text-xl font-semibold text-corteza leading-tight">{{ $recipe->name }}
+        <div class="sticky top-0 z-20 -mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-6 bg-harina border-b border-miga flex items-center justify-between gap-2 sm:gap-4">
+            <div class="min-w-0 flex-1">
+                <h1 class="text-lg sm:text-xl font-semibold text-corteza leading-tight truncate">{{ $recipe->name }}
                     @if(!$recipe->active)
                         <span class="text-sm font-normal text-gray-400 ml-1">(inactiva)</span>
                     @endif
                 </h1>
-                <p class="text-xs text-masa-madre mt-0.5">
+                <p class="text-xs text-masa-madre mt-0.5 hidden sm:block">
                     {{ $recipeCode }} · Última edición: {{ $recipe->updated_at->diffForHumans() }}
                 </p>
             </div>
             @can('manage-costs')
-                <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                <div class="flex items-center gap-1 sm:gap-2 shrink-0">
                     <button type="submit" form="form-precio-venta"
-                        class="px-3 py-1.5 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors">
-                        Guardar precio
+                        class="px-2 sm:px-3 py-1.5 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors whitespace-nowrap">
+                        <span class="hidden sm:inline">Guardar </span>precio
                     </button>
                     <form method="POST" action="{{ route('recipes.toggle-active', $recipe) }}">
                         @csrf
                         @method('PATCH')
                         <button type="submit"
-                            class="px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors">
-                            {{ $recipe->active ? 'Desactivar' : 'Activar' }}
+                            class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
+                            <span class="sm:hidden">{{ $recipe->active ? 'Desact.' : 'Activar' }}</span>
+                            <span class="hidden sm:inline">{{ $recipe->active ? 'Desactivar' : 'Activar' }}</span>
                         </button>
                     </form>
                     <form method="POST" action="{{ route('recipes.copy', $recipe) }}">
                         @csrf
                         <button type="submit"
-                            class="px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors">
+                            class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
                             Copiar
                         </button>
                     </form>
                     <button type="button"
                         @click="$dispatch('open-modal', 'recipe-edit-info')"
-                        class="px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors">
-                        Editar info
+                        class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
+                        Editar<span class="hidden sm:inline"> info</span>
                     </button>
                 </div>
             @endcan

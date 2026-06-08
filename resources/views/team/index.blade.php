@@ -14,7 +14,7 @@
             <div class="bg-white shadow rounded-lg p-6">
                 <h2 class="text-base font-semibold text-corteza mb-4">Invitar persona</h2>
 
-                <form method="POST" action="{{ route('team.invitations.store') }}" class="flex gap-3 items-end flex-wrap">
+                <form method="POST" action="{{ route('team.invitations.store') }}" class="flex flex-col sm:flex-row gap-3 sm:items-end">
                     @csrf
                     <div class="flex-1 min-w-48">
                         <x-input-label for="email" value="Email" />
@@ -44,6 +44,7 @@
             @if($pendingInvitations->isNotEmpty())
                 <div class="bg-white shadow rounded-lg p-6">
                     <h2 class="text-base font-semibold text-corteza mb-4">Invitaciones pendientes</h2>
+                    <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-masa-madre border-b border-miga">
                             <tr>
@@ -74,12 +75,14 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
             @endif
 
             {{-- Miembros del equipo --}}
             <div class="bg-white shadow rounded-lg p-6">
                 <h2 class="text-base font-semibold text-corteza mb-4">Miembros</h2>
+                <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left">
                     <thead class="text-masa-madre border-b border-miga">
                         <tr>
@@ -152,6 +155,7 @@
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             </div>
 
         </div>
