@@ -33,6 +33,15 @@
         <div class="px-4 py-3">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Costos</p>
 
+            <a href="{{ route('fixed-costs.index') }}" @click="open = false"
+                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
+                    {{ request()->routeIs('fixed-costs.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                Gastos Fijos
+            </a>
+
             <a href="{{ route('packaging.index') }}" @click="open = false"
                 class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
                     {{ request()->routeIs('packaging.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
@@ -173,20 +182,20 @@
             <span class="text-[10px] font-semibold leading-none">Ingredientes</span>
         </a>
 
-        {{-- Gastos Fijos --}}
-        <a href="{{ route('fixed-costs.index') }}"
+        {{-- Compras --}}
+        <a href="{{ route('purchases.index') }}"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs('fixed-costs.*') ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs('purchases.*') ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <span class="text-[10px] font-semibold leading-none">Gastos</span>
+            <span class="text-[10px] font-semibold leading-none">Compras</span>
         </a>
 
         {{-- Más --}}
         <button @click="open = !open"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs(['packaging.*', 'labor-types.*', 'suppliers.*', 'business.*', 'team.*', 'locations.*', 'profile.*', 'admin.*']) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs(['fixed-costs.*', 'packaging.*', 'labor-types.*', 'suppliers.*', 'business.*', 'team.*', 'locations.*', 'profile.*', 'admin.*']) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
