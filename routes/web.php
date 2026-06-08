@@ -16,6 +16,7 @@ use App\Http\Controllers\LaborTypeController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
@@ -51,6 +52,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
+
+    Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+    Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
 });
 
 // Costos — escritura (owner y admin)
@@ -96,6 +100,12 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('recipes/{recipe}/subrecipe-lines', [RecipeController::class, 'storeSubrecipeLine'])->name('recipes.subrecipe-lines.store');
     Route::patch('recipes/{recipe}/subrecipe-lines/{line}', [RecipeController::class, 'updateSubrecipeLine'])->name('recipes.subrecipe-lines.update');
     Route::delete('recipes/{recipe}/subrecipe-lines/{line}', [RecipeController::class, 'destroySubrecipeLine'])->name('recipes.subrecipe-lines.destroy');
+
+    Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+    Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
+    Route::post('purchases/{purchase}/lines', [PurchaseController::class, 'storeLine'])->name('purchases.lines.store');
+    Route::patch('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'updateLine'])->name('purchases.lines.update');
+    Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->name('purchases.lines.destroy');
 
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
     Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');

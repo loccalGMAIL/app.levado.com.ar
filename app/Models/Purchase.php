@@ -1,0 +1,42 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Purchase extends Model
+{
+    protected $fillable = [
+        'tenant_id',
+        'supplier_id',
+        'invoice_number',
+        'invoice_date',
+        'notes',
+    ];
+
+    protected $casts = [
+        'invoice_date' => 'date',
+    ];
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function lines(): HasMany
+    {
+        return $this->hasMany(PurchaseLine::class);
+    }
+
+    public function totalAmount(): float
+    {
+        return (float) $this->lines()->sum('subtotal');
+    }
+}
