@@ -281,6 +281,41 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.7.0] — 2026-06-08
+
+### Módulo de Compras — Registro de facturas de proveedores
+
+#### Agregado
+
+**Módulo de compras**
+- Tabla `purchases`: cabecera de factura (tenant, proveedor, N° de factura opcional, fecha, notas)
+- Tabla `purchase_lines`: líneas de compra con tipo (ingrediente / envase), insumo, cantidad, unidad de compra, precio unitario y subtotal calculado
+- `PurchaseController`: index con filtros (proveedor, rango de fechas), show con líneas, store, destroy (solo si sin líneas), storeLine, updateLine, destroyLine
+- 3 Form Requests con validación (`StorePurchaseRequest`, `StorePurchaseLineRequest`, `UpdatePurchaseLineRequest`)
+- Modelo `Purchase` con relaciones a Tenant, Supplier y PurchaseLine; helper `totalAmount()`
+- Modelo `PurchaseLine` con helpers `isIngredient()` / `isPackaging()` y relaciones a Ingredient y Packaging
+
+**Actualización automática de costos al cargar una factura**
+- Al agregar o editar una línea de compra, el costo del ingrediente/envase se actualiza inmediatamente
+- Conversión automática de unidades: si comprás 1 kg a $500/kg y el ingrediente se mide en gr, el sistema calcula y persiste $0.50/gr usando `UnitConverter`
+- Se crea automáticamente una entrada en `ingredient_price_logs` / `packaging_price_logs`
+- `RecipeCostPropagator` dispara recálculo en cascada de todas las recetas que usan el insumo actualizado
+- Acción registrada en `AdminAuditLog`
+
+**Vistas**
+- `purchases/index.blade.php`: listado paginado con filtros por proveedor y rango de fechas
+- `purchases/show.blade.php`: detalle con header de compra, tabla de ítems, formulario inline para agregar ítems (con selects dinámicos ingrediente/envase vía Alpine.js), modal de edición de línea
+- Creación rápida de proveedor inline desde el modal de nueva compra (patrón quick-create existente)
+- Botón "← Volver a compras" visible solo en mobile en la vista de detalle
+
+**Navegación**
+- "Compras" agregado al sidebar desktop (sección Costos, debajo de Mano de Obra)
+- Barra inferior mobile: "Gastos" reemplazado por "Compras" (ícono carrito)
+- "Gastos Fijos" movido al drawer "Más"
+- Breadcrumbs actualizados para `purchases.*` y `purchases.show`
+
+---
+
 ## [0.3.0] — 2026-05-18
 
 ### Backoffice B.1 + Frontend + Módulo de Costos (Etapa 2, parcial)
