@@ -98,9 +98,19 @@ metadata:
 ## Etapas futuras (post-MVP)
 3 — Productos y Stock | 4 — POS Desktop (Tauri+SQLite) | 5 — ARCA | 6 — Backoffice SaaS | 7 — Apertura SaaS pública
 
+## Módulo de Compras — v0.7.x (rama `feature/compras`)
+- 3.1 Compras Fase 1 — Escaneo y digitalización: ✅ completo (v0.7.1)
+  - `purchases` + `purchase_lines` con `iva_rate`
+  - InvoiceExtractor (Claude Haiku 4.5 vision), PurchaseLineRecorder
+  - Vistas: index, show, scan/create, scan/review
+  - Modal quick-create proveedor en review; iconos de acción; IVA por renglón persistido
+- 3.2 Compras Fase 2 — Match e imputación de costos: 🔲 pendiente de UI
+  - Métodos `matchLine` y `applyLineSuggestions` ya implementados en controller
+  - Falta definir y construir la pantalla de match
+
 ## Versioning
-- Rama activa: `v0.6.3`
-- Versión actual: `0.6.3` — búsqueda, paginación, edición inline y UX de recetas
+- Rama activa: `feature/compras`
+- Versión actual: `0.7.1`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.
