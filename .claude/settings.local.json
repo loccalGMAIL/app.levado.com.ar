@@ -12,11 +12,13 @@
       "Bash(ls \"d:\\\\DESARROLLO\\\\CoDiGo\\\\levado.com.ar\\\\site\\\\\")",
       "Read(//d/DESARROLLO/CoDiGo/levado.com.ar/**)",
       "Bash(git merge *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(findstr \"selling-price\")",
+      "Bash(git branch *)"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "laravel-boost"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

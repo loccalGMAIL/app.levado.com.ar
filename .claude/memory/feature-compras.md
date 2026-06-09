@@ -52,13 +52,38 @@ Rama: `feature/compras` — versión 0.7.1
 3. Vista de revisión: cabecera editable (proveedor, N° factura, fecha), tabla de renglones con checkbox de inclusión, cantidad, unidad, precio unit., **alícuota IVA** (select: 21%/10,5%/0%), IVA $ y Subtotal c/IVA calculados en Alpine
 4. `purchases.scan.store` → `PurchaseScanController@store` → guarda compra + renglones con `storePending()` (incluyendo `iva_rate`)
 
-### Fase 2 — Match e imputación (🔲 pendiente de UI)
+### Fase 3 — UX: Selects con buscador y límite de decimales (✅ completa — v0.7.3)
 
-Los métodos ya existen en `PurchaseController`:
-- `matchLine()`: asocia un renglón con un insumo/envase y aplica el costo
-- `applyLineSuggestions()`: aplica todas las sugerencias pendientes de la IA de una vez
+**Tom Select** integrado en todos los selects del módulo:
+- `purchases/modals/create.blade.php`: supplier select con `data-searchable`; el handler `supplier-created` usa `el._ts.addOption()` + `setValue()`.
+- `purchases/scan/review.blade.php`: supplier select migrado de Alpine `x-for` a `@foreach` server-side; Tom Select inicializado con `x-init`/`$nextTick` y `supplierTs` guardado en Alpine data; handler `supplier-created` usa la instancia.
+- `purchases/match.blade.php`: select de insumo/descartable por renglón, Tom Select via `x-init`/`$nextTick`, coexiste con `x-model` + `@change` (Tom Select dispara `change` en el native select).
 
-Falta: definir dónde vive la pantalla de match (separada del detalle de compra).
+**Límite de 4 decimales:**
+- `data-maxdecimals="4"` en inputs de cantidad y precio en show, edit-line, scan/review y match.
+- `step="0.0001"` corregido en todos los inputs de precio (era `step="0.01"` en algunos lugares).
+- Listener global en `app.js`: evento `input` trunca el valor si supera los 4 decimales.
+
+**CSS:** `app.css` importa `tom-select/dist/css/tom-select.default.css` con overrides para colores `corteza`, `horno`, `miga`.
+
+### Fase 2 — Match e imputación (✅ completa — v0.7.2)
+
+**Ruta:** `GET purchases/{purchase}/match` → `PurchaseController@match` → `purchases/match.blade.php`
+
+**Flujo:**
+1. Índice de compras: botón cadena (ámbar = pendientes, verde = todos aplicados)
+2. Vista match: tabla con descripción, precio/u, select de insumo y costo unitario editable
+3. Alpine.js calcula el costo reactivamente al cambiar el select:
+   - Unidades compatibles (kg↔gr, L↔ml): auto-convierte, sin campo divisor
+   - Unidades incompatibles (u → kg): campo divisor editable, pre-llenado del parser
+4. Parser de descripción (`parseDesc()`): regex detecta "X N unidad" en el `raw_name` para sugerir el divisor (marcado ✦ en ámbar)
+5. Submit envía `match` + `unit_cost` al controller
+6. Controller usa `applyWithCost()` si hay `unit_cost`, sino `apply()` (conversión automática)
+
+**Servicios:**
+- `PurchaseLineRecorder::applyWithCost(line, unitCost)`: aplica costo explícito sin conversión de unidades
+
+**Aplicación masiva:** botón "Aplicar N sugerencias de la IA" llama `applyLineSuggestions()` — solo aplica líneas con `purchaseable_id` set y unidades compatibles; las incompatibles quedan pendientes.
 
 ## Vistas
 

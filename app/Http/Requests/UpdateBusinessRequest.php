@@ -27,6 +27,7 @@ class UpdateBusinessRequest extends FormRequest
             'productive_hours_month' => ['required', 'integer', 'min:1', 'max:744'],
             'logo' => ['nullable', 'image', 'max:2048'],
             'invitation_message' => ['nullable', 'string', 'max:1000'],
+            'purchase_price_includes_iva' => ['required', 'in:0,1'],
         ];
     }
 }

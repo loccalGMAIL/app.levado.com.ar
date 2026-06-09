@@ -33,6 +33,7 @@ class PurchaseController extends Controller
         $purchases = $tenant->purchases()
             ->with('supplier')
             ->withCount('lines')
+            ->withCount(['lines as applied_count' => fn ($q) => $q->whereNotNull('cost_applied_at')])
             ->withSum('lines as net_total', 'subtotal')
             ->when(request('supplier_id'), fn ($q, $id) => $q->where('supplier_id', $id))
             ->when(request('from'), fn ($q, $date) => $q->where('invoice_date', '>=', $date))
@@ -184,15 +185,44 @@ class PurchaseController extends Controller
         return back()->with('status', 'Ítem eliminado.');
     }
 
+    public function match(Purchase $purchase): View
+    {
+        $this->authorizePurchase($purchase);
+        $tenant = app(Tenant::class);
+
+        $purchase->load(['supplier', 'lines']);
+
+        $ingredients = $tenant->ingredients()->where('active', true)->orderBy('name')->get();
+        $packagings = $tenant->packagings()->where('active', true)->orderBy('name')->get();
+
+        // Catalog keyed by id for fast Alpine.js lookup.
+        $ingredientCatalog = $ingredients->keyBy('id')->map(fn ($i) => [
+            'unit' => $i->unit->value,
+            'name' => $i->name,
+        ])->toArray();
+
+        return view('purchases.match', compact('purchase', 'ingredients', 'packagings', 'ingredientCatalog'));
+    }
+
     /**
      * Phase 2: associate a captured line with a catalog item and impute its cost.
+     * Accepts an optional unit_cost override (used when units are incompatible and
+     * the user provides the cost-per-catalog-unit directly from the match view).
      */
     public function matchLine(Request $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
         $this->authorizePurchase($purchase);
         abort_unless($line->purchase_id === $purchase->id, 403);
 
-        $match = $request->validate(['match' => ['nullable', 'string']])['match'] ?? null;
+        $validated = $request->validate([
+            'match' => ['nullable', 'string'],
+            'unit_cost' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $match = $validated['match'] ?? null;
+        $unitCost = isset($validated['unit_cost']) && $validated['unit_cost'] !== ''
+            ? (float) $validated['unit_cost']
+            : null;
 
         // "— sin asociar —": mark the line as pending again (does not revert costs).
         if (blank($match)) {
@@ -211,9 +241,13 @@ class PurchaseController extends Controller
         abort_unless($belongs, 422);
 
         try {
-            DB::transaction(function () use ($line, $type, $id) {
+            DB::transaction(function () use ($line, $type, $id, $unitCost) {
                 $line->update(['purchaseable_type' => $type, 'purchaseable_id' => (int) $id]);
-                $this->lineRecorder->apply($line);
+                if ($unitCost !== null) {
+                    $this->lineRecorder->applyWithCost($line, $unitCost);
+                } else {
+                    $this->lineRecorder->apply($line);
+                }
             });
         } catch (HttpException $e) {
             return back()->with('error', $e->getMessage());

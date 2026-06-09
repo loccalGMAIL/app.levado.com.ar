@@ -300,6 +300,49 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.7.3] — 2026-06-09
+
+### Compras — Selects con buscador y límite de decimales en inputs
+
+#### Agregado
+
+- **Tom Select en selects de compras:** todos los selects del módulo de compras cuentan ahora con campo de búsqueda integrado para agilizar la carga:
+  - Selector de proveedor en el modal "Nueva compra" y en la pantalla de revisión de factura escaneada.
+  - Selector de insumo/descartable en la vista de vinculación (`/purchases/{id}/match`), donde la lista puede tener cientos de opciones.
+- **Límite de 4 decimales en inputs de precio y cantidad:** todos los inputs numéricos de los formularios de compra (alta de renglón, edición de renglón, revisión de factura escaneada y campo de costo unitario en la vista match) limitan la entrada a un máximo de 4 lugares decimales en tiempo real. `step` también actualizado a `0.0001` para mantener consistencia.
+
+#### Cambiado
+
+- **Vista revisión de factura (`scan/review`):** el select de proveedor migró de renderizado dinámico con Alpine `x-for` a opciones server-side (`@foreach`), lo que permite inicializar Tom Select correctamente. La integración con el evento `supplier-created` (alta rápida de proveedor) se mantiene vía la API de Tom Select (`addOption` + `setValue`).
+- **`resources/css/app.css`:** importa el CSS de Tom Select con overrides de estilos para que los dropdowns de búsqueda sean coherentes con el diseño Tailwind (colores `corteza`, `horno`, `miga`).
+- **`resources/js/app.js`:** importa y expone `TomSelect` como `window.TomSelect`; inicializa automáticamente los selects con `data-searchable`; registra listener global para limitar decimales en inputs con `data-maxdecimals="4"`.
+
+---
+
+## [0.7.2] — 2026-06-09
+
+### Compras — Vinculación de renglones con catálogo (Fase 2)
+
+#### Agregado
+
+- **Vista dedicada `/purchases/{id}/match`:** pantalla exclusiva para vincular los renglones de una factura con insumos o descartables del catálogo. Separada del detalle de compra para mantener cada vista enfocada en una sola tarea.
+- **Botón de vinculación en el índice de compras:** ícono de cadena (link) por fila, visible solo cuando la compra tiene renglones. Ámbar cuando hay renglones pendientes de vincular; verde cuando todos están aplicados. El `title` muestra cuántos renglones quedan pendientes.
+- **Cálculo reactivo del costo unitario (Alpine.js):** al seleccionar un insumo en la vista de match, se calcula y muestra el costo por unidad del catálogo antes de aplicar.
+  - Unidades compatibles (kg↔gr, L↔ml, etc.): conversión automática, sin campo adicional.
+  - Unidades incompatibles (u → kg/gr/L): aparece campo divisor editable ("÷ N unidad/u").
+  - El campo costo por unidad es siempre editable antes de confirmar.
+- **Parser de descripción para cantidad de paquete:** al seleccionar un insumo con unidades incompatibles, el sistema analiza la descripción del renglón buscando patrones como "X 25 Kg", "x5lts", "× 200 ml". Si detecta una cantidad compatible con el insumo, pre-llena el divisor automáticamente con marca ✦ (ámbar) para que el usuario lo verifique antes de aplicar.
+- **`PurchaseLineRecorder::applyWithCost()`:** nuevo método que aplica un costo unitario explícito (provisto por el usuario) sin pasar por la conversión de unidades. Permite imputar compras donde la unidad de la factura (unidad/bolsa) es incompatible con la unidad del insumo (kg/gr).
+- **`applied_count` en el índice de compras:** el query de listado ahora incluye el conteo de renglones ya aplicados vía `withCount`, usado para determinar el color del botón de vinculación sin queries adicionales.
+
+#### Cambiado
+
+- **`PurchaseController::matchLine()`:** acepta campo opcional `unit_cost` (decimal). Si está presente, usa `applyWithCost()` en lugar de `apply()`, permitiendo aplicar costos calculados por el usuario para unidades incompatibles.
+- **Vista de match:** columna "Cantidad (factura)" eliminada. El foco es la descripción del producto, el precio unitario de la factura y el insumo sugerido con su costo editable.
+- **Select de insumos en vista de match:** muestra la unidad del catálogo entre paréntesis (ej: "Harina 000 (kg)") para que el usuario pueda identificar rápidamente la unidad de medida antes de vincular.
+
+---
+
 ## [0.7.0] — 2026-06-08
 
 ### Módulo de Compras — Registro de facturas de proveedores

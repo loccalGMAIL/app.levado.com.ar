@@ -22,8 +22,12 @@ class BusinessController extends Controller
             : null;
 
         $invitationMessage = $tenant->getSetting('invitation_message', '');
+        $purchasePriceIncludesIva = filter_var(
+            $tenant->getSetting('purchase_price_includes_iva', '1'),
+            FILTER_VALIDATE_BOOLEAN,
+        );
 
-        return view('business.edit', compact('tenant', 'totalFixedCosts', 'overheadPerHour', 'invitationMessage'));
+        return view('business.edit', compact('tenant', 'totalFixedCosts', 'overheadPerHour', 'invitationMessage', 'purchasePriceIncludesIva'));
     }
 
     public function update(UpdateBusinessRequest $request): RedirectResponse
@@ -43,6 +47,7 @@ class BusinessController extends Controller
         $tenant->update($data);
 
         $tenant->setSetting('invitation_message', $request->validated('invitation_message') ?? '');
+        $tenant->setSetting('purchase_price_includes_iva', $request->boolean('purchase_price_includes_iva') ? '1' : '0');
 
         $this->recorder->record(
             actor: $request->user(),

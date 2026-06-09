@@ -176,6 +176,39 @@
                     </div>
                 </div>
 
+                {{-- Precios de compra e IVA --}}
+                <div class="bg-white rounded-lg shadow p-6 space-y-5">
+                    <div>
+                        <h2 class="text-base font-semibold text-corteza mb-1">Precios de compra</h2>
+                        <p class="text-sm text-masa-madre">
+                            Indicá si los precios de tus facturas de compra incluyen IVA. Se usa al leer facturas con IA para registrar los costos correctamente.
+                        </p>
+                    </div>
+
+                    @php($ivaIncluido = old('purchase_price_includes_iva', $purchasePriceIncludesIva ? '1' : '0'))
+                    <fieldset class="space-y-3">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="radio" name="purchase_price_includes_iva" value="1"
+                                   class="mt-0.5 text-horno border-gray-300 focus:ring-horno"
+                                   @checked($ivaIncluido === '1')>
+                            <span class="text-sm">
+                                <span class="font-medium text-corteza">Con IVA incluido</span>
+                                <span class="block text-masa-madre">Los precios de la factura ya incluyen el IVA.</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="radio" name="purchase_price_includes_iva" value="0"
+                                   class="mt-0.5 text-horno border-gray-300 focus:ring-horno"
+                                   @checked($ivaIncluido === '0')>
+                            <span class="text-sm">
+                                <span class="font-medium text-corteza">Neto sin IVA</span>
+                                <span class="block text-masa-madre">Los precios de la factura no incluyen el IVA.</span>
+                            </span>
+                        </label>
+                    </fieldset>
+                    <x-input-error :messages="$errors->get('purchase_price_includes_iva')" class="mt-2" />
+                </div>
+
                 {{-- Capacidad productiva --}}
                 <div class="bg-white rounded-lg shadow p-6" id="field-horas-productivas">
                     <div class="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-8">

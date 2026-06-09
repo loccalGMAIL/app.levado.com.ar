@@ -61,6 +61,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         ->middleware('role:super_admin,owner,admin')
         ->name('purchases.scan.create');
     Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
+    Route::get('purchases/{purchase}/match', [PurchaseController::class, 'match'])->name('purchases.match');
     Route::get('purchases/{purchase}/invoice', [PurchaseController::class, 'invoiceImage'])->name('purchases.invoice');
 });
 

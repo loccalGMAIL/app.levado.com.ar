@@ -116,6 +116,28 @@ class PurchaseLineRecorder
         }
     }
 
+    /**
+     * Apply an explicit unit cost without going through unit conversion.
+     * Used when the user provides the cost per ingredient/packaging unit directly
+     * (e.g., for purchases made in 'unidad' where the catalog stores per kg).
+     */
+    public function applyWithCost(PurchaseLine $line, float $unitCost): void
+    {
+        abort_unless($line->isMatched(), 422, 'La línea no tiene un ítem asociado.');
+
+        if ($line->isIngredient()) {
+            $item = Ingredient::find($line->purchaseable_id);
+            abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Ingrediente no válido.');
+            $this->applyIngredientCost($item, $unitCost);
+        } else {
+            $item = Packaging::find($line->purchaseable_id);
+            abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
+            $this->applyPackagingCost($item, $unitCost);
+        }
+
+        $line->update(['cost_applied_at' => now()]);
+    }
+
     private function applyIngredientCost(Ingredient $item, float $costPerUnit): void
     {
         $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);

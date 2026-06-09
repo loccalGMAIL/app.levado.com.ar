@@ -41,22 +41,25 @@
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div class="sm:col-span-2"
-                                x-data="{
-                                    suppliers: {{ Js::from($suppliers->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values()) }},
-                                    selectedSupplierId: '{{ old('supplier_id', $matchedSupplierId ?? '') }}',
-                                }"
+                                x-data="{ supplierTs: null }"
                                 @supplier-created.window="
-                                    suppliers.push({ id: $event.detail.id, name: $event.detail.name });
-                                    selectedSupplierId = String($event.detail.id);
+                                    if (supplierTs) {
+                                        supplierTs.addOption({ value: String($event.detail.id), text: $event.detail.name });
+                                        supplierTs.setValue(String($event.detail.id));
+                                    }
                                 ">
                                 <x-input-label value="Proveedor" />
                                 <select name="supplier_id" required
-                                    x-model="selectedSupplierId"
+                                    x-init="$nextTick(() => {
+                                        supplierTs = new TomSelect($el, { maxOptions: null });
+                                        const initialId = '{{ old('supplier_id', $matchedSupplierId ?? '') }}';
+                                        if (initialId) supplierTs.setValue(initialId);
+                                    })"
                                     class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
                                     <option value="">— Seleccioná un proveedor —</option>
-                                    <template x-for="s in suppliers" :key="s.id">
-                                        <option :value="String(s.id)" x-text="s.name"></option>
-                                    </template>
+                                    @foreach($suppliers as $s)
+                                        <option value="{{ $s->id }}">{{ $s->name }}</option>
+                                    @endforeach
                                 </select>
                                 <x-input-error :messages="$errors->get('supplier_id')" class="mt-1" />
                                 @if(! $matchedSupplierId && $header['supplier_name'])
@@ -184,6 +187,7 @@
                                                 <input type="number" name="lines[{{ $i }}][quantity_purchased]"
                                                     x-model.number="qty"
                                                     step="0.0001" min="0.0001"
+                                                    data-maxdecimals="4"
                                                     value="{{ old("lines.$i.quantity_purchased", $line['quantity'] !== null ? rtrim(rtrim(number_format($line['quantity'], 4, '.', ''), '0'), '.') : '') }}"
                                                     class="block w-24 border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm text-right">
                                             </td>
@@ -205,7 +209,8 @@
                                                     <span class="absolute inset-y-0 left-2 flex items-center text-masa-madre text-xs">$</span>
                                                     <input type="number" name="lines[{{ $i }}][unit_price]"
                                                         x-model.number="price"
-                                                        step="0.01" min="0"
+                                                        step="0.0001" min="0"
+                                                        data-maxdecimals="4"
                                                         value="{{ old("lines.$i.unit_price", $line['unit_price']) }}"
                                                         class="block w-28 pl-5 border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm text-right">
                                                 </div>

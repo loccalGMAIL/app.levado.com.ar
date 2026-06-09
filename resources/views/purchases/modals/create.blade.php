@@ -2,7 +2,10 @@
     <form method="POST" action="{{ route('purchases.store') }}" class="space-y-4"
           x-on:supplier-created.window="
               const sel = document.getElementById('create_purchase_supplier');
-              sel.add(new Option($event.detail.name, $event.detail.id, true, true));
+              if (sel && sel._ts) {
+                  sel._ts.addOption({ value: String($event.detail.id), text: $event.detail.name });
+                  sel._ts.setValue(String($event.detail.id));
+              }
           ">
         @csrf
         <input type="hidden" name="_form" value="create">
@@ -17,6 +20,7 @@
                 </button>
             </div>
             <select id="create_purchase_supplier" name="supplier_id" required
+                data-searchable
                 class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
                 <option value="">— Seleccioná un proveedor —</option>
                 @foreach($suppliers as $supplier)

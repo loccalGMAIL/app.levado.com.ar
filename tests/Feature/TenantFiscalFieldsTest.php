@@ -32,6 +32,7 @@ test('owner puede guardar campos fiscales en el negocio', function () {
             'razon_social' => 'Panadería El Trigo SRL',
             'cuit' => '30-71234567-9',
             'condicion_iva' => CondicionIva::RI->value,
+            'purchase_price_includes_iva' => '1',
         ])
         ->assertRedirect();
 
@@ -51,6 +52,7 @@ test('campos fiscales son opcionales', function () {
             'country' => $tenant->country,
             'currency' => $tenant->currency,
             'productive_hours_month' => $tenant->productive_hours_month,
+            'purchase_price_includes_iva' => '1',
         ])
         ->assertRedirect();
 

@@ -132,6 +132,18 @@
                                                 </svg>
                                             </a>
                                             @can('manage-costs')
+                                                @if($purchase->lines_count > 0)
+                                                    @php
+                                                        $allApplied = $purchase->applied_count >= $purchase->lines_count;
+                                                    @endphp
+                                                    <a href="{{ route('purchases.match', $purchase) }}"
+                                                        class="inline-flex p-1 transition-colors {{ $allApplied ? 'text-green-500 hover:text-green-700' : 'text-amber-500 hover:text-amber-700' }}"
+                                                        title="{{ $allApplied ? 'Todos los renglones vinculados' : ($purchase->lines_count - $purchase->applied_count) . ' renglón(es) sin vincular' }}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                                        </svg>
+                                                    </a>
+                                                @endif
                                                 <form method="POST" action="{{ route('purchases.destroy', $purchase) }}"
                                                     onsubmit="return confirm('¿Eliminar esta compra y todos sus renglones?')">
                                                     @csrf

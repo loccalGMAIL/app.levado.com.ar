@@ -27,6 +27,7 @@
                 <x-input-label value="Cantidad comprada" />
                 <x-text-input name="quantity_purchased" type="number"
                     step="0.0001" min="0.0001"
+                    data-maxdecimals="4"
                     class="mt-1 block w-full"
                     x-bind:value="editingLine?.quantity_purchased"
                     @input="qty = parseFloat($event.target.value) || 0"
@@ -53,7 +54,8 @@
             <div class="relative mt-1">
                 <span class="absolute inset-y-0 left-3 flex items-center text-masa-madre text-sm">$</span>
                 <x-text-input name="unit_price" type="number"
-                    step="0.01" min="0"
+                    step="0.0001" min="0"
+                    data-maxdecimals="4"
                     class="block w-full pl-7"
                     x-bind:value="editingLine?.unit_price"
                     @input="price = parseFloat($event.target.value) || 0"
