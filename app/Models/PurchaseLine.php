@@ -10,19 +10,24 @@ class PurchaseLine extends Model
 {
     protected $fillable = [
         'purchase_id',
+        'raw_name',
         'purchaseable_type',
         'purchaseable_id',
         'quantity_purchased',
         'purchase_unit',
         'unit_price',
+        'iva_rate',
         'subtotal',
+        'cost_applied_at',
     ];
 
     protected $casts = [
         'quantity_purchased' => 'decimal:4',
         'unit_price' => 'decimal:4',
+        'iva_rate' => 'decimal:4',
         'subtotal' => 'decimal:4',
         'purchase_unit' => Unit::class,
+        'cost_applied_at' => 'datetime',
     ];
 
     public function purchase(): BelongsTo
@@ -48,5 +53,15 @@ class PurchaseLine extends Model
     public function isPackaging(): bool
     {
         return $this->purchaseable_type === 'packaging';
+    }
+
+    public function isMatched(): bool
+    {
+        return $this->purchaseable_type !== null && $this->purchaseable_id !== null;
+    }
+
+    public function isApplied(): bool
+    {
+        return $this->cost_applied_at !== null;
     }
 }

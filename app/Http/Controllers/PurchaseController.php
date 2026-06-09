@@ -6,23 +6,24 @@ use App\Enums\Unit;
 use App\Http\Requests\StorePurchaseLineRequest;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseLineRequest;
-use App\Models\Ingredient;
-use App\Models\Packaging;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
-use App\Services\RecipeCostPropagator;
-use App\Services\UnitConverter;
+use App\Services\PurchaseLineRecorder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class PurchaseController extends Controller
 {
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
-        private readonly RecipeCostPropagator $propagator,
-        private readonly UnitConverter $converter,
+        private readonly PurchaseLineRecorder $lineRecorder,
     ) {}
 
     public function index(): View
@@ -32,6 +33,7 @@ class PurchaseController extends Controller
         $purchases = $tenant->purchases()
             ->with('supplier')
             ->withCount('lines')
+            ->withSum('lines as net_total', 'subtotal')
             ->when(request('supplier_id'), fn ($q, $id) => $q->where('supplier_id', $id))
             ->when(request('from'), fn ($q, $date) => $q->where('invoice_date', '>=', $date))
             ->when(request('to'), fn ($q, $date) => $q->where('invoice_date', '<=', $date))
@@ -41,8 +43,9 @@ class PurchaseController extends Controller
             ->withQueryString();
 
         $suppliers = $tenant->suppliers()->where('active', true)->orderBy('name')->get();
+        $includeIva = filter_var($tenant->getSetting('purchase_price_includes_iva', '1'), FILTER_VALIDATE_BOOLEAN);
 
-        return view('purchases.index', compact('purchases', 'suppliers'));
+        return view('purchases.index', compact('purchases', 'suppliers', 'includeIva'));
     }
 
     public function store(StorePurchaseRequest $request): RedirectResponse
@@ -87,19 +90,24 @@ class PurchaseController extends Controller
     {
         $this->authorizePurchase($purchase);
 
-        if ($purchase->lines()->exists()) {
-            return back()->with('error', 'No se puede eliminar una compra que tiene ítems. Eliminá las líneas primero.');
-        }
+        $invoiceNumber = $purchase->invoice_number;
+        $tenantId = $purchase->tenant_id;
+        $purchaseId = $purchase->id;
+        $imagePath = $purchase->invoice_image_path;
 
-        $purchase->delete();
+        $purchase->delete(); // lines cascade via FK
+
+        if ($imagePath) {
+            Storage::disk('public')->delete($imagePath);
+        }
 
         $this->recorder->record(
             actor: request()->user(),
             targetType: 'purchase',
-            targetId: $purchase->id,
+            targetId: $purchaseId,
             action: 'purchase.deleted',
-            payload: ['invoice_number' => $purchase->invoice_number],
-            tenantId: $purchase->tenant_id,
+            payload: ['invoice_number' => $invoiceNumber],
+            tenantId: $tenantId,
         );
 
         return redirect()->route('purchases.index')->with('status', 'Compra eliminada.');
@@ -109,61 +117,33 @@ class PurchaseController extends Controller
     {
         $this->authorizePurchase($purchase);
 
-        $data = $request->validated();
-        $purchaseUnit = Unit::from($data['purchase_unit']);
-        $subtotal = (float) $data['quantity_purchased'] * (float) $data['unit_price'];
+        // Detail = faithful digitised invoice. Adding a line just records what's
+        // on the invoice; the cost is imputed later in the match step.
+        $line = $this->lineRecorder->storePending($purchase, $request->validated());
 
-        if ($data['purchaseable_type'] === 'ingredient') {
-            $item = Ingredient::find($data['purchaseable_id']);
-            abort_unless($item && $item->tenant_id === $purchase->tenant_id, 422, 'Ingrediente no válido.');
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'purchase_line',
+            targetId: $line->id,
+            action: 'purchase_line.created',
+            payload: ['raw_name' => $line->raw_name],
+            tenantId: $purchase->tenant_id,
+        );
 
-            $costPerUnit = $this->convertToCostPerUnit($purchaseUnit, $item->unit, (float) $data['unit_price']);
-            abort_if($costPerUnit === null, 422, 'Las unidades no son compatibles con las del ingrediente.');
+        return back()->with('status', 'Renglón agregado.');
+    }
 
-            $line = $purchase->lines()->create([
-                ...$data,
-                'subtotal' => $subtotal,
-            ]);
+    public function invoiceImage(Purchase $purchase): StreamedResponse
+    {
+        $this->authorizePurchase($purchase);
 
-            $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
-            $item->update(['cost_per_unit' => $costPerUnit]);
-            $this->propagator->propagateFromIngredient($item->id);
+        abort_if(
+            blank($purchase->invoice_image_path) || ! Storage::disk('public')->exists($purchase->invoice_image_path),
+            404,
+        );
 
-            $this->recorder->record(
-                actor: $request->user(),
-                targetType: 'purchase_line',
-                targetId: $line->id,
-                action: 'purchase_line.created',
-                payload: ['ingredient' => $item->name, 'cost_per_unit' => $costPerUnit],
-                tenantId: $purchase->tenant_id,
-            );
-        } else {
-            $item = Packaging::find($data['purchaseable_id']);
-            abort_unless($item && $item->tenant_id === $purchase->tenant_id, 422, 'Packaging no válido.');
-
-            // Packaging is always per unit — unit must be 'u'
-            abort_unless($purchaseUnit === Unit::Unidad, 422, 'El packaging solo puede comprarse por unidad (u).');
-
-            $line = $purchase->lines()->create([
-                ...$data,
-                'subtotal' => $subtotal,
-            ]);
-
-            $item->priceLogs()->create(['cost_per_unit' => (float) $data['unit_price'], 'recorded_at' => now()]);
-            $item->update(['cost_per_unit' => (float) $data['unit_price']]);
-            $this->propagator->propagateFromPackaging($item->id);
-
-            $this->recorder->record(
-                actor: $request->user(),
-                targetType: 'purchase_line',
-                targetId: $line->id,
-                action: 'purchase_line.created',
-                payload: ['packaging' => $item->name, 'cost_per_unit' => (float) $data['unit_price']],
-                tenantId: $purchase->tenant_id,
-            );
-        }
-
-        return back()->with('status', 'Ítem agregado y costo actualizado.');
+        // Served through the app (not the /storage symlink) so it works on any host.
+        return Storage::disk('public')->response($purchase->invoice_image_path);
     }
 
     public function updateLine(UpdatePurchaseLineRequest $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
@@ -171,33 +151,7 @@ class PurchaseController extends Controller
         $this->authorizePurchase($purchase);
         abort_unless($line->purchase_id === $purchase->id, 403);
 
-        $data = $request->validated();
-        $purchaseUnit = Unit::from($data['purchase_unit']);
-        $subtotal = (float) $data['quantity_purchased'] * (float) $data['unit_price'];
-
-        if ($line->isIngredient()) {
-            $item = Ingredient::find($line->purchaseable_id);
-            abort_unless($item, 422);
-
-            $costPerUnit = $this->convertToCostPerUnit($purchaseUnit, $item->unit, (float) $data['unit_price']);
-            abort_if($costPerUnit === null, 422, 'Las unidades no son compatibles con las del ingrediente.');
-
-            $line->update([...$data, 'subtotal' => $subtotal]);
-
-            $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
-            $item->update(['cost_per_unit' => $costPerUnit]);
-            $this->propagator->propagateFromIngredient($item->id);
-        } else {
-            $item = Packaging::find($line->purchaseable_id);
-            abort_unless($item, 422);
-            abort_unless($purchaseUnit === Unit::Unidad, 422, 'El packaging solo puede comprarse por unidad (u).');
-
-            $line->update([...$data, 'subtotal' => $subtotal]);
-
-            $item->priceLogs()->create(['cost_per_unit' => (float) $data['unit_price'], 'recorded_at' => now()]);
-            $item->update(['cost_per_unit' => (float) $data['unit_price']]);
-            $this->propagator->propagateFromPackaging($item->id);
-        }
+        $this->lineRecorder->recompute($line, $request->validated());
 
         $this->recorder->record(
             actor: $request->user(),
@@ -231,27 +185,82 @@ class PurchaseController extends Controller
     }
 
     /**
-     * Convert a purchase unit_price to the ingredient's base unit cost.
-     * E.g.: buying 1kg at $500/kg → ingredient.unit = gr → $0.50/gr
+     * Phase 2: associate a captured line with a catalog item and impute its cost.
      */
-    private function convertToCostPerUnit(Unit $purchaseUnit, Unit $ingredientUnit, float $unitPrice): ?float
+    public function matchLine(Request $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
-        if ($purchaseUnit === $ingredientUnit) {
-            return $unitPrice;
+        $this->authorizePurchase($purchase);
+        abort_unless($line->purchase_id === $purchase->id, 403);
+
+        $match = $request->validate(['match' => ['nullable', 'string']])['match'] ?? null;
+
+        // "— sin asociar —": mark the line as pending again (does not revert costs).
+        if (blank($match)) {
+            $line->update(['purchaseable_type' => null, 'purchaseable_id' => null, 'cost_applied_at' => null]);
+
+            return back()->with('status', 'Renglón marcado como pendiente.');
         }
 
-        if (! $this->converter->compatible($purchaseUnit, $ingredientUnit)) {
-            return null;
+        [$type, $id] = array_pad(explode(':', $match, 2), 2, null);
+        abort_unless(in_array($type, ['ingredient', 'packaging'], true) && is_numeric($id), 422);
+
+        $tenant = app(Tenant::class);
+        $belongs = $type === 'ingredient'
+            ? $tenant->ingredients()->whereKey($id)->exists()
+            : $tenant->packagings()->whereKey($id)->exists();
+        abort_unless($belongs, 422);
+
+        try {
+            DB::transaction(function () use ($line, $type, $id) {
+                $line->update(['purchaseable_type' => $type, 'purchaseable_id' => (int) $id]);
+                $this->lineRecorder->apply($line);
+            });
+        } catch (HttpException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        // Convert 1 purchase_unit to ingredient_units → price scales inversely
-        $purchaseUnitInIngredientUnits = $this->converter->convert(1.0, $purchaseUnit, $ingredientUnit);
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'purchase_line',
+            targetId: $line->id,
+            action: 'purchase_line.matched',
+            payload: ['type' => $type, 'id' => (int) $id],
+            tenantId: $purchase->tenant_id,
+        );
 
-        if ($purchaseUnitInIngredientUnits === null || $purchaseUnitInIngredientUnits == 0.0) {
-            return null;
+        return back()->with('status', 'Renglón asociado y costo actualizado.');
+    }
+
+    /**
+     * Phase 2: apply every still-pending line that already has a suggested match.
+     */
+    public function applyLineSuggestions(Purchase $purchase): RedirectResponse
+    {
+        $this->authorizePurchase($purchase);
+
+        $applied = 0;
+        $failed = 0;
+
+        $pending = $purchase->lines()
+            ->whereNotNull('purchaseable_id')
+            ->whereNull('cost_applied_at')
+            ->get();
+
+        foreach ($pending as $line) {
+            try {
+                DB::transaction(fn () => $this->lineRecorder->apply($line));
+                $applied++;
+            } catch (HttpException) {
+                $failed++;
+            }
         }
 
-        return $unitPrice / $purchaseUnitInIngredientUnits;
+        $message = "{$applied} renglón(es) asociado(s) y costos actualizados.";
+        if ($failed > 0) {
+            $message .= " {$failed} no se pudieron aplicar — revisá las unidades.";
+        }
+
+        return back()->with($failed > 0 ? 'error' : 'status', $message);
     }
 
     private function authorizePurchase(Purchase $purchase): void

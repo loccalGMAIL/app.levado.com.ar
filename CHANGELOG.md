@@ -5,6 +5,25 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.7.1] — 2026-06-09
+
+### Compras — IVA por renglón, iconos de acción y fixes
+
+#### Agregado
+
+- **Columna `iva_rate` en `purchase_lines`:** alícuota de IVA (0%, 10,5% ó 21%) almacenada por renglón. Se persiste en todos los flujos: escaneo de factura, alta manual y edición.
+- **Discriminación de IVA en vista detalle de compra (`/purchases/{id}`):** columnas "IVA $" y "Subtotal c/IVA" calculadas server-side desde el `iva_rate` guardado. El selector de alícuota está disponible en el modal de edición y en el formulario de alta manual.
+- **Selector de alícuota IVA en revisión de factura escaneada:** la pantalla de revisión muestra el select de alícuota por renglón; el valor elegido se guarda junto con la compra.
+- **Iconos de acción en tablas de compras:** reemplaza los textos "Editar", "Eliminar" y "Ver detalle →" por iconos SVG (lápiz, papelera, ojo) con `title` para tooltip y área de click con `p-1`.
+- **Botón "Eliminar compra" en el índice:** ícono de papelera con confirmación; borra la compra, sus renglones (cascade FK) y la imagen de factura del storage.
+- **Modal quick-create de proveedor en revisión de factura:** cuando la IA detecta un proveedor que no existe en el catálogo, aparece el botón "creálo acá" que abre el modal sin salir del formulario. Al crear el proveedor, el select se actualiza y lo selecciona automáticamente vía evento `supplier-created`.
+
+#### Corregido
+
+- **Overflow en `subtotal` y `unit_price` de `purchase_lines`:** `decimal(10,4)` (máx. $999.999) reemplazado por `decimal(14,4)` para soportar subtotales superiores a $1.000.000 (ej.: 200 bolsas × $13.891,40 = $2.778.280).
+
+---
+
 ## [0.6.5] — 2026-06-08
 
 ### Mobile — Barra de navegación inferior + fixes responsive

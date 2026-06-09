@@ -17,6 +17,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
@@ -54,7 +55,13 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
 
     Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+    // La pantalla de escaneo se registra antes que purchases/{purchase} para que
+    // "scan" no se interprete como un id de compra (route-model binding).
+    Route::get('purchases/scan', [PurchaseScanController::class, 'create'])
+        ->middleware('role:super_admin,owner,admin')
+        ->name('purchases.scan.create');
     Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
+    Route::get('purchases/{purchase}/invoice', [PurchaseController::class, 'invoiceImage'])->name('purchases.invoice');
 });
 
 // Costos — escritura (owner y admin)
@@ -102,10 +109,14 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::delete('recipes/{recipe}/subrecipe-lines/{line}', [RecipeController::class, 'destroySubrecipeLine'])->name('recipes.subrecipe-lines.destroy');
 
     Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+    Route::post('purchases/scan', [PurchaseScanController::class, 'scan'])->name('purchases.scan');
+    Route::post('purchases/scan/confirm', [PurchaseScanController::class, 'store'])->name('purchases.scan.store');
     Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
     Route::post('purchases/{purchase}/lines', [PurchaseController::class, 'storeLine'])->name('purchases.lines.store');
     Route::patch('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'updateLine'])->name('purchases.lines.update');
     Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->name('purchases.lines.destroy');
+    Route::post('purchases/{purchase}/lines/{line}/match', [PurchaseController::class, 'matchLine'])->name('purchases.lines.match');
+    Route::post('purchases/{purchase}/apply-suggestions', [PurchaseController::class, 'applyLineSuggestions'])->name('purchases.apply-suggestions');
 
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
     Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');

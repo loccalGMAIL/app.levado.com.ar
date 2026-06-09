@@ -27,11 +27,21 @@
                     <p class="text-sm text-masa-madre mt-0.5">Facturas de compra de insumos y envases.</p>
                 </div>
                 @can('manage-costs')
-                    <button type="button"
-                        @click="$dispatch('open-modal', 'purchase-create')"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
-                        + Nueva compra
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('purchases.scan.create') }}"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Leer factura
+                        </a>
+                        <button type="button"
+                            @click="$dispatch('open-modal', 'purchase-create')"
+                            class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                            + Nueva compra
+                        </button>
+                    </div>
                 @endcan
             </div>
 
@@ -84,6 +94,7 @@
                                 <th class="px-4 py-3 font-medium">Proveedor</th>
                                 <th class="px-4 py-3 font-medium">N° Factura</th>
                                 <th class="px-4 py-3 font-medium text-center">Ítems</th>
+                                <th class="px-4 py-3 font-medium text-right">Total {{ $includeIva ? '(c/IVA)' : '(s/IVA)' }}</th>
                                 <th class="px-4 py-3 font-medium"></th>
                             </tr>
                         </thead>
@@ -102,11 +113,39 @@
                                     <td class="px-4 py-3 text-center text-masa-madre">
                                         {{ $purchase->lines_count }}
                                     </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <a href="{{ route('purchases.show', $purchase) }}"
-                                            class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                                            Ver detalle →
-                                        </a>
+                                    @php
+                                        $rowTotal = $includeIva
+                                            ? ($purchase->invoice_total ?? $purchase->net_total ?? 0)
+                                            : ($purchase->net_total ?? 0);
+                                    @endphp
+                                    <td class="px-4 py-3 text-right font-mono text-corteza">
+                                        ${{ number_format($rowTotal, 2, ',', '.') }}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <a href="{{ route('purchases.show', $purchase) }}"
+                                                class="inline-flex p-1 text-masa-madre hover:text-corteza transition-colors"
+                                                title="Ver detalle">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </a>
+                                            @can('manage-costs')
+                                                <form method="POST" action="{{ route('purchases.destroy', $purchase) }}"
+                                                    onsubmit="return confirm('¿Eliminar esta compra y todos sus renglones?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                        class="inline-flex p-1 text-red-400 hover:text-red-600 transition-colors"
+                                                        title="Eliminar compra">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                            @endcan
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
