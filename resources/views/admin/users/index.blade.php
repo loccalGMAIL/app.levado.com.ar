@@ -5,7 +5,12 @@
         <h2 class="font-semibold text-xl text-corteza leading-tight">Usuarios</h2>
     </x-slot>
 
-    <div class="py-10" x-data="{ showCreate: false }">
+    <div class="py-10" x-data="{
+        showCreate: false,
+        editUser: null,
+        openEdit(user) { this.editUser = user; },
+        closeEdit() { this.editUser = null; }
+    }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
             @if(session('status'))
@@ -45,19 +50,20 @@
 
             {{-- Tabla --}}
             <div class="bg-white shadow rounded-lg overflow-x-auto">
-                <table class="w-full text-sm text-left">
+                <table class="min-w-[700px] w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
                             <th class="px-4 py-3 font-medium">Nombre</th>
                             <th class="px-4 py-3 font-medium">Email</th>
                             <th class="px-4 py-3 font-medium">Registro</th>
+                            <th class="px-4 py-3 font-medium">Estado</th>
                             <th class="px-4 py-3 font-medium">Comercios</th>
                             <th class="px-4 py-3 font-medium">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-miga">
                         @forelse($users as $user)
-                            <tr class="align-top">
+                            <tr class="align-top {{ $user->active ? '' : 'opacity-60' }}">
                                 <td class="px-4 py-3 text-corteza font-medium">
                                     {{ $user->name }}
                                 </td>
@@ -66,6 +72,13 @@
                                 </td>
                                 <td class="px-4 py-3 text-masa-madre text-xs whitespace-nowrap">
                                     {{ $user->created_at->format('d/m/Y') }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if($user->active)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">activo</span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">inactivo</span>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3">
                                     @if($user->tenantUsers->isEmpty())
@@ -90,20 +103,56 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    <form method="POST"
-                                        action="{{ route('admin.users.send-password-reset', $user) }}"
-                                        onsubmit="return confirm('¿Enviar correo de recuperación a {{ $user->email }}?')">
-                                        @csrf
-                                        <button type="submit"
-                                            class="text-xs text-masa-madre hover:text-corteza hover:underline whitespace-nowrap">
-                                            Enviar recuperación
+                                    <div class="flex items-center gap-2">
+                                        {{-- Editar --}}
+                                        <button
+                                            @click="openEdit({ id: {{ $user->id }}, name: '{{ addslashes($user->name) }}', email: '{{ addslashes($user->email) }}' })"
+                                            title="Editar usuario"
+                                            class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
                                         </button>
-                                    </form>
+
+                                        {{-- Enviar recuperación --}}
+                                        <form method="POST"
+                                            action="{{ route('admin.users.send-password-reset', $user) }}"
+                                            onsubmit="return confirm('¿Enviar correo de recuperación a {{ addslashes($user->email) }}?')">
+                                            @csrf
+                                            <button type="submit" title="Enviar recuperación de contraseña"
+                                                class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                                </svg>
+                                            </button>
+                                        </form>
+
+                                        {{-- Activar / Desactivar --}}
+                                        <form method="POST"
+                                            action="{{ route('admin.users.toggle-active', $user) }}"
+                                            onsubmit="return confirm('{{ $user->active ? '¿Desactivar a ' . addslashes($user->name) . '? No podrá ingresar a la app.' : '¿Activar a ' . addslashes($user->name) . '?' }}')">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit"
+                                                title="{{ $user->active ? 'Desactivar usuario' : 'Activar usuario' }}"
+                                                class="p-1.5 rounded transition-colors {{ $user->active ? 'text-masa-madre hover:text-red-600 hover:bg-red-50' : 'text-masa-madre hover:text-green-600 hover:bg-green-50' }}">
+                                                @if($user->active)
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                    </svg>
+                                                @else
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                @endif
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-masa-madre">
+                                <td colspan="6" class="px-4 py-8 text-center text-masa-madre">
                                     No se encontraron usuarios.
                                 </td>
                             </tr>
@@ -204,6 +253,51 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        {{-- Modal: Editar usuario --}}
+        <div x-show="editUser !== null" x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            @keydown.escape.window="closeEdit()">
+
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
+                @click.outside="closeEdit()">
+
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-lg font-semibold text-corteza">Editar usuario</h3>
+                    <button @click="closeEdit()" class="text-masa-madre hover:text-corteza text-xl leading-none">&times;</button>
+                </div>
+
+                <template x-if="editUser">
+                    <form method="POST" :action="`/admin/users/${editUser.id}`" class="space-y-4">
+                        @csrf
+                        @method('PATCH')
+
+                        <div>
+                            <label class="block text-sm font-medium text-corteza mb-1">Nombre</label>
+                            <input type="text" name="name" :value="editUser.name" required
+                                class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-corteza mb-1">Email</label>
+                            <input type="email" name="email" :value="editUser.email" required
+                                class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-2">
+                            <button type="button" @click="closeEdit()"
+                                class="px-4 py-2 text-sm border border-miga rounded-md hover:bg-miga transition-colors">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                class="px-4 py-2 text-sm bg-horno text-white rounded-md hover:bg-corteza transition-colors">
+                                Guardar cambios
+                            </button>
+                        </div>
+                    </form>
+                </template>
             </div>
         </div>
     </div>
