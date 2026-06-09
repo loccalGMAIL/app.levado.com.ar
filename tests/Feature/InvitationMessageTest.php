@@ -33,6 +33,7 @@ test('owner puede guardar el mensaje personalizado de invitación', function () 
             'currency' => $tenant->currency ?? 'ARS',
             'productive_hours_month' => $tenant->productive_hours_month ?? 160,
             'invitation_message' => 'Bienvenido al equipo, escribinos cuando quieras.',
+            'purchase_price_includes_iva' => '1',
         ])
         ->assertRedirect();
 

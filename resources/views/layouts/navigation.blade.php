@@ -58,6 +58,14 @@
                 } elseif (request()->routeIs('labor-types.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Mano de Obra', 'href' => null];
+                } elseif (request()->routeIs('purchases.show')) {
+                    $crumbs[] = ['label' => 'Compras', 'href' => route('purchases.index')];
+                    $purchase = request()->route('purchase');
+                    $label = $purchase?->invoice_number ? "Factura #{$purchase->invoice_number}" : 'Compra #' . $purchase?->id;
+                    $crumbs[] = ['label' => $label, 'href' => null];
+                } elseif (request()->routeIs('purchases.*')) {
+                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Compras', 'href' => null];
                 } elseif (request()->routeIs('business.*')) {
                     $crumbs[] = ['label' => 'Negocio', 'href' => null];
                     $crumbs[] = ['label' => 'Mi negocio', 'href' => null];

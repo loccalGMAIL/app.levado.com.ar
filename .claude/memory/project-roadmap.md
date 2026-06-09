@@ -98,9 +98,27 @@ metadata:
 ## Etapas futuras (post-MVP)
 3 — Productos y Stock | 4 — POS Desktop (Tauri+SQLite) | 5 — ARCA | 6 — Backoffice SaaS | 7 — Apertura SaaS pública
 
+## Módulo de Compras — v0.7.x (rama `feature/compras`)
+- 3.1 Compras Fase 1 — Escaneo y digitalización: ✅ completo (v0.7.1)
+  - `purchases` + `purchase_lines` con `iva_rate`
+  - InvoiceExtractor (Claude Haiku 4.5 vision), PurchaseLineRecorder
+  - Vistas: index, show, scan/create, scan/review
+  - Modal quick-create proveedor en review; iconos de acción; IVA por renglón persistido
+- 3.2 Compras Fase 2 — Match e imputación de costos: ✅ completo (v0.7.2)
+  - Vista dedicada `/purchases/{id}/match`
+  - Botón en índice con indicador de estado (ámbar/verde) + `applied_count`
+  - Cálculo reactivo Alpine.js: auto-conversión de unidades compatibles, divisor editable para incompatibles
+  - Parser de descripción: detecta "X 25 Kg", "x5lts", etc. para pre-llenar el divisor (✦)
+  - `PurchaseLineRecorder::applyWithCost()` para aplicar costo explícito sin conversión
+  - `matchLine()` acepta `unit_cost` override del form
+- 3.3 Compras UX — Selects con buscador y límite de decimales: ✅ completo (v0.7.3)
+  - Tom Select en todos los selects del módulo de compras (proveedor en create/review, insumo en match)
+  - `data-maxdecimals="4"` + listener global en `app.js` para inputs de precio y cantidad
+  - CSS de Tom Select integrado con overrides de estilos Tailwind (colores del proyecto)
+
 ## Versioning
-- Rama activa: `v0.6.3`
-- Versión actual: `0.6.3` — búsqueda, paginación, edición inline y UX de recetas
+- Rama activa: `feature/compras`
+- Versión actual: `0.7.3`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.
