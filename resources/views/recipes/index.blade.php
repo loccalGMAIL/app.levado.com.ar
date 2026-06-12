@@ -87,7 +87,7 @@
                                 </th>
                                 <th class="px-4 py-3 font-medium text-right">
                                     <a href="{{ $sortUrl('selling_price') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Precio venta / u <span class="text-xs">{{ $sortIcon('selling_price') }}</span>
+                                        Precio ({{ $defaultPriceList->name }}) / u <span class="text-xs">{{ $sortIcon('selling_price') }}</span>
                                     </a>
                                 </th>
                                 <th class="px-4 py-3 font-medium">Estado</th>
@@ -97,8 +97,9 @@
                         <tbody class="divide-y divide-miga">
                             @foreach($recipes as $recipe)
                                 @php
-                                    $initPriceInput     = $recipe->selling_price !== null ? number_format((float)$recipe->selling_price, 2, '.', '') : '';
-                                    $initPriceFormatted = $recipe->selling_price !== null ? number_format((float)$recipe->selling_price, 2, ',', '.') : '';
+                                    $defaultPrice = isset($defaultPrices[$recipe->id]) ? (float) $defaultPrices[$recipe->id] : null;
+                                    $initPriceInput     = $defaultPrice !== null ? number_format($defaultPrice, 2, '.', '') : '';
+                                    $initPriceFormatted = $defaultPrice !== null ? number_format($defaultPrice, 2, ',', '.') : '';
                                 @endphp
                                 <tr class="{{ $recipe->active ? '' : 'opacity-50' }}">
                                     <td class="px-4 py-3 font-medium text-corteza">
@@ -117,7 +118,7 @@
                                             editing: false,
                                             saving: false,
                                             isDirty: false,
-                                            price: {{ $recipe->selling_price ?? 'null' }},
+                                            price: {{ $defaultPrice ?? 'null' }},
                                             priceFormatted: '{{ $initPriceFormatted }}',
                                             startEdit() {
                                                 this.isDirty = false;
@@ -133,14 +134,14 @@
                                                 this.saving = true;
                                                 this.editing = false;
                                                 try {
-                                                    const res = await fetch('{{ route('recipes.selling-price.update', $recipe) }}', {
+                                                    const res = await fetch('{{ route('recipes.prices.update', [$recipe, $defaultPriceList]) }}', {
                                                         method: 'PATCH',
                                                         headers: {
                                                             'Content-Type': 'application/json',
                                                             'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
                                                             'Accept': 'application/json',
                                                         },
-                                                        body: JSON.stringify({ selling_price: payload })
+                                                        body: JSON.stringify({ price: payload })
                                                     });
                                                     const data = await res.json();
                                                     this.price = data.selling_price;
@@ -174,7 +175,7 @@
                                                 class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
                                             <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
                                         @else
-                                            @if($recipe->selling_price !== null)
+                                            @if($defaultPrice !== null)
                                                 $ {{ $initPriceFormatted }}
                                             @else
                                                 <span class="text-masa-madre">—</span>

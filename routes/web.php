@@ -20,6 +20,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeController;
+use App\Http\Controllers\RecipePriceController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -96,7 +97,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('recipes', [RecipeController::class, 'store'])->name('recipes.store');
     Route::post('recipes/{recipe}/copy', [RecipeController::class, 'copy'])->name('recipes.copy');
     Route::put('recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
-    Route::patch('recipes/{recipe}/selling-price', [RecipeController::class, 'updateSellingPrice'])->name('recipes.selling-price.update');
+    Route::patch('recipes/{recipe}/prices/{priceList}', [RecipePriceController::class, 'update'])->name('recipes.prices.update');
     Route::patch('recipes/{recipe}/toggle-active', [RecipeController::class, 'toggleActive'])->name('recipes.toggle-active');
 
     Route::post('recipes/{recipe}/ingredient-lines', [RecipeController::class, 'storeIngredientLine'])->name('recipes.ingredient-lines.store');

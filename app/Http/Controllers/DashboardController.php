@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Services\RecipeCostCalculator;
 use App\Services\UnitConverter;
@@ -14,6 +15,7 @@ class DashboardController extends Controller
     {
         $tenant = app(Tenant::class);
         $calculator = new RecipeCostCalculator(new UnitConverter);
+        $priceList = $tenant->defaultPriceList();
 
         $sortable = ['name', 'selling_price', 'yield_quantity', 'cost_per_unit', 'margin', 'margin_pct'];
         $sort = in_array(request('sort'), $sortable) ? request('sort') : 'name';
@@ -33,9 +35,13 @@ class DashboardController extends Controller
             })
             ->get();
 
-        $allRows = $recipes->map(function ($recipe) use ($calculator) {
+        $prices = RecipePrice::where('price_list_id', $priceList->id)
+            ->whereIn('recipe_id', $recipes->pluck('id'))
+            ->pluck('price', 'recipe_id');
+
+        $allRows = $recipes->map(function ($recipe) use ($calculator, $prices) {
             $costs = $calculator->calculate($recipe);
-            $sellingPrice = $recipe->selling_price !== null ? (float) $recipe->selling_price : null;
+            $sellingPrice = isset($prices[$recipe->id]) ? (float) $prices[$recipe->id] : null;
             $costPerUnit = $costs['cost_per_unit'];
 
             $margin = null;
@@ -108,6 +114,7 @@ class DashboardController extends Controller
 
         return view('dashboard', compact(
             'recipeRows',
+            'priceList',
             'totalFixedCosts',
             'productiveHours',
             'overheadPerHour',

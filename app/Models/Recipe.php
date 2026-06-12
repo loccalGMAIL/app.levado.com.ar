@@ -20,7 +20,6 @@ class Recipe extends Model
         'description',
         'yield_quantity',
         'yield_unit',
-        'selling_price',
         'active',
         'is_semi_elaborate',
         'unit_cost',
@@ -29,7 +28,6 @@ class Recipe extends Model
     protected $casts = [
         'yield_quantity' => 'decimal:3',
         'yield_unit' => Unit::class,
-        'selling_price' => 'decimal:2',
         'active' => 'boolean',
         'is_semi_elaborate' => 'boolean',
         'unit_cost' => 'decimal:4',

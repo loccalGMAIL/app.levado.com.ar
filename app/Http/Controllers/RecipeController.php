@@ -10,11 +10,13 @@ use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
 use App\Models\RecipeLaborLine;
 use App\Models\RecipePackagingLine;
+use App\Models\RecipePrice;
 use App\Models\RecipeSubrecipeLine;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostCalculator;
 use App\Services\RecipeCostPropagator;
+use App\Services\RecipePriceWriter;
 use App\Services\UnitConverter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +32,7 @@ class RecipeController extends Controller
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly RecipeCostPropagator $propagator,
+        private readonly RecipePriceWriter $priceWriter,
     ) {}
 
     public function index(): View
@@ -37,6 +40,8 @@ class RecipeController extends Controller
         $sortable = ['name', 'yield_quantity', 'selling_price'];
         $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+
+        $defaultPriceList = app(Tenant::class)->defaultPriceList();
 
         $recipes = app(Tenant::class)->recipes()
             ->when(request('search'), function ($q, $search) {
@@ -46,11 +51,22 @@ class RecipeController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
+            ->when($sort === 'selling_price', fn ($q) => $q->orderBy(
+                RecipePrice::select('price')
+                    ->whereColumn('recipe_id', 'recipes.id')
+                    ->where('price_list_id', $defaultPriceList->id),
+                $dir,
+            ))
+            ->when($sort && $sort !== 'selling_price', fn ($q) => $q->orderBy($sort, $dir))
+            ->when(! $sort, fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
 
-        return view('recipes.index', compact('recipes'));
+        $defaultPrices = RecipePrice::where('price_list_id', $defaultPriceList->id)
+            ->whereIn('recipe_id', $recipes->pluck('id'))
+            ->pluck('price', 'recipe_id');
+
+        return view('recipes.index', compact('recipes', 'defaultPriceList', 'defaultPrices'));
     }
 
     public function copy(Recipe $recipe): RedirectResponse
@@ -91,6 +107,9 @@ class RecipeController extends Controller
                 'unit' => $line->unit,
             ]);
         }
+        foreach ($recipe->prices()->with('priceList')->get() as $recipePrice) {
+            $this->priceWriter->set($newRecipe, $recipePrice->priceList, (float) $recipePrice->price);
+        }
 
         $this->propagator->propagateFrom($newRecipe);
 
@@ -110,7 +129,16 @@ class RecipeController extends Controller
     public function store(StoreRecipeRequest $request): RedirectResponse
     {
         $tenant = app(Tenant::class);
-        $recipe = $tenant->recipes()->create($request->validated());
+
+        $data = $request->validated();
+        $sellingPrice = $data['selling_price'] ?? null;
+        unset($data['selling_price']);
+
+        $recipe = $tenant->recipes()->create($data);
+
+        if ($sellingPrice !== null) {
+            $this->priceWriter->set($recipe, $tenant->defaultPriceList(), (float) $sellingPrice);
+        }
 
         if ($tenant->onboarding_completed_at === null) {
             $tenant->update(['onboarding_completed_at' => now()]);
@@ -199,8 +227,16 @@ class RecipeController extends Controller
 
         $semiElaborates = $this->availableSemiElaborates($recipe, $tenant);
 
+        $defaultPriceList = $tenant->defaultPriceList();
+        $defaultPrice = RecipePrice::where('price_list_id', $defaultPriceList->id)
+            ->where('recipe_id', $recipe->id)
+            ->value('price');
+        $defaultPrice = $defaultPrice !== null ? (float) $defaultPrice : null;
+
         return view('recipes.show', [
             'recipe' => $recipe,
+            'defaultPriceList' => $defaultPriceList,
+            'defaultPrice' => $defaultPrice,
             'ingredientCost' => $costs['ingredient_cost'],
             'packagingCost' => $costs['packaging_cost'],
             'laborCost' => $costs['labor_cost'],
@@ -222,7 +258,21 @@ class RecipeController extends Controller
     public function update(UpdateRecipeRequest $request, Recipe $recipe): RedirectResponse
     {
         $this->authorizeRecipe($recipe);
-        $recipe->update($request->validated());
+
+        $data = $request->validated();
+        $sellingPrice = $data['selling_price'] ?? null;
+        $sellingPriceSent = array_key_exists('selling_price', $data);
+        unset($data['selling_price']);
+
+        $recipe->update($data);
+
+        if ($sellingPriceSent) {
+            $this->priceWriter->set(
+                $recipe,
+                app(Tenant::class)->defaultPriceList(),
+                $sellingPrice !== null ? (float) $sellingPrice : null,
+            );
+        }
 
         $this->recorder->record(
             actor: $request->user(),
@@ -234,44 +284,6 @@ class RecipeController extends Controller
         );
 
         return redirect()->route('recipes.show', $recipe)->with('status', 'Receta actualizada.');
-    }
-
-    public function updateSellingPrice(Request $request, Recipe $recipe): JsonResponse
-    {
-        $this->authorizeRecipe($recipe);
-
-        $validated = $request->validate([
-            'selling_price' => ['nullable', 'numeric', 'min:0', 'max:9999999.99'],
-        ]);
-
-        $recipe->update(['selling_price' => $validated['selling_price']]);
-
-        $calculator = new RecipeCostCalculator(new UnitConverter);
-        $recipe->load(['ingredientLines.ingredient', 'packagingLines.packaging', 'laborLines.laborType']);
-        $costs = $calculator->calculate($recipe);
-
-        $sellingPrice = $recipe->selling_price !== null ? (float) $recipe->selling_price : null;
-        $costPerUnit = $costs['cost_per_unit'];
-
-        $margin = null;
-        $marginPct = null;
-        $marginColor = 'text-masa-madre';
-
-        if ($sellingPrice !== null && $costPerUnit !== null && $sellingPrice > 0) {
-            $margin = $sellingPrice - $costPerUnit;
-            $marginPct = ($margin / $sellingPrice) * 100;
-            $marginColor = $marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500');
-        }
-
-        return response()->json([
-            'selling_price' => $sellingPrice,
-            'selling_price_formatted' => $sellingPrice !== null ? number_format($sellingPrice, 2, ',', '.') : null,
-            'margin' => $margin,
-            'margin_formatted' => $margin !== null ? number_format($margin, 2, ',', '.') : null,
-            'margin_pct' => $marginPct,
-            'margin_pct_formatted' => $marginPct !== null ? number_format($marginPct, 1, ',', '.') : null,
-            'margin_color' => $marginColor,
-        ]);
     }
 
     public function toggleActive(Recipe $recipe): RedirectResponse

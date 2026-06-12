@@ -18,7 +18,7 @@
             subrecipeLines:  @js($subrecipeLinesData),
             overheadPerHour: @js($overheadPerHour),
             yieldQty:        @js((float) $recipe->yield_quantity),
-            sellingPrice:    @js((float) ($recipe->selling_price ?? 0)),
+            sellingPrice:    @js((float) ($defaultPrice ?? 0)),
             targetMargin:    30,
 
             get ingredientCost() {
@@ -457,7 +457,7 @@
 
                 {{-- Precio de venta --}}
                 <div class="bg-white rounded-lg shadow p-4 space-y-3">
-                    <p class="text-xs font-semibold text-masa-madre uppercase tracking-wide">Precio de venta</p>
+                    <p class="text-xs font-semibold text-masa-madre uppercase tracking-wide">Precio de venta (lista {{ $defaultPriceList->name }})</p>
 
                     <form id="form-precio-venta" method="POST" action="{{ route('recipes.update', $recipe) }}">
                         @csrf

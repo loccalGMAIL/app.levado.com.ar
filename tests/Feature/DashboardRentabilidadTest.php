@@ -5,12 +5,9 @@ use App\Enums\Unit;
 use App\Models\FixedCost;
 use App\Models\FixedCostCategory;
 use App\Models\Ingredient;
-use App\Models\LaborType;
-use App\Models\Packaging;
 use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
-use App\Models\RecipeLaborLine;
-use App\Models\RecipePackagingLine;
+use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
@@ -71,7 +68,11 @@ test('dashboard muestra el margen cuando hay precio de venta', function () {
     $recipe = Recipe::factory()->for($tenant)->create([
         'yield_quantity' => 10,
         'yield_unit' => Unit::Unidad->value,
-        'selling_price' => 100,
+    ]);
+    RecipePrice::factory()->for($tenant)->create([
+        'price_list_id' => $tenant->defaultPriceList()->id,
+        'recipe_id' => $recipe->id,
+        'price' => 100,
     ]);
 
     $ingredient = Ingredient::factory()->for($tenant)->create([

@@ -23,6 +23,11 @@ class RecipePrice extends Model
         'price' => 'decimal:2',
     ];
 
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);

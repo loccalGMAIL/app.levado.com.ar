@@ -110,7 +110,7 @@
                                 </th>
                                 <th class="px-4 py-3 font-medium text-right">
                                     <a href="{{ $sortUrl('selling_price') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Precio venta / u <span class="text-xs">{{ $sortIcon('selling_price') }}</span>
+                                        Precio ({{ $priceList->name }}) / u <span class="text-xs">{{ $sortIcon('selling_price') }}</span>
                                     </a>
                                 </th>
                                 <th class="px-4 py-3 font-medium text-right">
@@ -164,14 +164,14 @@
                                             this.saving = true;
                                             this.editing = false;
                                             try {
-                                                const res = await fetch('{{ route('recipes.selling-price.update', $recipe) }}', {
+                                                const res = await fetch('{{ route('recipes.prices.update', [$recipe, $priceList]) }}', {
                                                     method: 'PATCH',
                                                     headers: {
                                                         'Content-Type': 'application/json',
                                                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
                                                         'Accept': 'application/json',
                                                     },
-                                                    body: JSON.stringify({ selling_price: payload })
+                                                    body: JSON.stringify({ price: payload })
                                                 });
                                                 const data = await res.json();
                                                 this.price = data.selling_price;
