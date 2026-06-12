@@ -15,6 +15,7 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LaborTypeController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PackagingController;
+use App\Http\Controllers\PriceListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
@@ -50,6 +51,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('packaging', [PackagingController::class, 'index'])->name('packaging.index');
     Route::get('fixed-costs', [FixedCostController::class, 'index'])->name('fixed-costs.index');
     Route::get('labor-types', [LaborTypeController::class, 'index'])->name('labor-types.index');
+    Route::get('price-lists', [PriceListController::class, 'index'])->name('price-lists.index');
 
     Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
@@ -86,6 +88,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('labor-types', [LaborTypeController::class, 'store'])->name('labor-types.store');
     Route::put('labor-types/{laborType}', [LaborTypeController::class, 'update'])->name('labor-types.update');
     Route::patch('labor-types/{laborType}/toggle-active', [LaborTypeController::class, 'toggleActive'])->name('labor-types.toggle-active');
+
+    Route::post('price-lists', [PriceListController::class, 'store'])->name('price-lists.store');
+    Route::put('price-lists/{priceList}', [PriceListController::class, 'update'])->name('price-lists.update');
+    Route::patch('price-lists/{priceList}/toggle-active', [PriceListController::class, 'toggleActive'])->name('price-lists.toggle-active');
 
     Route::post('recipes', [RecipeController::class, 'store'])->name('recipes.store');
     Route::post('recipes/{recipe}/copy', [RecipeController::class, 'copy'])->name('recipes.copy');
