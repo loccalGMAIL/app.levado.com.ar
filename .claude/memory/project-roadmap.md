@@ -116,9 +116,19 @@ metadata:
   - `data-maxdecimals="4"` + listener global en `app.js` para inputs de precio y cantidad
   - CSS de Tom Select integrado con overrides de estilos Tailwind (colores del proyecto)
 
+## Listas de Precios — v0.8.0 (rama `claude/price-lists-planning-1h3rio`)
+- ✅ Completo (2026-06-12) — 270 tests verdes
+- Tablas: `price_lists` (tenant_id, name, adjustment_pct decimal 6,2 nullable, is_default, active; unique tenant+name), `recipe_prices` (unique price_list+recipe; price decimal 10,2 NOT NULL — sin fila = sin precio), `recipe_price_logs` (patrón ingredient_price_logs)
+- `recipes.selling_price` ELIMINADA: `recipe_prices` es la única fuente de verdad. `selling_price` sigue como campo virtual en forms de receta → escribe en la lista default vía `RecipePriceWriter`
+- Lista "General" default por tenant: lazy `Tenant::defaultPriceList()` (firstOrCreate); migración de datos copió los selling_price existentes. No desactivable, sin % de ajuste
+- `adjustment_pct` solo PRE-LLENA sugerencias en celdas vacías de la matriz (round 2 decimales, server-side); nunca se re-aplica a precios guardados
+- `RecipePriceController::update`: PATCH `recipes/{recipe}/prices/{priceList}` JSON (mismo shape que el viejo updateSellingPrice). 403 receta/lista ajena, 422 lista inactiva
+- Vistas: `price-lists/index` (CRUD modales) + `price-lists/matrix` (matriz receta × lista, edición inline por celda, margen semáforo); selector de lista en dashboard (fallback a default si param inválido)
+- `RecipeController::copy` duplica precios en todas las listas; sort por precio en recipes/index via subquery
+
 ## Versioning
-- Rama activa: `feature/compras`
-- Versión actual: `0.7.3`
+- Rama activa: `claude/price-lists-planning-1h3rio` (listas de precios, pendiente merge)
+- Versión actual: `0.8.0`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.

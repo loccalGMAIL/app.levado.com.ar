@@ -5,6 +5,25 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.0] — 2026-06-12
+
+### Listas de precios
+
+#### Agregado
+
+- **Listas de precios por tenant (`/price-lists`):** cada negocio define sus propias listas (ej. Mostrador, Mayorista, Cafeterías) con CRUD en modales. Cada lista puede tener un **% de ajuste opcional** sobre la lista base que pre-llena precios sugeridos.
+- **Lista "General" (base):** se crea automáticamente por tenant (lazy vía `Tenant::defaultPriceList()`) y absorbe los `selling_price` existentes en la migración de datos. No se puede desactivar y no acepta % de ajuste.
+- **Precios por receta y lista (`recipe_prices`):** un monto fijo por receta en cada lista, con histórico de cambios en `recipe_price_logs` (mismo patrón que los price logs de insumos).
+- **Matriz de precios (`/price-lists/matrix`):** vista comparativa receta × lista con costo/u de referencia, edición inline por celda, margen % con semáforo y precios sugeridos en gris para celdas vacías (se confirman con un click + Enter).
+- **Selector de lista en el dashboard de rentabilidad:** permite ver márgenes y semáforo según cualquier lista activa; por defecto muestra la lista base.
+- **Endpoint `PATCH /recipes/{recipe}/prices/{priceList}`:** reemplaza a `PATCH /recipes/{recipe}/selling-price` y devuelve el mismo shape JSON (precio + margen formateado + color).
+
+#### Cambiado
+
+- **`recipes.selling_price` eliminada:** `recipe_prices` es la única fuente de verdad del precio de venta. Los formularios de receta (crear, editar, precio en detalle) siguen mostrando el campo, que ahora escribe en la lista base. Copiar una receta duplica sus precios en todas las listas.
+
+---
+
 ## [0.7.1] — 2026-06-09
 
 ### Compras — IVA por renglón, iconos de acción y fixes
