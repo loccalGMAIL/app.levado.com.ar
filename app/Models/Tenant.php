@@ -72,6 +72,19 @@ class Tenant extends Model
         return $this->hasMany(Recipe::class);
     }
 
+    public function priceLists(): HasMany
+    {
+        return $this->hasMany(PriceList::class);
+    }
+
+    public function defaultPriceList(): PriceList
+    {
+        return $this->priceLists()->firstOrCreate(
+            ['is_default' => true],
+            ['name' => 'General', 'active' => true],
+        );
+    }
+
     public function settings(): HasMany
     {
         return $this->hasMany(TenantSetting::class);

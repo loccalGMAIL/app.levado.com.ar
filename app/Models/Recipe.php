@@ -64,4 +64,14 @@ class Recipe extends Model
     {
         return $this->hasMany(RecipeSubrecipeLine::class, 'child_recipe_id');
     }
+
+    public function prices(): HasMany
+    {
+        return $this->hasMany(RecipePrice::class);
+    }
+
+    public function priceLogs(): HasMany
+    {
+        return $this->hasMany(RecipePriceLog::class);
+    }
 }
