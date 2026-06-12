@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PurchaseScanController extends Controller
 {
@@ -48,17 +49,19 @@ class PurchaseScanController extends Controller
             return back()->with('error', 'Primero cargá tus insumos o descartables para poder asociar los ítems de la factura.');
         }
 
-        $path = $file->store("purchases/{$tenant->id}", 'public');
+        // Invoices are sensitive financial documents: keep them on the private
+        // disk and serve them only through authenticated controller routes.
+        $path = $file->store("purchases/{$tenant->id}", 'local');
 
         try {
             $draft = $this->extractor->extract(
-                base64_encode((string) Storage::disk('public')->get($path)),
+                base64_encode((string) Storage::disk('local')->get($path)),
                 $file->getMimeType() ?? 'image/jpeg',
                 $ingredients,
                 $packagings,
             );
         } catch (\Throwable $e) {
-            Storage::disk('public')->delete($path);
+            Storage::disk('local')->delete($path);
             Log::error('invoice scan: extraction failed', ['error' => $e->getMessage(), 'exception' => $e::class]);
 
             return back()->with('error', $e->getMessage());
@@ -192,6 +195,20 @@ class PurchaseScanController extends Controller
             return null;
         }
 
-        return Storage::disk('public')->exists($path) ? $path : null;
+        return Storage::disk('local')->exists($path) ? $path : null;
+    }
+
+    /**
+     * Stream a freshly-scanned invoice (not yet persisted) for the review screen.
+     * Only the owning tenant's images can be requested.
+     */
+    public function preview(Request $request): StreamedResponse
+    {
+        $tenant = app(Tenant::class);
+        $path = $this->safeImagePath((string) $request->query('path'), $tenant);
+
+        abort_if($path === null, 404);
+
+        return Storage::disk('local')->response($path);
     }
 }

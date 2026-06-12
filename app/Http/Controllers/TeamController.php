@@ -8,6 +8,7 @@ use App\Models\TenantUser;
 use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class TeamController extends Controller
@@ -39,11 +40,31 @@ class TeamController extends Controller
 
     public function updateRole(Request $request, TenantUser $tenantUser): RedirectResponse
     {
-        abort_unless($tenantUser->tenant_id === app(Tenant::class)->id, 403);
+        $tenant = app(Tenant::class);
+        abort_unless($tenantUser->tenant_id === $tenant->id, 403);
 
+        // Only owner/admin/viewer can be assigned from the team screen — never
+        // super_admin (that role is managed exclusively from the backoffice).
         $validated = $request->validate([
-            'role' => ['required', 'string', 'in:'.implode(',', array_column(TenantUserRole::cases(), 'value'))],
+            'role' => ['required', 'string', Rule::in([
+                TenantUserRole::Owner->value,
+                TenantUserRole::Admin->value,
+                TenantUserRole::Viewer->value,
+            ])],
         ]);
+
+        // A user cannot change their own role (prevents self-escalation/lockout).
+        abort_if($tenantUser->user_id === $request->user()->id, 403, 'No podés cambiar tu propio rol.');
+
+        // Super admins are never editable from the tenant team screen.
+        abort_if($tenantUser->role === TenantUserRole::SuperAdmin, 403);
+
+        // The tenant must always keep at least one active owner.
+        if ($tenantUser->role === TenantUserRole::Owner
+            && $validated['role'] !== TenantUserRole::Owner->value
+            && ! $this->hasOtherActiveOwner($tenant, $tenantUser)) {
+            return back()->with('error', 'El equipo debe tener al menos un propietario activo.');
+        }
 
         $tenantUser->update(['role' => $validated['role']]);
 
@@ -59,14 +80,25 @@ class TeamController extends Controller
         return back()->with('status', 'Rol actualizado correctamente.');
     }
 
-    public function deactivate(TenantUser $tenantUser): RedirectResponse
+    public function deactivate(Request $request, TenantUser $tenantUser): RedirectResponse
     {
-        abort_unless($tenantUser->tenant_id === app(Tenant::class)->id, 403);
+        $tenant = app(Tenant::class);
+        abort_unless($tenantUser->tenant_id === $tenant->id, 403);
+
+        // Can't deactivate yourself or a super admin from the team screen.
+        abort_if($tenantUser->user_id === $request->user()->id, 403, 'No podés desactivarte a vos mismo.');
+        abort_if($tenantUser->role === TenantUserRole::SuperAdmin, 403);
+
+        // The tenant must always keep at least one active owner.
+        if ($tenantUser->role === TenantUserRole::Owner
+            && ! $this->hasOtherActiveOwner($tenant, $tenantUser)) {
+            return back()->with('error', 'El equipo debe tener al menos un propietario activo.');
+        }
 
         $tenantUser->update(['active' => false]);
 
         $this->recorder->record(
-            actor: request()->user(),
+            actor: $request->user(),
             targetType: 'tenant_user',
             targetId: $tenantUser->id,
             action: 'team_member.deactivated',
@@ -93,5 +125,17 @@ class TeamController extends Controller
         );
 
         return back()->with('status', 'Usuario reactivado.');
+    }
+
+    /**
+     * Whether the tenant has another active owner besides the given membership.
+     */
+    private function hasOtherActiveOwner(Tenant $tenant, TenantUser $tenantUser): bool
+    {
+        return TenantUser::where('tenant_id', $tenant->id)
+            ->where('role', TenantUserRole::Owner->value)
+            ->where('active', true)
+            ->whereKeyNot($tenantUser->id)
+            ->exists();
     }
 }

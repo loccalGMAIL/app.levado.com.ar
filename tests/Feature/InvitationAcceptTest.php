@@ -99,6 +99,41 @@ test('aceptar la invitación vincula al usuario con el tenant', function () {
     )->toBeTrue();
 });
 
+test('un usuario existente sin autenticar NO inicia sesión al abrir el link', function () {
+    User::factory()->create(['email' => 'existente@levado.test']);
+    $invitation = pendingInvitation('existente@levado.test');
+
+    $this->post("/invitations/{$invitation->token}", [])
+        ->assertRedirect(route('login'));
+
+    $this->assertGuest();
+    expect($invitation->fresh()->isAccepted())->toBeFalse();
+    expect(
+        TenantUser::where('tenant_id', $invitation->tenant_id)->exists()
+    )->toBeFalse();
+});
+
+test('un usuario existente autenticado puede aceptar la invitación', function () {
+    Mail::fake();
+
+    $user = User::factory()->create(['email' => 'existente@levado.test']);
+    $invitation = pendingInvitation('existente@levado.test');
+
+    $this->actingAs($user)
+        ->post("/invitations/{$invitation->token}", [])
+        ->assertRedirect(route('dashboard'));
+
+    expect($invitation->fresh()->isAccepted())->toBeTrue();
+    expect(
+        TenantUser::where('tenant_id', $invitation->tenant_id)
+            ->where('user_id', $user->id)
+            ->exists()
+    )->toBeTrue();
+
+    // No welcome email for an already-existing account.
+    Mail::assertNotSent(WelcomeMail::class);
+});
+
 test('invitación expirada no puede aceptarse', function () {
     $tenant = Tenant::factory()->create();
     $invitation = Invitation::create([

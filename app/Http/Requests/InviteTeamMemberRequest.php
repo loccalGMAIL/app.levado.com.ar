@@ -20,9 +20,9 @@ class InviteTeamMemberRequest extends FormRequest
         return [
             'email' => ['required', 'email', 'max:255'],
             'role' => ['required', Rule::enum(TenantUserRole::class)->only([
-                TenantUserRole::Owner->value,
-                TenantUserRole::Admin->value,
-                TenantUserRole::Viewer->value,
+                TenantUserRole::Owner,
+                TenantUserRole::Admin,
+                TenantUserRole::Viewer,
             ])],
         ];
     }

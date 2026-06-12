@@ -99,7 +99,7 @@ class PurchaseController extends Controller
         $purchase->delete(); // lines cascade via FK
 
         if ($imagePath) {
-            Storage::disk('public')->delete($imagePath);
+            Storage::disk('local')->delete($imagePath);
         }
 
         $this->recorder->record(
@@ -139,12 +139,12 @@ class PurchaseController extends Controller
         $this->authorizePurchase($purchase);
 
         abort_if(
-            blank($purchase->invoice_image_path) || ! Storage::disk('public')->exists($purchase->invoice_image_path),
+            blank($purchase->invoice_image_path) || ! Storage::disk('local')->exists($purchase->invoice_image_path),
             404,
         );
 
-        // Served through the app (not the /storage symlink) so it works on any host.
-        return Storage::disk('public')->response($purchase->invoice_image_path);
+        // Served through the app from the private disk — never web-accessible directly.
+        return Storage::disk('local')->response($purchase->invoice_image_path);
     }
 
     public function updateLine(UpdatePurchaseLineRequest $request, Purchase $purchase, PurchaseLine $line): RedirectResponse

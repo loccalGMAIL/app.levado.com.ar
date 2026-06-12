@@ -25,7 +25,7 @@ function ownerForScan(): array
 }
 
 test('scan renders the review with detected lines', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     [$user, $tenant] = ownerForScan();
     $ingredient = Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => 'kg']);
 
@@ -172,10 +172,10 @@ test('the purchases index shows the total according to the IVA setting', functio
 });
 
 test('the invoice image is served through the app', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     [$user, $tenant] = ownerForScan();
     $supplier = Supplier::factory()->for($tenant)->create();
-    Storage::disk('public')->put("purchases/{$tenant->id}/factura.jpg", 'imgbytes');
+    Storage::disk('local')->put("purchases/{$tenant->id}/factura.jpg", 'imgbytes');
     $purchase = $tenant->purchases()->create([
         'supplier_id' => $supplier->id,
         'invoice_date' => '2026-05-14',
@@ -183,6 +183,27 @@ test('the invoice image is served through the app', function () {
     ]);
 
     $this->actingAs($user)->get(route('purchases.invoice', $purchase))->assertOk();
+});
+
+test('the scan preview streams a tenant-owned image from the private disk', function () {
+    Storage::fake('local');
+    [$user, $tenant] = ownerForScan();
+    Storage::disk('local')->put("purchases/{$tenant->id}/draft.jpg", 'imgbytes');
+
+    $this->actingAs($user)
+        ->get(route('purchases.scan.preview', ['path' => "purchases/{$tenant->id}/draft.jpg"]))
+        ->assertOk();
+});
+
+test('the scan preview 404s for an image owned by another tenant', function () {
+    Storage::fake('local');
+    [$user, $tenant] = ownerForScan();
+    [$otherUser, $otherTenant] = ownerForScan();
+    Storage::disk('local')->put("purchases/{$otherTenant->id}/draft.jpg", 'imgbytes');
+
+    $this->actingAs($user)
+        ->get(route('purchases.scan.preview', ['path' => "purchases/{$otherTenant->id}/draft.jpg"]))
+        ->assertNotFound();
 });
 
 test('the invoice route 404s when there is no image', function () {

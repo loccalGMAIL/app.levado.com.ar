@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\Unit;
+use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,7 +17,10 @@ class StoreScannedPurchaseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
+            'supplier_id' => [
+                'required', 'integer',
+                Rule::exists('suppliers', 'id')->where('tenant_id', app(Tenant::class)->id),
+            ],
             'invoice_number' => ['nullable', 'string', 'max:50'],
             'invoice_date' => ['required', 'date'],
             'invoice_total' => ['nullable', 'numeric', 'min:0'],

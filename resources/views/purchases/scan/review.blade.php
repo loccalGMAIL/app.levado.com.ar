@@ -101,13 +101,13 @@
 
                         <div class="space-y-2">
                             <p class="text-xs font-medium text-masa-madre">Factura</p>
-                            <a href="{{ Storage::url($imagePath) }}" target="_blank" class="block">
+                            <a href="{{ route('purchases.scan.preview', ['path' => $imagePath]) }}" target="_blank" class="block">
                                 @if(str_ends_with(strtolower($imagePath), '.pdf'))
                                     <div class="border border-miga rounded-md p-6 text-center text-sm text-masa-madre hover:border-horno transition-colors">
                                         Ver PDF de la factura →
                                     </div>
                                 @else
-                                    <img src="{{ Storage::url($imagePath) }}" alt="Factura"
+                                    <img src="{{ route('purchases.scan.preview', ['path' => $imagePath]) }}" alt="Factura"
                                         class="rounded-md border border-miga max-h-56 w-full object-contain bg-miga/30">
                                 @endif
                             </a>

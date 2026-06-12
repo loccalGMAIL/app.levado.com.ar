@@ -5,6 +5,27 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.7.4] — 2026-06-12
+
+### Seguridad — Escalada de privilegios, invitaciones y facturas privadas
+
+#### Seguridad
+
+- **Escalada de privilegios en Mi equipo (crítico):** `TeamController::updateRole` validaba contra **todos** los roles, incluido `super_admin`. Un admin de tenant podía asignarse ese rol y obtener acceso global al backoffice. Ahora los roles asignables se limitan a `owner/admin/viewer`, nadie puede cambiar su propio rol, no se pueden editar super admins desde la pantalla de equipo y el tenant debe conservar al menos un propietario activo. Las mismas protecciones aplican a desactivar miembros.
+- **Inicio de sesión sin contraseña vía invitación (alto):** aceptar una invitación dirigida a un email ya registrado iniciaba sesión en esa cuenta sin verificar credenciales. Ahora un usuario existente debe estar autenticado como sí mismo para vincularse; de lo contrario se lo redirige al login. El token de invitación nunca otorga una sesión por sí solo.
+- **Imágenes de facturas accesibles sin autenticación (alto):** las facturas se guardaban en el disco público (`/storage`), accesibles sin login. Se movieron al disco privado y se sirven únicamente a través de rutas autenticadas (`purchases.invoice` y la nueva `purchases.scan.preview`, que valida la pertenencia al tenant).
+- **Validación de proveedor acotada al tenant:** `StorePurchaseRequest` y `StoreScannedPurchaseRequest` ahora validan que el `supplier_id` pertenezca al tenant actual.
+
+#### Corregido
+
+- **Invitaciones de equipo rotas:** `Rule::enum()->only([...])` recibía los valores string del enum en vez de los casos, por lo que toda invitación fallaba con "The selected role is invalid". Se corrigió pasando los casos del enum.
+
+#### Agregado
+
+- **Comando `invoices:move-to-private`:** migra las imágenes de facturas existentes del disco público al privado. Idempotente y con opción `--dry-run`.
+
+---
+
 ## [0.7.1] — 2026-06-09
 
 ### Compras — IVA por renglón, iconos de acción y fixes

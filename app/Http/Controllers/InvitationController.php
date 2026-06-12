@@ -12,6 +12,7 @@ use App\Models\TenantUser;
 use App\Models\User;
 use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -58,7 +59,7 @@ class InvitationController extends Controller
         return back()->with('status', "Invitación enviada a {$email}.");
     }
 
-    public function show(string $token): View|RedirectResponse
+    public function show(Request $request, string $token): View|RedirectResponse
     {
         $invitation = Invitation::where('token', $token)->firstOrFail();
 
@@ -70,9 +71,21 @@ class InvitationController extends Controller
             return redirect()->route('login')->with('status', 'Esta invitación ya fue aceptada.');
         }
 
-        $userExists = User::where('email', $invitation->email)->exists();
+        $existingUser = User::where('email', $invitation->email)->first();
 
-        return view('auth.accept-invitation', compact('invitation', 'userExists'));
+        // An existing account can only be linked by its own owner while signed in.
+        // Anyone else must authenticate first — we never log in by token alone.
+        $mustLogin = $existingUser !== null && $request->user()?->id !== $existingUser->id;
+
+        if ($mustLogin) {
+            $request->session()->put('url.intended', route('invitations.accept', $token));
+        }
+
+        return view('auth.accept-invitation', [
+            'invitation' => $invitation,
+            'userExists' => $existingUser !== null,
+            'mustLogin' => $mustLogin,
+        ]);
     }
 
     public function accept(AcceptInvitationRequest $request, string $token): RedirectResponse
@@ -83,17 +96,29 @@ class InvitationController extends Controller
             return redirect()->route('login')->withErrors(['email' => 'La invitación no es válida.']);
         }
 
-        $user = User::firstOrCreate(
-            ['email' => $invitation->email],
-            [
+        $existingUser = User::where('email', $invitation->email)->first();
+
+        if ($existingUser !== null) {
+            // Linking an existing account requires being authenticated as that
+            // user — the invitation token alone never grants a session.
+            if ($request->user()?->id !== $existingUser->id) {
+                $request->session()->put('url.intended', route('invitations.accept', $token));
+
+                return redirect()->route('login')
+                    ->with('status', "Iniciá sesión con {$invitation->email} para aceptar la invitación.");
+            }
+
+            $user = $existingUser;
+        } else {
+            $user = User::create([
+                'email' => $invitation->email,
                 'name' => $request->validated('name'),
                 'password' => $request->validated('password'),
-            ],
-        );
+            ]);
 
-        if ($user->wasRecentlyCreated) {
             $user->email_verified_at = now();
             $user->save();
+
             Mail::to($user->email)->send(new WelcomeMail($user, $invitation->tenant));
         }
 

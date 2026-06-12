@@ -8,3 +8,4 @@
 - [Perfil del usuario](user-profile.md) — Fundador/dev de Levado, contexto del negocio, idioma, preferencias
 - [Feedback general](feedback-general.md) — Boost ≠ auth, no i18n, no comentarios innecesarios
 - [CRUD con modales](feedback-crud-modals.md) — Create/edit siempre en modales; estructura modals/, patrón Alpine/Blade, rutas mínimas
+- [Arreglos de seguridad 2026-06](security-fixes-2026-06.md) — Privesc en equipo, invitaciones sin auth, facturas privadas, bug de Rule::enum->only
