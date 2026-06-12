@@ -53,6 +53,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('fixed-costs', [FixedCostController::class, 'index'])->name('fixed-costs.index');
     Route::get('labor-types', [LaborTypeController::class, 'index'])->name('labor-types.index');
     Route::get('price-lists', [PriceListController::class, 'index'])->name('price-lists.index');
+    Route::get('price-lists/matrix', [PriceListController::class, 'matrix'])->name('price-lists.matrix');
 
     Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');

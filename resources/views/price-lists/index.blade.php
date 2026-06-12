@@ -41,13 +41,19 @@
                     <h2 class="text-base font-semibold text-corteza">Listas de Precios</h2>
                     <p class="text-sm text-masa-madre mt-0.5">Definí distintas listas (mostrador, mayorista, etc.) con un precio por receta en cada una.</p>
                 </div>
-                @can('manage-costs')
-                    <button type="button" id="btn-nueva-lista"
-                        @click="$dispatch('open-modal', 'price-list-create')"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
-                        + Nueva lista
-                    </button>
-                @endcan
+                <div class="flex items-center gap-3">
+                    <a href="{{ route('price-lists.matrix') }}"
+                        class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                        Matriz de precios →
+                    </a>
+                    @can('manage-costs')
+                        <button type="button" id="btn-nueva-lista"
+                            @click="$dispatch('open-modal', 'price-list-create')"
+                            class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                            + Nueva lista
+                        </button>
+                    @endcan
+                </div>
             </div>
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
