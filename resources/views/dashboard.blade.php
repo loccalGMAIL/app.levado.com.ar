@@ -56,6 +56,16 @@
                         placeholder="Buscar por nombre..."
                         class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
+                @if($priceLists->count() > 1)
+                    <select name="price_list" onchange="this.form.submit()"
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                        @foreach($priceLists as $list)
+                            <option value="{{ $list->id }}" @selected($priceList->id === $list->id)>
+                                Lista: {{ $list->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                @endif
                 <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Buscar
                 </button>

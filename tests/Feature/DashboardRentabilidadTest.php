@@ -5,6 +5,7 @@ use App\Enums\Unit;
 use App\Models\FixedCost;
 use App\Models\FixedCostCategory;
 use App\Models\Ingredient;
+use App\Models\PriceList;
 use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
 use App\Models\RecipePrice;
@@ -130,6 +131,72 @@ test('dashboard muestra overhead por hora cuando hay horas productivas', functio
         ->get(route('dashboard'))
         ->assertOk()
         ->assertSee('100,00');
+});
+
+test('el selector de lista muestra los márgenes de la lista elegida', function () {
+    [$user, $tenant] = ownerForDashboard();
+
+    $recipe = Recipe::factory()->for($tenant)->create([
+        'yield_quantity' => 10,
+        'yield_unit' => Unit::Unidad->value,
+    ]);
+    $ingredient = Ingredient::factory()->for($tenant)->create([
+        'unit' => Unit::Unidad->value,
+        'cost_per_unit' => 50,
+    ]);
+    RecipeIngredientLine::create([
+        'recipe_id' => $recipe->id,
+        'ingredient_id' => $ingredient->id,
+        'quantity' => 10,
+        'unit' => Unit::Unidad->value,
+    ]);
+
+    $mayorista = PriceList::factory()->for($tenant)->create(['name' => 'Mayorista']);
+    RecipePrice::factory()->for($tenant)->create([
+        'price_list_id' => $tenant->defaultPriceList()->id,
+        'recipe_id' => $recipe->id,
+        'price' => 100,
+    ]);
+    RecipePrice::factory()->for($tenant)->create([
+        'price_list_id' => $mayorista->id,
+        'recipe_id' => $recipe->id,
+        'price' => 80,
+    ]);
+
+    // costo/u = 50; en Mayorista: margen 30, margen% 37,5
+    $this->actingAs($user)
+        ->get(route('dashboard', ['price_list' => $mayorista->id]))
+        ->assertOk()
+        ->assertSee('Precio (Mayorista) / u')
+        ->assertSee('37,5');
+});
+
+test('un price_list inválido o de otro tenant cae a la lista default', function () {
+    [$user, $tenant] = ownerForDashboard();
+    Recipe::factory()->for($tenant)->create();
+    $other = Tenant::factory()->create();
+    $foreignList = PriceList::factory()->for($other)->create(['name' => 'Ajena']);
+
+    $this->actingAs($user)
+        ->get(route('dashboard', ['price_list' => $foreignList->id]))
+        ->assertOk()
+        ->assertSee('Precio (General) / u');
+
+    $this->actingAs($user)
+        ->get(route('dashboard', ['price_list' => 99999]))
+        ->assertOk()
+        ->assertSee('Precio (General) / u');
+});
+
+test('una lista inactiva no se puede seleccionar en el dashboard', function () {
+    [$user, $tenant] = ownerForDashboard();
+    Recipe::factory()->for($tenant)->create();
+    $inactive = PriceList::factory()->for($tenant)->create(['name' => 'Vieja', 'active' => false]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard', ['price_list' => $inactive->id]))
+        ->assertOk()
+        ->assertSee('Precio (General) / u');
 });
 
 test('aislamiento: recetas de otro tenant no aparecen en el dashboard', function () {

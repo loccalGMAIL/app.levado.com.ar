@@ -15,7 +15,15 @@ class DashboardController extends Controller
     {
         $tenant = app(Tenant::class);
         $calculator = new RecipeCostCalculator(new UnitConverter);
-        $priceList = $tenant->defaultPriceList();
+
+        $tenant->defaultPriceList();
+        $priceLists = $tenant->priceLists()
+            ->where('active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get();
+        $priceList = $priceLists->firstWhere('id', (int) request('price_list'))
+            ?? $priceLists->firstWhere('is_default', true);
 
         $sortable = ['name', 'selling_price', 'yield_quantity', 'cost_per_unit', 'margin', 'margin_pct'];
         $sort = in_array(request('sort'), $sortable) ? request('sort') : 'name';
@@ -115,6 +123,7 @@ class DashboardController extends Controller
         return view('dashboard', compact(
             'recipeRows',
             'priceList',
+            'priceLists',
             'totalFixedCosts',
             'productiveHours',
             'overheadPerHour',
