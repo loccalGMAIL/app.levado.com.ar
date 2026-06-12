@@ -9,6 +9,7 @@ use App\Models\TenantUser;
 use App\Models\User;
 use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -27,7 +28,7 @@ class UserController extends Controller
                     ->orWhere('email', 'like', "%{$escaped}%");
             })
             ->latest()
-            ->paginate(30)
+            ->paginate(20)
             ->withQueryString();
 
         $tenants = Tenant::orderBy('name')->get(['id', 'name']);
@@ -73,6 +74,47 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('status', "Usuario {$user->email} {$action} {$tenant->name}. Se envió el correo para establecer la contraseña.");
+    }
+
+    public function update(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
+        ]);
+
+        $user->update($validated);
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'user',
+            targetId: $user->id,
+            action: 'user.updated',
+            payload: ['name' => $user->name, 'email' => $user->email],
+        );
+
+        return redirect()->route('admin.users.index')
+            ->with('status', "Usuario {$user->email} actualizado.");
+    }
+
+    public function toggleActive(Request $request, User $user): RedirectResponse
+    {
+        $user->update(['active' => ! $user->active]);
+
+        $action = $user->active ? 'user.activated' : 'user.deactivated';
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'user',
+            targetId: $user->id,
+            action: $action,
+            payload: ['email' => $user->email],
+        );
+
+        $label = $user->active ? 'activado' : 'desactivado';
+
+        return redirect()->route('admin.users.index')
+            ->with('status', "Usuario {$user->email} {$label}.");
     }
 
     public function sendPasswordReset(User $user): RedirectResponse

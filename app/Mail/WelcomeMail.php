@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\MailTemplate;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -21,19 +22,24 @@ class WelcomeMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: "Bienvenido/a a {$this->tenant->name} en Levado",
-        );
+        $tpl = MailTemplate::forType('welcome');
+        $subject = $tpl?->subject ?? "Bienvenido/a a {$this->tenant->name} en Levado";
+
+        return new Envelope(subject: $subject);
     }
 
     public function content(): Content
     {
+        $tpl = MailTemplate::forType('welcome');
+
         return new Content(
             view: 'emails.welcome',
             with: [
                 'userName' => $this->user->name,
                 'tenantName' => $this->tenant->name,
                 'loginUrl' => route('login'),
+                'introText' => $tpl?->intro_text,
+                'footerNote' => $tpl?->footer_note ?? 'Que tu panadería siga creciendo.',
             ],
         );
     }

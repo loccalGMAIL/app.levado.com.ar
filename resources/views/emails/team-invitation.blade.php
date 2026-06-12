@@ -15,6 +15,10 @@
             Te invitaron a {{ $tenantName }}
         </h1>
 
+        @if(!empty($introText))
+        <p style="color: #6B5B45;">{{ $introText }}</p>
+        @endif
+
         <p style="color: #6B5B45;">
             Recibiste una invitación para unirte al equipo de <strong>{{ $tenantName }}</strong>
             en Levado con el rol <strong>{{ $role }}</strong>.
@@ -39,7 +43,7 @@
         </p>
 
         <hr style="border: none; border-top: 1px solid #F2EAD8; margin: 32px 0;">
-        <p style="color: #9c897a; font-size: 12px; margin: 0;">Que tu panadería siga creciendo.</p>
+        <p style="color: #9c897a; font-size: 12px; margin: 0;">{{ $footerNote ?? 'Que tu panadería siga creciendo.' }}</p>
     </div>
 </body>
 </html>

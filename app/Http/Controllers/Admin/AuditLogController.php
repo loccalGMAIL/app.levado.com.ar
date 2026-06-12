@@ -24,7 +24,7 @@ class AuditLogController extends Controller
             ->when($to && strtotime($to), fn ($q) => $q->whereDate('created_at', '<=', $to))
             ->when(request('was_impersonating') !== null && request('was_impersonating') !== '', fn ($q) => $q->where('was_impersonating', (bool) request('was_impersonating')))
             ->latest()
-            ->paginate(50)
+            ->paginate(20)
             ->withQueryString();
 
         $actors = User::orderBy('name')->get(['id', 'name']);

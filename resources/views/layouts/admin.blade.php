@@ -33,7 +33,7 @@
                         </a>
                         <a href="{{ route('admin.audit-logs.index') }}"
                             class="text-sm {{ request()->routeIs('admin.audit-logs.*') ? 'text-white font-medium' : 'text-orange-200 hover:text-white' }} transition-colors">
-                            Auditoría
+                            Registro
                         </a>
                         <a href="{{ route('admin.mails.index') }}"
                             class="text-sm {{ request()->routeIs('admin.mails.*') ? 'text-white font-medium' : 'text-orange-200 hover:text-white' }} transition-colors">

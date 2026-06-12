@@ -157,10 +157,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'super-a
 
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
     Route::post('users', [AdminUserController::class, 'store'])->name('users.store');
+    Route::patch('users/{user}', [AdminUserController::class, 'update'])->name('users.update');
+    Route::patch('users/{user}/toggle-active', [AdminUserController::class, 'toggleActive'])->name('users.toggle-active');
     Route::post('users/{user}/send-password-reset', [AdminUserController::class, 'sendPasswordReset'])->name('users.send-password-reset');
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 
     Route::get('mails', [MailPreviewController::class, 'index'])->name('mails.index');
+    Route::patch('mails/{type}', [MailPreviewController::class, 'update'])->name('mails.update');
     Route::get('mails/preview/team-invitation', [MailPreviewController::class, 'teamInvitation'])->name('mails.preview.team-invitation');
     Route::get('mails/preview/welcome', [MailPreviewController::class, 'welcome'])->name('mails.preview.welcome');
 });

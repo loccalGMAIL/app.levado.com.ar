@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Invitation;
+use App\Models\MailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -17,13 +18,16 @@ class TeamInvitation extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: "Invitación a {$this->invitation->tenant->name} en Levado",
-        );
+        $tpl = MailTemplate::forType('team-invitation');
+        $subject = $tpl?->subject ?? "Invitación a {$this->invitation->tenant->name} en Levado";
+
+        return new Envelope(subject: $subject);
     }
 
     public function content(): Content
     {
+        $tpl = MailTemplate::forType('team-invitation');
+
         return new Content(
             view: 'emails.team-invitation',
             with: [
@@ -32,6 +36,8 @@ class TeamInvitation extends Mailable
                 'role' => $this->invitation->role->label(),
                 'expiresAt' => $this->invitation->expires_at->format('d/m/Y H:i'),
                 'customMessage' => $this->invitation->tenant->getSetting('invitation_message'),
+                'introText' => $tpl?->intro_text,
+                'footerNote' => $tpl?->footer_note ?? 'Que tu panadería siga creciendo.',
             ],
         );
     }

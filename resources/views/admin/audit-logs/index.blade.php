@@ -1,8 +1,8 @@
 <x-admin-layout>
-    <x-slot name="title">Logs de auditoría</x-slot>
+    <x-slot name="title">Registro de actividad</x-slot>
 
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-corteza leading-tight">Logs de auditoría</h2>
+        <h2 class="font-semibold text-xl text-corteza leading-tight">Registro de actividad</h2>
     </x-slot>
 
     <div class="py-10">
@@ -72,7 +72,7 @@
 
             {{-- Tabla --}}
             <div class="bg-white shadow rounded-lg overflow-x-auto">
-                <table class="w-full text-sm text-left">
+                <table class="min-w-[900px] w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
                             <th class="px-4 py-3 font-medium">Fecha</th>
@@ -95,7 +95,7 @@
                                 </td>
                                 <td class="px-4 py-3 text-corteza">{{ $log->actor?->name ?? '—' }}</td>
                                 <td class="px-4 py-3">
-                                    <span class="font-mono text-xs bg-miga text-corteza px-2 py-0.5 rounded">
+                                    <span class="font-mono text-xs bg-miga text-corteza px-2 py-0.5 rounded inline-block max-w-[200px] truncate" title="{{ $log->action }}">
                                         {{ $log->action }}
                                     </span>
                                 </td>
@@ -124,7 +124,7 @@
                         @empty
                             <tr>
                                 <td colspan="7" class="px-4 py-8 text-center text-masa-madre">
-                                    No hay registros de auditoría.
+                                    No hay registros de actividad.
                                 </td>
                             </tr>
                         @endforelse
