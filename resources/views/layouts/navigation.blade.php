@@ -51,10 +51,10 @@
                     $crumbs[] = ['label' => 'Proveedores', 'href' => null];
                 } elseif (request()->routeIs('packaging.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
-                    $crumbs[] = ['label' => 'Envases', 'href' => null];
+                    $crumbs[] = ['label' => 'Descartables', 'href' => null];
                 } elseif (request()->routeIs('fixed-costs.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
-                    $crumbs[] = ['label' => 'Gastos Fijos', 'href' => null];
+                    $crumbs[] = ['label' => 'Gastos', 'href' => null];
                 } elseif (request()->routeIs('labor-types.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Mano de Obra', 'href' => null];

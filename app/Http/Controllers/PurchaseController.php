@@ -273,6 +273,7 @@ class PurchaseController extends Controller
         $this->authorizePurchase($purchase);
 
         $applied = 0;
+        $skipped = 0;
         $failed = 0;
 
         $pending = $purchase->lines()
@@ -284,17 +285,29 @@ class PurchaseController extends Controller
             try {
                 DB::transaction(fn () => $this->lineRecorder->apply($line));
                 $applied++;
-            } catch (HttpException) {
-                $failed++;
+            } catch (HttpException $e) {
+                if (str_contains($e->getMessage(), 'unidades no son compatibles')) {
+                    $skipped++;
+                } else {
+                    $failed++;
+                }
             }
         }
 
-        $message = "{$applied} renglón(es) asociado(s) y costos actualizados.";
+        $message = match (true) {
+            $applied > 0 && $skipped > 0 => "{$applied} renglón(es) aplicado(s). {$skipped} requieren especificar el divisor manualmente.",
+            $applied > 0 => "{$applied} renglón(es) asociado(s) y costos actualizados.",
+            $skipped > 0 => 'Las sugerencias de IA requieren completar el divisor de unidades — aplicalas una por una desde cada renglón.',
+            default => 'No se pudieron aplicar las sugerencias.',
+        };
+
         if ($failed > 0) {
-            $message .= " {$failed} no se pudieron aplicar — revisá las unidades.";
+            $message .= " {$failed} fallaron inesperadamente.";
         }
 
-        return back()->with($failed > 0 ? 'error' : 'status', $message);
+        $flashKey = ($applied > 0 && $failed === 0) ? 'status' : 'error';
+
+        return back()->with($flashKey, $message);
     }
 
     private function authorizePurchase(Purchase $purchase): void

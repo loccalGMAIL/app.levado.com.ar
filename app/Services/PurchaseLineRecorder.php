@@ -63,6 +63,10 @@ class PurchaseLineRecorder
     /**
      * Impute the line's price to its matched item and mark it as applied.
      * Aborts (422) if the line is unmatched or the units are incompatible.
+     *
+     * For ingredient lines where units don't share a dimension (e.g. u → kg),
+     * falls back to parsing the product description for a quantity hint
+     * (same logic as the JS parseDesc() + pkgQty in match.blade.php).
      */
     public function apply(PurchaseLine $line): void
     {
@@ -75,7 +79,12 @@ class PurchaseLineRecorder
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Ingrediente no válido.');
 
             $costPerUnit = $this->costPerUnit($purchaseUnit, $item->unit, (float) $line->unit_price);
-            abort_if($costPerUnit === null, 422, 'Las unidades no son compatibles con las del ingrediente.');
+
+            if ($costPerUnit === null) {
+                $pkgQty = $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
+                abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del ingrediente.');
+                $costPerUnit = (float) $line->unit_price / $pkgQty;
+            }
 
             $this->applyIngredientCost($item, $costPerUnit);
         } else {
@@ -173,5 +182,47 @@ class PurchaseLineRecorder
         }
 
         return $unitPrice / $purchaseUnitInIngredientUnits;
+    }
+
+    /**
+     * Parse a product description for a quantity hint when purchase unit and ingredient
+     * unit are dimensionally incompatible (e.g. 'u' → 'kg').
+     *
+     * Mirrors the JS parseDesc() + pkgQty logic in match.blade.php.
+     * Matches patterns like "X 25 Kg", "x5lts", "× 200 ml", "X 1.5 L", "X5KG".
+     *
+     * Returns the package quantity expressed in $ingredientUnit, or null if not parseable.
+     */
+    private function parseDescPkgQty(string $desc, Unit $ingredientUnit): ?float
+    {
+        $pattern = '/[xX×]\s*(\d+(?:[.,]\d+)?)\s*(kg|kgs?|kilo[s]?|kilogramo[s]?|gr[s]?|gramo[s]?|g|l(?:t[s]?|itro[s]?)?|ml[s]?|cc)/i';
+
+        if (! preg_match($pattern, $desc, $matches)) {
+            return null;
+        }
+
+        $qty = (float) str_replace(',', '.', $matches[1]);
+        if ($qty <= 0) {
+            return null;
+        }
+
+        $aliases = [
+            'kg' => Unit::Kilogramo, 'kgs' => Unit::Kilogramo,
+            'kilo' => Unit::Kilogramo, 'kilos' => Unit::Kilogramo,
+            'kilogramo' => Unit::Kilogramo, 'kilogramos' => Unit::Kilogramo,
+            'gr' => Unit::Gramo, 'grs' => Unit::Gramo, 'g' => Unit::Gramo,
+            'gramo' => Unit::Gramo, 'gramos' => Unit::Gramo,
+            'l' => Unit::Litro, 'lt' => Unit::Litro, 'lts' => Unit::Litro,
+            'litro' => Unit::Litro, 'litros' => Unit::Litro,
+            'ml' => Unit::Mililitro, 'mls' => Unit::Mililitro,
+            'cc' => Unit::Centimetro3,
+        ];
+
+        $parsedUnit = $aliases[strtolower($matches[2])] ?? null;
+        if ($parsedUnit === null) {
+            return null;
+        }
+
+        return $this->converter->convert($qty, $parsedUnit, $ingredientUnit);
     }
 }
