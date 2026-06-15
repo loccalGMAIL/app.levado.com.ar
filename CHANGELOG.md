@@ -5,6 +5,17 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.2] — 2026-06-15
+
+### Refactor — Calidad interna del módulo de listas de precios
+
+#### Mejorado
+
+- **`RecipePriceWriter::set()` sin lazy load innecesario:** el log de precio usaba `$recipePrice->recipe->priceLogs()` cargando la relación desde el modelo intermedio cuando `$recipe` ya estaba disponible como parámetro. Ahora usa `$recipe->priceLogs()` directamente, eliminando 1 SELECT por receta en operaciones bulk.
+- **Transacciones en aplicación masiva de sugerencias:** `applySuggestions()` y `applyAllSuggestions()` envuelven sus loops de escritura en `DB::transaction()`. Si alguna escritura falla a mitad de camino, ningún precio queda persistido parcialmente.
+
+---
+
 ## [0.8.1] — 2026-06-15
 
 ### Listas de precios — Aplicación masiva de sugerencias + selector en recetas

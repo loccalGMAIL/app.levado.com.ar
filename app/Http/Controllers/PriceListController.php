@@ -12,6 +12,7 @@ use App\Services\RecipeCostCalculator;
 use App\Services\RecipePriceWriter;
 use App\Services\UnitConverter;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PriceListController extends Controller
@@ -170,15 +171,19 @@ class PriceListController extends Controller
         $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
         $existing = RecipePrice::where('price_list_id', $priceList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
 
-        $applied = 0;
-        foreach ($recipes as $recipe) {
-            if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
-                continue;
+        $applied = DB::transaction(function () use ($recipes, $existing, $basePrices, $priceList): int {
+            $count = 0;
+            foreach ($recipes as $recipe) {
+                if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
+                    continue;
+                }
+                $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $priceList->adjustment_pct / 100), 2);
+                $this->writer->set($recipe, $priceList, $suggested);
+                $count++;
             }
-            $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $priceList->adjustment_pct / 100), 2);
-            $this->writer->set($recipe, $priceList, $suggested);
-            $applied++;
-        }
+
+            return $count;
+        });
 
         return redirect()->route('price-lists.index')
             ->with('status', "Se aplicaron {$applied} sugerencia(s) en la lista \"{$priceList->name}\".");
@@ -193,18 +198,22 @@ class PriceListController extends Controller
         $recipeIds = $recipes->pluck('id');
         $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
 
-        $applied = 0;
-        foreach ($lists as $list) {
-            $existing = RecipePrice::where('price_list_id', $list->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
-            foreach ($recipes as $recipe) {
-                if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
-                    continue;
+        $applied = DB::transaction(function () use ($lists, $recipes, $recipeIds, $basePrices): int {
+            $count = 0;
+            foreach ($lists as $list) {
+                $existing = RecipePrice::where('price_list_id', $list->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
+                foreach ($recipes as $recipe) {
+                    if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
+                        continue;
+                    }
+                    $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $list->adjustment_pct / 100), 2);
+                    $this->writer->set($recipe, $list, $suggested);
+                    $count++;
                 }
-                $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $list->adjustment_pct / 100), 2);
-                $this->writer->set($recipe, $list, $suggested);
-                $applied++;
             }
-        }
+
+            return $count;
+        });
 
         return redirect()->route('price-lists.matrix')
             ->with('status', "Se aplicaron {$applied} sugerencia(s) en todas las listas.");

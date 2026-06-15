@@ -32,7 +32,7 @@ class RecipePriceWriter
         );
 
         if ($priceChanged) {
-            $recipePrice->recipe->priceLogs()->create([
+            $recipe->priceLogs()->create([
                 'price_list_id' => $priceList->id,
                 'price' => $price,
                 'recorded_at' => now(),
