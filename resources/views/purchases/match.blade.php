@@ -88,7 +88,7 @@
                     if (directFactor !== undefined) {
                         // Compatible units — auto-convert, no divisor input needed
                         this.needsPkgQty = false;
-                        this.unitCost = this.unitPrice / directFactor;
+                        this.unitCost = Math.round((this.unitPrice / directFactor) * 100) / 100;
                     } else {
                         // Incompatible (e.g. 'u' → 'kg'): try to extract pkg qty from description
                         this.needsPkgQty = true;
@@ -105,14 +105,14 @@
                             }
                         }
 
-                        this.unitCost = this.pkgQty > 0 ? this.unitPrice / this.pkgQty : this.unitPrice;
+                        this.unitCost = this.pkgQty > 0 ? Math.round((this.unitPrice / this.pkgQty) * 100) / 100 : this.unitPrice;
                     }
                 },
 
                 onPkgQtyChange() {
                     this.pkgQtyFromDesc = false;
                     if (this.pkgQty > 0) {
-                        this.unitCost = this.unitPrice / this.pkgQty;
+                        this.unitCost = Math.round((this.unitPrice / this.pkgQty) * 100) / 100;
                     }
                 },
 
@@ -287,12 +287,12 @@
                                                 class="space-y-2">
                                                 @csrf
                                                 <input type="hidden" name="match" x-bind:value="selected">
-                                                <input type="hidden" name="unit_cost" x-bind:value="unitCost > 0 ? unitCost.toFixed(4) : ''">
+                                                <input type="hidden" name="unit_cost" x-bind:value="unitCost > 0 ? unitCost.toFixed(2) : ''">
 
                                                 <div class="flex items-start gap-3 flex-wrap">
                                                     {{-- Select de insumo/descartable --}}
                                                     <select x-model="selected" @change="onSelect()"
-                                                        x-init="$nextTick(() => { new TomSelect($el, { maxOptions: null }); })"
+                                                        x-init="$nextTick(() => { new TomSelect($el, { maxOptions: null, dropdownParent: 'body' }); })"
                                                         class="text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1.5 min-w-[220px]">
                                                         <option value="">— sin asociar —</option>
                                                         @if($ingredients->isNotEmpty())
@@ -350,8 +350,8 @@
                                                             <span>=&nbsp;$</span>
                                                             <input type="number"
                                                                 x-model.number="unitCost"
-                                                                min="0" step="0.0001"
-                                                                data-maxdecimals="4"
+                                                                min="0" step="0.01"
+                                                                data-maxdecimals="2"
                                                                 class="w-28 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1 text-right font-mono">
                                                             <span>/</span>
                                                             <span x-text="catalogUnit" class="font-medium text-corteza"></span>

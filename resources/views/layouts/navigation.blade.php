@@ -54,7 +54,7 @@
                     $crumbs[] = ['label' => 'Envases', 'href' => null];
                 } elseif (request()->routeIs('fixed-costs.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
-                    $crumbs[] = ['label' => 'Gastos Fijos', 'href' => null];
+                    $crumbs[] = ['label' => 'Gastos', 'href' => null];
                 } elseif (request()->routeIs('labor-types.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Mano de Obra', 'href' => null];

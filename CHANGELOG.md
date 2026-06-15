@@ -5,6 +5,22 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.5] — 2026-06-15
+
+### Fix — Compras: botón aplicar sugerencias, decimales y dropdown de producto
+
+#### Corregido
+
+- **Botón "Aplicar sugerencias de IA":** el bulk apply fallaba silenciosamente cuando los renglones sugeridos tenían unidad de compra `u` e ingrediente en `kg`/`gr`. Ahora `PurchaseLineRecorder::apply()` intenta parsear la descripción del renglón (patrón "X 25 Kg", "x5lts", etc.) para derivar la cantidad por unidad, replicando la lógica del frontend. Solo requiere intervención manual cuando la descripción tampoco tiene cantidad. El mensaje de feedback distingue entre líneas aplicadas, salteadas por unidades y errores inesperados.
+- **Decimales del cálculo de costo unitario:** la división entre precio y factor de conversión producía floats con 12+ decimales en el input visible. Los tres puntos de asignación de `unitCost` en el JS ahora redondean a 2 decimales (`Math.round(x * 100) / 100`). El input usa `step="0.01"` y `data-maxdecimals="2"`.
+- **Dropdown de producto atrapado en scroll:** TomSelect se inicializa con `dropdownParent: 'body'`, evitando que el `overflow-x-auto` del contenedor de la tabla recorte el dropdown cuando hay pocos productos.
+
+#### UX
+
+- Menú lateral y mobile nav: "Gastos Fijos" renombrado a "Gastos".
+
+---
+
 ## [0.8.4] — 2026-06-15
 
 ### Recetas — Selector de lista de precios en el detalle de receta
