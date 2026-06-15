@@ -20,6 +20,10 @@
             yieldQty:        @js((float) $recipe->yield_quantity),
             sellingPrice:    @js((float) ($defaultPrice ?? 0)),
             targetMargin:    30,
+            priceLists:      @js($priceLists->map(fn($l) => ['id' => $l->id, 'name' => $l->name])),
+            allPrices:       @js($allPrices),
+            selectedListId:  @js($defaultPriceList->id),
+            savingPrice:     false,
 
             get ingredientCost() {
                 return this.ingredientLines.reduce((s, l) => s + l.quantity * l.costPerLineUnit, 0);
@@ -59,6 +63,27 @@
             fmt(n) {
                 if (n === null || n === undefined || isNaN(n)) return '—';
                 return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+            },
+            changeList(id) {
+                this.selectedListId = id;
+                this.sellingPrice = this.allPrices[id] ?? 0;
+            },
+            async savePrice() {
+                if (this.savingPrice) return;
+                this.savingPrice = true;
+                try {
+                    const res = await fetch('/recipes/{{ $recipe->id }}/prices/' + this.selectedListId, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                        body: JSON.stringify({ price: this.sellingPrice > 0 ? this.sellingPrice : null }),
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.allPrices[this.selectedListId] = data.selling_price;
+                    }
+                } finally {
+                    this.savingPrice = false;
+                }
             },
             async saveIngredientLine(line) {
                 await fetch('/recipes/{{ $recipe->id }}/ingredient-lines/' + line.id, {
@@ -110,9 +135,10 @@
             </div>
             @can('manage-costs')
                 <div class="flex items-center gap-1 sm:gap-2 shrink-0">
-                    <button type="submit" form="form-precio-venta"
-                        class="px-2 sm:px-3 py-1.5 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors whitespace-nowrap">
-                        <span class="hidden sm:inline">Guardar </span>precio
+                    <button type="button" @click="savePrice()" :disabled="savingPrice"
+                        class="px-2 sm:px-3 py-1.5 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors whitespace-nowrap disabled:opacity-50">
+                        <span x-show="!savingPrice"><span class="hidden sm:inline">Guardar </span>precio</span>
+                        <span x-show="savingPrice" class="text-xs">Guardando…</span>
                     </button>
                     <form method="POST" action="{{ route('recipes.toggle-active', $recipe) }}">
                         @csrf
@@ -457,23 +483,30 @@
 
                 {{-- Precio de venta --}}
                 <div class="bg-white rounded-lg shadow p-4 space-y-3">
-                    <p class="text-xs font-semibold text-masa-madre uppercase tracking-wide">Precio de venta (lista {{ $defaultPriceList->name }})</p>
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xs font-semibold text-masa-madre uppercase tracking-wide">Precio de venta</p>
+                        @if($priceLists->count() > 1)
+                            <select @change="changeList(parseInt($event.target.value))"
+                                class="text-xs border-gray-300 rounded-md shadow-sm focus:border-horno focus:ring-horno text-corteza py-0.5">
+                                @foreach($priceLists as $list)
+                                    <option value="{{ $list->id }}" {{ $list->id === $defaultPriceList->id ? 'selected' : '' }}>
+                                        {{ $list->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        @else
+                            <span class="text-xs text-masa-madre">{{ $defaultPriceList->name }}</span>
+                        @endif
+                    </div>
 
-                    <form id="form-precio-venta" method="POST" action="{{ route('recipes.update', $recipe) }}">
-                        @csrf
-                        @method('PUT')
-                        <input type="hidden" name="name" value="{{ $recipe->name }}">
-                        <input type="hidden" name="yield_quantity" value="{{ $recipe->yield_quantity }}">
-                        <input type="hidden" name="yield_unit" value="{{ $recipe->yield_unit->value }}">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-masa-madre shrink-0">$</span>
-                            <input type="number" name="selling_price"
-                                x-model.number="sellingPrice"
-                                step="0.01" min="0"
-                                placeholder="0,00"
-                                class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono text-right" />
-                        </div>
-                    </form>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-masa-madre shrink-0">$</span>
+                        <input type="number"
+                            x-model.number="sellingPrice"
+                            step="0.01" min="0"
+                            placeholder="0,00"
+                            class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono text-right" />
+                    </div>
 
                     {{-- Margin bar --}}
                     <template x-if="sellingPrice > 0 && costPerUnit !== null">

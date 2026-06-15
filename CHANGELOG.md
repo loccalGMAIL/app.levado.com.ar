@@ -5,6 +5,22 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.4] — 2026-06-15
+
+### Recetas — Selector de lista de precios en el detalle de receta
+
+#### Agregado
+
+- **Selector de lista de precios en el sidebar de `/recipes/{id}`:** cuando el tenant tiene más de una lista activa, aparece un dropdown junto al título "Precio de venta" que permite cambiar de lista sin salir de la receta. Al cambiar la lista, el campo de precio y la barra de margen se actualizan reactivamente con el precio guardado en esa lista.
+- **Guardado AJAX por lista:** el botón "Guardar precio" (antes submit de formulario HTML) ahora llama a `PATCH /recipes/{id}/prices/{priceList}` y muestra estado "Guardando…" mientras espera. No hay recarga de página.
+
+#### Técnico
+- `RecipeController::show()` carga todas las listas activas y los precios de la receta en todas ellas (`$priceLists`, `$allPrices`).
+- `$defaultPrice` se deriva de `$allPrices` en lugar de una query extra.
+- Alpine.js: nuevos datos `priceLists`, `allPrices`, `selectedListId`, `savingPrice`; nuevos métodos `changeList()` y `savePrice()`.
+
+---
+
 ## [0.8.3] — 2026-06-15
 
 ### Fix — Inconsistencia en costo/u entre dashboard y detalle de receta

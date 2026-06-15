@@ -233,15 +233,27 @@ class RecipeController extends Controller
         $semiElaborates = $this->availableSemiElaborates($recipe, $tenant);
 
         $defaultPriceList = $tenant->defaultPriceList();
-        $defaultPrice = RecipePrice::where('price_list_id', $defaultPriceList->id)
-            ->where('recipe_id', $recipe->id)
-            ->value('price');
-        $defaultPrice = $defaultPrice !== null ? (float) $defaultPrice : null;
+
+        $priceLists = $tenant->priceLists()
+            ->where('active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get();
+
+        $allPrices = RecipePrice::where('recipe_id', $recipe->id)
+            ->whereIn('price_list_id', $priceLists->pluck('id'))
+            ->pluck('price', 'price_list_id')
+            ->map(fn ($p) => $p !== null ? (float) $p : null)
+            ->toArray();
+
+        $defaultPrice = $allPrices[$defaultPriceList->id] ?? null;
 
         return view('recipes.show', [
             'recipe' => $recipe,
             'defaultPriceList' => $defaultPriceList,
             'defaultPrice' => $defaultPrice,
+            'priceLists' => $priceLists,
+            'allPrices' => $allPrices,
             'ingredientCost' => $costs['ingredient_cost'],
             'packagingCost' => $costs['packaging_cost'],
             'laborCost' => $costs['labor_cost'],
