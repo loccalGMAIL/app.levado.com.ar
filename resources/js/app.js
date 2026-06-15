@@ -9,6 +9,7 @@ window.TomSelect = TomSelect;
 Alpine.start();
 
 import './onboarding-tour';
+import './purchases/match';
 
 // Initialize Tom Select on [data-searchable] elements (non-Alpine selects)
 document.querySelectorAll('[data-searchable]').forEach(function (el) {
