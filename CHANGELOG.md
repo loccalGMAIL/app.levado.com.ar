@@ -5,6 +5,17 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.3] — 2026-06-15
+
+### Fix — Inconsistencia en costo/u entre dashboard y detalle de receta
+
+#### Corregido
+
+- **`cost_per_unit` sin overhead en el dashboard y endpoint de precios:** el dashboard de rentabilidad y la respuesta AJAX de edición inline de precios calculaban el costo por unidad usando solo costos directos (ingredientes + mano de obra + packaging + subrecetas), omitiendo los gastos fijos prorrateados por horas. La vista de detalle de receta sí los incluía, generando valores distintos entre las dos pantallas.
+- **Solución:** `RecipeCostCalculator::calculate()` ahora devuelve también `total_labor_hours`. `DashboardController` y `RecipePriceController` suman `fixedCost = labor_hours × overhead_per_hour` antes de derivar `cost_per_unit` y márgenes, igualando el criterio de la vista de receta.
+
+---
+
 ## [0.8.2] — 2026-06-15
 
 ### Refactor — Calidad interna del módulo de listas de precios

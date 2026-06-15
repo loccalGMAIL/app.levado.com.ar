@@ -9,7 +9,7 @@ class RecipeCostCalculator
     public function __construct(private UnitConverter $converter) {}
 
     /**
-     * @return array{ingredient_cost: float, packaging_cost: float, labor_cost: float, subrecipe_cost: float, total_cost: float, cost_per_unit: float|null}
+     * @return array{ingredient_cost: float, packaging_cost: float, labor_cost: float, subrecipe_cost: float, total_cost: float, cost_per_unit: float|null, total_labor_hours: float}
      */
     public function calculate(Recipe $recipe): array
     {
@@ -36,6 +36,7 @@ class RecipeCostCalculator
             fn ($l) => (float) $l->quantity * (float) $l->packaging->cost_per_unit
         );
 
+        $laborHours = $recipe->laborLines->sum(fn ($l) => (float) $l->hours);
         $laborCost = $recipe->laborLines->sum(
             fn ($l) => (float) $l->hours * (float) $l->laborType->hourly_rate
         );
@@ -68,6 +69,7 @@ class RecipeCostCalculator
             'subrecipe_cost' => $subrecipeCost,
             'total_cost' => $totalCost,
             'cost_per_unit' => $costPerUnit,
+            'total_labor_hours' => $laborHours,
         ];
     }
 }

@@ -47,10 +47,17 @@ class DashboardController extends Controller
             ->whereIn('recipe_id', $recipes->pluck('id'))
             ->pluck('price', 'recipe_id');
 
-        $allRows = $recipes->map(function ($recipe) use ($calculator, $prices) {
+        $totalFixedCosts = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
+        $productiveHours = $tenant->productive_hours_month ?? 0;
+        $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : null;
+
+        $allRows = $recipes->map(function ($recipe) use ($calculator, $prices, $overheadPerHour) {
             $costs = $calculator->calculate($recipe);
+            $fixedCost = $overheadPerHour !== null ? $costs['total_labor_hours'] * $overheadPerHour : 0.0;
+            $totalCost = $costs['total_cost'] + $fixedCost;
+            $yieldQty = (float) $recipe->yield_quantity;
+            $costPerUnit = $yieldQty > 0 ? $totalCost / $yieldQty : null;
             $sellingPrice = isset($prices[$recipe->id]) ? (float) $prices[$recipe->id] : null;
-            $costPerUnit = $costs['cost_per_unit'];
 
             $margin = null;
             $marginPct = null;
@@ -61,7 +68,7 @@ class DashboardController extends Controller
 
             return [
                 'recipe' => $recipe,
-                'total_cost' => $costs['total_cost'],
+                'total_cost' => $totalCost,
                 'cost_per_unit' => $costPerUnit,
                 'selling_price' => $sellingPrice,
                 'margin' => $margin,
@@ -112,10 +119,6 @@ class DashboardController extends Controller
             $page,
             ['path' => request()->url(), 'query' => request()->except('page')],
         );
-
-        $totalFixedCosts = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
-        $productiveHours = $tenant->productive_hours_month ?? 0;
-        $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : null;
 
         $activeRecipeCount = $tenant->recipes()->where('active', true)->count();
         $packagingCount = $tenant->packagings()->where('active', true)->count();
