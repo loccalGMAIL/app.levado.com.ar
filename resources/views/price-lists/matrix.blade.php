@@ -9,11 +9,29 @@
                     <h2 class="text-base font-semibold text-corteza">Matriz de precios</h2>
                     <p class="text-sm text-masa-madre mt-0.5">Todos los precios de tus recetas, lista por lista. Hacé clic en una celda para editar.</p>
                 </div>
-                <a href="{{ route('price-lists.index') }}"
-                    class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors shrink-0">
-                    ← Listas de precios
-                </a>
+                <div class="flex items-center gap-3 shrink-0">
+                    @can('manage-costs')
+                        <form method="POST" action="{{ route('price-lists.apply-all-suggestions') }}"
+                            onsubmit="return confirm('¿Aplicar todas las sugerencias pendientes? Solo se completarán las celdas vacías.')">
+                            @csrf
+                            <button type="submit"
+                                class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                                Aplicar sugerencias
+                            </button>
+                        </form>
+                    @endcan
+                    <a href="{{ route('price-lists.index') }}"
+                        class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                        ← Listas de precios
+                    </a>
+                </div>
             </div>
+
+            @if(session('status'))
+                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
+                    {{ session('status') }}
+                </div>
+            @endif
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <input type="hidden" name="dir" value="{{ request('dir') }}">

@@ -94,6 +94,8 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('price-lists', [PriceListController::class, 'store'])->name('price-lists.store');
     Route::put('price-lists/{priceList}', [PriceListController::class, 'update'])->name('price-lists.update');
     Route::patch('price-lists/{priceList}/toggle-active', [PriceListController::class, 'toggleActive'])->name('price-lists.toggle-active');
+    Route::post('price-lists/apply-all-suggestions', [PriceListController::class, 'applyAllSuggestions'])->name('price-lists.apply-all-suggestions');
+    Route::post('price-lists/{priceList}/apply-suggestions', [PriceListController::class, 'applySuggestions'])->name('price-lists.apply-suggestions');
 
     Route::post('recipes', [RecipeController::class, 'store'])->name('recipes.store');
     Route::post('recipes/{recipe}/copy', [RecipeController::class, 'copy'])->name('recipes.copy');

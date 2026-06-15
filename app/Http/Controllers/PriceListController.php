@@ -9,6 +9,7 @@ use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostCalculator;
+use App\Services\RecipePriceWriter;
 use App\Services\UnitConverter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -17,6 +18,7 @@ class PriceListController extends Controller
 {
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
+        private readonly RecipePriceWriter $writer,
     ) {}
 
     public function index(): View
@@ -154,6 +156,58 @@ class PriceListController extends Controller
         $label = $priceList->active ? 'activada' : 'desactivada';
 
         return back()->with('status', "Lista de precios {$label}.");
+    }
+
+    public function applySuggestions(PriceList $priceList): RedirectResponse
+    {
+        $tenant = app(Tenant::class);
+        $this->authorizePriceList($priceList);
+        abort_if($priceList->is_default || $priceList->adjustment_pct === null, 422, 'Esta lista no admite sugerencias.');
+
+        $defaultList = $tenant->defaultPriceList();
+        $recipes = $tenant->recipes()->where('active', true)->where('is_semi_elaborate', false)->get();
+        $recipeIds = $recipes->pluck('id');
+        $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
+        $existing = RecipePrice::where('price_list_id', $priceList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
+
+        $applied = 0;
+        foreach ($recipes as $recipe) {
+            if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
+                continue;
+            }
+            $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $priceList->adjustment_pct / 100), 2);
+            $this->writer->set($recipe, $priceList, $suggested);
+            $applied++;
+        }
+
+        return redirect()->route('price-lists.index')
+            ->with('status', "Se aplicaron {$applied} sugerencia(s) en la lista \"{$priceList->name}\".");
+    }
+
+    public function applyAllSuggestions(): RedirectResponse
+    {
+        $tenant = app(Tenant::class);
+        $lists = $tenant->priceLists()->where('active', true)->where('is_default', false)->whereNotNull('adjustment_pct')->get();
+        $defaultList = $tenant->defaultPriceList();
+        $recipes = $tenant->recipes()->where('active', true)->where('is_semi_elaborate', false)->get();
+        $recipeIds = $recipes->pluck('id');
+        $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
+
+        $applied = 0;
+        foreach ($lists as $list) {
+            $existing = RecipePrice::where('price_list_id', $list->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
+            foreach ($recipes as $recipe) {
+                if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
+                    continue;
+                }
+                $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $list->adjustment_pct / 100), 2);
+                $this->writer->set($recipe, $list, $suggested);
+                $applied++;
+            }
+        }
+
+        return redirect()->route('price-lists.matrix')
+            ->with('status', "Se aplicaron {$applied} sugerencia(s) en todas las listas.");
     }
 
     private function authorizePriceList(PriceList $priceList): void

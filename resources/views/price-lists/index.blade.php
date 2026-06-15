@@ -160,6 +160,16 @@
                                     @can('manage-costs')
                                         <td class="px-4 py-3">
                                             <div class="flex items-center justify-end gap-3">
+                                                @if(! $priceList->is_default && $priceList->adjustment_pct !== null && $priceList->active)
+                                                    <form method="POST" action="{{ route('price-lists.apply-suggestions', $priceList) }}"
+                                                        onsubmit="return confirm('¿Aplicar sugerencias a todas las recetas sin precio en esta lista?')">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-xs text-masa-madre hover:text-corteza hover:underline">
+                                                            Aplicar sugerencias
+                                                        </button>
+                                                    </form>
+                                                @endif
                                                 <button type="button"
                                                     @click="openEdit({{ Js::from([
                                                         'id'             => $priceList->id,

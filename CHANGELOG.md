@@ -5,6 +5,21 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.1] — 2026-06-15
+
+### Listas de precios — Aplicación masiva de sugerencias + selector en recetas
+
+#### Agregado
+
+- **Botón "Aplicar sugerencias" por lista (`/price-lists`):** en la columna de acciones de cada lista no-base con % de ajuste activa, aplica de una sola vez el precio sugerido a todas las recetas que todavía no tienen precio en esa lista. No sobreescribe precios ya cargados.
+- **Botón "Aplicar sugerencias" en la matriz (`/price-lists/matrix`):** aplica las sugerencias pendientes en todas las listas con % de ajuste en un único click. Redirige con el conteo de precios aplicados.
+- **Selector de lista de precios en el listado de recetas (`/recipes`):** dropdown en el formulario de filtros (visible cuando hay más de una lista activa) que recarga la tabla mostrando los precios de la lista elegida. La columna de precio cambia de nombre, el ordenamiento y la edición inline operan sobre la lista seleccionada. El selector se preserva al buscar y filtrar.
+
+#### Técnico
+- Suite completa: **270 tests**, todos verdes
+
+---
+
 ## [0.8.0] — 2026-06-12
 
 ### Listas de precios

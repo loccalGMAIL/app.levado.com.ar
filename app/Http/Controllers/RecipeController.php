@@ -41,9 +41,14 @@ class RecipeController extends Controller
         $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
-        $defaultPriceList = app(Tenant::class)->defaultPriceList();
+        $tenant = app(Tenant::class);
+        $priceLists = $tenant->priceLists()->where('active', true)->orderByDesc('is_default')->orderBy('name')->get();
+        $priceList = $priceLists->firstWhere('id', (int) request('price_list'))
+            ?? $priceLists->firstWhere('is_default', true)
+            ?? $priceLists->first()
+            ?? $tenant->defaultPriceList();
 
-        $recipes = app(Tenant::class)->recipes()
+        $recipes = $tenant->recipes()
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
@@ -54,7 +59,7 @@ class RecipeController extends Controller
             ->when($sort === 'selling_price', fn ($q) => $q->orderBy(
                 RecipePrice::select('price')
                     ->whereColumn('recipe_id', 'recipes.id')
-                    ->where('price_list_id', $defaultPriceList->id),
+                    ->where('price_list_id', $priceList->id),
                 $dir,
             ))
             ->when($sort && $sort !== 'selling_price', fn ($q) => $q->orderBy($sort, $dir))
@@ -62,11 +67,11 @@ class RecipeController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $defaultPrices = RecipePrice::where('price_list_id', $defaultPriceList->id)
+        $prices = RecipePrice::where('price_list_id', $priceList->id)
             ->whereIn('recipe_id', $recipes->pluck('id'))
             ->pluck('price', 'recipe_id');
 
-        return view('recipes.index', compact('recipes', 'defaultPriceList', 'defaultPrices'));
+        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices'));
     }
 
     public function copy(Recipe $recipe): RedirectResponse

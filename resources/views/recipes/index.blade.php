@@ -42,6 +42,16 @@
                     <option value="active"   @selected(request('status') === 'active')>Activas</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactivas</option>
                 </select>
+                @if($priceLists->count() > 1)
+                    <select name="price_list" onchange="this.form.submit()"
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                        @foreach($priceLists as $list)
+                            <option value="{{ $list->id }}" @selected($priceList->id === $list->id)>
+                                Lista: {{ $list->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                @endif
                 <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
@@ -87,7 +97,7 @@
                                 </th>
                                 <th class="px-4 py-3 font-medium text-right">
                                     <a href="{{ $sortUrl('selling_price') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Precio ({{ $defaultPriceList->name }}) / u <span class="text-xs">{{ $sortIcon('selling_price') }}</span>
+                                        Precio ({{ $priceList->name }}) / u <span class="text-xs">{{ $sortIcon('selling_price') }}</span>
                                     </a>
                                 </th>
                                 <th class="px-4 py-3 font-medium">Estado</th>
@@ -97,9 +107,9 @@
                         <tbody class="divide-y divide-miga">
                             @foreach($recipes as $recipe)
                                 @php
-                                    $defaultPrice = isset($defaultPrices[$recipe->id]) ? (float) $defaultPrices[$recipe->id] : null;
-                                    $initPriceInput     = $defaultPrice !== null ? number_format($defaultPrice, 2, '.', '') : '';
-                                    $initPriceFormatted = $defaultPrice !== null ? number_format($defaultPrice, 2, ',', '.') : '';
+                                    $price = isset($prices[$recipe->id]) ? (float) $prices[$recipe->id] : null;
+                                    $initPriceInput     = $price !== null ? number_format($price, 2, '.', '') : '';
+                                    $initPriceFormatted = $price !== null ? number_format($price, 2, ',', '.') : '';
                                 @endphp
                                 <tr class="{{ $recipe->active ? '' : 'opacity-50' }}">
                                     <td class="px-4 py-3 font-medium text-corteza">
@@ -118,7 +128,7 @@
                                             editing: false,
                                             saving: false,
                                             isDirty: false,
-                                            price: {{ $defaultPrice ?? 'null' }},
+                                            price: {{ $price ?? 'null' }},
                                             priceFormatted: '{{ $initPriceFormatted }}',
                                             startEdit() {
                                                 this.isDirty = false;
@@ -134,7 +144,7 @@
                                                 this.saving = true;
                                                 this.editing = false;
                                                 try {
-                                                    const res = await fetch('{{ route('recipes.prices.update', [$recipe, $defaultPriceList]) }}', {
+                                                    const res = await fetch('{{ route('recipes.prices.update', [$recipe, $priceList]) }}', {
                                                         method: 'PATCH',
                                                         headers: {
                                                             'Content-Type': 'application/json',
@@ -175,7 +185,7 @@
                                                 class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
                                             <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
                                         @else
-                                            @if($defaultPrice !== null)
+                                            @if($price !== null)
                                                 $ {{ $initPriceFormatted }}
                                             @else
                                                 <span class="text-masa-madre">—</span>
