@@ -22,10 +22,13 @@ class Packaging extends Model
         'active',
     ];
 
-    protected $casts = [
-        'cost_per_unit' => 'decimal:4',
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'cost_per_unit' => 'decimal:4',
+            'active' => 'boolean',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

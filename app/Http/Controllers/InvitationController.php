@@ -44,7 +44,7 @@ class InvitationController extends Controller
             ],
         );
 
-        Mail::to($email)->send(new TeamInvitation($invitation));
+        Mail::to($email)->queue(new TeamInvitation($invitation));
 
         $this->recorder->record(
             actor: $request->user(),
@@ -94,7 +94,7 @@ class InvitationController extends Controller
         if ($user->wasRecentlyCreated) {
             $user->email_verified_at = now();
             $user->save();
-            Mail::to($user->email)->send(new WelcomeMail($user, $invitation->tenant));
+            Mail::to($user->email)->queue(new WelcomeMail($user, $invitation->tenant));
         }
 
         TenantUser::firstOrCreate(

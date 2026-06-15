@@ -15,10 +15,13 @@ class FixedCost extends Model
 
     protected $fillable = ['tenant_id', 'fixed_cost_category_id', 'name', 'monthly_amount', 'active'];
 
-    protected $casts = [
-        'monthly_amount' => 'decimal:2',
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'monthly_amount' => 'decimal:2',
+            'active' => 'boolean',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

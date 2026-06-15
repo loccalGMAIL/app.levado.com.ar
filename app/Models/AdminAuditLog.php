@@ -21,11 +21,14 @@ class AdminAuditLog extends Model
         'user_agent',
     ];
 
-    protected $casts = [
-        'payload' => 'array',
-        'was_impersonating' => 'boolean',
-        'created_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'payload' => 'array',
+            'was_impersonating' => 'boolean',
+            'created_at' => 'datetime',
+        ];
+    }
 
     public function actor(): BelongsTo
     {

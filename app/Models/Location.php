@@ -21,10 +21,13 @@ class Location extends Model
         'active',
     ];
 
-    protected $casts = [
-        'is_default' => 'boolean',
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'is_default' => 'boolean',
+            'active' => 'boolean',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

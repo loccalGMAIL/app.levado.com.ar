@@ -11,10 +11,13 @@ class FixedCostLog extends Model
 
     protected $fillable = ['fixed_cost_id', 'monthly_amount', 'valid_from'];
 
-    protected $casts = [
-        'monthly_amount' => 'decimal:2',
-        'valid_from' => 'date',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'monthly_amount' => 'decimal:2',
+            'valid_from' => 'date',
+        ];
+    }
 
     public function fixedCost(): BelongsTo
     {

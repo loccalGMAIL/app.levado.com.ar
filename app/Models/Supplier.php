@@ -22,9 +22,12 @@ class Supplier extends Model
         'active',
     ];
 
-    protected $casts = [
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'active' => 'boolean',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

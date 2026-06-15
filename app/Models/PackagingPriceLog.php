@@ -15,10 +15,13 @@ class PackagingPriceLog extends Model
         'recorded_at',
     ];
 
-    protected $casts = [
-        'cost_per_unit' => 'decimal:4',
-        'recorded_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'cost_per_unit' => 'decimal:4',
+            'recorded_at' => 'datetime',
+        ];
+    }
 
     public function packaging(): BelongsTo
     {

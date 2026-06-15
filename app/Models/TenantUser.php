@@ -17,11 +17,14 @@ class TenantUser extends Model
         'active',
     ];
 
-    protected $casts = [
-        'role' => TenantUserRole::class,
-        'active' => 'boolean',
-        'created_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'role' => TenantUserRole::class,
+            'active' => 'boolean',
+            'created_at' => 'datetime',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

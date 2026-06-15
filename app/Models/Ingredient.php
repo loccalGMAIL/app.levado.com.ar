@@ -24,11 +24,14 @@ class Ingredient extends Model
         'active',
     ];
 
-    protected $casts = [
-        'unit' => Unit::class,
-        'cost_per_unit' => 'decimal:4',
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'unit' => Unit::class,
+            'cost_per_unit' => 'decimal:4',
+            'active' => 'boolean',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

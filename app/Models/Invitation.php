@@ -17,11 +17,14 @@ class Invitation extends Model
         'expires_at',
     ];
 
-    protected $casts = [
-        'role' => TenantUserRole::class,
-        'accepted_at' => 'datetime',
-        'expires_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'role' => TenantUserRole::class,
+            'accepted_at' => 'datetime',
+            'expires_at' => 'datetime',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

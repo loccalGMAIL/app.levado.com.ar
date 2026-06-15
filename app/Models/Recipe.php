@@ -25,13 +25,16 @@ class Recipe extends Model
         'unit_cost',
     ];
 
-    protected $casts = [
-        'yield_quantity' => 'decimal:3',
-        'yield_unit' => Unit::class,
-        'active' => 'boolean',
-        'is_semi_elaborate' => 'boolean',
-        'unit_cost' => 'decimal:4',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'yield_quantity' => 'decimal:3',
+            'yield_unit' => Unit::class,
+            'active' => 'boolean',
+            'is_semi_elaborate' => 'boolean',
+            'unit_cost' => 'decimal:4',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

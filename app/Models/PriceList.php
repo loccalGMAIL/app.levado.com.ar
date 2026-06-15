@@ -21,11 +21,14 @@ class PriceList extends Model
         'active',
     ];
 
-    protected $casts = [
-        'adjustment_pct' => 'decimal:2',
-        'is_default' => 'boolean',
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'adjustment_pct' => 'decimal:2',
+            'is_default' => 'boolean',
+            'active' => 'boolean',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

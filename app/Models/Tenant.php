@@ -25,12 +25,15 @@ class Tenant extends Model
         'onboarding_completed_at',
     ];
 
-    protected $casts = [
-        'active' => 'boolean',
-        'productive_hours_month' => 'integer',
-        'condicion_iva' => CondicionIva::class,
-        'onboarding_completed_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'active' => 'boolean',
+            'productive_hours_month' => 'integer',
+            'condicion_iva' => CondicionIva::class,
+            'onboarding_completed_at' => 'datetime',
+        ];
+    }
 
     public function locations(): HasMany
     {

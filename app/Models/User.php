@@ -63,6 +63,6 @@ class User extends Authenticatable
     public function sendPasswordResetNotification($token): void
     {
         $url = route('password.reset', ['token' => $token, 'email' => $this->email]);
-        Mail::to($this->email)->send(new PasswordResetMail($this, $url));
+        Mail::to($this->email)->queue(new PasswordResetMail($this, $url));
     }
 }

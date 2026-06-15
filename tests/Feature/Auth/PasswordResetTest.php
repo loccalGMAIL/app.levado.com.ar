@@ -17,7 +17,7 @@ test('reset password link can be requested', function () {
 
     $this->post('/forgot-password', ['email' => $user->email]);
 
-    Mail::assertSent(PasswordResetMail::class, fn ($mail) => $mail->hasTo($user->email));
+    Mail::assertQueued(PasswordResetMail::class, fn ($mail) => $mail->hasTo($user->email));
 });
 
 test('reset password screen can be rendered', function () {
@@ -27,7 +27,7 @@ test('reset password screen can be rendered', function () {
 
     $this->post('/forgot-password', ['email' => $user->email]);
 
-    Mail::assertSent(PasswordResetMail::class, function ($mail) {
+    Mail::assertQueued(PasswordResetMail::class, function ($mail) {
         $token = basename(parse_url($mail->resetUrl, PHP_URL_PATH));
 
         $response = $this->get('/reset-password/'.$token);
@@ -45,7 +45,7 @@ test('password can be reset with valid token', function () {
 
     $this->post('/forgot-password', ['email' => $user->email]);
 
-    Mail::assertSent(PasswordResetMail::class, function ($mail) use ($user) {
+    Mail::assertQueued(PasswordResetMail::class, function ($mail) use ($user) {
         $token = basename(parse_url($mail->resetUrl, PHP_URL_PATH));
 
         $response = $this->post('/reset-password', [

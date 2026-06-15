@@ -59,7 +59,7 @@ class TenantController extends Controller
             'expires_at' => now()->addHours(24),
         ]);
 
-        Mail::to($invitation->email)->send(new TeamInvitation($invitation));
+        Mail::to($invitation->email)->queue(new TeamInvitation($invitation));
 
         $this->recorder->record(
             actor: $request->user(),

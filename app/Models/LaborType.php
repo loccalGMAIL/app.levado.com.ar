@@ -14,10 +14,13 @@ class LaborType extends Model
 
     protected $fillable = ['tenant_id', 'name', 'hourly_rate', 'active'];
 
-    protected $casts = [
-        'hourly_rate' => 'decimal:2',
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'hourly_rate' => 'decimal:2',
+            'active' => 'boolean',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {
