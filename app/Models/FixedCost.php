@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\FixedCostFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,11 @@ class FixedCost extends Model
             'monthly_amount' => 'decimal:2',
             'active' => 'boolean',
         ];
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true);
     }
 
     public function tenant(): BelongsTo

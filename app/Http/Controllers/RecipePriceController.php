@@ -21,8 +21,8 @@ class RecipePriceController extends Controller
     public function update(Request $request, Recipe $recipe, PriceList $priceList): JsonResponse
     {
         $tenant = app(Tenant::class);
-        abort_unless($recipe->tenant_id === $tenant->id, 403);
-        abort_unless($priceList->tenant_id === $tenant->id, 403);
+        $this->authorize('view', $recipe);
+        $this->authorize('view', $priceList);
         abort_unless($priceList->active, 422, 'La lista de precios está inactiva.');
 
         $validated = $request->validate([
@@ -40,7 +40,7 @@ class RecipePriceController extends Controller
         ]);
         $costs = (new RecipeCostCalculator(new UnitConverter))->calculate($recipe);
 
-        $totalFixedCosts = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
+        $totalFixedCosts = $tenant->fixedCosts()->active()->sum('monthly_amount');
         $productiveHours = (int) $tenant->productive_hours_month;
         $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : null;
         $fixedCost = $overheadPerHour !== null ? $costs['total_labor_hours'] * $overheadPerHour : 0.0;

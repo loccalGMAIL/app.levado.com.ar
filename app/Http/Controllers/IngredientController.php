@@ -32,12 +32,12 @@ class IngredientController extends Controller
 
                 return $q->where('name', 'like', "%{$escaped}%");
             })
-            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
-        $suppliers = $tenant->suppliers()->where('active', true)->orderBy('name')->get();
+        $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
 
         return view('ingredients.index', compact('ingredients', 'suppliers'));
     }
@@ -66,7 +66,7 @@ class IngredientController extends Controller
 
     public function update(UpdateIngredientRequest $request, Ingredient $ingredient): RedirectResponse
     {
-        $this->authorizeIngredient($ingredient);
+        $this->authorize('update', $ingredient);
 
         $data = $request->validated();
 
@@ -99,7 +99,7 @@ class IngredientController extends Controller
 
     public function toggleActive(Ingredient $ingredient): RedirectResponse
     {
-        $this->authorizeIngredient($ingredient);
+        $this->authorize('update', $ingredient);
 
         $ingredient->update(['active' => ! $ingredient->active]);
         $action = $ingredient->active ? 'ingredient.activated' : 'ingredient.deactivated';
@@ -116,10 +116,5 @@ class IngredientController extends Controller
         $label = $ingredient->active ? 'activado' : 'desactivado';
 
         return back()->with('status', "Ingrediente {$label}.");
-    }
-
-    private function authorizeIngredient(Ingredient $ingredient): void
-    {
-        abort_unless($ingredient->tenant_id === app(Tenant::class)->id, 403);
     }
 }

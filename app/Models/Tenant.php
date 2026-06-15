@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CondicionIva;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -33,6 +34,11 @@ class Tenant extends Model
             'condicion_iva' => CondicionIva::class,
             'onboarding_completed_at' => 'datetime',
         ];
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true);
     }
 
     public function locations(): HasMany

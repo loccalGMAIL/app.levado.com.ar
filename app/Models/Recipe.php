@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Unit;
 use Database\Factories\RecipeFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +35,11 @@ class Recipe extends Model
             'is_semi_elaborate' => 'boolean',
             'unit_cost' => 'decimal:4',
         ];
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true);
     }
 
     public function tenant(): BelongsTo

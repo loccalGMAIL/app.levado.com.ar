@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TenantUserRole;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -24,6 +25,11 @@ class TenantUser extends Model
             'active' => 'boolean',
             'created_at' => 'datetime',
         ];
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true);
     }
 
     public function tenant(): BelongsTo

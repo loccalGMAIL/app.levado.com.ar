@@ -32,12 +32,12 @@ class PackagingController extends Controller
 
                 return $q->where('name', 'like', "%{$escaped}%");
             })
-            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
-        $suppliers = $tenant->suppliers()->where('active', true)->orderBy('name')->get();
+        $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
 
         return view('packaging.index', compact('packagings', 'suppliers'));
     }
@@ -66,7 +66,7 @@ class PackagingController extends Controller
 
     public function update(UpdatePackagingRequest $request, Packaging $packaging): RedirectResponse
     {
-        $this->authorizePackaging($packaging);
+        $this->authorize('update', $packaging);
 
         $data = $request->validated();
 
@@ -99,7 +99,7 @@ class PackagingController extends Controller
 
     public function toggleActive(Packaging $packaging): RedirectResponse
     {
-        $this->authorizePackaging($packaging);
+        $this->authorize('update', $packaging);
 
         $packaging->update(['active' => ! $packaging->active]);
         $action = $packaging->active ? 'packaging.activated' : 'packaging.deactivated';
@@ -116,10 +116,5 @@ class PackagingController extends Controller
         $label = $packaging->active ? 'activado' : 'desactivado';
 
         return back()->with('status', "Envase {$label}.");
-    }
-
-    private function authorizePackaging(Packaging $packaging): void
-    {
-        abort_unless($packaging->tenant_id === app(Tenant::class)->id, 403);
     }
 }

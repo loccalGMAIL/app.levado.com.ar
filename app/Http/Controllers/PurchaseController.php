@@ -43,7 +43,7 @@ class PurchaseController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $suppliers = $tenant->suppliers()->where('active', true)->orderBy('name')->get();
+        $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
         $includeIva = filter_var($tenant->getSetting('purchase_price_includes_iva', '1'), FILTER_VALIDATE_BOOLEAN);
 
         return view('purchases.index', compact('purchases', 'suppliers', 'includeIva'));
@@ -74,14 +74,14 @@ class PurchaseController extends Controller
 
     public function show(Purchase $purchase): View
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('view', $purchase);
         $tenant = app(Tenant::class);
 
         $purchase->load(['supplier', 'lines']);
 
-        $ingredients = $tenant->ingredients()->where('active', true)->orderBy('name')->get();
-        $packagings = $tenant->packagings()->where('active', true)->orderBy('name')->get();
-        $suppliers = $tenant->suppliers()->where('active', true)->orderBy('name')->get();
+        $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
+        $packagings = $tenant->packagings()->active()->orderBy('name')->get();
+        $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
         $units = Unit::cases();
 
         return view('purchases.show', compact('purchase', 'ingredients', 'packagings', 'suppliers', 'units'));
@@ -89,7 +89,7 @@ class PurchaseController extends Controller
 
     public function destroy(Purchase $purchase): RedirectResponse
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('delete', $purchase);
 
         $invoiceNumber = $purchase->invoice_number;
         $tenantId = $purchase->tenant_id;
@@ -116,7 +116,7 @@ class PurchaseController extends Controller
 
     public function storeLine(StorePurchaseLineRequest $request, Purchase $purchase): RedirectResponse
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('update', $purchase);
 
         // Detail = faithful digitised invoice. Adding a line just records what's
         // on the invoice; the cost is imputed later in the match step.
@@ -136,7 +136,7 @@ class PurchaseController extends Controller
 
     public function invoiceImage(Purchase $purchase): StreamedResponse
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('update', $purchase);
 
         abort_if(
             blank($purchase->invoice_image_path) || ! Storage::disk('public')->exists($purchase->invoice_image_path),
@@ -149,7 +149,7 @@ class PurchaseController extends Controller
 
     public function updateLine(UpdatePurchaseLineRequest $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('update', $purchase);
         abort_unless($line->purchase_id === $purchase->id, 403);
 
         $this->lineRecorder->recompute($line, $request->validated());
@@ -168,7 +168,7 @@ class PurchaseController extends Controller
 
     public function destroyLine(Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('update', $purchase);
         abort_unless($line->purchase_id === $purchase->id, 403);
 
         $line->delete();
@@ -187,13 +187,13 @@ class PurchaseController extends Controller
 
     public function match(Purchase $purchase): View
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('update', $purchase);
         $tenant = app(Tenant::class);
 
         $purchase->load(['supplier', 'lines']);
 
-        $ingredients = $tenant->ingredients()->where('active', true)->orderBy('name')->get();
-        $packagings = $tenant->packagings()->where('active', true)->orderBy('name')->get();
+        $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
+        $packagings = $tenant->packagings()->active()->orderBy('name')->get();
 
         // Catalog keyed by id for fast Alpine.js lookup.
         $ingredientCatalog = $ingredients->keyBy('id')->map(fn ($i) => [
@@ -211,7 +211,7 @@ class PurchaseController extends Controller
      */
     public function matchLine(Request $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('update', $purchase);
         abort_unless($line->purchase_id === $purchase->id, 403);
 
         $validated = $request->validate([
@@ -270,7 +270,7 @@ class PurchaseController extends Controller
      */
     public function applyLineSuggestions(Purchase $purchase): RedirectResponse
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('update', $purchase);
 
         $applied = 0;
         $skipped = 0;
@@ -308,10 +308,5 @@ class PurchaseController extends Controller
         $flashKey = ($applied > 0 && $failed === 0) ? 'status' : 'error';
 
         return back()->with($flashKey, $message);
-    }
-
-    private function authorizePurchase(Purchase $purchase): void
-    {
-        abort_unless($purchase->tenant_id === app(Tenant::class)->id, 403);
     }
 }

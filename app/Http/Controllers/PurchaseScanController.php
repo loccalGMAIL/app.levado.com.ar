@@ -41,8 +41,8 @@ class PurchaseScanController extends Controller
         $tenant = app(Tenant::class);
         $file = $request->file('invoice');
 
-        $ingredients = $tenant->ingredients()->where('active', true)->orderBy('name')->get();
-        $packagings = $tenant->packagings()->where('active', true)->orderBy('name')->get();
+        $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
+        $packagings = $tenant->packagings()->active()->orderBy('name')->get();
 
         if ($ingredients->isEmpty() && $packagings->isEmpty()) {
             return back()->with('error', 'Primero cargá tus insumos o descartables para poder asociar los ítems de la factura.');
@@ -64,7 +64,7 @@ class PurchaseScanController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        $suppliers = $tenant->suppliers()->where('active', true)->orderBy('name')->get();
+        $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
 
         return view('purchases.scan.review', [
             'draft' => $draft,

@@ -28,7 +28,7 @@ class SupplierController extends Controller
 
                 return $q->where('name', 'like', "%{$escaped}%");
             })
-            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
@@ -60,7 +60,7 @@ class SupplierController extends Controller
 
     public function update(UpdateSupplierRequest $request, Supplier $supplier): RedirectResponse
     {
-        $this->authorizeSupplier($supplier);
+        $this->authorize('update', $supplier);
 
         $supplier->update($request->validated());
 
@@ -78,7 +78,7 @@ class SupplierController extends Controller
 
     public function toggleActive(Supplier $supplier): RedirectResponse
     {
-        $this->authorizeSupplier($supplier);
+        $this->authorize('update', $supplier);
 
         $supplier->update(['active' => ! $supplier->active]);
         $action = $supplier->active ? 'supplier.activated' : 'supplier.deactivated';
@@ -95,10 +95,5 @@ class SupplierController extends Controller
         $label = $supplier->active ? 'activado' : 'desactivado';
 
         return back()->with('status', "Proveedor {$label}.");
-    }
-
-    private function authorizeSupplier(Supplier $supplier): void
-    {
-        abort_unless($supplier->tenant_id === app(Tenant::class)->id, 403);
     }
 }

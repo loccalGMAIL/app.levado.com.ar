@@ -53,7 +53,7 @@ class LocationController extends Controller
 
     public function update(UpdateLocationRequest $request, Location $location): RedirectResponse
     {
-        $this->authorizeLocation($location);
+        $this->authorize('update', $location);
 
         $data = $request->validated();
         $isDefault = (bool) ($data['is_default'] ?? false);
@@ -78,7 +78,7 @@ class LocationController extends Controller
 
     public function toggleActive(Location $location): RedirectResponse
     {
-        $this->authorizeLocation($location);
+        $this->authorize('update', $location);
 
         if ($location->is_default && $location->active) {
             return back()->with('error', 'No se puede desactivar la sucursal principal.');
@@ -99,10 +99,5 @@ class LocationController extends Controller
         $label = $location->active ? 'activada' : 'desactivada';
 
         return back()->with('status', "Sucursal {$label}.");
-    }
-
-    private function authorizeLocation(Location $location): void
-    {
-        abort_unless($location->tenant_id === app(Tenant::class)->id, 403);
     }
 }

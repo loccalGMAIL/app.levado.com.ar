@@ -21,7 +21,7 @@ class TenantController extends Controller
     public function index(): View
     {
         $tenants = Tenant::withCount(['tenantUsers as users_count', 'tenantUsers as active_users_count' => function ($q) {
-            $q->where('active', true);
+            $q->active();
         }])
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
@@ -29,7 +29,7 @@ class TenantController extends Controller
                 return $q->where('name', 'like', "%{$escaped}%")
                     ->orWhere('country', 'like', "%{$escaped}%");
             })
-            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->latest()
             ->paginate(20)

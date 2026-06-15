@@ -111,7 +111,7 @@ class InvitationController extends Controller
 
     public function destroy(Invitation $invitation): RedirectResponse
     {
-        abort_unless($invitation->tenant_id === app(Tenant::class)->id, 403);
+        $this->authorize('delete', $invitation);
 
         $this->recorder->record(
             actor: request()->user(),
