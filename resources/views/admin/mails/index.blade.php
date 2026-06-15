@@ -16,12 +16,6 @@
     }">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-            @if(session('status'))
-                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
-                    {{ session('status') }}
-                </div>
-            @endif
-
             <p class="text-sm text-masa-madre">
                 Previsualizá y editá los emails que Levado envía automáticamente.
             </p>

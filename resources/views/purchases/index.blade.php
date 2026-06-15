@@ -10,17 +10,6 @@
 
         <div class="space-y-6">
 
-            @if(session('status'))
-                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
-                    {{ session('status') }}
-                </div>
-            @endif
-            @if(session('error'))
-                <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm">
-                    {{ session('error') }}
-                </div>
-            @endif
-
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-base font-semibold text-corteza">Compras</h2>

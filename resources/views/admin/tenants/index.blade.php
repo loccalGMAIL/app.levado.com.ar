@@ -14,12 +14,6 @@
     <div class="py-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-            @if(session('status'))
-                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
-                    {{ session('status') }}
-                </div>
-            @endif
-
             {{-- Filtros --}}
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <div class="flex-1 min-w-48">

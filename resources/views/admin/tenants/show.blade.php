@@ -43,12 +43,6 @@
     <div class="py-10" x-data="{ tab: 'config' }">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-            @if(session('status'))
-                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
-                    {{ session('status') }}
-                </div>
-            @endif
-
             {{-- Tabs --}}
             <div class="border-b border-miga flex gap-6">
                 <button @click="tab = 'config'"

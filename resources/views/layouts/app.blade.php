@@ -7,6 +7,9 @@
 
         <title>{{ isset($title) ? $title . ' — ' : '' }}{{ config('app.name') }}</title>
 
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+        <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -51,6 +54,7 @@
                 @endisset
 
                 <main class="flex-1">
+                    <x-flash-messages />
                     {{ $slot }}
                 </main>
 

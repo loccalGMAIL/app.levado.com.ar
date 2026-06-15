@@ -71,7 +71,7 @@
         <x-input-error :messages="$errors->get('is_semi_elaborate')" class="mt-2" />
 
         <div class="flex gap-3 pt-2">
-            <x-primary-button>Guardar cambios</x-primary-button>
+            <x-primary-button data-loading="Guardando…">Guardar cambios</x-primary-button>
             <button type="button"
                 x-on:click="$dispatch('close-modal', 'recipe-edit-info')"
                 class="px-4 py-2 text-sm text-masa-madre hover:text-corteza">

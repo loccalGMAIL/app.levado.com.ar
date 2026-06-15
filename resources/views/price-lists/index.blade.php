@@ -24,12 +24,6 @@
 
         <div class="space-y-6">
 
-            @if(session('status'))
-                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
-                    {{ session('status') }}
-                </div>
-            @endif
-
             @if($errors->has('toggle'))
                 <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm">
                     {{ $errors->first('toggle') }}
@@ -91,9 +85,7 @@
             @endphp
 
             @if($priceLists->isEmpty())
-                <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
-                    No se encontraron listas con esos filtros.
-                </div>
+                <x-empty-state>No se encontraron listas con esos filtros.</x-empty-state>
             @else
                 <div class="bg-white rounded-lg shadow overflow-x-auto">
                     <table class="w-full text-sm text-left">
@@ -151,22 +143,22 @@
                                         {{ $priceList->prices_count }}
                                     </td>
                                     <td class="px-4 py-3">
-                                        @if($priceList->active)
-                                            <span class="text-xs text-green-600 font-medium">activa</span>
-                                        @else
-                                            <span class="text-xs text-gray-400">inactiva</span>
-                                        @endif
+                                        <x-status-badge :active="$priceList->active" label-active="activa" label-inactive="inactiva" />
                                     </td>
                                     @can('manage-costs')
                                         <td class="px-4 py-3">
-                                            <div class="flex items-center justify-end gap-3">
+                                            <div class="flex items-center justify-end gap-1">
                                                 @if(! $priceList->is_default && $priceList->adjustment_pct !== null && $priceList->active)
                                                     <form method="POST" action="{{ route('price-lists.apply-suggestions', $priceList) }}"
                                                         onsubmit="return confirm('¿Aplicar sugerencias a todas las recetas sin precio en esta lista?')">
                                                         @csrf
                                                         <button type="submit"
-                                                            class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                                                            Aplicar sugerencias
+                                                            aria-label="Aplicar sugerencias de precio"
+                                                            title="Aplicar sugerencias"
+                                                            class="p-1.5 rounded text-masa-madre hover:text-horno hover:bg-amber-50 transition-colors">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                                                            </svg>
                                                         </button>
                                                     </form>
                                                 @endif
@@ -177,16 +169,29 @@
                                                         'adjustment_pct' => $priceList->adjustment_pct,
                                                         'is_default'     => $priceList->is_default,
                                                     ]) }})"
-                                                    class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                                                    Editar
+                                                    aria-label="Editar lista de precios"
+                                                    class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                                    </svg>
                                                 </button>
                                                 @unless($priceList->is_default)
                                                     <form method="POST" action="{{ route('price-lists.toggle-active', $priceList) }}">
                                                         @csrf
                                                         @method('PATCH')
                                                         <button type="submit"
-                                                            class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                                                            {{ $priceList->active ? 'Desactivar' : 'Activar' }}
+                                                            aria-label="{{ $priceList->active ? 'Desactivar' : 'Activar' }}"
+                                                            class="p-1.5 rounded transition-colors {{ $priceList->active ? 'text-masa-madre hover:text-red-600 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50' }}">
+                                                            @if($priceList->active)
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                                                </svg>
+                                                            @else
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                </svg>
+                                                            @endif
                                                         </button>
                                                     </form>
                                                 @endunless

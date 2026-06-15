@@ -4,12 +4,6 @@
     <div class="py-8 px-6 lg:px-8">
         <div class="space-y-6">
 
-            @if (session('status'))
-                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
-                    {{ session('status') }}
-                </div>
-            @endif
-
             {{-- Invitar miembro --}}
             <div class="bg-white shadow rounded-lg p-6">
                 <h2 class="text-base font-semibold text-corteza mb-4">Invitar persona</h2>

@@ -17,6 +17,14 @@ document.querySelectorAll('[data-searchable]').forEach(function (el) {
     el._ts = ts;
 });
 
+// Prevent double-submit and show loading state on forms with data-loading buttons
+document.addEventListener('submit', function(e) {
+    const btn = e.target.querySelector('[type="submit"][data-loading]');
+    if (!btn || btn.disabled) { return; }
+    btn.disabled = true;
+    btn.textContent = btn.dataset.loading;
+}, true);
+
 // Limit decimal inputs to max 4 places in real time
 document.addEventListener('input', function (e) {
     const max = e.target.dataset.maxdecimals;

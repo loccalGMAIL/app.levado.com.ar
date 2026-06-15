@@ -25,7 +25,7 @@
         </div>
 
         <div class="flex gap-3 pt-2">
-            <x-primary-button>Crear tipo</x-primary-button>
+            <x-primary-button data-loading="Guardando…">Crear tipo</x-primary-button>
             <button type="button"
                 x-on:click="$dispatch('close-modal', 'labor-type-create')"
                 class="px-4 py-2 text-sm text-masa-madre hover:text-corteza">
