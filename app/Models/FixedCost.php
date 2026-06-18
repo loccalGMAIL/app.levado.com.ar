@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\FixedCostFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,10 +16,18 @@ class FixedCost extends Model
 
     protected $fillable = ['tenant_id', 'fixed_cost_category_id', 'name', 'monthly_amount', 'active'];
 
-    protected $casts = [
-        'monthly_amount' => 'decimal:2',
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'monthly_amount' => 'decimal:2',
+            'active' => 'boolean',
+        ];
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true);
+    }
 
     public function tenant(): BelongsTo
     {

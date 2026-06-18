@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\TenantUserRole;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -15,6 +16,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Model::preventLazyLoading(! app()->isProduction());
+
         View::composer('layouts.app', function ($view) {
             try {
                 $tenant = app(Tenant::class);

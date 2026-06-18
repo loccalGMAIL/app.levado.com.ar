@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CondicionIva;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -25,12 +26,20 @@ class Tenant extends Model
         'onboarding_completed_at',
     ];
 
-    protected $casts = [
-        'active' => 'boolean',
-        'productive_hours_month' => 'integer',
-        'condicion_iva' => CondicionIva::class,
-        'onboarding_completed_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'active' => 'boolean',
+            'productive_hours_month' => 'integer',
+            'condicion_iva' => CondicionIva::class,
+            'onboarding_completed_at' => 'datetime',
+        ];
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true);
+    }
 
     public function locations(): HasMany
     {

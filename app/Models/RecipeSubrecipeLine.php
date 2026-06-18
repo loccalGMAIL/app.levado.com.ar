@@ -16,11 +16,14 @@ class RecipeSubrecipeLine extends Model
         'cost_calculated',
     ];
 
-    protected $casts = [
-        'quantity_used' => 'decimal:3',
-        'unit' => Unit::class,
-        'cost_calculated' => 'decimal:4',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'quantity_used' => 'decimal:3',
+            'unit' => Unit::class,
+            'cost_calculated' => 'decimal:4',
+        ];
+    }
 
     public function recipe(): BelongsTo
     {

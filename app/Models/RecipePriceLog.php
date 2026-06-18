@@ -16,10 +16,13 @@ class RecipePriceLog extends Model
         'recorded_at',
     ];
 
-    protected $casts = [
-        'price' => 'decimal:2',
-        'recorded_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'price' => 'decimal:2',
+            'recorded_at' => 'datetime',
+        ];
+    }
 
     public function recipe(): BelongsTo
     {

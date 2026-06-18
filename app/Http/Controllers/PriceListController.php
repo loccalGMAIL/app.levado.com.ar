@@ -38,7 +38,7 @@ class PriceListController extends Controller
 
                 return $q->where('name', 'like', "%{$escaped}%");
             })
-            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('is_default')->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
@@ -53,7 +53,7 @@ class PriceListController extends Controller
         $tenant->defaultPriceList();
 
         $priceLists = $tenant->priceLists()
-            ->where('active', true)
+            ->active()
             ->orderByDesc('is_default')
             ->orderBy('name')
             ->get();
@@ -68,7 +68,7 @@ class PriceListController extends Controller
                 'laborLines.laborType',
                 'subrecipeLines.childRecipe',
             ])
-            ->where('active', true)
+            ->active()
             ->where('is_semi_elaborate', false)
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
@@ -112,7 +112,7 @@ class PriceListController extends Controller
 
     public function update(UpdatePriceListRequest $request, PriceList $priceList): RedirectResponse
     {
-        $this->authorizePriceList($priceList);
+        $this->authorize('update', $priceList);
 
         $data = $request->validated();
 
@@ -136,7 +136,7 @@ class PriceListController extends Controller
 
     public function toggleActive(PriceList $priceList): RedirectResponse
     {
-        $this->authorizePriceList($priceList);
+        $this->authorize('update', $priceList);
 
         if ($priceList->is_default) {
             return back()->withErrors(['toggle' => 'No podés desactivar la lista base.']);
@@ -162,11 +162,11 @@ class PriceListController extends Controller
     public function applySuggestions(PriceList $priceList): RedirectResponse
     {
         $tenant = app(Tenant::class);
-        $this->authorizePriceList($priceList);
+        $this->authorize('update', $priceList);
         abort_if($priceList->is_default || $priceList->adjustment_pct === null, 422, 'Esta lista no admite sugerencias.');
 
         $defaultList = $tenant->defaultPriceList();
-        $recipes = $tenant->recipes()->where('active', true)->where('is_semi_elaborate', false)->get();
+        $recipes = $tenant->recipes()->active()->where('is_semi_elaborate', false)->get();
         $recipeIds = $recipes->pluck('id');
         $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
         $existing = RecipePrice::where('price_list_id', $priceList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
@@ -192,9 +192,9 @@ class PriceListController extends Controller
     public function applyAllSuggestions(): RedirectResponse
     {
         $tenant = app(Tenant::class);
-        $lists = $tenant->priceLists()->where('active', true)->where('is_default', false)->whereNotNull('adjustment_pct')->get();
+        $lists = $tenant->priceLists()->active()->where('is_default', false)->whereNotNull('adjustment_pct')->get();
         $defaultList = $tenant->defaultPriceList();
-        $recipes = $tenant->recipes()->where('active', true)->where('is_semi_elaborate', false)->get();
+        $recipes = $tenant->recipes()->active()->where('is_semi_elaborate', false)->get();
         $recipeIds = $recipes->pluck('id');
         $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
 
@@ -217,10 +217,5 @@ class PriceListController extends Controller
 
         return redirect()->route('price-lists.matrix')
             ->with('status', "Se aplicaron {$applied} sugerencia(s) en todas las listas.");
-    }
-
-    private function authorizePriceList(PriceList $priceList): void
-    {
-        abort_unless($priceList->tenant_id === app(Tenant::class)->id, 403);
     }
 }

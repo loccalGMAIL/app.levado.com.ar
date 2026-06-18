@@ -18,10 +18,13 @@ class Purchase extends Model
         'invoice_image_path',
     ];
 
-    protected $casts = [
-        'invoice_date' => 'date',
-        'invoice_total' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'invoice_date' => 'date',
+            'invoice_total' => 'decimal:2',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

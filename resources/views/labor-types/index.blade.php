@@ -23,12 +23,6 @@
 
         <div class="space-y-6">
 
-            @if(session('status'))
-                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
-                    {{ session('status') }}
-                </div>
-            @endif
-
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-base font-semibold text-corteza">Mano de Obra</h2>
@@ -78,13 +72,13 @@
             @endphp
 
             @if($laborTypes->isEmpty())
-                <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
+                <x-empty-state>
                     @if(request('search') || request('status'))
                         No se encontraron tipos con esos filtros.
                     @else
                         Todavía no hay tipos de mano de obra. Agregá el primero.
                     @endif
-                </div>
+                </x-empty-state>
             @else
                 <div class="bg-white rounded-lg shadow overflow-x-auto">
                     <table class="w-full text-sm text-left">
@@ -128,30 +122,39 @@
                                         $ {{ number_format($laborType->hourly_rate, 2, ',', '.') }}
                                     </td>
                                     <td class="px-4 py-3">
-                                        @if($laborType->active)
-                                            <span class="text-xs text-green-600 font-medium">activo</span>
-                                        @else
-                                            <span class="text-xs text-gray-400">inactivo</span>
-                                        @endif
+                                        <x-status-badge :active="$laborType->active" />
                                     </td>
                                     @can('manage-costs')
                                         <td class="px-4 py-3">
-                                            <div class="flex items-center justify-end gap-3">
+                                            <div class="flex items-center justify-end gap-1">
                                                 <button type="button"
                                                     @click="openEdit({{ Js::from([
                                                         'id'          => $laborType->id,
                                                         'name'        => $laborType->name,
                                                         'hourly_rate' => $laborType->hourly_rate,
                                                     ]) }})"
-                                                    class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                                                    Editar
+                                                    aria-label="Editar tipo de mano de obra" title="Editar tipo de mano de obra"
+                                                    class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                                    </svg>
                                                 </button>
                                                 <form method="POST" action="{{ route('labor-types.toggle-active', $laborType) }}">
                                                     @csrf
                                                     @method('PATCH')
                                                     <button type="submit"
-                                                        class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                                                        {{ $laborType->active ? 'Desactivar' : 'Activar' }}
+                                                        aria-label="{{ $laborType->active ? 'Desactivar' : 'Activar' }}" title="{{ $laborType->active ? 'Desactivar' : 'Activar' }}"
+                                                        class="p-1.5 rounded transition-colors {{ $laborType->active ? 'text-red-500 hover:text-red-700 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50' }}">
+                                                        @if($laborType->active)
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                            </svg>
+                                                        @else
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            </svg>
+                                                        @endif
                                                     </button>
                                                 </form>
                                             </div>

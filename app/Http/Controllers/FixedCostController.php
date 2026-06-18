@@ -29,13 +29,13 @@ class FixedCostController extends Controller
 
                 return $q->where('name', 'like', "%{$escaped}%");
             })
-            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
 
-        $totalActive = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
+        $totalActive = $tenant->fixedCosts()->active()->sum('monthly_amount');
         $categories = $tenant->fixedCostCategories()->orderBy('name')->get();
         $showCategories = session('reopen_categories', false);
 
@@ -67,7 +67,7 @@ class FixedCostController extends Controller
 
     public function update(UpdateFixedCostRequest $request, FixedCost $fixedCost): RedirectResponse
     {
-        $this->authorizeFixedCost($fixedCost);
+        $this->authorize('update', $fixedCost);
 
         $data = $request->validated();
 
@@ -94,7 +94,7 @@ class FixedCostController extends Controller
 
     public function toggleActive(FixedCost $fixedCost): RedirectResponse
     {
-        $this->authorizeFixedCost($fixedCost);
+        $this->authorize('update', $fixedCost);
 
         $fixedCost->update(['active' => ! $fixedCost->active]);
         $action = $fixedCost->active ? 'fixed_cost.activated' : 'fixed_cost.deactivated';
@@ -111,10 +111,5 @@ class FixedCostController extends Controller
         $label = $fixedCost->active ? 'activado' : 'desactivado';
 
         return back()->with('status', "Gasto fijo {$label}.");
-    }
-
-    private function authorizeFixedCost(FixedCost $fixedCost): void
-    {
-        abort_unless($fixedCost->tenant_id === app(Tenant::class)->id, 403);
     }
 }

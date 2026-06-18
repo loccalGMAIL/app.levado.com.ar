@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\SupplierFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,9 +23,17 @@ class Supplier extends Model
         'active',
     ];
 
-    protected $casts = [
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'active' => 'boolean',
+        ];
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true);
+    }
 
     public function tenant(): BelongsTo
     {

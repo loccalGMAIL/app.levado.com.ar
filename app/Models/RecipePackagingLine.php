@@ -13,9 +13,12 @@ class RecipePackagingLine extends Model
         'quantity',
     ];
 
-    protected $casts = [
-        'quantity' => 'decimal:3',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'quantity' => 'decimal:3',
+        ];
+    }
 
     public function recipe(): BelongsTo
     {

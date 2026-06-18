@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Unit;
 use Database\Factories\IngredientFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,11 +25,19 @@ class Ingredient extends Model
         'active',
     ];
 
-    protected $casts = [
-        'unit' => Unit::class,
-        'cost_per_unit' => 'decimal:4',
-        'active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'unit' => Unit::class,
+            'cost_per_unit' => 'decimal:4',
+            'active' => 'boolean',
+        ];
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true);
+    }
 
     public function tenant(): BelongsTo
     {

@@ -19,9 +19,12 @@ class RecipePrice extends Model
         'price',
     ];
 
-    protected $casts = [
-        'price' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'price' => 'decimal:2',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {

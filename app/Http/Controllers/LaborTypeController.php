@@ -30,7 +30,7 @@ class LaborTypeController extends Controller
 
                 return $q->where('name', 'like', "%{$escaped}%");
             })
-            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
@@ -58,7 +58,7 @@ class LaborTypeController extends Controller
 
     public function update(UpdateLaborTypeRequest $request, LaborType $laborType): RedirectResponse
     {
-        $this->authorizeLaborType($laborType);
+        $this->authorize('update', $laborType);
 
         $data = $request->validated();
         $rateChanged = (float) $laborType->hourly_rate !== (float) ($data['hourly_rate'] ?? $laborType->hourly_rate);
@@ -83,7 +83,7 @@ class LaborTypeController extends Controller
 
     public function toggleActive(LaborType $laborType): RedirectResponse
     {
-        $this->authorizeLaborType($laborType);
+        $this->authorize('update', $laborType);
 
         $laborType->update(['active' => ! $laborType->active]);
         $action = $laborType->active ? 'labor_type.activated' : 'labor_type.deactivated';
@@ -100,10 +100,5 @@ class LaborTypeController extends Controller
         $label = $laborType->active ? 'activado' : 'desactivado';
 
         return back()->with('status', "Tipo de mano de obra {$label}.");
-    }
-
-    private function authorizeLaborType(LaborType $laborType): void
-    {
-        abort_unless($laborType->tenant_id === app(Tenant::class)->id, 403);
     }
 }

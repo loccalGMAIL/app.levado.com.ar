@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Unit;
 use Database\Factories\RecipeFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,13 +26,21 @@ class Recipe extends Model
         'unit_cost',
     ];
 
-    protected $casts = [
-        'yield_quantity' => 'decimal:3',
-        'yield_unit' => Unit::class,
-        'active' => 'boolean',
-        'is_semi_elaborate' => 'boolean',
-        'unit_cost' => 'decimal:4',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'yield_quantity' => 'decimal:3',
+            'yield_unit' => Unit::class,
+            'active' => 'boolean',
+            'is_semi_elaborate' => 'boolean',
+            'unit_cost' => 'decimal:4',
+        ];
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true);
+    }
 
     public function tenant(): BelongsTo
     {

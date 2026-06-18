@@ -61,12 +61,7 @@ class RecipeCostPropagator
             ->pluck('recipe_id')
             ->unique();
 
-        foreach ($recipeIds as $recipeId) {
-            $recipe = Recipe::find($recipeId);
-            if ($recipe) {
-                $this->propagateFrom($recipe);
-            }
-        }
+        Recipe::whereIn('id', $recipeIds)->get()->each(fn (Recipe $recipe) => $this->propagateFrom($recipe));
     }
 
     /**
@@ -78,12 +73,7 @@ class RecipeCostPropagator
             ->pluck('recipe_id')
             ->unique();
 
-        foreach ($recipeIds as $recipeId) {
-            $recipe = Recipe::find($recipeId);
-            if ($recipe) {
-                $this->propagateFrom($recipe);
-            }
-        }
+        Recipe::whereIn('id', $recipeIds)->get()->each(fn (Recipe $recipe) => $this->propagateFrom($recipe));
     }
 
     /**
@@ -95,12 +85,7 @@ class RecipeCostPropagator
             ->pluck('recipe_id')
             ->unique();
 
-        foreach ($recipeIds as $recipeId) {
-            $recipe = Recipe::find($recipeId);
-            if ($recipe) {
-                $this->propagateFrom($recipe);
-            }
-        }
+        Recipe::whereIn('id', $recipeIds)->get()->each(fn (Recipe $recipe) => $this->propagateFrom($recipe));
     }
 
     /**

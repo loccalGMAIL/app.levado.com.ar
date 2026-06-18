@@ -18,7 +18,7 @@ class DashboardController extends Controller
 
         $tenant->defaultPriceList();
         $priceLists = $tenant->priceLists()
-            ->where('active', true)
+            ->active()
             ->orderByDesc('is_default')
             ->orderBy('name')
             ->get();
@@ -35,7 +35,7 @@ class DashboardController extends Controller
                 'packagingLines.packaging',
                 'laborLines.laborType',
             ])
-            ->where('active', true)
+            ->active()
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
@@ -47,7 +47,7 @@ class DashboardController extends Controller
             ->whereIn('recipe_id', $recipes->pluck('id'))
             ->pluck('price', 'recipe_id');
 
-        $totalFixedCosts = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
+        $totalFixedCosts = $tenant->fixedCosts()->active()->sum('monthly_amount');
         $productiveHours = $tenant->productive_hours_month ?? 0;
         $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : null;
 
@@ -120,8 +120,8 @@ class DashboardController extends Controller
             ['path' => request()->url(), 'query' => request()->except('page')],
         );
 
-        $activeRecipeCount = $tenant->recipes()->where('active', true)->count();
-        $packagingCount = $tenant->packagings()->where('active', true)->count();
+        $activeRecipeCount = $tenant->recipes()->active()->count();
+        $packagingCount = $tenant->packagings()->active()->count();
 
         return view('dashboard', compact(
             'recipeRows',

@@ -13,18 +13,6 @@
     }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-            @if(session('status'))
-                <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
-                    {{ session('status') }}
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm">
-                    {{ session('error') }}
-                </div>
-            @endif
-
             {{-- Búsqueda y acción --}}
             <div class="flex items-center gap-3">
                 <form method="GET" class="flex gap-3 flex-1">

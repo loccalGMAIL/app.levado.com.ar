@@ -21,14 +21,17 @@ class PurchaseLine extends Model
         'cost_applied_at',
     ];
 
-    protected $casts = [
-        'quantity_purchased' => 'decimal:4',
-        'unit_price' => 'decimal:4',
-        'iva_rate' => 'decimal:4',
-        'subtotal' => 'decimal:4',
-        'purchase_unit' => Unit::class,
-        'cost_applied_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'quantity_purchased' => 'decimal:4',
+            'unit_price' => 'decimal:4',
+            'iva_rate' => 'decimal:4',
+            'subtotal' => 'decimal:4',
+            'purchase_unit' => Unit::class,
+            'cost_applied_at' => 'datetime',
+        ];
+    }
 
     public function purchase(): BelongsTo
     {

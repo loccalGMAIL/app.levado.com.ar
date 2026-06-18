@@ -13,9 +13,12 @@ class RecipeLaborLine extends Model
         'hours',
     ];
 
-    protected $casts = [
-        'hours' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'hours' => 'decimal:2',
+        ];
+    }
 
     public function recipe(): BelongsTo
     {

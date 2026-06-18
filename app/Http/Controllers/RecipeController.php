@@ -42,7 +42,7 @@ class RecipeController extends Controller
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
         $tenant = app(Tenant::class);
-        $priceLists = $tenant->priceLists()->where('active', true)->orderByDesc('is_default')->orderBy('name')->get();
+        $priceLists = $tenant->priceLists()->active()->orderByDesc('is_default')->orderBy('name')->get();
         $priceList = $priceLists->firstWhere('id', (int) request('price_list'))
             ?? $priceLists->firstWhere('is_default', true)
             ?? $priceLists->first()
@@ -54,7 +54,7 @@ class RecipeController extends Controller
 
                 return $q->where('name', 'like', "%{$escaped}%");
             })
-            ->when(request('status') === 'active', fn ($q) => $q->where('active', true))
+            ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort === 'selling_price', fn ($q) => $q->orderBy(
                 RecipePrice::select('price')
@@ -76,7 +76,7 @@ class RecipeController extends Controller
 
     public function copy(Recipe $recipe): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
 
         $recipe->load(['ingredientLines', 'laborLines', 'packagingLines', 'subrecipeLines']);
 
@@ -163,7 +163,7 @@ class RecipeController extends Controller
 
     public function show(Recipe $recipe): View
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
 
         $recipe->loadMissing([
             'ingredientLines.ingredient.supplier',
@@ -175,11 +175,11 @@ class RecipeController extends Controller
         $costs = (new RecipeCostCalculator(new UnitConverter))->calculate($recipe);
 
         $tenant = app(Tenant::class);
-        $ingredients = $tenant->ingredients()->where('active', true)->orderBy('name')->get();
-        $packagings = $tenant->packagings()->where('active', true)->orderBy('name')->get();
-        $laborTypes = $tenant->laborTypes()->where('active', true)->orderBy('name')->get();
+        $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
+        $packagings = $tenant->packagings()->active()->orderBy('name')->get();
+        $laborTypes = $tenant->laborTypes()->active()->orderBy('name')->get();
 
-        $totalFixedCosts = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
+        $totalFixedCosts = $tenant->fixedCosts()->active()->sum('monthly_amount');
         $productiveHours = (int) $tenant->productive_hours_month;
         $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : 0.0;
 
@@ -235,7 +235,7 @@ class RecipeController extends Controller
         $defaultPriceList = $tenant->defaultPriceList();
 
         $priceLists = $tenant->priceLists()
-            ->where('active', true)
+            ->active()
             ->orderByDesc('is_default')
             ->orderBy('name')
             ->get();
@@ -274,7 +274,7 @@ class RecipeController extends Controller
 
     public function update(UpdateRecipeRequest $request, Recipe $recipe): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
 
         $data = $request->validated();
         $sellingPrice = $data['selling_price'] ?? null;
@@ -305,7 +305,7 @@ class RecipeController extends Controller
 
     public function toggleActive(Recipe $recipe): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
 
         if ($recipe->active && $recipe->is_semi_elaborate) {
             $blockedBy = DB::table('recipe_subrecipe_lines')
@@ -342,7 +342,7 @@ class RecipeController extends Controller
 
     public function storeIngredientLine(Request $request, Recipe $recipe): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
 
         $data = $request->validate([
             'ingredient_id' => [
@@ -370,7 +370,7 @@ class RecipeController extends Controller
 
     public function destroyIngredientLine(Recipe $recipe, RecipeIngredientLine $line): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
         $line->delete();
         $this->propagator->propagateFrom($recipe);
@@ -380,7 +380,7 @@ class RecipeController extends Controller
 
     public function storePackagingLine(Request $request, Recipe $recipe): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
 
         $data = $request->validate([
             'packaging_id' => [
@@ -398,7 +398,7 @@ class RecipeController extends Controller
 
     public function destroyPackagingLine(Recipe $recipe, RecipePackagingLine $line): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
         $line->delete();
         $this->propagator->propagateFrom($recipe);
@@ -408,7 +408,7 @@ class RecipeController extends Controller
 
     public function storeLaborLine(Request $request, Recipe $recipe): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
 
         $data = $request->validate([
             'labor_type_id' => [
@@ -426,7 +426,7 @@ class RecipeController extends Controller
 
     public function destroyLaborLine(Recipe $recipe, RecipeLaborLine $line): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
         $line->delete();
         $this->propagator->propagateFrom($recipe);
@@ -436,7 +436,7 @@ class RecipeController extends Controller
 
     public function updateIngredientLine(Request $request, Recipe $recipe, RecipeIngredientLine $line): JsonResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
 
         $data = $request->validate(['quantity' => ['required', 'numeric', 'min:0.001']]);
@@ -448,7 +448,7 @@ class RecipeController extends Controller
 
     public function updatePackagingLine(Request $request, Recipe $recipe, RecipePackagingLine $line): JsonResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
 
         $data = $request->validate(['quantity' => ['required', 'numeric', 'min:0.001']]);
@@ -460,7 +460,7 @@ class RecipeController extends Controller
 
     public function updateLaborLine(Request $request, Recipe $recipe, RecipeLaborLine $line): JsonResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
 
         $data = $request->validate(['hours' => ['required', 'numeric', 'min:0.01']]);
@@ -472,7 +472,7 @@ class RecipeController extends Controller
 
     public function storeSubrecipeLine(Request $request, Recipe $recipe): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
         $tenant = app(Tenant::class);
 
         $data = $request->validate([
@@ -510,7 +510,7 @@ class RecipeController extends Controller
 
     public function updateSubrecipeLine(Request $request, Recipe $recipe, RecipeSubrecipeLine $line): JsonResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
 
         $data = $request->validate(['quantity_used' => ['required', 'numeric', 'min:0.001']]);
@@ -522,7 +522,7 @@ class RecipeController extends Controller
 
     public function destroySubrecipeLine(Recipe $recipe, RecipeSubrecipeLine $line): RedirectResponse
     {
-        $this->authorizeRecipe($recipe);
+        $this->authorize('update', $recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
         $line->delete();
         $this->propagator->propagateFrom($recipe);
@@ -534,15 +534,10 @@ class RecipeController extends Controller
     {
         return $tenant->recipes()
             ->where('is_semi_elaborate', true)
-            ->where('active', true)
+            ->active()
             ->where('id', '!=', $recipe->id)
             ->get()
             ->filter(fn ($candidate) => ! $this->propagator->isAncestor($candidate->id, $recipe->id, $tenant->id))
             ->values();
-    }
-
-    private function authorizeRecipe(Recipe $recipe): void
-    {
-        abort_unless($recipe->tenant_id === app(Tenant::class)->id, 403);
     }
 }

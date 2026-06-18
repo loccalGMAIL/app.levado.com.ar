@@ -15,10 +15,13 @@ class RecipeIngredientLine extends Model
         'unit',
     ];
 
-    protected $casts = [
-        'quantity' => 'decimal:3',
-        'unit' => Unit::class,
-    ];
+    protected function casts(): array
+    {
+        return [
+            'quantity' => 'decimal:3',
+            'unit' => Unit::class,
+        ];
+    }
 
     public function recipe(): BelongsTo
     {

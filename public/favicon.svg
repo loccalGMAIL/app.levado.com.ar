@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <text x="128" y="180"
+        font-family="Lora, Georgia, 'Times New Roman', serif"
+        font-size="155"
+        font-weight="500"
+        text-anchor="middle"
+        fill="#6B4226"
+        letter-spacing="-4">lvd</text>
+  <!-- Subtle scoring mark accent under the letters -->
+  <path d="M 28 214 Q 128 234 228 214" stroke="#C8862E" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.85"/>
+</svg>
