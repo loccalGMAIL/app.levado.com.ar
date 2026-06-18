@@ -106,6 +106,11 @@
 
                                 @if($line->isApplied())
                                     {{-- Renglón ya aplicado — estático --}}
+                                    @php
+                                        $appliedIngredient = $line->isIngredient()
+                                            ? $ingredients->firstWhere('id', $line->purchaseable_id)
+                                            : null;
+                                    @endphp
                                     <tr class="bg-green-50/40">
                                         <td class="px-4 py-3 text-corteza text-xs" title="{{ $line->raw_name }}">
                                             {{ \Illuminate\Support\Str::limit($line->raw_name ?? '—', 65) }}
@@ -116,6 +121,11 @@
                                         </td>
                                         <td class="px-4 py-3 font-medium text-corteza text-sm">
                                             {{ $matchedName ?? '—' }}
+                                            @if($appliedIngredient?->subdivisions)
+                                                <span class="block text-[11px] font-normal text-masa-madre">
+                                                    {{ $appliedIngredient->subdivisions }} {{ $appliedIngredient->subdivision_label ?? 'u' }} / envase
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3">
                                             <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
@@ -179,7 +189,12 @@
                                                                 @foreach($ingredients as $ing)
                                                                     <option value="ingredient:{{ $ing->id }}"
                                                                         @selected($currentValue === "ingredient:{$ing->id}")>
-                                                                        {{ $ing->name }} ({{ $ing->unit->short() }})
+                                                                        {{ $ing->name }}
+                                                                        @if($ing->subdivisions)
+                                                                            ({{ $ing->subdivisions }} {{ $ing->subdivision_label ?? 'u' }} / envase)
+                                                                        @else
+                                                                            ({{ $ing->unit->short() }})
+                                                                        @endif
                                                                     </option>
                                                                 @endforeach
                                                             </optgroup>
@@ -235,6 +250,17 @@
                                                             <span>/</span>
                                                             <span x-text="catalogUnit" class="font-medium text-corteza"></span>
                                                         </div>
+
+                                                        {{-- Costo por sub-unidad (cuando hay subdivisiones) --}}
+                                                        <template x-if="subUnitCost !== null">
+                                                            <div class="text-xs text-masa-madre whitespace-nowrap">
+                                                                → $<span x-text="subUnitCost.toFixed(4)"></span>
+                                                                / <span x-text="subdivisionLabel || 'u'"></span>
+                                                                <span class="text-masa-madre/60">
+                                                                    (1&nbsp;<span x-text="catalogUnit"></span>&nbsp;=&nbsp;<span x-text="subdivisions"></span>&nbsp;<span x-text="subdivisionLabel || 'u'"></span>)
+                                                                </span>
+                                                            </div>
+                                                        </template>
 
                                                         {{-- Botón --}}
                                                         <button type="submit"

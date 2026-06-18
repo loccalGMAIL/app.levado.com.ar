@@ -30,6 +30,13 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         unitCost: unitPrice,
         needsPkgQty: false,
         incompatiblePkg: false,
+        subdivisions: null,
+        subdivisionLabel: null,
+
+        get subUnitCost() {
+            if (!this.subdivisions || this.unitCost <= 0) return null;
+            return Math.round((this.unitCost / this.subdivisions) * 10000) / 10000;
+        },
 
         init() {
             if (this.selected) this.recalc();
@@ -38,6 +45,8 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         onSelect() {
             this.pkgQty = 1;
             this.pkgQtyFromDesc = false;
+            this.subdivisions = null;
+            this.subdivisionLabel = null;
             this.recalc();
         },
 
@@ -69,6 +78,8 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
             if (!item) return;
 
             this.catalogUnit = item.unit;
+            this.subdivisions = item.subdivisions || null;
+            this.subdivisionLabel = item.subdivisionLabel || null;
             const directFactor = UNIT_CONV[this.purchaseUnit]?.[item.unit];
 
             if (directFactor !== undefined) {
