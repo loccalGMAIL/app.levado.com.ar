@@ -17,6 +17,7 @@ class PurchaseLine extends Model
         'purchase_unit',
         'unit_price',
         'iva_rate',
+        'percepcion_rate',
         'subtotal',
         'cost_applied_at',
     ];
@@ -27,6 +28,7 @@ class PurchaseLine extends Model
             'quantity_purchased' => 'decimal:4',
             'unit_price' => 'decimal:4',
             'iva_rate' => 'decimal:4',
+            'percepcion_rate' => 'decimal:2',
             'subtotal' => 'decimal:4',
             'purchase_unit' => Unit::class,
             'cost_applied_at' => 'datetime',

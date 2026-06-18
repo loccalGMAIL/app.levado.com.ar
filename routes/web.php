@@ -15,6 +15,7 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LaborTypeController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PackagingController;
+use App\Http\Controllers\PackagingCostController;
 use App\Http\Controllers\PriceListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
@@ -61,6 +62,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     // La pantalla de escaneo se registra antes que purchases/{purchase} para que
     // "scan" no se interprete como un id de compra (route-model binding).
+    Route::get('purchases/check-duplicate', [PurchaseController::class, 'checkDuplicate'])->name('purchases.check-duplicate');
     Route::get('purchases/scan', [PurchaseScanController::class, 'create'])
         ->middleware('role:super_admin,owner,admin')
         ->name('purchases.scan.create');
@@ -81,6 +83,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
 
     Route::post('packaging', [PackagingController::class, 'store'])->name('packaging.store');
     Route::put('packaging/{packaging}', [PackagingController::class, 'update'])->name('packaging.update');
+    Route::patch('packaging/{packaging}/cost', [PackagingCostController::class, 'update'])->name('packaging.cost.update');
     Route::patch('packaging/{packaging}/toggle-active', [PackagingController::class, 'toggleActive'])->name('packaging.toggle-active');
 
     Route::post('fixed-costs', [FixedCostController::class, 'store'])->name('fixed-costs.store');

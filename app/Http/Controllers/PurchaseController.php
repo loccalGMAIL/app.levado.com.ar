@@ -11,6 +11,7 @@ use App\Models\PurchaseLine;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\PurchaseLineRecorder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -70,6 +71,33 @@ class PurchaseController extends Controller
         );
 
         return redirect()->route('purchases.show', $purchase)->with('status', 'Compra registrada.');
+    }
+
+    public function checkDuplicate(Request $request): JsonResponse
+    {
+        $invoiceNumber = $request->string('invoice_number')->trim()->value();
+        $supplierId = $request->integer('supplier_id');
+
+        if (blank($invoiceNumber) || $supplierId === 0) {
+            return response()->json(['duplicate' => false]);
+        }
+
+        $tenant = app(Tenant::class);
+
+        $existing = $tenant->purchases()
+            ->where('supplier_id', $supplierId)
+            ->where('invoice_number', $invoiceNumber)
+            ->first();
+
+        if ($existing === null) {
+            return response()->json(['duplicate' => false]);
+        }
+
+        return response()->json([
+            'duplicate' => true,
+            'purchase_id' => $existing->id,
+            'date' => $existing->invoice_date->format('d/m/Y'),
+        ]);
     }
 
     public function show(Purchase $purchase): View

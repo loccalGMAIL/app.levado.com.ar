@@ -8,7 +8,7 @@
         $editingLine = null;
         $errorsInEditLine = $errors->hasAny(['quantity_purchased', 'purchase_unit', 'unit_price']) && old('_form') === 'edit-line';
         if ($errorsInEditLine) {
-            $editingLine = ['id' => old('line_id'), 'raw_name' => old('raw_name'), 'quantity_purchased' => old('quantity_purchased'), 'purchase_unit' => old('purchase_unit'), 'unit_price' => old('unit_price')];
+            $editingLine = ['id' => old('line_id'), 'raw_name' => old('raw_name'), 'quantity_purchased' => old('quantity_purchased'), 'purchase_unit' => old('purchase_unit'), 'unit_price' => old('unit_price'), 'iva_rate' => old('iva_rate'), 'percepcion_rate' => old('percepcion_rate')];
         }
     @endphp
 
@@ -109,7 +109,8 @@
                                     <th class="px-4 py-3 font-medium text-right">Precio unitario</th>
                                     <th class="px-4 py-3 font-medium text-right">Subtotal</th>
                                     <th class="px-4 py-3 font-medium text-right">IVA $</th>
-                                    <th class="px-4 py-3 font-medium text-right">Subtotal c/IVA</th>
+                                    <th class="px-4 py-3 font-medium text-right">Percepción $</th>
+                                    <th class="px-4 py-3 font-medium text-right">Total</th>
                                     @can('manage-costs')
                                         <th class="px-4 py-3"></th>
                                     @endcan
@@ -118,8 +119,9 @@
                             <tbody class="divide-y divide-miga">
                                 @foreach($purchase->lines as $line)
                                     @php
-                                        $ivaAmount   = (float) $line->subtotal * (float) $line->iva_rate;
-                                        $subtotalIva = (float) $line->subtotal * (1 + (float) $line->iva_rate);
+                                        $ivaAmount        = (float) $line->subtotal * (float) $line->iva_rate;
+                                        $percepcionAmount = (float) $line->subtotal * ((float) ($line->percepcion_rate ?? 0) / 100);
+                                        $lineTotal        = (float) $line->subtotal + $ivaAmount + $percepcionAmount;
                                     @endphp
                                     <tr>
                                         <td class="px-4 py-3 align-top text-corteza min-w-[12rem]">
@@ -138,8 +140,11 @@
                                         <td class="px-4 py-3 align-top text-right font-mono text-masa-madre">
                                             ${{ number_format($ivaAmount, 2, ',', '.') }}
                                         </td>
+                                        <td class="px-4 py-3 align-top text-right font-mono text-masa-madre">
+                                            {{ $percepcionAmount > 0 ? '$ ' . number_format($percepcionAmount, 2, ',', '.') : '—' }}
+                                        </td>
                                         <td class="px-4 py-3 align-top text-right font-mono font-semibold text-corteza">
-                                            ${{ number_format($subtotalIva, 2, ',', '.') }}
+                                            ${{ number_format($lineTotal, 2, ',', '.') }}
                                         </td>
                                         @can('manage-costs')
                                             <td class="px-4 py-3 align-top">
@@ -152,6 +157,7 @@
                                                             'purchase_unit' => $line->purchase_unit->value,
                                                             'unit_price' => $line->unit_price,
                                                             'iva_rate' => $line->iva_rate,
+                                                            'percepcion_rate' => $line->percepcion_rate,
                                                         ]) }})"
                                                         class="p-1 text-masa-madre hover:text-corteza transition-colors"
                                                         title="Editar">
@@ -230,6 +236,10 @@
                         </div>
                     </div>
 
+                    @php
+                        $defaultIva = old('iva_rate', $purchase->default_iva_rate !== null ? (string) $purchase->default_iva_rate : '0.21');
+                        $defaultPercepcion = old('percepcion_rate', $purchase->default_percepcion_rate !== null ? (string) $purchase->default_percepcion_rate : '');
+                    @endphp
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                         <div>
                             <x-input-label value="Precio unitario" />
@@ -249,13 +259,25 @@
                             <x-input-label value="Alíc. IVA" />
                             <select name="iva_rate"
                                 class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
-                                <option value="0.21" @selected(old('iva_rate', '0.21') === '0.21')>21%</option>
-                                <option value="0.105" @selected(old('iva_rate') === '0.105')>10,5%</option>
-                                <option value="0" @selected(old('iva_rate') === '0')>0%</option>
+                                <option value="0.21" @selected($defaultIva === '0.21')>21%</option>
+                                <option value="0.105" @selected($defaultIva === '0.105' || $defaultIva === '0.1050')>10,5%</option>
+                                <option value="0" @selected($defaultIva === '0' || $defaultIva === '0.0000')>0%</option>
                             </select>
                         </div>
 
-                        <div class="lg:col-span-2 flex items-end">
+                        <div>
+                            <x-input-label value="Percepción" />
+                            <div class="relative mt-1">
+                                <x-text-input name="percepcion_rate" type="number"
+                                    step="0.01" min="0" max="100"
+                                    class="block w-full pr-8"
+                                    :value="$defaultPercepcion"
+                                    placeholder="0" />
+                                <span class="absolute inset-y-0 right-3 flex items-center text-masa-madre text-sm">%</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-end">
                             <x-primary-button>Agregar renglón</x-primary-button>
                         </div>
                     </div>
