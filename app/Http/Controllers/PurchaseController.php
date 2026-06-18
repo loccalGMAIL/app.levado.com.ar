@@ -227,6 +227,8 @@ class PurchaseController extends Controller
         $ingredientCatalog = $ingredients->keyBy('id')->map(fn ($i) => [
             'unit' => $i->unit->value,
             'name' => $i->name,
+            'subdivisions' => $i->subdivisions,
+            'subdivisionLabel' => $i->subdivision_label,
         ])->toArray();
 
         return view('purchases.match', compact('purchase', 'ingredients', 'packagings', 'ingredientCatalog'));

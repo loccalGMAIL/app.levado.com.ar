@@ -106,6 +106,11 @@
 
                                 @if($line->isApplied())
                                     {{-- Renglón ya aplicado — estático --}}
+                                    @php
+                                        $appliedIngredient = $line->isIngredient()
+                                            ? $ingredients->firstWhere('id', $line->purchaseable_id)
+                                            : null;
+                                    @endphp
                                     <tr class="bg-green-50/40">
                                         <td class="px-4 py-3 text-corteza text-xs" title="{{ $line->raw_name }}">
                                             {{ \Illuminate\Support\Str::limit($line->raw_name ?? '—', 65) }}
@@ -116,6 +121,11 @@
                                         </td>
                                         <td class="px-4 py-3 font-medium text-corteza text-sm">
                                             {{ $matchedName ?? '—' }}
+                                            @if($appliedIngredient?->subdivisions)
+                                                <span class="block text-[11px] font-normal text-masa-madre">
+                                                    {{ $appliedIngredient->subdivisions }} {{ $appliedIngredient->subdivision_label ?? 'u' }} / envase
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3">
                                             <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
@@ -166,7 +176,7 @@
                                                 class="space-y-2">
                                                 @csrf
                                                 <input type="hidden" name="match" x-bind:value="selected">
-                                                <input type="hidden" name="unit_cost" x-bind:value="unitCost > 0 ? unitCost.toFixed(2) : ''">
+                                                <input type="hidden" name="unit_cost" x-bind:value="unitCost > 0 ? unitCost.toFixed(4) : ''">
 
                                                 <div class="flex items-start gap-3 flex-wrap">
                                                     {{-- Select de insumo/descartable --}}
@@ -179,7 +189,12 @@
                                                                 @foreach($ingredients as $ing)
                                                                     <option value="ingredient:{{ $ing->id }}"
                                                                         @selected($currentValue === "ingredient:{$ing->id}")>
-                                                                        {{ $ing->name }} ({{ $ing->unit->short() }})
+                                                                        {{ $ing->name }}
+                                                                        @if($ing->subdivisions)
+                                                                            ({{ $ing->subdivisions }} {{ $ing->subdivision_label ?? 'u' }} / envase)
+                                                                        @else
+                                                                            ({{ $ing->unit->short() }})
+                                                                        @endif
                                                                     </option>
                                                                 @endforeach
                                                             </optgroup>
@@ -230,10 +245,15 @@
                                                             <input type="number"
                                                                 x-model.number="unitCost"
                                                                 min="0" step="0.01"
-                                                                data-maxdecimals="2"
+                                                                data-maxdecimals="4"
                                                                 class="w-28 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1 text-right font-mono">
                                                             <span>/</span>
-                                                            <span x-text="catalogUnit" class="font-medium text-corteza"></span>
+                                                            <span x-text="displayUnit || catalogUnit" class="font-medium text-corteza"></span>
+                                                            <template x-if="subdivisions">
+                                                                <span class="text-masa-madre/60 ml-1">
+                                                                    (1 envase = <span x-text="subdivisions"></span> <span x-text="subdivisionLabel || 'u'"></span>)
+                                                                </span>
+                                                            </template>
                                                         </div>
 
                                                         {{-- Botón --}}

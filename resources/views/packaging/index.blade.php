@@ -2,16 +2,18 @@
     <x-slot name="title">Envases</x-slot>
 
     @php
-        $errorsInCreate = $errors->hasAny(['name', 'brand', 'supplier_id', 'cost_per_unit']) && old('_form') === 'create';
-        $errorsInEdit   = $errors->hasAny(['name', 'brand', 'supplier_id', 'cost_per_unit']) && old('_form') === 'edit';
+        $errorsInCreate = $errors->hasAny(['name', 'brand', 'supplier_id', 'cost_per_unit', 'subdivisions', 'subdivision_label']) && old('_form') === 'create';
+        $errorsInEdit   = $errors->hasAny(['name', 'brand', 'supplier_id', 'cost_per_unit', 'subdivisions', 'subdivision_label']) && old('_form') === 'edit';
         $supplierErrorsInCreate = $errors->hasAny(['name', 'phone', 'email', 'notes']) && old('_form') === 'supplier-quick-create';
-        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'cost_per_unit' => ''];
+        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'cost_per_unit' => '', 'subdivisions' => null, 'subdivision_label' => ''];
         $editingOnError = $errorsInEdit ? [
-            'id'            => old('packaging_id'),
-            'name'          => old('name'),
-            'brand'         => old('brand'),
-            'supplier_id'   => old('supplier_id'),
-            'cost_per_unit' => old('cost_per_unit'),
+            'id'               => old('packaging_id'),
+            'name'             => old('name'),
+            'brand'            => old('brand'),
+            'supplier_id'      => old('supplier_id'),
+            'cost_per_unit'    => old('cost_per_unit'),
+            'subdivisions'     => old('subdivisions'),
+            'subdivision_label' => old('subdivision_label'),
         ] : $editingDefault;
     @endphp
 
@@ -112,11 +114,13 @@
                                         @can('manage-costs')
                                             <button type="button"
                                                 @click="openEdit({{ Js::from([
-                                                    'id'            => $packaging->id,
-                                                    'name'          => $packaging->name,
-                                                    'brand'         => $packaging->brand ?? '',
-                                                    'supplier_id'   => $packaging->supplier_id ?? '',
-                                                    'cost_per_unit' => $packaging->cost_per_unit,
+                                                    'id'               => $packaging->id,
+                                                    'name'             => $packaging->name,
+                                                    'brand'            => $packaging->brand ?? '',
+                                                    'supplier_id'      => $packaging->supplier_id ?? '',
+                                                    'cost_per_unit'    => $packaging->cost_per_unit,
+                                                    'subdivisions'     => $packaging->subdivisions,
+                                                    'subdivision_label' => $packaging->subdivision_label ?? '',
                                                 ]) }})"
                                                 class="hover:underline text-left">
                                                 {{ $packaging->name }}
@@ -124,6 +128,11 @@
                                         @else
                                             {{ $packaging->name }}
                                         @endcan
+                                        @if($packaging->subdivisions)
+                                            <span class="text-xs text-masa-madre block font-normal">
+                                                {{ $packaging->subdivisions }} {{ $packaging->subdivision_label ?? 'u.' }} / presentación
+                                            </span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->brand ?? '—' }}</td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->supplier?->name ?? '—' }}</td>
@@ -194,11 +203,13 @@
                                             <div class="flex items-center justify-end gap-1">
                                                 <button type="button"
                                                     @click="openEdit({{ Js::from([
-                                                        'id'            => $packaging->id,
-                                                        'name'          => $packaging->name,
-                                                        'brand'         => $packaging->brand ?? '',
-                                                        'supplier_id'   => $packaging->supplier_id ?? '',
-                                                        'cost_per_unit' => $packaging->cost_per_unit,
+                                                        'id'               => $packaging->id,
+                                                        'name'             => $packaging->name,
+                                                        'brand'            => $packaging->brand ?? '',
+                                                        'supplier_id'      => $packaging->supplier_id ?? '',
+                                                        'cost_per_unit'    => $packaging->cost_per_unit,
+                                                        'subdivisions'     => $packaging->subdivisions,
+                                                        'subdivision_label' => $packaging->subdivision_label ?? '',
                                                     ]) }})"
                                                     aria-label="Editar envase" title="Editar envase"
                                                     class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">

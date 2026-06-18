@@ -5,6 +5,32 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.8] — 2026-06-18
+
+### Subdivisiones para envases e ingredientes por unidad
+
+#### Agregado
+
+- **Subdivisiones en ingredientes con unidad `u`:** al registrar un ingrediente vendido por unidad (ej.: paquete de galletas), se puede indicar cuántas unidades trae la presentación ("Unidades por envase") y cómo se llama la sub-unidad ("galleta", "rebanada"). El campo `cost_per_unit` almacena el precio por sub-unidad.
+- **Subdivisiones en envases/descartables:** los envases soportan ahora el mismo mecanismo. Al registrar un envase que viene en pack (ej.: caja de 100 bolsas kraft), se indica la cantidad por presentación y el nombre de la sub-unidad ("bolsa", "etiqueta"). La tabla de envases muestra "100 bolsa / presentación" debajo del nombre cuando tiene subdivisiones configuradas.
+- **Vista de matcheo de compras:** la columna de ingredientes en `/purchases/{id}/match` muestra la info de subdivisión al vincular un renglón de factura, para que sea visible cuántas sub-unidades trae cada presentación.
+
+#### Corregido
+
+- **`cost_per_unit` almacena precio por sub-unidad:** el campo refleja el costo de una sola sub-unidad (ej.: $1 por galleta), no el precio del paquete completo.
+
+#### Corregido
+
+- **Modal de crear/editar envase — proveedor nuevo:** el botón "+ Nuevo" ya no cierra el modal del envase antes de abrir el quick-create de proveedor. Ahora abre el quick-create encima (z-index superior), y al crear el proveedor el select se actualiza automáticamente con la nueva opción seleccionada, replicando el comportamiento del modal de ingredientes.
+
+#### Técnico
+
+- Migraciones: `add_subdivisions_to_ingredients_table` y `add_subdivisions_to_packagings_table` (`subdivisions` UNSIGNED INT nullable, `subdivision_label` VARCHAR 50 nullable).
+- `StoreIngredientRequest`, `UpdateIngredientRequest`, `StorePackagingRequest` y `UpdatePackagingRequest` validados con `nullable|integer|min:2` y `nullable|string|max:50`.
+- 4 nuevos tests en `PackagingCrudTest`: crear con subdivisiones, crear sin subdivisiones (null), editar agregando subdivisiones y validar mínimo de 2.
+
+---
+
 ## [0.8.7] — 2026-06-18
 
 ### Compras — Control de IVA y percepciones por factura

@@ -185,18 +185,23 @@ class RecipeController extends Controller
 
         $converter = new UnitConverter;
 
-        $ingredientLinesData = $recipe->ingredientLines->map(fn ($line) => [
-            'id' => $line->id,
-            'name' => $line->ingredient->name,
-            'code' => 'ING-'.str_pad($line->ingredient->id, 3, '0', STR_PAD_LEFT),
-            'supplier' => $line->ingredient->supplier?->name,
-            'quantity' => (float) $line->quantity,
-            'unit' => $line->unit->value,
-            'unitLabel' => $line->unit->short(),
-            'costPerLineUnit' => $converter->convert(1.0, $line->unit, $line->ingredient->unit) * (float) $line->ingredient->cost_per_unit,
-            'refCost' => (float) $line->ingredient->cost_per_unit,
-            'refUnit' => $line->ingredient->unit->short(),
-        ]);
+        $ingredientLinesData = $recipe->ingredientLines->map(function ($line) use ($converter) {
+            $ingredient = $line->ingredient;
+            $subLabel = $ingredient->subdivisions ? ($ingredient->subdivision_label ?? 'u') : null;
+
+            return [
+                'id' => $line->id,
+                'name' => $ingredient->name,
+                'code' => 'ING-'.str_pad($ingredient->id, 3, '0', STR_PAD_LEFT),
+                'supplier' => $ingredient->supplier?->name,
+                'quantity' => (float) $line->quantity,
+                'unit' => $line->unit->value,
+                'unitLabel' => $subLabel ?? $line->unit->short(),
+                'costPerLineUnit' => $converter->convert(1.0, $line->unit, $ingredient->unit) * (float) $ingredient->cost_per_unit,
+                'refCost' => (float) $ingredient->cost_per_unit,
+                'refUnit' => $subLabel ?? $ingredient->unit->short(),
+            ];
+        });
 
         $laborLinesData = $recipe->laborLines->map(fn ($line) => [
             'id' => $line->id,

@@ -22,6 +22,8 @@ class Ingredient extends Model
         'supplier_id',
         'unit',
         'cost_per_unit',
+        'subdivisions',
+        'subdivision_label',
         'active',
     ];
 
@@ -30,6 +32,7 @@ class Ingredient extends Model
         return [
             'unit' => Unit::class,
             'cost_per_unit' => 'decimal:4',
+            'subdivisions' => 'integer',
             'active' => 'boolean',
         ];
     }

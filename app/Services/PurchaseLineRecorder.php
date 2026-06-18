@@ -87,6 +87,12 @@ class PurchaseLineRecorder
                 $costPerUnit = (float) $line->unit_price / $pkgQty;
             }
 
+            // When ingredient tracks sub-units (subdivisions), the stored cost_per_unit must
+            // represent the sub-unit price so that recipes can multiply directly without division.
+            if ($item->subdivisions && $purchaseUnit === Unit::Unidad && $item->unit === Unit::Unidad) {
+                $costPerUnit = $costPerUnit / $item->subdivisions;
+            }
+
             $this->applyIngredientCost($item, $costPerUnit);
         } else {
             $item = Packaging::find($line->purchaseable_id);

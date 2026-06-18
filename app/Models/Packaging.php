@@ -20,6 +20,8 @@ class Packaging extends Model
         'brand',
         'supplier_id',
         'cost_per_unit',
+        'subdivisions',
+        'subdivision_label',
         'active',
     ];
 

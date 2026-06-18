@@ -23,6 +23,8 @@ class StoreIngredientRequest extends FormRequest
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'unit' => ['required', Rule::enum(Unit::class)],
             'cost_per_unit' => ['required', 'numeric', 'min:0', 'max:99999999'],
+            'subdivisions' => ['nullable', 'integer', 'min:2'],
+            'subdivision_label' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

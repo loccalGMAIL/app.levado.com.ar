@@ -1,5 +1,9 @@
 <x-crud-modal name="packaging-create" title="Nuevo envase" :show="$errorsInCreate">
-    <form method="POST" action="{{ route('packaging.store') }}" class="space-y-4">
+    <form method="POST" action="{{ route('packaging.store') }}" class="space-y-4"
+          x-on:supplier-created.window="
+              const sel = document.getElementById('create_pkg_supplier');
+              sel.add(new Option($event.detail.name, $event.detail.id, true, true));
+          ">
         @csrf
         <input type="hidden" name="_form" value="create">
 
@@ -24,7 +28,7 @@
                 <div class="flex items-center justify-between">
                     <x-input-label for="create_pkg_supplier" value="Proveedor" />
                     <button type="button"
-                        @click="$dispatch('close-modal', 'packaging-create'); $nextTick(() => $dispatch('open-modal', 'supplier-quick-create'))"
+                        @click="$dispatch('open-modal', 'supplier-quick-create')"
                         class="text-xs text-masa-madre hover:text-corteza hover:underline">
                         + Nuevo
                     </button>
@@ -52,6 +56,26 @@
                 required />
             <p class="mt-1 text-xs text-masa-madre">En la moneda del negocio.</p>
             <x-input-error :messages="$errors->get('cost_per_unit')" class="mt-2" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 border-t border-miga pt-4">
+            <div>
+                <x-input-label for="create_pkg_subdivisions" value="Unidades por presentación" />
+                <x-text-input id="create_pkg_subdivisions" name="subdivisions" type="number"
+                    step="1" min="2"
+                    class="mt-1 block w-full"
+                    :value="old('subdivisions')" />
+                <p class="mt-1 text-xs text-masa-madre">Ej.: 100 bolsas por caja.</p>
+                <x-input-error :messages="$errors->get('subdivisions')" class="mt-2" />
+            </div>
+            <div>
+                <x-input-label for="create_pkg_subdivision_label" value="Nombre de la unidad" />
+                <x-text-input id="create_pkg_subdivision_label" name="subdivision_label" type="text"
+                    class="mt-1 block w-full"
+                    :value="old('subdivision_label')"
+                    placeholder="bolsa, etiqueta…" />
+                <x-input-error :messages="$errors->get('subdivision_label')" class="mt-2" />
+            </div>
         </div>
 
         <div class="flex gap-3 pt-2">

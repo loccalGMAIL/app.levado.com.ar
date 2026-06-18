@@ -1,5 +1,6 @@
 <x-crud-modal name="ingredient-create" title="Nuevo ingrediente" :show="$errorsInCreate">
     <form method="POST" action="{{ route('ingredients.store') }}" class="space-y-4"
+          x-data="{ selectedUnit: '{{ old('unit') }}' }"
           x-on:supplier-created.window="
               const sel = document.getElementById('create_supplier');
               sel.add(new Option($event.detail.name, $event.detail.id, true, true));
@@ -51,6 +52,7 @@
             <div>
                 <x-input-label for="create_unit" value="Unidad de medida" />
                 <select id="create_unit" name="unit" required
+                    x-model="selectedUnit"
                     class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
                     <option value="">— Seleccioná —</option>
                     @foreach(\App\Enums\Unit::cases() as $unit)
@@ -71,6 +73,26 @@
                     required />
                 <p class="mt-1 text-xs text-masa-madre">En la moneda del negocio.</p>
                 <x-input-error :messages="$errors->get('cost_per_unit')" class="mt-2" />
+            </div>
+        </div>
+
+        <div x-show="selectedUnit === 'u'" class="grid grid-cols-2 gap-4 border-t border-miga pt-4">
+            <div>
+                <x-input-label for="create_subdivisions" value="Unidades por envase" />
+                <x-text-input id="create_subdivisions" name="subdivisions" type="number"
+                    step="1" min="2"
+                    class="mt-1 block w-full"
+                    :value="old('subdivisions')" />
+                <p class="mt-1 text-xs text-masa-madre">Ej.: 24 galletas por paquete.</p>
+                <x-input-error :messages="$errors->get('subdivisions')" class="mt-2" />
+            </div>
+            <div>
+                <x-input-label for="create_subdivision_label" value="Nombre de la unidad" />
+                <x-text-input id="create_subdivision_label" name="subdivision_label" type="text"
+                    class="mt-1 block w-full"
+                    :value="old('subdivision_label')"
+                    placeholder="galleta, rebanada…" />
+                <x-input-error :messages="$errors->get('subdivision_label')" class="mt-2" />
             </div>
         </div>
 

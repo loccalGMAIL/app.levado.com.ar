@@ -5,14 +5,16 @@
         $errorsInCreate = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit']) && old('_form') === 'create';
         $errorsInEdit   = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit']) && old('_form') === 'edit';
         $supplierErrorsInCreate = $errors->hasAny(['name', 'phone', 'email', 'notes']) && old('_form') === 'supplier-quick-create';
-        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'unit' => '', 'cost_per_unit' => ''];
+        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'unit' => '', 'cost_per_unit' => '', 'subdivisions' => '', 'subdivision_label' => ''];
         $editingOnError = $errorsInEdit ? [
-            'id'            => old('ingredient_id'),
-            'name'          => old('name'),
-            'brand'         => old('brand'),
-            'supplier_id'   => old('supplier_id'),
-            'unit'          => old('unit'),
-            'cost_per_unit' => old('cost_per_unit'),
+            'id'                => old('ingredient_id'),
+            'name'              => old('name'),
+            'brand'             => old('brand'),
+            'supplier_id'       => old('supplier_id'),
+            'unit'              => old('unit'),
+            'cost_per_unit'     => old('cost_per_unit'),
+            'subdivisions'      => old('subdivisions'),
+            'subdivision_label' => old('subdivision_label'),
         ] : $editingDefault;
     @endphp
 
@@ -114,12 +116,14 @@
                                         @can('manage-costs')
                                             <button type="button"
                                                 @click="openEdit({{ Js::from([
-                                                    'id'            => $ingredient->id,
-                                                    'name'          => $ingredient->name,
-                                                    'brand'         => $ingredient->brand ?? '',
-                                                    'supplier_id'   => $ingredient->supplier_id ?? '',
-                                                    'unit'          => $ingredient->unit->value,
-                                                    'cost_per_unit' => $ingredient->cost_per_unit,
+                                                    'id'                => $ingredient->id,
+                                                    'name'              => $ingredient->name,
+                                                    'brand'             => $ingredient->brand ?? '',
+                                                    'supplier_id'       => $ingredient->supplier_id ?? '',
+                                                    'unit'              => $ingredient->unit->value,
+                                                    'cost_per_unit'     => $ingredient->cost_per_unit,
+                                                    'subdivisions'      => $ingredient->subdivisions ?? '',
+                                                    'subdivision_label' => $ingredient->subdivision_label ?? '',
                                                 ]) }})"
                                                 class="hover:underline text-left">
                                                 {{ $ingredient->name }}
@@ -148,12 +152,14 @@
                                             <div class="flex items-center justify-end gap-1">
                                                 <button type="button"
                                                     @click="openEdit({{ Js::from([
-                                                        'id'            => $ingredient->id,
-                                                        'name'          => $ingredient->name,
-                                                        'brand'         => $ingredient->brand ?? '',
-                                                        'supplier_id'   => $ingredient->supplier_id ?? '',
-                                                        'unit'          => $ingredient->unit->value,
-                                                        'cost_per_unit' => $ingredient->cost_per_unit,
+                                                        'id'                => $ingredient->id,
+                                                        'name'              => $ingredient->name,
+                                                        'brand'             => $ingredient->brand ?? '',
+                                                        'supplier_id'       => $ingredient->supplier_id ?? '',
+                                                        'unit'              => $ingredient->unit->value,
+                                                        'cost_per_unit'     => $ingredient->cost_per_unit,
+                                                        'subdivisions'      => $ingredient->subdivisions ?? '',
+                                                        'subdivision_label' => $ingredient->subdivision_label ?? '',
                                                     ]) }})"
                                                     aria-label="Editar ingrediente" title="Editar ingrediente"
                                                     class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
