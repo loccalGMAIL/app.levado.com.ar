@@ -176,7 +176,7 @@
                                                 class="space-y-2">
                                                 @csrf
                                                 <input type="hidden" name="match" x-bind:value="selected">
-                                                <input type="hidden" name="unit_cost" x-bind:value="unitCost > 0 ? unitCost.toFixed(2) : ''">
+                                                <input type="hidden" name="unit_cost" x-bind:value="unitCost > 0 ? unitCost.toFixed(4) : ''">
 
                                                 <div class="flex items-start gap-3 flex-wrap">
                                                     {{-- Select de insumo/descartable --}}
@@ -245,22 +245,16 @@
                                                             <input type="number"
                                                                 x-model.number="unitCost"
                                                                 min="0" step="0.01"
-                                                                data-maxdecimals="2"
+                                                                data-maxdecimals="4"
                                                                 class="w-28 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1 text-right font-mono">
                                                             <span>/</span>
-                                                            <span x-text="catalogUnit" class="font-medium text-corteza"></span>
-                                                        </div>
-
-                                                        {{-- Costo por sub-unidad (cuando hay subdivisiones) --}}
-                                                        <template x-if="subUnitCost !== null">
-                                                            <div class="text-xs text-masa-madre whitespace-nowrap">
-                                                                → $<span x-text="subUnitCost.toFixed(4)"></span>
-                                                                / <span x-text="subdivisionLabel || 'u'"></span>
-                                                                <span class="text-masa-madre/60">
-                                                                    (1&nbsp;<span x-text="catalogUnit"></span>&nbsp;=&nbsp;<span x-text="subdivisions"></span>&nbsp;<span x-text="subdivisionLabel || 'u'"></span>)
+                                                            <span x-text="displayUnit || catalogUnit" class="font-medium text-corteza"></span>
+                                                            <template x-if="subdivisions">
+                                                                <span class="text-masa-madre/60 ml-1">
+                                                                    (1 envase = <span x-text="subdivisions"></span> <span x-text="subdivisionLabel || 'u'"></span>)
                                                                 </span>
-                                                            </div>
-                                                        </template>
+                                                            </template>
+                                                        </div>
 
                                                         {{-- Botón --}}
                                                         <button type="submit"

@@ -25,6 +25,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         description,
 
         catalogUnit: '',
+        displayUnit: '',
         pkgQty: 1,
         pkgQtyFromDesc: false,
         unitCost: unitPrice,
@@ -32,11 +33,6 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         incompatiblePkg: false,
         subdivisions: null,
         subdivisionLabel: null,
-
-        get subUnitCost() {
-            if (!this.subdivisions || this.unitCost <= 0) return null;
-            return Math.round((this.unitCost / this.subdivisions) * 10000) / 10000;
-        },
 
         init() {
             if (this.selected) this.recalc();
@@ -80,11 +76,18 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
             this.catalogUnit = item.unit;
             this.subdivisions = item.subdivisions || null;
             this.subdivisionLabel = item.subdivisionLabel || null;
+            this.displayUnit = (this.subdivisions && item.unit === 'u')
+                ? (item.subdivisionLabel || 'u')
+                : item.unit;
             const directFactor = UNIT_CONV[this.purchaseUnit]?.[item.unit];
 
             if (directFactor !== undefined) {
                 this.needsPkgQty = false;
-                this.unitCost = Math.round((this.unitPrice / directFactor) * 100) / 100;
+                // When the ingredient tracks sub-units, divide by subdivisions so unitCost
+                // represents cost per sub-unit (what gets stored in cost_per_unit).
+                const subdivisionFactor = (this.subdivisions && this.purchaseUnit === 'u' && item.unit === 'u')
+                    ? this.subdivisions : 1;
+                this.unitCost = Math.round((this.unitPrice / directFactor / subdivisionFactor) * 10000) / 10000;
             } else {
                 this.needsPkgQty = true;
                 const parsed = this.parseDesc(this.description);

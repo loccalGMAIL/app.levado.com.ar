@@ -28,10 +28,7 @@ class RecipeCostCalculator
                 $line->ingredient->unit
             );
             if ($converted !== null) {
-                $effectiveCost = $line->ingredient->subdivisions
-                    ? (float) $line->ingredient->cost_per_unit / $line->ingredient->subdivisions
-                    : (float) $line->ingredient->cost_per_unit;
-                $ingredientCost += $converted * $effectiveCost;
+                $ingredientCost += $converted * (float) $line->ingredient->cost_per_unit;
             }
         }
 

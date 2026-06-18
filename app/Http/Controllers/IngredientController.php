@@ -71,7 +71,6 @@ class IngredientController extends Controller
         $data = $request->validated();
 
         $costChanged = (float) $ingredient->cost_per_unit !== (float) $data['cost_per_unit'];
-        $subdivisionsChanged = $ingredient->subdivisions !== (isset($data['subdivisions']) ? (int) $data['subdivisions'] : null);
 
         if ($costChanged) {
             $ingredient->priceLogs()->create([
@@ -82,7 +81,7 @@ class IngredientController extends Controller
 
         $ingredient->update($data);
 
-        if ($costChanged || $subdivisionsChanged) {
+        if ($costChanged) {
             $this->propagator->propagateFromIngredient($ingredient->id);
         }
 

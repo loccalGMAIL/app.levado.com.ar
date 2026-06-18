@@ -187,11 +187,7 @@ class RecipeController extends Controller
 
         $ingredientLinesData = $recipe->ingredientLines->map(function ($line) use ($converter) {
             $ingredient = $line->ingredient;
-            $hasSubdivisions = (bool) $ingredient->subdivisions;
-            $effectiveCost = $hasSubdivisions
-                ? (float) $ingredient->cost_per_unit / $ingredient->subdivisions
-                : (float) $ingredient->cost_per_unit;
-            $subLabel = $hasSubdivisions ? ($ingredient->subdivision_label ?? 'u') : null;
+            $subLabel = $ingredient->subdivisions ? ($ingredient->subdivision_label ?? 'u') : null;
 
             return [
                 'id' => $line->id,
@@ -201,8 +197,8 @@ class RecipeController extends Controller
                 'quantity' => (float) $line->quantity,
                 'unit' => $line->unit->value,
                 'unitLabel' => $subLabel ?? $line->unit->short(),
-                'costPerLineUnit' => $converter->convert(1.0, $line->unit, $ingredient->unit) * $effectiveCost,
-                'refCost' => $effectiveCost,
+                'costPerLineUnit' => $converter->convert(1.0, $line->unit, $ingredient->unit) * (float) $ingredient->cost_per_unit,
+                'refCost' => (float) $ingredient->cost_per_unit,
                 'refUnit' => $subLabel ?? $ingredient->unit->short(),
             ];
         });
