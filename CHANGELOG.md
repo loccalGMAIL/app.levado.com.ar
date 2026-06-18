@@ -19,6 +19,10 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 - **`cost_per_unit` almacena precio por sub-unidad:** el campo refleja el costo de una sola sub-unidad (ej.: $1 por galleta), no el precio del paquete completo.
 
+#### Corregido
+
+- **Modal de crear/editar envase — proveedor nuevo:** el botón "+ Nuevo" ya no cierra el modal del envase antes de abrir el quick-create de proveedor. Ahora abre el quick-create encima (z-index superior), y al crear el proveedor el select se actualiza automáticamente con la nueva opción seleccionada, replicando el comportamiento del modal de ingredientes.
+
 #### Técnico
 
 - Migraciones: `add_subdivisions_to_ingredients_table` y `add_subdivisions_to_packagings_table` (`subdivisions` UNSIGNED INT nullable, `subdivision_label` VARCHAR 50 nullable).

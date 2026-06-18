@@ -1,5 +1,9 @@
 <x-crud-modal name="packaging-create" title="Nuevo envase" :show="$errorsInCreate">
-    <form method="POST" action="{{ route('packaging.store') }}" class="space-y-4">
+    <form method="POST" action="{{ route('packaging.store') }}" class="space-y-4"
+          x-on:supplier-created.window="
+              const sel = document.getElementById('create_pkg_supplier');
+              sel.add(new Option($event.detail.name, $event.detail.id, true, true));
+          ">
         @csrf
         <input type="hidden" name="_form" value="create">
 
@@ -24,7 +28,7 @@
                 <div class="flex items-center justify-between">
                     <x-input-label for="create_pkg_supplier" value="Proveedor" />
                     <button type="button"
-                        @click="$dispatch('close-modal', 'packaging-create'); $nextTick(() => $dispatch('open-modal', 'supplier-quick-create'))"
+                        @click="$dispatch('open-modal', 'supplier-quick-create')"
                         class="text-xs text-masa-madre hover:text-corteza hover:underline">
                         + Nuevo
                     </button>

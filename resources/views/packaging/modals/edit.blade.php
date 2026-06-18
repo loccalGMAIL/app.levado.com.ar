@@ -1,7 +1,12 @@
 <x-crud-modal name="packaging-edit" title="Editar envase" :show="$errorsInEdit">
     <form method="POST"
         :action="`/packaging/${editing.id}`"
-        class="space-y-4">
+        class="space-y-4"
+        x-on:supplier-created.window="
+            const sel = document.getElementById('edit_pkg_supplier');
+            sel.add(new Option($event.detail.name, $event.detail.id, true, true));
+            editing.supplier_id = $event.detail.id;
+        ">
         @csrf
         <input type="hidden" name="_method" value="PUT">
         <input type="hidden" name="_form" value="edit">
@@ -28,7 +33,7 @@
                 <div class="flex items-center justify-between">
                     <x-input-label for="edit_pkg_supplier" value="Proveedor" />
                     <button type="button"
-                        @click="$dispatch('close-modal', 'packaging-edit'); $nextTick(() => $dispatch('open-modal', 'supplier-quick-create'))"
+                        @click="$dispatch('open-modal', 'supplier-quick-create')"
                         class="text-xs text-masa-madre hover:text-corteza hover:underline">
                         + Nuevo
                     </button>
