@@ -126,9 +126,31 @@ metadata:
 - Vistas: `price-lists/index` (CRUD modales) + `price-lists/matrix` (matriz receta × lista, edición inline por celda, margen semáforo); selector de lista en dashboard (fallback a default si param inválido)
 - `RecipeController::copy` duplica precios en todas las listas; sort por precio en recipes/index via subquery
 
+## v0.8.5 — Fix compras y renombrado Envases → Descartables
+- Fix: bulk apply sugerencias IA, decimales en costo, dropdown de producto en compras
+- Renombrado "Envases" → "Descartables" en menú lateral, mobile nav y breadcrumbs
+
+## v0.8.6 — Mejoras UX generales
+- Flash toasts, iconos en tablas, loading en modales
+- Coherencia de íconos y color en acciones de tablas
+- Refactor: Policy classes, `scopeActive()`, reemplaza `abort_unless`
+- Refactor: JS a módulo Vite, `LazilyRefreshDatabase` en tests
+
+## v0.8.7 — Compras: IVA, percepciones y edición inline
+- Control de IVA y percepciones por factura (`/purchases`)
+- Edición inline de costo en packaging
+- Advertencia de comprobantes duplicados
+
+## v0.8.8 — Subdivisiones para ingredientes y descartables (2026-06-18)
+- Ingredientes: soporte de subdivisiones para ítems vendidos por envase (ej: bandeja de 12 unidades)
+- Descartables: subdivisiones para ítems vendidos por presentación
+- Compras: matcheo de renglones muestra subdivisiones disponibles
+- Fix: modal de proveedor nuevo no cierra el modal del descartable
+- **281 tests, todos verdes**
+
 ## Versioning
-- Rama activa: `claude/price-lists-planning-1h3rio` (listas de precios, pendiente merge)
-- Versión actual: `0.8.0`
+- Rama activa: `master`
+- Versión actual: `0.8.8`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.
