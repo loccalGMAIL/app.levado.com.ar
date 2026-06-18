@@ -18,6 +18,8 @@ class StorePurchaseRequest extends FormRequest
             'invoice_number' => ['nullable', 'string', 'max:50'],
             'invoice_date' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'default_iva_rate' => ['nullable', 'numeric', 'in:0,0.105,0.21'],
+            'default_percepcion_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ];
     }
 }

@@ -121,6 +121,8 @@ class PurchaseScanController extends Controller
                 'invoice_total' => $data['invoice_total'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'invoice_image_path' => $imagePath,
+                'default_iva_rate' => $data['default_iva_rate'] ?? null,
+                'default_percepcion_rate' => $data['default_percepcion_rate'] ?? null,
             ]);
 
             foreach ($rows as $row) {
@@ -134,6 +136,7 @@ class PurchaseScanController extends Controller
                     'purchase_unit' => $row['purchase_unit'],
                     'unit_price' => $row['unit_price'],
                     'iva_rate' => $row['iva_rate'] ?? 0.21,
+                    'percepcion_rate' => $row['percepcion_rate'] ?? null,
                 ]);
             }
 

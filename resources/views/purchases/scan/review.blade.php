@@ -48,10 +48,19 @@
                 </p>
             </div>
 
-            <form method="POST" action="{{ route('purchases.scan.store') }}" class="space-y-6">
+            <form method="POST" action="{{ route('purchases.scan.store') }}" class="space-y-6"
+                x-data="{
+                    globalIva: '0.21',
+                    globalPercepcion: '',
+                    applyToAll() {
+                        $dispatch('apply-tax-defaults', { ivaRate: this.globalIva, percepcionRate: this.globalPercepcion });
+                    }
+                }">
                 @csrf
                 <input type="hidden" name="invoice_image_path" value="{{ $imagePath }}">
                 <input type="hidden" name="invoice_total" value="{{ $header['total'] }}">
+                <input type="hidden" name="default_iva_rate" :value="globalIva">
+                <input type="hidden" name="default_percepcion_rate" :value="globalPercepcion">
 
                 {{-- Cabecera --}}
                 <div class="bg-white rounded-lg shadow p-6">
@@ -138,6 +147,49 @@
                     </div>
                 </div>
 
+                {{-- Control global IVA y percepciones --}}
+                <div class="bg-white rounded-lg shadow p-5">
+                    <p class="text-sm font-semibold text-corteza mb-3">IVA y percepciones de la factura</p>
+                    <div class="flex flex-wrap items-end gap-5">
+                        <div class="space-y-1.5">
+                            <p class="text-xs font-medium text-masa-madre">Alícuota IVA</p>
+                            <div class="flex flex-wrap gap-x-4 gap-y-2">
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="radio" x-model="globalIva" value="0"
+                                        class="text-corteza focus:ring-horno border-gray-300">
+                                    Sin IVA
+                                </label>
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="radio" x-model="globalIva" value="0.105"
+                                        class="text-corteza focus:ring-horno border-gray-300">
+                                    10,5%
+                                </label>
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="radio" x-model="globalIva" value="0.21"
+                                        class="text-corteza focus:ring-horno border-gray-300">
+                                    21%
+                                </label>
+                            </div>
+                        </div>
+
+                        <div x-show="globalIva !== '0'" x-cloak class="space-y-1.5">
+                            <p class="text-xs font-medium text-masa-madre">Percepción</p>
+                            <div class="flex items-center gap-1.5">
+                                <input type="number" x-model="globalPercepcion"
+                                    step="0.01" min="0" max="100"
+                                    placeholder="0"
+                                    class="border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm w-24 text-right">
+                                <span class="text-sm text-masa-madre">%</span>
+                            </div>
+                        </div>
+
+                        <button type="button" @click="applyToAll()"
+                            class="px-4 py-2 text-sm font-medium bg-corteza text-white rounded-md hover:bg-horno transition-colors shrink-0">
+                            Aplicar a todos los renglones
+                        </button>
+                    </div>
+                </div>
+
                 {{-- Renglones detectados --}}
                 <div>
                     <h3 class="text-sm font-semibold text-corteza mb-3">Renglones detectados ({{ count($draft['lines']) }})</h3>
@@ -156,9 +208,11 @@
                                         <th class="px-3 py-3 font-medium text-right">Cantidad</th>
                                         <th class="px-3 py-3 font-medium">Unidad</th>
                                         <th class="px-3 py-3 font-medium text-right">Precio unit.</th>
-                                        <th class="px-3 py-3 font-medium text-center">Alíc. IVA</th>
+                                        <th class="px-3 py-3 font-medium text-center">IVA</th>
+                                        <th class="px-3 py-3 font-medium text-center">Perc. %</th>
                                         <th class="px-3 py-3 font-medium text-right">IVA $</th>
-                                        <th class="px-3 py-3 font-medium text-right">Subtotal c/IVA</th>
+                                        <th class="px-3 py-3 font-medium text-right">Perc. $</th>
+                                        <th class="px-3 py-3 font-medium text-right">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-miga">
@@ -174,13 +228,20 @@
                                             $initPrice = is_numeric($line['unit_price']) ? (float) $line['unit_price'] : 0;
                                         @endphp
                                         <tr x-data="{
-                                            qty:     {{ $initQty }},
-                                            price:   {{ $initPrice }},
-                                            ivaRate: 0.21,
-                                            get ivaAmount()   { return this.qty * this.price * this.ivaRate; },
-                                            get subtotalIva() { return this.qty * this.price * (1 + this.ivaRate); },
+                                            qty:             {{ $initQty }},
+                                            price:           {{ $initPrice }},
+                                            ivaRate:         0.21,
+                                            percepcionRate:  0,
+                                            get net()              { return this.qty * this.price; },
+                                            get ivaAmount()        { return this.net * this.ivaRate; },
+                                            get percepcionAmount() { return this.net * (this.percepcionRate / 100); },
+                                            get lineTotal()        { return this.net * (1 + this.ivaRate + this.percepcionRate / 100); },
                                             fmt(n) { return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-                                        }">
+                                        }"
+                                        @apply-tax-defaults.window="
+                                            ivaRate = parseFloat($event.detail.ivaRate) || 0;
+                                            percepcionRate = parseFloat($event.detail.percepcionRate) || 0;
+                                        ">
                                             <td class="px-3 py-3 text-center align-top">
                                                 <input type="checkbox" name="lines[{{ $i }}][include]" value="1"
                                                     @checked(old("lines.$i.include", true))
@@ -242,14 +303,30 @@
                                                 </select>
                                             </td>
 
+                                            <td class="px-3 py-3 align-top text-center">
+                                                <div class="flex items-center gap-1 justify-center">
+                                                    <input type="number" name="lines[{{ $i }}][percepcion_rate]"
+                                                        x-model.number="percepcionRate"
+                                                        step="0.01" min="0" max="100"
+                                                        placeholder="0"
+                                                        class="border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm w-16 text-right">
+                                                    <span class="text-xs text-masa-madre">%</span>
+                                                </div>
+                                            </td>
+
                                             <td class="px-3 py-3 align-top text-right">
                                                 <span class="text-sm font-mono text-masa-madre"
                                                     x-text="'$ ' + fmt(ivaAmount)"></span>
                                             </td>
 
                                             <td class="px-3 py-3 align-top text-right">
+                                                <span class="text-sm font-mono text-masa-madre"
+                                                    x-text="percepcionRate > 0 ? '$ ' + fmt(percepcionAmount) : '—'"></span>
+                                            </td>
+
+                                            <td class="px-3 py-3 align-top text-right">
                                                 <span class="text-sm font-mono font-medium text-corteza"
-                                                    x-text="'$ ' + fmt(subtotalIva)"></span>
+                                                    x-text="'$ ' + fmt(lineTotal)"></span>
                                             </td>
                                         </tr>
                                     @endforeach

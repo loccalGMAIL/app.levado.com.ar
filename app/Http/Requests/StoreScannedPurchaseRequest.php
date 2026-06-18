@@ -32,6 +32,9 @@ class StoreScannedPurchaseRequest extends FormRequest
             'lines.*.purchase_unit' => ['nullable', Rule::enum(Unit::class)],
             'lines.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'lines.*.iva_rate' => ['nullable', 'numeric', 'in:0,0.105,0.21'],
+            'lines.*.percepcion_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'default_iva_rate' => ['nullable', 'numeric', 'in:0,0.105,0.21'],
+            'default_percepcion_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ];
     }
 }

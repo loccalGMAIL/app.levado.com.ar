@@ -5,6 +5,26 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.7] — 2026-06-18
+
+### Compras — Control de IVA y percepciones por factura
+
+#### Agregado
+
+- **Control de IVA a nivel de factura:** al registrar una compra (modal de nueva compra y revisión de factura escaneada) se puede establecer la alícuota IVA de toda la factura — Sin IVA / 10,5% / 21%. El valor se guarda en `purchases.default_iva_rate` y pre-rellena el selector de IVA en cada línea que se agregue manualmente desde el detalle de la compra.
+- **Percepciones por línea:** cuando la factura tiene IVA, se puede activar una percepción de porcentaje libre (ej. 3,5%). Se almacena en `purchase_lines.percepcion_rate` (decimal %) y `purchases.default_percepcion_rate`. El cálculo es `percepcion_$ = subtotal_neto × percepcion% / 100`.
+- **"Aplicar a todos los renglones" en el escaneo:** el panel de IVA/percepciones de la vista de revisión de factura escaneada incluye un botón que distribuye los valores seleccionados a todas las filas de la tabla vía Alpine.js (`@apply-tax-defaults`). Cada fila también es editable individualmente.
+- **Columna Percepción $ en tablas:** la tabla de renglones en el detalle de compra (`purchases/show`) y en la revisión de escaneo ahora muestran columnas separadas para IVA $, Percepción $ y Total; reemplazando la anterior columna "Subtotal c/IVA".
+- **Modal editar línea:** incluye el campo Percepción % con cálculo reactivo en tiempo real (muestra IVA $, Percepción $ y Total c/IVA+Perc.).
+
+#### Técnico
+
+- Migraciones: `add_percepcion_rate_to_purchase_lines_table` (DECIMAL 5,2) y `add_tax_defaults_to_purchases_table` (`default_iva_rate` DECIMAL 5,4, `default_percepcion_rate` DECIMAL 5,2).
+- `PurchaseLineRecorder::storePending()` y `recompute()` persisten `percepcion_rate`.
+- `StorePurchaseRequest`, `StorePurchaseLineRequest`, `UpdatePurchaseLineRequest` y `StoreScannedPurchaseRequest` validados con las nuevas reglas.
+
+---
+
 ## [0.8.6] — 2026-06-18
 
 ### UX — Mejoras de interfaz: feedback visual, íconos y tooltips

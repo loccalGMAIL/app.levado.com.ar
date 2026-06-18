@@ -3,6 +3,9 @@
           x-data="{
               supplierId: '{{ old('supplier_id', '') }}',
               invoiceNumber: '{{ old('invoice_number', '') }}',
+              ivaRate: '{{ old('default_iva_rate', '0.21') }}',
+              hasPercepcion: {{ old('default_percepcion_rate') ? 'true' : 'false' }},
+              percepcionRate: '{{ old('default_percepcion_rate', '') }}',
               duplicateWarning: null,
               _dupTimer: null,
               checkDuplicate() {
@@ -89,6 +92,46 @@
                 class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm"
                 placeholder="Opcional">{{ old('notes') }}</textarea>
             <x-input-error :messages="$errors->get('notes')" class="mt-2" />
+        </div>
+
+        {{-- IVA y percepciones --}}
+        <div class="bg-miga/50 rounded-md p-4 space-y-3">
+            <p class="text-xs font-semibold text-corteza">IVA de la factura</p>
+            <div class="flex flex-wrap gap-x-5 gap-y-2">
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="default_iva_rate" value="0" x-model="ivaRate"
+                        class="text-corteza focus:ring-horno border-gray-300">
+                    Sin IVA
+                </label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="default_iva_rate" value="0.105" x-model="ivaRate"
+                        class="text-corteza focus:ring-horno border-gray-300">
+                    10,5%
+                </label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="default_iva_rate" value="0.21" x-model="ivaRate"
+                        class="text-corteza focus:ring-horno border-gray-300">
+                    21%
+                </label>
+            </div>
+
+            <div x-show="ivaRate !== '0'" x-cloak class="flex items-center gap-3 pt-1">
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" x-model="hasPercepcion"
+                        @change="if (!hasPercepcion) percepcionRate = ''"
+                        class="rounded text-corteza focus:ring-horno border-gray-300">
+                    Percepción
+                </label>
+                <div x-show="hasPercepcion" x-cloak class="flex items-center gap-1.5">
+                    <input type="number" name="default_percepcion_rate"
+                        step="0.01" min="0" max="100"
+                        x-model="percepcionRate"
+                        :disabled="!hasPercepcion"
+                        placeholder="0"
+                        class="border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm w-24 text-right">
+                    <span class="text-sm text-masa-madre">%</span>
+                </div>
+            </div>
         </div>
 
         <div class="flex gap-3 pt-2">

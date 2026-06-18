@@ -14,6 +14,8 @@ class Purchase extends Model
         'invoice_number',
         'invoice_date',
         'invoice_total',
+        'default_iva_rate',
+        'default_percepcion_rate',
         'notes',
         'invoice_image_path',
     ];
@@ -23,6 +25,8 @@ class Purchase extends Model
         return [
             'invoice_date' => 'date',
             'invoice_total' => 'decimal:2',
+            'default_iva_rate' => 'decimal:4',
+            'default_percepcion_rate' => 'decimal:2',
         ];
     }
 

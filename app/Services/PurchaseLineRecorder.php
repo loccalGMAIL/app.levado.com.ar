@@ -56,6 +56,7 @@ class PurchaseLineRecorder
             'purchase_unit' => $data['purchase_unit'],
             'unit_price' => $data['unit_price'],
             'iva_rate' => $data['iva_rate'] ?? 0.21,
+            'percepcion_rate' => isset($data['percepcion_rate']) && $data['percepcion_rate'] !== '' ? $data['percepcion_rate'] : null,
             'subtotal' => $subtotal,
         ]);
     }
@@ -115,6 +116,9 @@ class PurchaseLineRecorder
             'purchase_unit' => $data['purchase_unit'],
             'unit_price' => $data['unit_price'],
             'iva_rate' => $data['iva_rate'] ?? $line->iva_rate,
+            'percepcion_rate' => array_key_exists('percepcion_rate', $data)
+                ? (isset($data['percepcion_rate']) && $data['percepcion_rate'] !== '' ? $data['percepcion_rate'] : null)
+                : $line->percepcion_rate,
             'subtotal' => $subtotal,
         ]);
 
