@@ -139,6 +139,70 @@ test('aislamiento: envases de otro tenant no aparecen en el listado', function (
         ->assertDontSee('Ajeno');
 });
 
+test('owner puede crear envase con subdivisiones', function () {
+    [$user, $tenant] = ownerForPackaging();
+
+    $this->actingAs($user)
+        ->post(route('packaging.store'), [
+            'name' => 'Bolsas kraft x100',
+            'cost_per_unit' => '0.50',
+            'subdivisions' => 100,
+            'subdivision_label' => 'bolsa',
+        ])
+        ->assertRedirect(route('packaging.index'));
+
+    $packaging = $tenant->packagings()->where('name', 'Bolsas kraft x100')->first();
+    expect($packaging->subdivisions)->toBe(100);
+    expect($packaging->subdivision_label)->toBe('bolsa');
+});
+
+test('crear envase sin subdivisiones mantiene null', function () {
+    [$user, $tenant] = ownerForPackaging();
+
+    $this->actingAs($user)
+        ->post(route('packaging.store'), [
+            'name' => 'Caja simple',
+            'cost_per_unit' => '5.00',
+        ])
+        ->assertRedirect(route('packaging.index'));
+
+    $packaging = $tenant->packagings()->where('name', 'Caja simple')->first();
+    expect($packaging->subdivisions)->toBeNull();
+    expect($packaging->subdivision_label)->toBeNull();
+});
+
+test('owner puede editar envase agregando subdivisiones', function () {
+    [$user, $tenant] = ownerForPackaging();
+    $packaging = Packaging::factory()->for($tenant)->create([
+        'name' => 'Caja sin subdivisión',
+        'cost_per_unit' => '1.00',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('packaging.update', $packaging), [
+            'name' => 'Caja sin subdivisión',
+            'cost_per_unit' => '0.25',
+            'subdivisions' => 4,
+            'subdivision_label' => 'compartimento',
+        ])
+        ->assertRedirect(route('packaging.index'));
+
+    expect($packaging->fresh()->subdivisions)->toBe(4);
+    expect($packaging->fresh()->subdivision_label)->toBe('compartimento');
+});
+
+test('subdivisions debe ser al menos 2', function () {
+    [$user] = ownerForPackaging();
+
+    $this->actingAs($user)
+        ->post(route('packaging.store'), [
+            'name' => 'Caja',
+            'cost_per_unit' => '10',
+            'subdivisions' => 1,
+        ])
+        ->assertSessionHasErrors('subdivisions');
+});
+
 test('aislamiento: no se puede editar envase de otro tenant', function () {
     [$user] = ownerForPackaging();
 
