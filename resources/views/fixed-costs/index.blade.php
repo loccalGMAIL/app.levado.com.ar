@@ -159,7 +159,7 @@
                                                     @method('PATCH')
                                                     <button type="submit"
                                                         aria-label="{{ $fixedCost->active ? 'Desactivar' : 'Activar' }}" title="{{ $fixedCost->active ? 'Desactivar' : 'Activar' }}"
-                                                        class="p-1.5 rounded transition-colors {{ $fixedCost->active ? 'text-masa-madre hover:text-red-600 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50' }}">
+                                                        class="p-1.5 rounded transition-colors {{ $fixedCost->active ? 'text-red-500 hover:text-red-700 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50' }}">
                                                         @if($fixedCost->active)
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
