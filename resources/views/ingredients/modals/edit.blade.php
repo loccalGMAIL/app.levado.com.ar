@@ -68,6 +68,26 @@
             </div>
         </div>
 
+        <div x-show="editing.unit === 'u'" class="grid grid-cols-2 gap-4 border-t border-miga pt-4">
+            <div>
+                <x-input-label for="edit_subdivisions" value="Unidades por envase" />
+                <x-text-input id="edit_subdivisions" name="subdivisions" type="number"
+                    step="1" min="2"
+                    class="mt-1 block w-full"
+                    x-model="editing.subdivisions" />
+                <p class="mt-1 text-xs text-masa-madre">Ej.: 24 galletas por paquete.</p>
+                <x-input-error :messages="$errors->get('subdivisions')" class="mt-2" />
+            </div>
+            <div>
+                <x-input-label for="edit_subdivision_label" value="Nombre de la unidad" />
+                <x-text-input id="edit_subdivision_label" name="subdivision_label" type="text"
+                    class="mt-1 block w-full"
+                    x-model="editing.subdivision_label"
+                    placeholder="galleta, rebanada…" />
+                <x-input-error :messages="$errors->get('subdivision_label')" class="mt-2" />
+            </div>
+        </div>
+
         <div class="flex gap-3 pt-2">
             <x-primary-button data-loading="Guardando…">Guardar cambios</x-primary-button>
             <button type="button"
