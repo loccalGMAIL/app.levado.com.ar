@@ -127,8 +127,64 @@
                                     </td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->brand ?? '—' }}</td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->supplier?->name ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-right text-corteza font-mono">
-                                        {{ number_format($packaging->cost_per_unit, 2, ',', '.') }}
+                                    <td class="px-4 py-3 text-right font-mono text-corteza"
+                                        x-data="{
+                                            editing: false,
+                                            saving: false,
+                                            isDirty: false,
+                                            cost: {{ (float) $packaging->cost_per_unit }},
+                                            costFormatted: '{{ number_format($packaging->cost_per_unit, 2, ',', '.') }}',
+                                            startEdit() {
+                                                this.isDirty = false;
+                                                this.$refs.costInput.value = parseFloat(this.cost).toFixed(2);
+                                                this.editing = true;
+                                                this.$nextTick(() => this.$refs.costInput.select());
+                                            },
+                                            async saveCost() {
+                                                if (this.saving) return;
+                                                if (!this.isDirty) { this.editing = false; return; }
+                                                const raw = this.$refs.costInput.value.trim();
+                                                if (raw === '') { this.editing = false; return; }
+                                                this.saving = true;
+                                                this.editing = false;
+                                                try {
+                                                    const res = await fetch('{{ route('packaging.cost.update', $packaging) }}', {
+                                                        method: 'PATCH',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                                            'Accept': 'application/json',
+                                                        },
+                                                        body: JSON.stringify({ cost_per_unit: raw })
+                                                    });
+                                                    const data = await res.json();
+                                                    this.cost = data.cost_per_unit;
+                                                    this.costFormatted = data.cost_per_unit_formatted;
+                                                } finally {
+                                                    this.saving = false;
+                                                }
+                                            }
+                                        }">
+                                        @can('manage-costs')
+                                            <div x-show="!editing && !saving"
+                                                @click="startEdit()"
+                                                class="cursor-pointer hover:text-horno select-none"
+                                                x-text="'$ ' + costFormatted"></div>
+                                            <input
+                                                x-show="editing"
+                                                x-ref="costInput"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                @input="isDirty = true"
+                                                @keydown.enter.prevent="saveCost()"
+                                                @keydown.escape="editing = false; isDirty = false"
+                                                @blur="saveCost()"
+                                                class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                            <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                        @else
+                                            $ <span x-text="costFormatted"></span>
+                                        @endcan
                                     </td>
                                     <td class="px-4 py-3">
                                         <x-status-badge :active="$packaging->active" />

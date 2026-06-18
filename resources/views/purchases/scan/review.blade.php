@@ -24,6 +24,23 @@
                 </div>
             @endif
 
+            @if(isset($possibleDuplicate) && $possibleDuplicate)
+                <div class="p-4 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg text-sm flex items-start gap-3">
+                    <svg class="w-5 h-5 shrink-0 mt-0.5 text-yellow-600" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                    <span>
+                        Ya existe un comprobante con este número para este proveedor
+                        (cargado el {{ $possibleDuplicate->invoice_date->format('d/m/Y') }}).
+                        <a href="{{ route('purchases.show', $possibleDuplicate) }}"
+                            class="font-medium underline hover:text-yellow-900">
+                            Ver comprobante →
+                        </a>
+                        Podés continuar igual si es una compra diferente.
+                    </span>
+                </div>
+            @endif
+
             <div>
                 <h2 class="text-base font-semibold text-corteza">Revisá lo que se leyó de la factura</h2>
                 <p class="text-sm text-masa-madre mt-0.5">

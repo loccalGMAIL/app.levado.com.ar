@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\Unit;
 use App\Http\Requests\StoreScannedPurchaseRequest;
+use App\Models\Purchase;
 use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
@@ -65,13 +66,24 @@ class PurchaseScanController extends Controller
         }
 
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
+        $matchedSupplierId = $this->matchSupplier($draft['header']['supplier_name'] ?? null, $suppliers);
+        $invoiceNumber = $draft['header']['invoice_number'] ?? null;
+
+        $possibleDuplicate = null;
+        if (filled($invoiceNumber) && $matchedSupplierId !== null) {
+            $possibleDuplicate = Purchase::where('tenant_id', $tenant->id)
+                ->where('supplier_id', $matchedSupplierId)
+                ->where('invoice_number', $invoiceNumber)
+                ->first();
+        }
 
         return view('purchases.scan.review', [
             'draft' => $draft,
             'imagePath' => $path,
-            'matchedSupplierId' => $this->matchSupplier($draft['header']['supplier_name'] ?? null, $suppliers),
+            'matchedSupplierId' => $matchedSupplierId,
             'suppliers' => $suppliers,
             'units' => Unit::cases(),
+            'possibleDuplicate' => $possibleDuplicate,
             // For the "se sugerirá: X" hint per line.
             'ingredientNames' => $ingredients->pluck('name', 'id'),
             'packagingNames' => $packagings->pluck('name', 'id'),
