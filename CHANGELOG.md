@@ -5,6 +5,32 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.6] — 2026-06-18
+
+### UX — Mejoras de interfaz: feedback visual, íconos y tooltips
+
+#### Agregado
+
+- **Flash messages en el layout:** los mensajes de éxito y error aparecen como toast fijo en la esquina superior derecha (`fixed top-4 right-4 z-50`) y se auto-cierran a los 4 segundos con transición de opacidad. Se eliminaron los bloques flash inline de cada vista; ahora se usa el componente `<x-flash-messages>` en el layout.
+- **Loading state en modales:** todos los botones "Guardar" de los modales de create/edit tienen `data-loading="Guardando…"` que activa el handler global de `app.js` para prevenir doble-submit y mostrar feedback durante el POST.
+- **Íconos en acciones de tablas:** las acciones de cada fila (editar, activar/desactivar) se migraron a botones icon-only con SVG Heroicons, `aria-label` y `title` para tooltips nativos.
+- **Componentes `<x-status-badge>` y `<x-empty-state>`:** eliminan duplicación de los patrones de badge activo/inactivo y mensaje de lista vacía en las vistas index.
+- **Favicon:** se agregaron `favicon.ico` y `favicon.svg` con la identidad de Levado, referenciados en ambos layouts (`app.blade.php` y `admin.blade.php`).
+
+#### Corregido
+
+- **Ícono "Desactivar":** reemplaza el eye-slash (asociado a "ocultar") por el símbolo de prohibición ⊘ (`no-symbol` de Heroicons) — significado más claro para desactivar un registro.
+- **Color del botón desactivar:** ahora es `text-red-500` siempre visible (antes solo aparecía en hover).
+- **Ícono "Ver detalle" en Recetas y Compras:** reemplaza el ojo por el ícono de lápiz para coherencia con el resto de las vistas.
+- **Tooltips en todos los botones icon-only:** atributo `title` nativo en todos los botones de acción (se eligió `title` nativo sobre CSS para evitar recorte por `overflow-x-auto`).
+
+#### Técnico / Refactor
+
+- **Auditoría best-practices Laravel (fases 1–3):** corrección de N+1 queries, casts Eloquent, índices en migraciones, extracción de JS a módulo Vite (`price-editor.js`), `LazilyRefreshDatabase` en tests de feature.
+- **Policies y scopes de autorización:** clases Policy para los modelos principales; scope `scopeActive()`; reemplazo de `abort_unless()` por autorización de policy.
+
+---
+
 ## [0.8.5] — 2026-06-15
 
 ### Fix — Compras: botón aplicar sugerencias, decimales y dropdown de producto
