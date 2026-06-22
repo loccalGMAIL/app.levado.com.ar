@@ -45,7 +45,14 @@ class PackagingController extends Controller
     public function store(StorePackagingRequest $request): RedirectResponse
     {
         $tenant = app(Tenant::class);
-        $packaging = $tenant->packagings()->create($request->validated());
+        $data = $request->validated();
+
+        if (! empty($data['subdivisions'])) {
+            $data['cost_per_package'] = $data['cost_per_unit'];
+            $data['cost_per_unit'] = $data['cost_per_unit'] / $data['subdivisions'];
+        }
+
+        $packaging = $tenant->packagings()->create($data);
 
         $packaging->priceLogs()->create([
             'cost_per_unit' => $packaging->cost_per_unit,
@@ -69,6 +76,13 @@ class PackagingController extends Controller
         $this->authorize('update', $packaging);
 
         $data = $request->validated();
+
+        if (! empty($data['subdivisions'])) {
+            $data['cost_per_package'] = $data['cost_per_unit'];
+            $data['cost_per_unit'] = $data['cost_per_unit'] / $data['subdivisions'];
+        } else {
+            $data['cost_per_package'] = null;
+        }
 
         $costChanged = (float) $packaging->cost_per_unit !== (float) $data['cost_per_unit'];
 

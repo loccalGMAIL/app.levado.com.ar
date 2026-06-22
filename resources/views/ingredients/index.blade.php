@@ -5,7 +5,7 @@
         $errorsInCreate = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit']) && old('_form') === 'create';
         $errorsInEdit   = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit']) && old('_form') === 'edit';
         $supplierErrorsInCreate = $errors->hasAny(['name', 'phone', 'email', 'notes']) && old('_form') === 'supplier-quick-create';
-        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'unit' => '', 'cost_per_unit' => '', 'subdivisions' => '', 'subdivision_label' => ''];
+        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'unit' => '', 'cost_per_unit' => '', 'cost_per_package' => null, 'subdivisions' => '', 'subdivision_label' => ''];
         $editingOnError = $errorsInEdit ? [
             'id'                => old('ingredient_id'),
             'name'              => old('name'),
@@ -13,6 +13,7 @@
             'supplier_id'       => old('supplier_id'),
             'unit'              => old('unit'),
             'cost_per_unit'     => old('cost_per_unit'),
+            'cost_per_package'  => old('cost_per_package'),
             'subdivisions'      => old('subdivisions'),
             'subdivision_label' => old('subdivision_label'),
         ] : $editingDefault;
@@ -22,6 +23,9 @@
         x-data="{
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
+                if (record.subdivisions && record.unit === 'u' && record.cost_per_package !== null) {
+                    record.cost_per_unit = record.cost_per_package;
+                }
                 this.editing = record;
                 $dispatch('open-modal', 'ingredient-edit');
             }
@@ -98,9 +102,10 @@
                                 <th class="px-4 py-3 font-medium">Marca</th>
                                 <th class="px-4 py-3 font-medium">Proveedor</th>
                                 <th class="px-4 py-3 font-medium">Unidad</th>
+                                <th class="px-4 py-3 font-medium text-right">Por envase</th>
                                 <th class="px-4 py-3 font-medium text-right">
                                     <a href="{{ $sortUrl('cost_per_unit') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Costo / unidad <span class="text-xs">{{ $sortIcon('cost_per_unit') }}</span>
+                                        Costo / sub-unidad <span class="text-xs">{{ $sortIcon('cost_per_unit') }}</span>
                                     </a>
                                 </th>
                                 <th class="px-4 py-3 font-medium">Estado</th>
@@ -122,6 +127,7 @@
                                                     'supplier_id'       => $ingredient->supplier_id ?? '',
                                                     'unit'              => $ingredient->unit->value,
                                                     'cost_per_unit'     => $ingredient->cost_per_unit,
+                                                    'cost_per_package'  => $ingredient->cost_per_package,
                                                     'subdivisions'      => $ingredient->subdivisions ?? '',
                                                     'subdivision_label' => $ingredient->subdivision_label ?? '',
                                                 ]) }})"
@@ -141,8 +147,18 @@
                                     <td class="px-4 py-3 text-masa-madre">
                                         {{ $ingredient->unit->short() }}
                                     </td>
+                                    <td class="px-4 py-3 text-right text-masa-madre font-mono text-xs">
+                                        @if($ingredient->cost_per_package !== null)
+                                            {{ number_format($ingredient->cost_per_package, 2, ',', '.') }}
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3 text-right text-corteza font-mono">
                                         {{ number_format($ingredient->cost_per_unit, 2, ',', '.') }}
+                                        @if($ingredient->subdivisions && $ingredient->subdivision_label)
+                                            <span class="block text-xs text-masa-madre font-normal">/ {{ $ingredient->subdivision_label }}</span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3">
                                         <x-status-badge :active="$ingredient->active" />
