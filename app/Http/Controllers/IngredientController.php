@@ -45,7 +45,14 @@ class IngredientController extends Controller
     public function store(StoreIngredientRequest $request): RedirectResponse
     {
         $tenant = app(Tenant::class);
-        $ingredient = $tenant->ingredients()->create($request->validated());
+        $data = $request->validated();
+
+        if (! empty($data['subdivisions']) && ($data['unit'] ?? '') === 'u') {
+            $data['cost_per_package'] = $data['cost_per_unit'];
+            $data['cost_per_unit'] = $data['cost_per_unit'] / $data['subdivisions'];
+        }
+
+        $ingredient = $tenant->ingredients()->create($data);
 
         $ingredient->priceLogs()->create([
             'cost_per_unit' => $ingredient->cost_per_unit,
@@ -69,6 +76,13 @@ class IngredientController extends Controller
         $this->authorize('update', $ingredient);
 
         $data = $request->validated();
+
+        if (! empty($data['subdivisions']) && ($data['unit'] ?? $ingredient->unit->value) === 'u') {
+            $data['cost_per_package'] = $data['cost_per_unit'];
+            $data['cost_per_unit'] = $data['cost_per_unit'] / $data['subdivisions'];
+        } else {
+            $data['cost_per_package'] = null;
+        }
 
         $costChanged = (float) $ingredient->cost_per_unit !== (float) $data['cost_per_unit'];
 

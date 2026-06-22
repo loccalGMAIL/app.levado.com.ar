@@ -5,14 +5,15 @@
         $errorsInCreate = $errors->hasAny(['name', 'brand', 'supplier_id', 'cost_per_unit', 'subdivisions', 'subdivision_label']) && old('_form') === 'create';
         $errorsInEdit   = $errors->hasAny(['name', 'brand', 'supplier_id', 'cost_per_unit', 'subdivisions', 'subdivision_label']) && old('_form') === 'edit';
         $supplierErrorsInCreate = $errors->hasAny(['name', 'phone', 'email', 'notes']) && old('_form') === 'supplier-quick-create';
-        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'cost_per_unit' => '', 'subdivisions' => null, 'subdivision_label' => ''];
+        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'cost_per_unit' => '', 'cost_per_package' => null, 'subdivisions' => null, 'subdivision_label' => ''];
         $editingOnError = $errorsInEdit ? [
-            'id'               => old('packaging_id'),
-            'name'             => old('name'),
-            'brand'            => old('brand'),
-            'supplier_id'      => old('supplier_id'),
-            'cost_per_unit'    => old('cost_per_unit'),
-            'subdivisions'     => old('subdivisions'),
+            'id'                => old('packaging_id'),
+            'name'              => old('name'),
+            'brand'             => old('brand'),
+            'supplier_id'       => old('supplier_id'),
+            'cost_per_unit'     => old('cost_per_unit'),
+            'cost_per_package'  => old('cost_per_package'),
+            'subdivisions'      => old('subdivisions'),
             'subdivision_label' => old('subdivision_label'),
         ] : $editingDefault;
     @endphp
@@ -21,6 +22,9 @@
         x-data="{
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
+                if (record.subdivisions && record.cost_per_package !== null) {
+                    record.cost_per_unit = record.cost_per_package;
+                }
                 this.editing = record;
                 $dispatch('open-modal', 'packaging-edit');
             }
@@ -96,9 +100,10 @@
                                 </th>
                                 <th class="px-4 py-3 font-medium">Marca</th>
                                 <th class="px-4 py-3 font-medium">Proveedor</th>
+                                <th class="px-4 py-3 font-medium text-right">Por presentación</th>
                                 <th class="px-4 py-3 font-medium text-right">
                                     <a href="{{ $sortUrl('cost_per_unit') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Costo / unidad <span class="text-xs">{{ $sortIcon('cost_per_unit') }}</span>
+                                        Costo / sub-unidad <span class="text-xs">{{ $sortIcon('cost_per_unit') }}</span>
                                     </a>
                                 </th>
                                 <th class="px-4 py-3 font-medium">Estado</th>
@@ -114,12 +119,13 @@
                                         @can('manage-costs')
                                             <button type="button"
                                                 @click="openEdit({{ Js::from([
-                                                    'id'               => $packaging->id,
-                                                    'name'             => $packaging->name,
-                                                    'brand'            => $packaging->brand ?? '',
-                                                    'supplier_id'      => $packaging->supplier_id ?? '',
-                                                    'cost_per_unit'    => $packaging->cost_per_unit,
-                                                    'subdivisions'     => $packaging->subdivisions,
+                                                    'id'                => $packaging->id,
+                                                    'name'              => $packaging->name,
+                                                    'brand'             => $packaging->brand ?? '',
+                                                    'supplier_id'       => $packaging->supplier_id ?? '',
+                                                    'cost_per_unit'     => $packaging->cost_per_unit,
+                                                    'cost_per_package'  => $packaging->cost_per_package,
+                                                    'subdivisions'      => $packaging->subdivisions,
                                                     'subdivision_label' => $packaging->subdivision_label ?? '',
                                                 ]) }})"
                                                 class="hover:underline text-left">
@@ -136,6 +142,13 @@
                                     </td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->brand ?? '—' }}</td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->supplier?->name ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-right text-masa-madre font-mono text-xs">
+                                        @if($packaging->cost_per_package !== null)
+                                            {{ number_format($packaging->cost_per_package, 2, ',', '.') }}
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3 text-right font-mono text-corteza"
                                         x-data="{
                                             editing: false,

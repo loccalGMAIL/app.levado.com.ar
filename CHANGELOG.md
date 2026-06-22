@@ -5,6 +5,29 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.9] — 2026-06-22
+
+### Subdivisiones — corrección de cálculo de costo y doble precio en tabla
+
+#### Corregido
+
+- **Cálculo de costo con subdivisiones en creación/edición manual:** al crear o editar un ingrediente/envase con subdivisiones, el campo "Costo" que ingresa el usuario ahora se interpreta como el precio del envase completo y se divide por la cantidad de sub-unidades antes de guardarse en `cost_per_unit`. Antes, `cost_per_unit` almacenaba el precio del envase entero, haciendo que las recetas calcularan precios muy inflados (ej.: $240 × 6 galletas = $1.440 en vez de $60).
+
+#### Agregado
+
+- **Columna "Por envase" en tablas de ingredientes y envases:** las tablas en `/ingredients` y `/packaging` muestran ahora dos columnas de precio — "Por envase" (precio del pack completo) y "Costo / sub-unidad" (precio que usan las recetas). Para ítems sin subdivisiones se muestra un guión.
+- **Hint dinámico en modales crear/editar:** cuando un ingrediente o envase tiene subdivisiones configuradas, el campo de costo muestra la etiqueta "Costo por envase" y un hint reactivo "≈ $X / [sub-unidad]" calculado en tiempo real con Alpine.js.
+- **Comando `php artisan ingredients:fix-subdivision-costs`:** permite corregir ingredientes y envases existentes que tenían subdivisiones configuradas antes de este fix. Muestra una tabla de previsualización con el precio actual y el precio calculado por sub-unidad, pide confirmación global y propaga los cambios de costo a las recetas afectadas.
+
+#### Técnico
+
+- Migración: `add_cost_per_package_to_ingredients_and_packagings_tables` — agrega `cost_per_package` (DECIMAL 10,4 nullable) a `ingredients` y `packagings`.
+- `IngredientController` y `PackagingController`: en `store()` y `update()`, si el ítem tiene subdivisiones, guarda `cost_per_package = precio_ingresado` y `cost_per_unit = precio_ingresado / subdivisions`.
+- `PurchaseLineRecorder::apply()`: ídem al aplicar una compra — guarda `cost_per_package` antes de dividir.
+- 4 nuevos tests en `IngredientCrudTest` cubriendo la división correcta, limpieza de `cost_per_package` al quitar subdivisiones y no-efectos en ingredientes sin subdivisiones.
+
+---
+
 ## [0.8.8] — 2026-06-18
 
 ### Subdivisiones para envases e ingredientes por unidad

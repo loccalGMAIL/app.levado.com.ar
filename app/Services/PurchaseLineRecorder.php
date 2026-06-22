@@ -90,7 +90,10 @@ class PurchaseLineRecorder
             // When ingredient tracks sub-units (subdivisions), the stored cost_per_unit must
             // represent the sub-unit price so that recipes can multiply directly without division.
             if ($item->subdivisions && $purchaseUnit === Unit::Unidad && $item->unit === Unit::Unidad) {
+                $item->cost_per_package = $costPerUnit;
                 $costPerUnit = $costPerUnit / $item->subdivisions;
+            } else {
+                $item->cost_per_package = null;
             }
 
             $this->applyIngredientCost($item, $costPerUnit);
@@ -99,7 +102,16 @@ class PurchaseLineRecorder
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
             abort_unless($purchaseUnit === Unit::Unidad, 422, 'El packaging solo puede comprarse por unidad (u).');
 
-            $this->applyPackagingCost($item, (float) $line->unit_price);
+            $packagePrice = (float) $line->unit_price;
+            if ($item->subdivisions) {
+                $item->cost_per_package = $packagePrice;
+                $costPerUnit = $packagePrice / $item->subdivisions;
+            } else {
+                $item->cost_per_package = null;
+                $costPerUnit = $packagePrice;
+            }
+
+            $this->applyPackagingCost($item, $costPerUnit);
         }
 
         $line->update(['cost_applied_at' => now()]);
@@ -160,14 +172,14 @@ class PurchaseLineRecorder
     private function applyIngredientCost(Ingredient $item, float $costPerUnit): void
     {
         $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
-        $item->update(['cost_per_unit' => $costPerUnit]);
+        $item->update(['cost_per_unit' => $costPerUnit, 'cost_per_package' => $item->cost_per_package]);
         $this->propagator->propagateFromIngredient($item->id);
     }
 
     private function applyPackagingCost(Packaging $item, float $costPerUnit): void
     {
         $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
-        $item->update(['cost_per_unit' => $costPerUnit]);
+        $item->update(['cost_per_unit' => $costPerUnit, 'cost_per_package' => $item->cost_per_package]);
         $this->propagator->propagateFromPackaging($item->id);
     }
 

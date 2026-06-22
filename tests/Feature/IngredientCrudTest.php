@@ -165,3 +165,90 @@ test('aislamiento: no se puede editar ingrediente de otro tenant', function () {
         ])
         ->assertForbidden();
 });
+
+// --- Subdivisiones ---
+
+test('crear ingrediente con subdivisión divide el costo y guarda precio por envase', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+
+    $this->actingAs($user)
+        ->post(route('ingredients.store'), [
+            'name' => 'Galletas Oreo',
+            'unit' => Unit::Unidad->value,
+            'cost_per_unit' => '240',
+            'subdivisions' => '24',
+            'subdivision_label' => 'galleta',
+        ])
+        ->assertRedirect(route('ingredients.index'));
+
+    $ingredient = $tenant->ingredients()->where('name', 'Galletas Oreo')->first();
+
+    expect((float) $ingredient->cost_per_package)->toBe(240.0)
+        ->and((float) $ingredient->cost_per_unit)->toBe(10.0);
+});
+
+test('crear ingrediente sin subdivisión no setea cost_per_package', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+
+    $this->actingAs($user)
+        ->post(route('ingredients.store'), [
+            'name' => 'Harina',
+            'unit' => Unit::Kilogramo->value,
+            'cost_per_unit' => '1500',
+        ])
+        ->assertRedirect(route('ingredients.index'));
+
+    $ingredient = $tenant->ingredients()->where('name', 'Harina')->first();
+
+    expect($ingredient->cost_per_package)->toBeNull()
+        ->and((float) $ingredient->cost_per_unit)->toBe(1500.0);
+});
+
+test('editar ingrediente con subdivisión divide el costo correctamente', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $ingredient = Ingredient::factory()->for($tenant)->create([
+        'unit' => Unit::Unidad,
+        'cost_per_unit' => '10',
+        'cost_per_package' => '240',
+        'subdivisions' => 24,
+        'subdivision_label' => 'galleta',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('ingredients.update', $ingredient), [
+            'name' => $ingredient->name,
+            'unit' => Unit::Unidad->value,
+            'cost_per_unit' => '480',
+            'subdivisions' => '24',
+            'subdivision_label' => 'galleta',
+        ])
+        ->assertRedirect(route('ingredients.index'));
+
+    $ingredient->refresh();
+
+    expect((float) $ingredient->cost_per_package)->toBe(480.0)
+        ->and((float) $ingredient->cost_per_unit)->toBe(20.0);
+});
+
+test('quitar subdivisiones al editar limpia cost_per_package', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $ingredient = Ingredient::factory()->for($tenant)->create([
+        'unit' => Unit::Unidad,
+        'cost_per_unit' => '10',
+        'cost_per_package' => '240',
+        'subdivisions' => 24,
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('ingredients.update', $ingredient), [
+            'name' => $ingredient->name,
+            'unit' => Unit::Unidad->value,
+            'cost_per_unit' => '50',
+        ])
+        ->assertRedirect(route('ingredients.index'));
+
+    $ingredient->refresh();
+
+    expect($ingredient->cost_per_package)->toBeNull()
+        ->and((float) $ingredient->cost_per_unit)->toBe(50.0);
+});

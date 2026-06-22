@@ -1,5 +1,6 @@
 <x-crud-modal name="packaging-create" title="Nuevo envase" :show="$errorsInCreate">
     <form method="POST" action="{{ route('packaging.store') }}" class="space-y-4"
+          x-data="{ pkgCreateCost: '{{ old('cost_per_unit') }}', pkgCreateSubdivisions: '{{ old('subdivisions') }}', pkgCreateSubdivisionLabel: '{{ old('subdivision_label') }}' }"
           x-on:supplier-created.window="
               const sel = document.getElementById('create_pkg_supplier');
               sel.add(new Option($event.detail.name, $event.detail.id, true, true));
@@ -48,13 +49,20 @@
         </div>
 
         <div>
-            <x-input-label for="create_pkg_cost" value="Costo por unidad" />
+            <x-input-label for="create_pkg_cost"
+                x-text="parseInt(pkgCreateSubdivisions) > 1 ? 'Costo por presentación' : 'Costo por unidad'" />
             <x-text-input id="create_pkg_cost" name="cost_per_unit" type="number"
                 step="0.0001" min="0"
                 class="mt-1 block w-full"
                 :value="old('cost_per_unit')"
+                x-model="pkgCreateCost"
                 required />
-            <p class="mt-1 text-xs text-masa-madre">En la moneda del negocio.</p>
+            <p class="mt-1 text-xs text-masa-madre"
+                x-show="parseInt(pkgCreateSubdivisions) > 1 && pkgCreateCost"
+                x-text="'≈ $' + (parseFloat(pkgCreateCost) / (parseInt(pkgCreateSubdivisions) || 1)).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 4}) + ' / ' + (pkgCreateSubdivisionLabel || 'sub-unidad')">
+            </p>
+            <p class="mt-1 text-xs text-masa-madre"
+                x-show="parseInt(pkgCreateSubdivisions) <= 1">En la moneda del negocio.</p>
             <x-input-error :messages="$errors->get('cost_per_unit')" class="mt-2" />
         </div>
 
@@ -64,7 +72,8 @@
                 <x-text-input id="create_pkg_subdivisions" name="subdivisions" type="number"
                     step="1" min="2"
                     class="mt-1 block w-full"
-                    :value="old('subdivisions')" />
+                    :value="old('subdivisions')"
+                    x-model="pkgCreateSubdivisions" />
                 <p class="mt-1 text-xs text-masa-madre">Ej.: 100 bolsas por caja.</p>
                 <x-input-error :messages="$errors->get('subdivisions')" class="mt-2" />
             </div>
@@ -73,6 +82,7 @@
                 <x-text-input id="create_pkg_subdivision_label" name="subdivision_label" type="text"
                     class="mt-1 block w-full"
                     :value="old('subdivision_label')"
+                    x-model="pkgCreateSubdivisionLabel"
                     placeholder="bolsa, etiqueta…" />
                 <x-input-error :messages="$errors->get('subdivision_label')" class="mt-2" />
             </div>

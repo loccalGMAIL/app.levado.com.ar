@@ -20,6 +20,7 @@ class Packaging extends Model
         'brand',
         'supplier_id',
         'cost_per_unit',
+        'cost_per_package',
         'subdivisions',
         'subdivision_label',
         'active',
@@ -29,6 +30,7 @@ class Packaging extends Model
     {
         return [
             'cost_per_unit' => 'decimal:4',
+            'cost_per_package' => 'decimal:4',
             'active' => 'boolean',
         ];
     }

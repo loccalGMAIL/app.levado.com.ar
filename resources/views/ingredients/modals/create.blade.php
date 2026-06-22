@@ -1,6 +1,6 @@
 <x-crud-modal name="ingredient-create" title="Nuevo ingrediente" :show="$errorsInCreate">
     <form method="POST" action="{{ route('ingredients.store') }}" class="space-y-4"
-          x-data="{ selectedUnit: '{{ old('unit') }}' }"
+          x-data="{ selectedUnit: '{{ old('unit') }}', createCost: '{{ old('cost_per_unit') }}', createSubdivisions: '{{ old('subdivisions') }}', createSubdivisionLabel: '{{ old('subdivision_label') }}' }"
           x-on:supplier-created.window="
               const sel = document.getElementById('create_supplier');
               sel.add(new Option($event.detail.name, $event.detail.id, true, true));
@@ -65,13 +65,20 @@
                 <x-input-error :messages="$errors->get('unit')" class="mt-2" />
             </div>
             <div>
-                <x-input-label for="create_cost" value="Costo por unidad" />
+                <x-input-label for="create_cost"
+                    x-text="selectedUnit === 'u' && parseInt(createSubdivisions) > 1 ? 'Costo por envase' : 'Costo por unidad'" />
                 <x-text-input id="create_cost" name="cost_per_unit" type="number"
                     step="0.0001" min="0"
                     class="mt-1 block w-full"
                     :value="old('cost_per_unit')"
+                    x-model="createCost"
                     required />
-                <p class="mt-1 text-xs text-masa-madre">En la moneda del negocio.</p>
+                <p class="mt-1 text-xs text-masa-madre"
+                    x-show="selectedUnit === 'u' && parseInt(createSubdivisions) > 1 && createCost"
+                    x-text="'≈ $' + (parseFloat(createCost) / (parseInt(createSubdivisions) || 1)).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 4}) + ' / ' + (createSubdivisionLabel || 'sub-unidad')">
+                </p>
+                <p class="mt-1 text-xs text-masa-madre"
+                    x-show="selectedUnit !== 'u' || parseInt(createSubdivisions) <= 1">En la moneda del negocio.</p>
                 <x-input-error :messages="$errors->get('cost_per_unit')" class="mt-2" />
             </div>
         </div>
@@ -82,7 +89,8 @@
                 <x-text-input id="create_subdivisions" name="subdivisions" type="number"
                     step="1" min="2"
                     class="mt-1 block w-full"
-                    :value="old('subdivisions')" />
+                    :value="old('subdivisions')"
+                    x-model="createSubdivisions" />
                 <p class="mt-1 text-xs text-masa-madre">Ej.: 24 galletas por paquete.</p>
                 <x-input-error :messages="$errors->get('subdivisions')" class="mt-2" />
             </div>
@@ -91,6 +99,7 @@
                 <x-text-input id="create_subdivision_label" name="subdivision_label" type="text"
                     class="mt-1 block w-full"
                     :value="old('subdivision_label')"
+                    x-model="createSubdivisionLabel"
                     placeholder="galleta, rebanada…" />
                 <x-input-error :messages="$errors->get('subdivision_label')" class="mt-2" />
             </div>
