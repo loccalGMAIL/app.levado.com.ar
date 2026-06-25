@@ -5,6 +5,16 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.10] — 2026-06-25
+
+### Boletas de compra — corrección de error al aplicar sugerencias de IA
+
+#### Corregido
+
+- **Error 500 al aplicar sugerencias de IA en bloque:** al presionar "Aplicar X sugerencias de la IA", el sistema lanzaba `LazyLoadingViolationException` porque la relación `purchase` de cada `PurchaseLine` no estaba pre-cargada. Se resuelve asignando la relación directamente desde el objeto `$purchase` ya disponible en el controlador, sin queries adicionales.
+
+---
+
 ## [0.8.9] — 2026-06-22
 
 ### Subdivisiones — corrección de cálculo de costo y doble precio en tabla
