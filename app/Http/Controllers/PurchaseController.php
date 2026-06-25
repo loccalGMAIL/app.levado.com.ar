@@ -312,6 +312,7 @@ class PurchaseController extends Controller
             ->get();
 
         foreach ($pending as $line) {
+            $line->setRelation('purchase', $purchase);
             try {
                 DB::transaction(fn () => $this->lineRecorder->apply($line));
                 $applied++;
