@@ -129,6 +129,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
     Route::post('purchases/{purchase}/lines', [PurchaseController::class, 'storeLine'])->name('purchases.lines.store');
     Route::patch('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'updateLine'])->name('purchases.lines.update');
+    Route::patch('purchases/{purchase}/lines/{line}/price', [PurchaseController::class, 'updateLinePrice'])->name('purchases.lines.price.update');
     Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->name('purchases.lines.destroy');
     Route::post('purchases/{purchase}/lines/{line}/match', [PurchaseController::class, 'matchLine'])->name('purchases.lines.match');
     Route::post('purchases/{purchase}/apply-suggestions', [PurchaseController::class, 'applyLineSuggestions'])->name('purchases.apply-suggestions');

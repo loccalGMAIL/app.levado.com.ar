@@ -169,6 +169,49 @@ class PurchaseController extends Controller
         return redirect()->route('purchases.index')->with('status', 'Compra eliminada.');
     }
 
+    public function updateLinePrice(Request $request, Purchase $purchase, PurchaseLine $line): JsonResponse
+    {
+        $this->authorize('update', $purchase);
+        abort_unless($line->purchase_id === $purchase->id, 403);
+
+        $validated = $request->validate([
+            'unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+        ]);
+
+        $this->lineRecorder->recompute($line, [
+            'raw_name' => $line->raw_name,
+            'quantity_purchased' => (float) $line->quantity_purchased,
+            'purchase_unit' => $line->purchase_unit->value,
+            'unit_price' => (float) $validated['unit_price'],
+            'iva_rate' => (float) $line->iva_rate,
+            'percepcion_rate' => $line->percepcion_rate !== null ? (float) $line->percepcion_rate : null,
+        ]);
+
+        $line->refresh();
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'purchase_line',
+            targetId: $line->id,
+            action: 'purchase_line.updated',
+            payload: ['unit_price' => (float) $line->unit_price],
+            tenantId: $purchase->tenant_id,
+        );
+
+        $purchase->load('lines');
+        $totalSubtotal = $purchase->lines->sum(fn ($l) => (float) $l->subtotal);
+        $totalIva = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * (float) $l->iva_rate);
+        $totalPercepcion = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * ((float) ($l->percepcion_rate ?? 0) / 100));
+
+        return response()->json([
+            'unit_price' => (float) $line->unit_price,
+            'total_subtotal' => $totalSubtotal,
+            'total_iva' => $totalIva,
+            'total_percepcion' => $totalPercepcion,
+            'grand_total' => $totalSubtotal + $totalIva + $totalPercepcion,
+        ]);
+    }
+
     public function storeLine(StorePurchaseLineRequest $request, Purchase $purchase): RedirectResponse
     {
         $this->authorize('update', $purchase);

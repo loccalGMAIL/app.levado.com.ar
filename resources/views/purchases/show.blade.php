@@ -37,8 +37,20 @@
             openEdit(line) {
                 this.editingLine = line;
                 $dispatch('open-modal', 'line-edit');
-            }
-        }">
+            },
+            mobileExpanded: false,
+            tfootSubtotal: {{ $totalSubtotal }},
+            tfootIva: {{ $totalIva }},
+            tfootPercepcion: {{ $totalPercepcion }},
+            tfootGrandTotal: {{ $grandTotal }},
+            fmt(n) { return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        }"
+        @line-price-saved.window="
+            tfootSubtotal   = $event.detail.total_subtotal;
+            tfootIva        = $event.detail.total_iva;
+            tfootPercepcion = $event.detail.total_percepcion;
+            tfootGrandTotal = $event.detail.grand_total;
+        ">
 
         {{-- Botón volver (solo móvil) --}}
         <div class="sm:hidden px-6 pt-4 pb-0">
@@ -169,18 +181,129 @@
                         No hay renglones. Agregá uno con el botón de arriba.
                     </div>
                 @else
-                    <div class="bg-white rounded-lg shadow overflow-x-auto">
+                    {{-- Vista tarjetas: mobile (oculta cuando se expande la tabla) --}}
+                    <div :class="mobileExpanded ? 'hidden' : 'md:hidden'"
+                         class="bg-white rounded-lg shadow divide-y divide-miga">
+                        @foreach($purchase->lines as $line)
+                            @php
+                                $mSub   = (float) $line->subtotal;
+                                $mTotal = $mSub * (1 + (float) $line->iva_rate + ((float) ($line->percepcion_rate ?? 0) / 100));
+                            @endphp
+                            <div class="px-4 py-3 space-y-1.5">
+                                <p class="font-medium text-corteza text-sm">{{ $line->raw_name ?? '—' }}</p>
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="space-y-1 min-w-0">
+                                        <p class="text-masa-madre text-xs">
+                                            {{ rtrim(rtrim(number_format($line->quantity_purchased, 4, ',', '.'), '0'), ',') }}
+                                            {{ $line->purchase_unit->short() }}
+                                            &middot; ${{ number_format($line->unit_price, 2, ',', '.') }}/u
+                                        </p>
+                                        @if($line->isApplied())
+                                            <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
+                                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                </svg>
+                                                Aplicado
+                                            </span>
+                                        @elseif($line->isMatched())
+                                            <span class="inline-flex items-center gap-1 text-amber-600 text-xs font-medium">
+                                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
+                                                </svg>
+                                                Pendiente
+                                            </span>
+                                        @else
+                                            <span class="text-masa-madre/60 text-xs">Sin vincular</span>
+                                        @endif
+                                    </div>
+                                    <div class="text-right shrink-0">
+                                        <p class="font-mono font-semibold text-corteza whitespace-nowrap text-sm">
+                                            ${{ number_format($mTotal, 2, ',', '.') }}
+                                        </p>
+                                        <p class="text-masa-madre text-xs whitespace-nowrap">
+                                            Sub: ${{ number_format($mSub, 2, ',', '.') }}
+                                        </p>
+                                    </div>
+                                </div>
+                                @can('manage-costs')
+                                    <div class="flex items-center gap-2 pt-0.5">
+                                        <button type="button"
+                                            @click="openEdit({{ Js::from([
+                                                'id' => $line->id,
+                                                'raw_name' => $line->raw_name,
+                                                'quantity_purchased' => $line->quantity_purchased,
+                                                'purchase_unit' => $line->purchase_unit->value,
+                                                'unit_price' => $line->unit_price,
+                                                'iva_rate' => $line->iva_rate,
+                                                'percepcion_rate' => $line->percepcion_rate,
+                                            ]) }})"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-corteza border border-corteza/30 rounded-md hover:bg-miga transition-colors">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.25 2.25 0 1 1 3.182 3.182L7.5 19.213l-4 1 1-4 12.362-12.726z" />
+                                            </svg>
+                                            Editar
+                                        </button>
+                                        <form method="POST"
+                                            action="{{ route('purchases.lines.destroy', [$purchase, $line]) }}"
+                                            onsubmit="return confirm('¿Eliminar este renglón?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                                                </svg>
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endcan
+                            </div>
+                        @endforeach
+
+                        {{-- Total mobile --}}
+                        <div class="px-4 py-3 bg-miga/30 flex items-center justify-between gap-4">
+                            <span class="text-xs font-semibold text-corteza">Total con IVA</span>
+                            <span class="font-mono font-semibold text-corteza whitespace-nowrap"
+                                  x-text="'$ ' + fmt(tfootGrandTotal)"></span>
+                        </div>
+
+                        {{-- Expandir a tabla completa --}}
+                        <div class="px-4 py-2.5 flex justify-center">
+                            <button type="button" @click="mobileExpanded = true"
+                                class="inline-flex items-center gap-1.5 text-xs text-masa-madre hover:text-corteza transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                                </svg>
+                                Ver tabla completa
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Tabla completa: siempre visible en desktop; en mobile solo al expandir --}}
+                    <div :class="mobileExpanded ? '' : 'hidden md:block'"
+                         class="bg-white rounded-lg shadow overflow-x-auto">
+                        {{-- Botón colapsar (solo mobile) --}}
+                        <div class="md:hidden px-4 py-2.5 border-b border-miga flex items-center justify-between">
+                            <span class="text-xs font-medium text-masa-madre">Vista completa</span>
+                            <button type="button" @click="mobileExpanded = false"
+                                class="inline-flex items-center gap-1 text-xs font-medium text-corteza hover:text-horno transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Vista simple
+                            </button>
+                        </div>
                         <table class="w-full text-xs text-left">
                             <thead class="bg-miga text-masa-madre border-b border-miga">
                                 <tr>
                                     <th class="px-4 py-3 font-medium">Descripción</th>
-                                    <th class="px-4 py-3 font-medium text-right">Cantidad</th>
-                                    <th class="px-4 py-3 font-medium">Unidad</th>
-                                    <th class="px-4 py-3 font-medium text-right">Precio unitario</th>
-                                    <th class="px-4 py-3 font-medium text-right">Subtotal</th>
-                                    <th class="px-4 py-3 font-medium text-right">IVA $</th>
-                                    <th class="px-4 py-3 font-medium text-right">Percepción $</th>
-                                    <th class="px-4 py-3 font-medium text-right">Total</th>
+                                    <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Cantidad</th>
+                                    <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Precio unitario</th>
+                                    <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Subtotal</th>
+                                    <th class="px-4 py-3 font-medium text-right whitespace-nowrap">IVA $</th>
+                                    <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Percepción $</th>
+                                    <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Total</th>
                                     <th class="px-4 py-3 font-medium text-center">Costo</th>
                                     @can('manage-costs')
                                         <th class="px-4 py-3"></th>
@@ -189,34 +312,95 @@
                             </thead>
                             <tbody class="divide-y divide-miga">
                                 @foreach($purchase->lines as $line)
-                                    @php
-                                        $ivaAmount        = (float) $line->subtotal * (float) $line->iva_rate;
-                                        $percepcionAmount = (float) $line->subtotal * ((float) ($line->percepcion_rate ?? 0) / 100);
-                                        $lineTotal        = (float) $line->subtotal + $ivaAmount + $percepcionAmount;
-                                    @endphp
-                                    <tr>
+                                    <tr x-data="{
+                                            editing: false,
+                                            saving: false,
+                                            isDirty: false,
+                                            price: {{ (float) $line->unit_price }},
+                                            qty: {{ (float) $line->quantity_purchased }},
+                                            ivaRate: {{ (float) $line->iva_rate }},
+                                            percepcionRate: {{ (float) ($line->percepcion_rate ?? 0) }},
+                                            get subtotal() { return this.qty * this.price; },
+                                            get ivaAmount() { return this.subtotal * this.ivaRate; },
+                                            get percepcionAmount() { return this.subtotal * (this.percepcionRate / 100); },
+                                            get lineTotal() { return this.subtotal + this.ivaAmount + this.percepcionAmount; },
+                                            fmt(n) { return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+                                            startEdit() {
+                                                this.isDirty = false;
+                                                this.$refs.priceInput.value = parseFloat(this.price).toFixed(4).replace(/\.?0+$/, '');
+                                                this.editing = true;
+                                                this.$nextTick(() => this.$refs.priceInput.select());
+                                            },
+                                            async savePrice() {
+                                                if (this.saving) return;
+                                                if (!this.isDirty) { this.editing = false; return; }
+                                                const raw = this.$refs.priceInput.value.trim();
+                                                if (raw === '') { this.editing = false; return; }
+                                                this.saving = true;
+                                                this.editing = false;
+                                                try {
+                                                    const res = await fetch('{{ route('purchases.lines.price.update', [$purchase, $line]) }}', {
+                                                        method: 'PATCH',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                                            'Accept': 'application/json',
+                                                        },
+                                                        body: JSON.stringify({ unit_price: raw })
+                                                    });
+                                                    if (!res.ok) return;
+                                                    const data = await res.json();
+                                                    this.price = data.unit_price;
+                                                    this.$el.dispatchEvent(new CustomEvent('line-price-saved', { detail: data, bubbles: true, composed: true }));
+                                                } finally {
+                                                    this.saving = false;
+                                                }
+                                            }
+                                        }">
                                         <td class="px-4 py-3 align-top text-corteza min-w-[12rem]">
                                             {{ $line->raw_name ?? '—' }}
                                         </td>
-                                        <td class="px-4 py-3 align-top text-right font-mono text-corteza">
+                                        <td class="px-4 py-3 align-top text-right font-mono text-corteza whitespace-nowrap">
                                             {{ rtrim(rtrim(number_format($line->quantity_purchased, 4, ',', '.'), '0'), ',') }}
+                                            <span class="text-masa-madre ml-0.5">{{ $line->purchase_unit->short() }}</span>
                                         </td>
-                                        <td class="px-4 py-3 align-top text-masa-madre">{{ $line->purchase_unit->short() }}</td>
-                                        <td class="px-4 py-3 align-top text-right font-mono text-corteza">
-                                            ${{ number_format($line->unit_price, 2, ',', '.') }}
+
+                                        {{-- Precio unitario: edición inline --}}
+                                        <td class="px-4 py-3 align-top text-right font-mono whitespace-nowrap">
+                                            @can('manage-costs')
+                                                <div x-show="!editing && !saving"
+                                                    @click="startEdit()"
+                                                    class="cursor-pointer text-corteza hover:text-horno select-none"
+                                                    title="Click para editar"
+                                                    x-text="'$ ' + fmt(price)"></div>
+                                                <input
+                                                    x-show="editing"
+                                                    x-cloak
+                                                    x-ref="priceInput"
+                                                    type="number"
+                                                    step="0.0001"
+                                                    min="0"
+                                                    @input="isDirty = true"
+                                                    @keydown.enter.prevent="savePrice()"
+                                                    @keydown.escape="editing = false; isDirty = false"
+                                                    @blur="savePrice()"
+                                                    class="w-28 text-right text-xs border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                                <span x-show="saving" x-cloak class="text-xs text-masa-madre italic">guardando…</span>
+                                            @else
+                                                <span class="text-corteza" x-text="'$ ' + fmt(price)"></span>
+                                            @endcan
                                         </td>
-                                        <td class="px-4 py-3 align-top text-right font-mono font-semibold text-corteza">
-                                            ${{ number_format($line->subtotal, 2, ',', '.') }}
+
+                                        <td class="px-4 py-3 align-top text-right font-mono font-semibold text-corteza whitespace-nowrap"
+                                            x-text="'$ ' + fmt(subtotal)"></td>
+                                        <td class="px-4 py-3 align-top text-right font-mono text-masa-madre whitespace-nowrap"
+                                            x-text="'$ ' + fmt(ivaAmount)"></td>
+                                        <td class="px-4 py-3 align-top text-right font-mono text-masa-madre whitespace-nowrap">
+                                            <span x-show="percepcionAmount > 0" x-text="'$ ' + fmt(percepcionAmount)"></span>
+                                            <span x-show="percepcionAmount <= 0">—</span>
                                         </td>
-                                        <td class="px-4 py-3 align-top text-right font-mono text-masa-madre">
-                                            ${{ number_format($ivaAmount, 2, ',', '.') }}
-                                        </td>
-                                        <td class="px-4 py-3 align-top text-right font-mono text-masa-madre">
-                                            {{ $percepcionAmount > 0 ? '$ ' . number_format($percepcionAmount, 2, ',', '.') : '—' }}
-                                        </td>
-                                        <td class="px-4 py-3 align-top text-right font-mono font-semibold text-corteza">
-                                            ${{ number_format($lineTotal, 2, ',', '.') }}
-                                        </td>
+                                        <td class="px-4 py-3 align-top text-right font-mono font-semibold text-corteza whitespace-nowrap"
+                                            x-text="'$ ' + fmt(lineTotal)"></td>
                                         <td class="px-4 py-3 align-top text-center">
                                             @if($line->isApplied())
                                                 <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium"
@@ -252,7 +436,7 @@
                                                             'percepcion_rate' => $line->percepcion_rate,
                                                         ]) }})"
                                                         class="p-1 text-masa-madre hover:text-corteza transition-colors"
-                                                        title="Editar">
+                                                        title="Editar todos los campos">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.25 2.25 0 1 1 3.182 3.182L7.5 19.213l-4 1 1-4 12.362-12.726z" />
                                                         </svg>
@@ -278,19 +462,17 @@
                             </tbody>
                             <tfoot class="border-t-2 border-miga bg-miga/30">
                                 <tr>
-                                    <td colspan="4" class="px-4 py-3 text-xs font-semibold text-corteza text-right">Totales</td>
-                                    <td class="px-4 py-3 text-right font-mono font-semibold text-corteza text-xs">
-                                        ${{ number_format($totalSubtotal, 2, ',', '.') }}
+                                    <td colspan="3" class="px-4 py-3 text-xs font-semibold text-corteza text-right">Totales</td>
+                                    <td class="px-4 py-3 text-right font-mono font-semibold text-corteza text-xs whitespace-nowrap"
+                                        x-text="'$ ' + fmt(tfootSubtotal)"></td>
+                                    <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs whitespace-nowrap"
+                                        x-text="'$ ' + fmt(tfootIva)"></td>
+                                    <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs whitespace-nowrap">
+                                        <span x-show="tfootPercepcion > 0" x-text="'$ ' + fmt(tfootPercepcion)"></span>
+                                        <span x-show="tfootPercepcion <= 0">—</span>
                                     </td>
-                                    <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs">
-                                        ${{ number_format($totalIva, 2, ',', '.') }}
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs">
-                                        {{ $totalPercepcion > 0 ? '$ ' . number_format($totalPercepcion, 2, ',', '.') : '—' }}
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-mono font-semibold text-corteza text-xs">
-                                        ${{ number_format($grandTotal, 2, ',', '.') }}
-                                    </td>
+                                    <td class="px-4 py-3 text-right font-mono font-semibold text-corteza text-xs whitespace-nowrap"
+                                        x-text="'$ ' + fmt(tfootGrandTotal)"></td>
                                     <td @can('manage-costs') colspan="2" @endcan class="px-4 py-3"></td>
                                 </tr>
                             </tfoot>
