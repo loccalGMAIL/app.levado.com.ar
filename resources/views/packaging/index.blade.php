@@ -20,6 +20,7 @@
 
     <div class="py-8 px-6 lg:px-8"
         x-data="{
+            mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
                 if (record.subdivisions && record.cost_per_package !== null) {
@@ -89,7 +90,128 @@
                     @endif
                 </x-empty-state>
             @else
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                {{-- Cards (mobile) --}}
+                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                    @foreach($packagings as $packaging)
+                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $packaging->active ? '' : 'opacity-50' }}"
+                            x-data="{
+                                editing: false,
+                                saving: false,
+                                isDirty: false,
+                                cost: {{ (float) $packaging->cost_per_unit }},
+                                costFormatted: '{{ number_format($packaging->cost_per_unit, 2, ',', '.') }}',
+                                startEdit() {
+                                    this.isDirty = false;
+                                    this.$refs.costInputCard.value = parseFloat(this.cost).toFixed(2);
+                                    this.editing = true;
+                                    this.$nextTick(() => this.$refs.costInputCard.select());
+                                },
+                                async saveCost() {
+                                    if (this.saving) return;
+                                    if (!this.isDirty) { this.editing = false; return; }
+                                    const raw = this.$refs.costInputCard.value.trim();
+                                    if (raw === '') { this.editing = false; return; }
+                                    this.saving = true;
+                                    this.editing = false;
+                                    try {
+                                        const res = await fetch('{{ route('packaging.cost.update', $packaging) }}', {
+                                            method: 'PATCH',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                                'Accept': 'application/json',
+                                            },
+                                            body: JSON.stringify({ cost_per_unit: raw })
+                                        });
+                                        const data = await res.json();
+                                        this.cost = data.cost_per_unit;
+                                        this.costFormatted = data.cost_per_unit_formatted;
+                                    } finally {
+                                        this.saving = false;
+                                    }
+                                }
+                            }">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="font-medium text-corteza">{{ $packaging->name }}</div>
+                                    <div class="text-xs text-masa-madre mt-0.5">
+                                        @if($packaging->brand || $packaging->supplier)
+                                            {{ implode(', ', array_filter([$packaging->brand, $packaging->supplier?->name])) }}
+                                        @endif
+                                        @if($packaging->subdivisions)
+                                            · {{ $packaging->subdivisions }} {{ $packaging->subdivision_label ?? 'u.' }} / presentación
+                                        @endif
+                                    </div>
+                                </div>
+                                <x-status-badge :active="$packaging->active" />
+                            </div>
+                            <div class="mt-2 font-mono text-corteza text-sm">
+                                @can('manage-costs')
+                                    <div x-show="!editing && !saving"
+                                        @click="startEdit()"
+                                        class="cursor-pointer hover:text-horno select-none inline-flex items-center gap-1">
+                                        $ <span x-text="costFormatted"></span>
+                                        <span class="text-xs text-masa-madre font-normal">/ {{ $packaging->subdivisions && $packaging->subdivision_label ? $packaging->subdivision_label : 'u.' }}</span>
+                                        <svg class="w-3 h-3 text-masa-madre" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
+                                    </div>
+                                    <input
+                                        x-show="editing"
+                                        x-ref="costInputCard"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        @input="isDirty = true"
+                                        @keydown.enter.prevent="saveCost()"
+                                        @keydown.escape="editing = false; isDirty = false"
+                                        @blur="saveCost()"
+                                        class="w-32 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                    <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                @else
+                                    $ <span>{{ number_format($packaging->cost_per_unit, 2, ',', '.') }}</span>
+                                @endcan
+                            </div>
+                            @can('manage-costs')
+                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
+                                    <button type="button"
+                                        @click="openEdit({{ Js::from([
+                                            'id'               => $packaging->id,
+                                            'name'             => $packaging->name,
+                                            'brand'            => $packaging->brand ?? '',
+                                            'supplier_id'      => $packaging->supplier_id ?? '',
+                                            'cost_per_unit'    => $packaging->cost_per_unit,
+                                            'cost_per_package' => $packaging->cost_per_package,
+                                            'subdivisions'     => $packaging->subdivisions,
+                                            'subdivision_label' => $packaging->subdivision_label ?? '',
+                                        ]) }})"
+                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                        Editar
+                                    </button>
+                                    <form method="POST" action="{{ route('packaging.toggle-active', $packaging) }}" class="flex-1">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                            class="w-full py-1.5 px-3 text-sm rounded transition-colors {{ $packaging->active ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-600 hover:bg-green-50' }}">
+                                            {{ $packaging->active ? 'Desactivar' : 'Activar' }}
+                                        </button>
+                                    </form>
+                                </div>
+                            @endcan
+                        </div>
+                    @endforeach
+                    <button type="button" @click="mobileExpanded = true"
+                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
+                        Ver tabla completa ↓
+                    </button>
+                </div>
+
+                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
+                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
+                    <div class="md:hidden px-4 py-2 border-b border-miga">
+                        <button type="button" @click="mobileExpanded = false"
+                            class="text-sm text-masa-madre hover:text-corteza">
+                            ← Volver a cards
+                        </button>
+                    </div>
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>

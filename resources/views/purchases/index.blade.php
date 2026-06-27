@@ -6,7 +6,7 @@
     @endphp
 
     <div class="py-8 px-6 lg:px-8"
-        x-data="{}">
+        x-data="{ mobileExpanded: false }">
 
         <div class="space-y-6">
 
@@ -75,7 +75,70 @@
                     @endif
                 </div>
             @else
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                {{-- Cards (mobile) --}}
+                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                    @foreach($purchases as $purchase)
+                        @php
+                            $cardTotal = $includeIva
+                                ? ($purchase->invoice_total ?? $purchase->net_total ?? 0)
+                                : ($purchase->net_total ?? 0);
+                            $cardAllApplied = $purchase->lines_count > 0 && $purchase->applied_count >= $purchase->lines_count;
+                        @endphp
+                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="font-medium text-corteza">{{ $purchase->supplier->name }}</div>
+                                    <div class="text-xs text-masa-madre mt-0.5 font-mono">
+                                        {{ $purchase->invoice_date->format('d/m/Y') }}
+                                        @if($purchase->invoice_number)
+                                            · #{{ $purchase->invoice_number }}
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-mono font-medium text-corteza">$ {{ number_format($cardTotal, 2, ',', '.') }}</div>
+                                    <div class="text-xs text-masa-madre mt-0.5">{{ $purchase->lines_count }} ítems</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
+                                <a href="{{ route('purchases.show', $purchase) }}"
+                                    class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                    Ver detalle
+                                </a>
+                                @can('manage-costs')
+                                    @if($purchase->lines_count > 0)
+                                        <a href="{{ route('purchases.match', $purchase) }}"
+                                            class="flex-1 py-1.5 px-3 text-sm border rounded text-center transition-colors {{ $cardAllApplied ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-amber-300 text-amber-700 hover:bg-amber-50' }}">
+                                            {{ $cardAllApplied ? 'Vinculada' : 'Vincular' }}
+                                        </a>
+                                    @endif
+                                    <form method="POST" action="{{ route('purchases.destroy', $purchase) }}"
+                                        onsubmit="return confirm('¿Eliminar esta compra y todos sus renglones?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="py-1.5 px-3 text-sm border border-red-300 text-red-600 hover:bg-red-50 rounded transition-colors">
+                                            Eliminar
+                                        </button>
+                                    </form>
+                                @endcan
+                            </div>
+                        </div>
+                    @endforeach
+                    <button type="button" @click="mobileExpanded = true"
+                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
+                        Ver tabla completa ↓
+                    </button>
+                </div>
+
+                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
+                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
+                    <div class="md:hidden px-4 py-2 border-b border-miga">
+                        <button type="button" @click="mobileExpanded = false"
+                            class="text-sm text-masa-madre hover:text-corteza">
+                            ← Volver a cards
+                        </button>
+                    </div>
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
