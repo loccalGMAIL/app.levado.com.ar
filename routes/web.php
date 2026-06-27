@@ -123,6 +123,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::delete('recipes/{recipe}/subrecipe-lines/{line}', [RecipeController::class, 'destroySubrecipeLine'])->name('recipes.subrecipe-lines.destroy');
 
     Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+    Route::patch('purchases/{purchase}', [PurchaseController::class, 'update'])->name('purchases.update');
     Route::post('purchases/scan', [PurchaseScanController::class, 'scan'])->name('purchases.scan');
     Route::post('purchases/scan/confirm', [PurchaseScanController::class, 'store'])->name('purchases.scan.store');
     Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');

@@ -6,6 +6,7 @@ use App\Enums\Unit;
 use App\Http\Requests\StorePurchaseLineRequest;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseLineRequest;
+use App\Http\Requests\UpdatePurchaseRequest;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Tenant;
@@ -73,10 +74,35 @@ class PurchaseController extends Controller
         return redirect()->route('purchases.show', $purchase)->with('status', 'Compra registrada.');
     }
 
+    public function update(UpdatePurchaseRequest $request, Purchase $purchase): RedirectResponse
+    {
+        $this->authorize('update', $purchase);
+        $tenant = app(Tenant::class);
+
+        abort_unless(
+            $tenant->suppliers()->where('id', $request->validated('supplier_id'))->exists(),
+            403,
+        );
+
+        $purchase->update($request->validated());
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'purchase',
+            targetId: $purchase->id,
+            action: 'purchase.updated',
+            payload: ['invoice_number' => $purchase->invoice_number, 'invoice_date' => $purchase->invoice_date->toDateString()],
+            tenantId: $tenant->id,
+        );
+
+        return redirect()->route('purchases.show', $purchase)->with('status', 'Compra actualizada.');
+    }
+
     public function checkDuplicate(Request $request): JsonResponse
     {
         $invoiceNumber = $request->string('invoice_number')->trim()->value();
         $supplierId = $request->integer('supplier_id');
+        $excludeId = $request->integer('exclude_id');
 
         if (blank($invoiceNumber) || $supplierId === 0) {
             return response()->json(['duplicate' => false]);
@@ -87,6 +113,7 @@ class PurchaseController extends Controller
         $existing = $tenant->purchases()
             ->where('supplier_id', $supplierId)
             ->where('invoice_number', $invoiceNumber)
+            ->when($excludeId > 0, fn ($q) => $q->where('id', '!=', $excludeId))
             ->first();
 
         if ($existing === null) {
