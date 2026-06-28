@@ -54,13 +54,13 @@
             <x-input-label for="edit_pkg_cost"
                 x-text="editing.subdivisions ? 'Costo por presentación' : 'Costo por unidad'" />
             <x-text-input id="edit_pkg_cost" name="cost_per_unit" type="number"
-                step="0.0001" min="0"
+                step="0.01" min="0"
                 class="mt-1 block w-full"
                 x-model="editing.cost_per_unit"
                 required />
             <p class="mt-1 text-xs text-masa-madre"
                 x-show="editing.subdivisions && editing.subdivisions > 1 && editing.cost_per_unit"
-                x-text="'≈ $' + (parseFloat(editing.cost_per_unit) / (parseInt(editing.subdivisions) || 1)).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 4}) + ' / ' + (editing.subdivision_label || 'sub-unidad')">
+                x-text="'≈ $' + (parseFloat(editing.cost_per_unit) / (parseInt(editing.subdivisions) || 1)).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' / ' + (editing.subdivision_label || 'sub-unidad')">
             </p>
             <x-input-error :messages="$errors->get('cost_per_unit')" class="mt-2" />
         </div>

@@ -68,14 +68,14 @@
                 <x-input-label for="create_cost"
                     x-text="selectedUnit === 'u' && parseInt(createSubdivisions) > 1 ? 'Costo por envase' : 'Costo por unidad'" />
                 <x-text-input id="create_cost" name="cost_per_unit" type="number"
-                    step="0.0001" min="0"
+                    step="0.01" min="0"
                     class="mt-1 block w-full"
                     :value="old('cost_per_unit')"
                     x-model="createCost"
                     required />
                 <p class="mt-1 text-xs text-masa-madre"
                     x-show="selectedUnit === 'u' && parseInt(createSubdivisions) > 1 && createCost"
-                    x-text="'≈ $' + (parseFloat(createCost) / (parseInt(createSubdivisions) || 1)).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 4}) + ' / ' + (createSubdivisionLabel || 'sub-unidad')">
+                    x-text="'≈ $' + (parseFloat(createCost) / (parseInt(createSubdivisions) || 1)).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' / ' + (createSubdivisionLabel || 'sub-unidad')">
                 </p>
                 <p class="mt-1 text-xs text-masa-madre"
                     x-show="selectedUnit !== 'u' || parseInt(createSubdivisions) <= 1">En la moneda del negocio.</p>

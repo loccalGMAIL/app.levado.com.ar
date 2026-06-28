@@ -52,8 +52,8 @@
             tfootGrandTotal = $event.detail.grand_total;
         ">
 
-        {{-- Botón volver (solo móvil) --}}
-        <div class="sm:hidden px-6 pt-4 pb-0">
+        {{-- Botón volver --}}
+        <div class="px-6 pt-4 pb-0">
             <a href="{{ route('purchases.index') }}"
                 class="inline-flex items-center gap-1.5 text-sm text-masa-madre hover:text-corteza transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -194,7 +194,7 @@
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="space-y-1 min-w-0">
                                         <p class="text-masa-madre text-xs">
-                                            {{ rtrim(rtrim(number_format($line->quantity_purchased, 4, ',', '.'), '0'), ',') }}
+                                            {{ number_format($line->quantity_purchased, 2, ',', '.') }}
                                             {{ $line->purchase_unit->short() }}
                                             &middot; ${{ number_format($line->unit_price, 2, ',', '.') }}/u
                                         </p>
@@ -231,9 +231,9 @@
                                             @click="openEdit({{ Js::from([
                                                 'id' => $line->id,
                                                 'raw_name' => $line->raw_name,
-                                                'quantity_purchased' => $line->quantity_purchased,
+                                                'quantity_purchased' => round((float) $line->quantity_purchased, 2),
                                                 'purchase_unit' => $line->purchase_unit->value,
-                                                'unit_price' => $line->unit_price,
+                                                'unit_price' => round((float) $line->unit_price, 2),
                                                 'iva_rate' => $line->iva_rate,
                                                 'percepcion_rate' => $line->percepcion_rate,
                                             ]) }})"
@@ -327,7 +327,7 @@
                                             fmt(n) { return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
                                             startEdit() {
                                                 this.isDirty = false;
-                                                this.$refs.priceInput.value = parseFloat(this.price).toFixed(4).replace(/\.?0+$/, '');
+                                                this.$refs.priceInput.value = parseFloat(this.price).toFixed(2);
                                                 this.editing = true;
                                                 this.$nextTick(() => this.$refs.priceInput.select());
                                             },
@@ -361,7 +361,7 @@
                                             {{ $line->raw_name ?? '—' }}
                                         </td>
                                         <td class="px-4 py-3 align-top text-right font-mono text-corteza whitespace-nowrap">
-                                            {{ rtrim(rtrim(number_format($line->quantity_purchased, 4, ',', '.'), '0'), ',') }}
+                                            {{ number_format($line->quantity_purchased, 2, ',', '.') }}
                                             <span class="text-masa-madre ml-0.5">{{ $line->purchase_unit->short() }}</span>
                                         </td>
 
@@ -378,7 +378,7 @@
                                                     x-cloak
                                                     x-ref="priceInput"
                                                     type="number"
-                                                    step="0.0001"
+                                                    step="0.01"
                                                     min="0"
                                                     @input="isDirty = true"
                                                     @keydown.enter.prevent="savePrice()"
@@ -429,9 +429,9 @@
                                                         @click="openEdit({{ Js::from([
                                                             'id' => $line->id,
                                                             'raw_name' => $line->raw_name,
-                                                            'quantity_purchased' => $line->quantity_purchased,
+                                                            'quantity_purchased' => round((float) $line->quantity_purchased, 2),
                                                             'purchase_unit' => $line->purchase_unit->value,
-                                                            'unit_price' => $line->unit_price,
+                                                            'unit_price' => round((float) $line->unit_price, 2),
                                                             'iva_rate' => $line->iva_rate,
                                                             'percepcion_rate' => $line->percepcion_rate,
                                                         ]) }})"

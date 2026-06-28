@@ -31,19 +31,36 @@ class PurchaseController extends Controller
     public function index(): View
     {
         $tenant = app(Tenant::class);
+        $sortCol = request('sort', 'date');
+        $sortDir = request('dir', 'desc') === 'asc' ? 'asc' : 'desc';
 
-        $purchases = $tenant->purchases()
+        $query = $tenant->purchases()
             ->with('supplier')
             ->withCount('lines')
             ->withCount(['lines as applied_count' => fn ($q) => $q->whereNotNull('cost_applied_at')])
             ->withSum('lines as net_total', 'subtotal')
+            ->when(request('search'), function ($q, $s) {
+                $q->where(function ($q2) use ($s) {
+                    $q2->where('invoice_number', 'like', "%{$s}%")
+                        ->orWhereHas('supplier', fn ($sq) => $sq->where('name', 'like', "%{$s}%"));
+                });
+            })
             ->when(request('supplier_id'), fn ($q, $id) => $q->where('supplier_id', $id))
             ->when(request('from'), fn ($q, $date) => $q->where('invoice_date', '>=', $date))
-            ->when(request('to'), fn ($q, $date) => $q->where('invoice_date', '<=', $date))
-            ->orderByDesc('invoice_date')
-            ->orderByDesc('id')
-            ->paginate(20)
-            ->withQueryString();
+            ->when(request('to'), fn ($q, $date) => $q->where('invoice_date', '<=', $date));
+
+        match ($sortCol) {
+            'invoice_number' => $query->orderBy('invoice_number', $sortDir)->orderByDesc('purchases.id'),
+            'supplier' => $query->join('suppliers', 'suppliers.id', '=', 'purchases.supplier_id')
+                ->select('purchases.*')
+                ->orderBy('suppliers.name', $sortDir)
+                ->orderByDesc('purchases.id'),
+            'items' => $query->orderBy('lines_count', $sortDir)->orderByDesc('id'),
+            'total' => $query->orderBy('invoice_total', $sortDir)->orderByDesc('id'),
+            default => $query->orderBy('invoice_date', $sortDir)->orderByDesc('id'),
+        };
+
+        $purchases = $query->paginate(20)->withQueryString();
 
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
         $includeIva = filter_var($tenant->getSetting('purchase_price_includes_iva', '1'), FILTER_VALIDATE_BOOLEAN);

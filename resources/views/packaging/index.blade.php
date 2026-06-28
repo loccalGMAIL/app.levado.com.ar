@@ -178,8 +178,8 @@
                                             'name'             => $packaging->name,
                                             'brand'            => $packaging->brand ?? '',
                                             'supplier_id'      => $packaging->supplier_id ?? '',
-                                            'cost_per_unit'    => $packaging->cost_per_unit,
-                                            'cost_per_package' => $packaging->cost_per_package,
+                                            'cost_per_unit'    => round((float) $packaging->cost_per_unit, 2),
+                                            'cost_per_package' => $packaging->cost_per_package !== null ? round((float) $packaging->cost_per_package, 2) : null,
                                             'subdivisions'     => $packaging->subdivisions,
                                             'subdivision_label' => $packaging->subdivision_label ?? '',
                                         ]) }})"
@@ -245,8 +245,8 @@
                                                     'name'              => $packaging->name,
                                                     'brand'             => $packaging->brand ?? '',
                                                     'supplier_id'       => $packaging->supplier_id ?? '',
-                                                    'cost_per_unit'     => $packaging->cost_per_unit,
-                                                    'cost_per_package'  => $packaging->cost_per_package,
+                                                    'cost_per_unit'     => round((float) $packaging->cost_per_unit, 2),
+                                                    'cost_per_package'  => $packaging->cost_per_package !== null ? round((float) $packaging->cost_per_package, 2) : null,
                                                     'subdivisions'      => $packaging->subdivisions,
                                                     'subdivision_label' => $packaging->subdivision_label ?? '',
                                                 ]) }})"
@@ -342,7 +342,7 @@
                                                         'name'             => $packaging->name,
                                                         'brand'            => $packaging->brand ?? '',
                                                         'supplier_id'      => $packaging->supplier_id ?? '',
-                                                        'cost_per_unit'    => $packaging->cost_per_unit,
+                                                        'cost_per_unit'    => round((float) $packaging->cost_per_unit, 2),
                                                         'subdivisions'     => $packaging->subdivisions,
                                                         'subdivision_label' => $packaging->subdivision_label ?? '',
                                                     ]) }})"

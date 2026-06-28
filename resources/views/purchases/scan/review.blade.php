@@ -264,9 +264,9 @@
                                             <td class="px-3 py-3 align-top text-right">
                                                 <input type="number" name="lines[{{ $i }}][quantity_purchased]"
                                                     x-model.number="qty"
-                                                    step="0.0001" min="0.0001"
-                                                    data-maxdecimals="4"
-                                                    value="{{ old("lines.$i.quantity_purchased", $line['quantity'] !== null ? rtrim(rtrim(number_format($line['quantity'], 4, '.', ''), '0'), '.') : '') }}"
+                                                    step="0.01" min="0.01"
+                                                    data-maxdecimals="2"
+                                                    value="{{ old("lines.$i.quantity_purchased", $line['quantity'] !== null ? number_format((float) $line['quantity'], 2, '.', '') : '') }}"
                                                     class="block w-24 border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm text-right">
                                             </td>
 
@@ -287,8 +287,8 @@
                                                     <span class="absolute inset-y-0 left-2 flex items-center text-masa-madre text-xs">$</span>
                                                     <input type="number" name="lines[{{ $i }}][unit_price]"
                                                         x-model.number="price"
-                                                        step="0.0001" min="0"
-                                                        data-maxdecimals="4"
+                                                        step="0.01" min="0"
+                                                        data-maxdecimals="2"
                                                         value="{{ old("lines.$i.unit_price", $line['unit_price']) }}"
                                                         class="block w-28 pl-5 border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm text-right">
                                                 </div>
