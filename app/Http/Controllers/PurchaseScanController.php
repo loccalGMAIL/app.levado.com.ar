@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceExtractor;
+use App\Services\InvoiceImagePreparer;
 use App\Services\PurchaseLineRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class PurchaseScanController extends Controller
@@ -23,6 +25,7 @@ class PurchaseScanController extends Controller
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly InvoiceExtractor $extractor,
+        private readonly InvoiceImagePreparer $preparer,
         private readonly PurchaseLineRecorder $lineRecorder,
     ) {}
 
@@ -49,12 +52,17 @@ class PurchaseScanController extends Controller
             return back()->with('error', 'Primero cargá tus insumos o descartables para poder asociar los ítems de la factura.');
         }
 
-        $path = $file->store("purchases/{$tenant->id}", 'public');
+        $contents = (string) file_get_contents($file->getRealPath());
+        [$contents, $mime] = $this->preparer->prepare($contents, $file->getMimeType() ?? 'image/jpeg');
+
+        $extension = $mime === 'application/pdf' ? 'pdf' : 'jpg';
+        $path = "purchases/{$tenant->id}/".Str::uuid()->toString().'.'.$extension;
+        Storage::disk('public')->put($path, $contents);
 
         try {
             $draft = $this->extractor->extract(
-                base64_encode((string) Storage::disk('public')->get($path)),
-                $file->getMimeType() ?? 'image/jpeg',
+                base64_encode($contents),
+                $mime,
                 $ingredients,
                 $packagings,
             );
