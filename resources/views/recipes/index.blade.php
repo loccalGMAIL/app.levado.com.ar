@@ -5,7 +5,7 @@
         $errorsInCreate = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit']) && old('_form') === 'create';
     @endphp
 
-    <div class="py-8 px-6 lg:px-8" x-data="{}">
+    <div class="py-8 px-6 lg:px-8" x-data="{ mobileExpanded: false }">
         <div class="space-y-6">
 
             <div class="flex items-center justify-between">
@@ -75,7 +75,133 @@
                     @endif
                 </x-empty-state>
             @else
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                {{-- Cards (mobile) --}}
+                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                    @foreach($recipes as $recipe)
+                        @php
+                            $price = isset($prices[$recipe->id]) ? (float) $prices[$recipe->id] : null;
+                            $initPriceInput     = $price !== null ? number_format($price, 2, '.', '') : '';
+                            $initPriceFormatted = $price !== null ? number_format($price, 2, ',', '.') : '';
+                        @endphp
+                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $recipe->active ? '' : 'opacity-50' }}"
+                            x-data="{
+                                editing: false,
+                                saving: false,
+                                isDirty: false,
+                                price: {{ $price ?? 'null' }},
+                                priceFormatted: '{{ $initPriceFormatted }}',
+                                startEdit() {
+                                    this.isDirty = false;
+                                    this.$refs.priceInputCard.value = this.price !== null ? parseFloat(this.price).toFixed(2) : '';
+                                    this.editing = true;
+                                    this.$nextTick(() => this.$refs.priceInputCard.select());
+                                },
+                                async savePrice() {
+                                    if (this.saving) return;
+                                    if (!this.isDirty) { this.editing = false; return; }
+                                    const raw = this.$refs.priceInputCard.value.trim();
+                                    const payload = raw !== '' ? raw : null;
+                                    this.saving = true;
+                                    this.editing = false;
+                                    try {
+                                        const res = await fetch('{{ route('recipes.prices.update', [$recipe, $priceList]) }}', {
+                                            method: 'PATCH',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                                'Accept': 'application/json',
+                                            },
+                                            body: JSON.stringify({ price: payload })
+                                        });
+                                        const data = await res.json();
+                                        this.price = data.selling_price;
+                                        this.priceFormatted = data.selling_price_formatted ?? '';
+                                    } finally {
+                                        this.saving = false;
+                                    }
+                                }
+                            }">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1 min-w-0">
+                                    <a href="{{ route('recipes.show', $recipe) }}" class="font-medium text-corteza hover:underline">
+                                        {{ $recipe->name }}
+                                        @if($recipe->is_semi_elaborate)
+                                            <span class="ml-1 text-[10px] font-medium bg-amber-100 text-amber-700 rounded px-1 py-0.5">semi</span>
+                                        @endif
+                                    </a>
+                                    <div class="text-xs text-masa-madre mt-0.5">
+                                        {{ number_format((float)$recipe->yield_quantity, 0, ',', '.') }} {{ $recipe->yield_unit->short() }} rendimiento
+                                    </div>
+                                </div>
+                                <x-status-badge :active="$recipe->active" label-active="activa" label-inactive="inactiva" />
+                            </div>
+                            <div class="mt-2 flex items-center gap-2">
+                                <span class="text-xs text-masa-madre shrink-0">{{ $priceList->name }}:</span>
+                                <div class="font-mono text-sm text-corteza">
+                                    @can('manage-costs')
+                                        <div x-show="!editing && !saving"
+                                            @click="startEdit()"
+                                            class="cursor-pointer hover:text-horno select-none inline-flex items-center gap-1">
+                                            <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
+                                            <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
+                                            <svg class="w-3 h-3 text-masa-madre" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
+                                        </div>
+                                        <input x-show="editing" x-ref="priceInputCard"
+                                            type="number" step="0.01" min="0"
+                                            @input="isDirty = true"
+                                            @keydown.enter.prevent="savePrice()"
+                                            @keydown.escape="editing = false; isDirty = false"
+                                            @blur="savePrice()"
+                                            class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                        <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                    @else
+                                        @if($price !== null)
+                                            $ {{ $initPriceFormatted }}
+                                        @else
+                                            <span class="text-masa-madre">—</span>
+                                        @endif
+                                    @endcan
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
+                                <a href="{{ route('recipes.show', $recipe) }}"
+                                    class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                    Ver receta
+                                </a>
+                                @can('manage-costs')
+                                    <form method="POST" action="{{ route('recipes.copy', $recipe) }}">
+                                        @csrf
+                                        <button type="submit"
+                                            class="py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">
+                                            Copiar
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ route('recipes.toggle-active', $recipe) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                            class="py-1.5 px-3 text-sm rounded transition-colors {{ $recipe->active ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-600 hover:bg-green-50' }}">
+                                            {{ $recipe->active ? 'Desactivar' : 'Activar' }}
+                                        </button>
+                                    </form>
+                                @endcan
+                            </div>
+                        </div>
+                    @endforeach
+                    <button type="button" @click="mobileExpanded = true"
+                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
+                        Ver tabla completa ↓
+                    </button>
+                </div>
+
+                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
+                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
+                    <div class="md:hidden px-4 py-2 border-b border-miga">
+                        <button type="button" @click="mobileExpanded = false"
+                            class="text-sm text-masa-madre hover:text-corteza">
+                            ← Volver a cards
+                        </button>
+                    </div>
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>

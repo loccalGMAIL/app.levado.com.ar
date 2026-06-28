@@ -172,7 +172,7 @@
             <div class="flex-1 min-w-0 space-y-4">
 
                 {{-- Ingredientes --}}
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <div class="bg-white rounded-lg shadow" x-data="{ mobileExpanded: false }">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Ingredientes</h3>
                         @can('manage-costs')
@@ -186,66 +186,119 @@
                     @if($recipe->ingredientLines->isEmpty())
                         <p class="px-4 py-4 text-sm text-masa-madre">Sin ingredientes todavía.</p>
                     @else
-                        <table class="w-full text-sm">
-                            <thead class="bg-miga text-masa-madre">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Ingrediente</th>
-                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
-                                    <th class="px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-wide w-20">Unidad</th>
-                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
-                                    @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-miga">
-                                <template x-for="line in ingredientLines" :key="line.id">
-                                    <tr>
-                                        <td class="px-4 py-2.5">
-                                            <div class="font-medium text-corteza" x-text="line.name"></div>
-                                            <div class="text-[11px] text-masa-madre mt-0.5">
-                                                <span x-text="line.code"></span>
-                                                <span class="mx-1">·</span>
-                                                <span x-text="'$' + fmt(line.refCost) + '/' + line.refUnit"></span>
-                                                <template x-if="line.supplier">
-                                                    <span> — <span x-text="line.supplier"></span></span>
-                                                </template>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-2.5 text-right">
-                                            <input type="number"
-                                                x-model.number="line.quantity"
-                                                @change="saveIngredientLine(line)"
-                                                min="0.001" step="any"
-                                                class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
-                                        </td>
-                                        <td class="px-4 py-2.5 text-center">
-                                            <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono" x-text="line.unitLabel"></span>
-                                        </td>
-                                        <td class="px-4 py-2.5 text-right font-mono text-corteza">
-                                            <span x-text="'$ ' + fmt(line.quantity * line.costPerLineUnit)"></span>
-                                        </td>
+                        {{-- Cards (mobile) --}}
+                        <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="divide-y divide-miga">
+                            <template x-for="line in ingredientLines" :key="line.id">
+                                <div class="p-3 space-y-2">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div>
+                                            <div class="font-medium text-corteza text-sm" x-text="line.name"></div>
+                                            <div class="text-[11px] text-masa-madre mt-0.5" x-text="'$' + fmt(line.refCost) + '/' + line.refUnit"></div>
+                                        </div>
+                                        <div class="text-right shrink-0">
+                                            <div class="text-[11px] text-masa-madre">Costo</div>
+                                            <div class="font-mono text-sm text-corteza" x-text="'$ ' + fmt(line.quantity * line.costPerLineUnit)"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-masa-madre shrink-0">Cantidad:</span>
+                                        <input type="number"
+                                            x-model.number="line.quantity"
+                                            @change="saveIngredientLine(line)"
+                                            min="0.001" step="any"
+                                            class="flex-1 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
+                                        <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono shrink-0" x-text="line.unitLabel"></span>
                                         @can('manage-costs')
-                                            <td class="px-4 py-2.5 text-center">
-                                                <form method="POST" action="{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}"
-                                                    :action="'{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            </td>
+                                            <form method="POST" action="{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}"
+                                                :action="'{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors p-1" title="Quitar">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
                                         @endcan
+                                    </div>
+                                </div>
+                            </template>
+                            <div class="p-3">
+                                <button type="button" @click="mobileExpanded = true"
+                                    class="w-full py-1.5 text-sm text-masa-madre hover:text-corteza text-center">
+                                    Ver tabla completa ↓
+                                </button>
+                            </div>
+                        </div>
+                        {{-- Tabla (desktop siempre, mobile si está expandida) --}}
+                        <div :class="mobileExpanded ? '' : 'hidden md:block'" class="overflow-x-auto">
+                            <div class="md:hidden px-4 py-2 border-b border-miga">
+                                <button type="button" @click="mobileExpanded = false"
+                                    class="text-sm text-masa-madre hover:text-corteza">
+                                    ← Volver a cards
+                                </button>
+                            </div>
+                            <table class="w-full text-sm">
+                                <thead class="bg-miga text-masa-madre">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Ingrediente</th>
+                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
+                                        <th class="px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-wide w-20">Unidad</th>
+                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
+                                        @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
                                     </tr>
-                                </template>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody class="divide-y divide-miga">
+                                    <template x-for="line in ingredientLines" :key="line.id">
+                                        <tr>
+                                            <td class="px-4 py-2.5">
+                                                <div class="font-medium text-corteza" x-text="line.name"></div>
+                                                <div class="text-[11px] text-masa-madre mt-0.5">
+                                                    <span x-text="line.code"></span>
+                                                    <span class="mx-1">·</span>
+                                                    <span x-text="'$' + fmt(line.refCost) + '/' + line.refUnit"></span>
+                                                    <template x-if="line.supplier">
+                                                        <span> — <span x-text="line.supplier"></span></span>
+                                                    </template>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-2.5 text-right">
+                                                <input type="number"
+                                                    x-model.number="line.quantity"
+                                                    @change="saveIngredientLine(line)"
+                                                    min="0.001" step="any"
+                                                    class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
+                                            </td>
+                                            <td class="px-4 py-2.5 text-center">
+                                                <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono" x-text="line.unitLabel"></span>
+                                            </td>
+                                            <td class="px-4 py-2.5 text-right font-mono text-corteza">
+                                                <span x-text="'$ ' + fmt(line.quantity * line.costPerLineUnit)"></span>
+                                            </td>
+                                            @can('manage-costs')
+                                                <td class="px-4 py-2.5 text-center">
+                                                    <form method="POST" action="{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}"
+                                                        :action="'{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            @endcan
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
                     @endif
                 </div>
 
                 {{-- Mano de obra --}}
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <div class="bg-white rounded-lg shadow" x-data="{ mobileExpanded: false }">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Mano de obra</h3>
                         @can('manage-costs')
@@ -259,57 +312,111 @@
                     @if($recipe->laborLines->isEmpty())
                         <p class="px-4 py-4 text-sm text-masa-madre">Sin mano de obra todavía.</p>
                     @else
-                        <table class="w-full text-sm">
-                            <thead class="bg-miga text-masa-madre">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Rol</th>
-                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Horas</th>
-                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
-                                    @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-miga">
-                                <template x-for="line in laborLines" :key="line.id">
-                                    <tr>
-                                        <td class="px-4 py-2.5">
-                                            <div class="font-medium text-corteza" x-text="line.name"></div>
+                        {{-- Cards (mobile) --}}
+                        <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="divide-y divide-miga">
+                            <template x-for="line in laborLines" :key="line.id">
+                                <div class="p-3 space-y-2">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div>
+                                            <div class="font-medium text-corteza text-sm" x-text="line.name"></div>
                                             <div class="text-[11px] text-masa-madre mt-0.5">
                                                 $<span x-text="fmt(line.hourlyRate)"></span>/h
                                             </div>
-                                        </td>
-                                        <td class="px-4 py-2.5 text-right">
-                                            <input type="number"
-                                                x-model.number="line.hours"
-                                                @change="saveLaborLine(line)"
-                                                min="0.01" step="any"
-                                                class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
-                                        </td>
-                                        <td class="px-4 py-2.5 text-right font-mono text-corteza">
-                                            <span x-text="'$ ' + fmt(line.hours * line.hourlyRate)"></span>
-                                        </td>
+                                        </div>
+                                        <div class="text-right shrink-0">
+                                            <div class="text-[11px] text-masa-madre">Costo</div>
+                                            <div class="font-mono text-sm text-corteza" x-text="'$ ' + fmt(line.hours * line.hourlyRate)"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-masa-madre shrink-0">Horas:</span>
+                                        <input type="number"
+                                            x-model.number="line.hours"
+                                            @change="saveLaborLine(line)"
+                                            min="0.01" step="any"
+                                            class="flex-1 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
                                         @can('manage-costs')
-                                            <td class="px-4 py-2.5 text-center">
-                                                <form method="POST"
-                                                    :action="'{{ route('recipes.labor-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            </td>
+                                            <form method="POST"
+                                                :action="'{{ route('recipes.labor-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors p-1" title="Quitar">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
                                         @endcan
+                                    </div>
+                                </div>
+                            </template>
+                            <div class="p-3">
+                                <button type="button" @click="mobileExpanded = true"
+                                    class="w-full py-1.5 text-sm text-masa-madre hover:text-corteza text-center">
+                                    Ver tabla completa ↓
+                                </button>
+                            </div>
+                        </div>
+                        {{-- Tabla (desktop siempre, mobile si está expandida) --}}
+                        <div :class="mobileExpanded ? '' : 'hidden md:block'" class="overflow-x-auto">
+                            <div class="md:hidden px-4 py-2 border-b border-miga">
+                                <button type="button" @click="mobileExpanded = false"
+                                    class="text-sm text-masa-madre hover:text-corteza">
+                                    ← Volver a cards
+                                </button>
+                            </div>
+                            <table class="w-full text-sm">
+                                <thead class="bg-miga text-masa-madre">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Rol</th>
+                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Horas</th>
+                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
+                                        @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
                                     </tr>
-                                </template>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody class="divide-y divide-miga">
+                                    <template x-for="line in laborLines" :key="line.id">
+                                        <tr>
+                                            <td class="px-4 py-2.5">
+                                                <div class="font-medium text-corteza" x-text="line.name"></div>
+                                                <div class="text-[11px] text-masa-madre mt-0.5">
+                                                    $<span x-text="fmt(line.hourlyRate)"></span>/h
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-2.5 text-right">
+                                                <input type="number"
+                                                    x-model.number="line.hours"
+                                                    @change="saveLaborLine(line)"
+                                                    min="0.01" step="any"
+                                                    class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
+                                            </td>
+                                            <td class="px-4 py-2.5 text-right font-mono text-corteza">
+                                                <span x-text="'$ ' + fmt(line.hours * line.hourlyRate)"></span>
+                                            </td>
+                                            @can('manage-costs')
+                                                <td class="px-4 py-2.5 text-center">
+                                                    <form method="POST"
+                                                        :action="'{{ route('recipes.labor-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            @endcan
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
                     @endif
                 </div>
 
                 {{-- Envases --}}
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <div class="bg-white rounded-lg shadow" x-data="{ mobileExpanded: false }">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Envases</h3>
                         @can('manage-costs')
@@ -323,52 +430,101 @@
                     @if($recipe->packagingLines->isEmpty())
                         <p class="px-4 py-4 text-sm text-masa-madre">Sin envases todavía.</p>
                     @else
-                        <table class="w-full text-sm">
-                            <thead class="bg-miga text-masa-madre">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Envase</th>
-                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
-                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
-                                    @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-miga">
-                                <template x-for="line in packagingLines" :key="line.id">
-                                    <tr>
-                                        <td class="px-4 py-2.5 font-medium text-corteza" x-text="line.name"></td>
-                                        <td class="px-4 py-2.5 text-right">
-                                            <input type="number"
-                                                x-model.number="line.quantity"
-                                                @change="savePackagingLine(line)"
-                                                min="0.001" step="any"
-                                                class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
-                                        </td>
-                                        <td class="px-4 py-2.5 text-right font-mono text-corteza">
-                                            <span x-text="'$ ' + fmt(line.quantity * line.costPerUnit)"></span>
-                                        </td>
+                        {{-- Cards (mobile) --}}
+                        <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="divide-y divide-miga">
+                            <template x-for="line in packagingLines" :key="line.id">
+                                <div class="p-3 space-y-2">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="font-medium text-corteza text-sm" x-text="line.name"></div>
+                                        <div class="text-right shrink-0">
+                                            <div class="text-[11px] text-masa-madre">Costo</div>
+                                            <div class="font-mono text-sm text-corteza" x-text="'$ ' + fmt(line.quantity * line.costPerUnit)"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-masa-madre shrink-0">Cantidad:</span>
+                                        <input type="number"
+                                            x-model.number="line.quantity"
+                                            @change="savePackagingLine(line)"
+                                            min="0.001" step="any"
+                                            class="flex-1 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
                                         @can('manage-costs')
-                                            <td class="px-4 py-2.5 text-center">
-                                                <form method="POST"
-                                                    :action="'{{ route('recipes.packaging-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            </td>
+                                            <form method="POST"
+                                                :action="'{{ route('recipes.packaging-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors p-1" title="Quitar">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
                                         @endcan
+                                    </div>
+                                </div>
+                            </template>
+                            <div class="p-3">
+                                <button type="button" @click="mobileExpanded = true"
+                                    class="w-full py-1.5 text-sm text-masa-madre hover:text-corteza text-center">
+                                    Ver tabla completa ↓
+                                </button>
+                            </div>
+                        </div>
+                        {{-- Tabla (desktop siempre, mobile si está expandida) --}}
+                        <div :class="mobileExpanded ? '' : 'hidden md:block'" class="overflow-x-auto">
+                            <div class="md:hidden px-4 py-2 border-b border-miga">
+                                <button type="button" @click="mobileExpanded = false"
+                                    class="text-sm text-masa-madre hover:text-corteza">
+                                    ← Volver a cards
+                                </button>
+                            </div>
+                            <table class="w-full text-sm">
+                                <thead class="bg-miga text-masa-madre">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Envase</th>
+                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
+                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
+                                        @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
                                     </tr>
-                                </template>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody class="divide-y divide-miga">
+                                    <template x-for="line in packagingLines" :key="line.id">
+                                        <tr>
+                                            <td class="px-4 py-2.5 font-medium text-corteza" x-text="line.name"></td>
+                                            <td class="px-4 py-2.5 text-right">
+                                                <input type="number"
+                                                    x-model.number="line.quantity"
+                                                    @change="savePackagingLine(line)"
+                                                    min="0.001" step="any"
+                                                    class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
+                                            </td>
+                                            <td class="px-4 py-2.5 text-right font-mono text-corteza">
+                                                <span x-text="'$ ' + fmt(line.quantity * line.costPerUnit)"></span>
+                                            </td>
+                                            @can('manage-costs')
+                                                <td class="px-4 py-2.5 text-center">
+                                                    <form method="POST"
+                                                        :action="'{{ route('recipes.packaging-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            @endcan
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
                     @endif
                 </div>
 
                 {{-- Sub-recetas --}}
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <div class="bg-white rounded-lg shadow" x-data="{ mobileExpanded: false }">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Sub-recetas</h3>
                         @can('manage-costs')
@@ -383,56 +539,111 @@
                         <p class="px-4 py-4 text-sm text-masa-madre">Sin sub-recetas todavía.</p>
                     </template>
                     <template x-if="subrecipeLines.length > 0">
-                        <table class="w-full text-sm">
-                            <thead class="bg-miga text-masa-madre">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Sub-receta</th>
-                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
-                                    <th class="px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-wide w-20">Unidad</th>
-                                    <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
-                                    @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-miga">
+                        <div>
+                            {{-- Cards (mobile) --}}
+                            <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="divide-y divide-miga">
                                 <template x-for="line in subrecipeLines" :key="line.id">
-                                    <tr>
-                                        <td class="px-4 py-2.5">
-                                            <div class="font-medium text-corteza" x-text="line.name"></div>
-                                            <div class="text-[11px] text-masa-madre mt-0.5">
-                                                <span x-text="'$' + fmt(line.unitCost) + '/' + line.childYieldUnit"></span>
+                                    <div class="p-3 space-y-2">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div>
+                                                <div class="font-medium text-corteza text-sm" x-text="line.name"></div>
+                                                <div class="text-[11px] text-masa-madre mt-0.5" x-text="'$' + fmt(line.unitCost) + '/' + line.childYieldUnit"></div>
                                             </div>
-                                        </td>
-                                        <td class="px-4 py-2.5 text-right">
+                                            <div class="text-right shrink-0">
+                                                <div class="text-[11px] text-masa-madre">Costo</div>
+                                                <div class="font-mono text-sm text-corteza" x-text="'$ ' + fmt(line.quantity * line.costPerLineUnit)"></div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs text-masa-madre shrink-0">Cantidad:</span>
                                             <input type="number"
                                                 x-model.number="line.quantity"
                                                 @change="saveSubrecipeLine(line)"
                                                 min="0.001" step="any"
-                                                class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
-                                        </td>
-                                        <td class="px-4 py-2.5 text-center">
-                                            <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono" x-text="line.unitLabel"></span>
-                                        </td>
-                                        <td class="px-4 py-2.5 text-right font-mono text-corteza">
-                                            <span x-text="'$ ' + fmt(line.quantity * line.costPerLineUnit)"></span>
-                                        </td>
-                                        @can('manage-costs')
-                                            <td class="px-4 py-2.5 text-center">
+                                                class="flex-1 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
+                                            <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono shrink-0" x-text="line.unitLabel"></span>
+                                            @can('manage-costs')
                                                 <form method="POST"
                                                     :action="'{{ route('recipes.subrecipe-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
+                                                    <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors p-1" title="Quitar">
                                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                                         </svg>
                                                     </button>
                                                 </form>
-                                            </td>
-                                        @endcan
-                                    </tr>
+                                            @endcan
+                                        </div>
+                                    </div>
                                 </template>
-                            </tbody>
-                        </table>
+                                <div class="p-3">
+                                    <button type="button" @click="mobileExpanded = true"
+                                        class="w-full py-1.5 text-sm text-masa-madre hover:text-corteza text-center">
+                                        Ver tabla completa ↓
+                                    </button>
+                                </div>
+                            </div>
+                            {{-- Tabla (desktop siempre, mobile si está expandida) --}}
+                            <div :class="mobileExpanded ? '' : 'hidden md:block'" class="overflow-x-auto">
+                                <div class="md:hidden px-4 py-2 border-b border-miga">
+                                    <button type="button" @click="mobileExpanded = false"
+                                        class="text-sm text-masa-madre hover:text-corteza">
+                                        ← Volver a cards
+                                    </button>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-miga text-masa-madre">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Sub-receta</th>
+                                            <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
+                                            <th class="px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-wide w-20">Unidad</th>
+                                            <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
+                                            @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-miga">
+                                        <template x-for="line in subrecipeLines" :key="line.id">
+                                            <tr>
+                                                <td class="px-4 py-2.5">
+                                                    <div class="font-medium text-corteza" x-text="line.name"></div>
+                                                    <div class="text-[11px] text-masa-madre mt-0.5">
+                                                        <span x-text="'$' + fmt(line.unitCost) + '/' + line.childYieldUnit"></span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-2.5 text-right">
+                                                    <input type="number"
+                                                        x-model.number="line.quantity"
+                                                        @change="saveSubrecipeLine(line)"
+                                                        min="0.001" step="any"
+                                                        class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
+                                                </td>
+                                                <td class="px-4 py-2.5 text-center">
+                                                    <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono" x-text="line.unitLabel"></span>
+                                                </td>
+                                                <td class="px-4 py-2.5 text-right font-mono text-corteza">
+                                                    <span x-text="'$ ' + fmt(line.quantity * line.costPerLineUnit)"></span>
+                                                </td>
+                                                @can('manage-costs')
+                                                    <td class="px-4 py-2.5 text-center">
+                                                        <form method="POST"
+                                                            :action="'{{ route('recipes.subrecipe-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
+                                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                                </svg>
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                @endcan
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </template>
                 </div>
 
@@ -448,16 +659,16 @@
                     <div class="space-y-1.5 text-sm pt-1">
                         <div class="flex justify-between">
                             <span class="text-masa-madre">Ingredientes</span>
-                            <span class="font-mono text-corteza" x-text="'$ ' + fmt(ingredientCost)"></span>
+                            <span class="font-mono text-corteza" x-text="'$ ' + fmt(ingredientCost)"></span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-masa-madre">Mano de obra</span>
-                            <span class="font-mono text-corteza" x-text="'$ ' + fmt(laborCost)"></span>
+                            <span class="font-mono text-corteza" x-text="'$ ' + fmt(laborCost)"></span>
                         </div>
                         <template x-if="packagingLines.length > 0">
                             <div class="flex justify-between">
                                 <span class="text-masa-madre">Envases</span>
-                                <span class="font-mono text-corteza" x-text="'$ ' + fmt(packagingCost)"></span>
+                                <span class="font-mono text-corteza" x-text="'$ ' + fmt(packagingCost)"></span>
                             </div>
                         </template>
                         <template x-if="subrecipeLines.length > 0">
@@ -469,7 +680,7 @@
                         <template x-if="overheadPerHour > 0">
                             <div class="flex justify-between">
                                 <span class="text-masa-madre">Gastos fijos</span>
-                                <span class="font-mono text-corteza" x-text="'$ ' + fmt(fixedCost)"></span>
+                                <span class="font-mono text-corteza" x-text="'$ ' + fmt(fixedCost)"></span>
                             </div>
                         </template>
                     </div>
@@ -477,7 +688,7 @@
                     <div class="border-t border-miga pt-2 flex justify-between items-baseline">
                         <span class="text-sm font-semibold text-corteza">Costo unitario</span>
                         <span class="text-lg font-bold text-corteza font-mono"
-                            x-text="costPerUnit ? '$ ' + fmt(costPerUnit) : '—'"></span>
+                            x-text="costPerUnit ? '$ ' + fmt(costPerUnit) : '—'"></span>
                     </div>
                 </div>
 
@@ -515,7 +726,7 @@
                                 <span class="text-masa-madre">Margen actual</span>
                                 <span class="font-mono font-medium"
                                     :class="currentMarginPct >= 30 ? 'text-green-600' : currentMarginPct >= 15 ? 'text-amber-600' : 'text-red-500'"
-                                    x-text="currentMarginPct !== null ? fmt(currentMarginPct) + ' %' : '—'"></span>
+                                    x-text="currentMarginPct !== null ? fmt(currentMarginPct) + ' %' : '—'"></span>
                             </div>
                             <div class="w-full bg-miga rounded-full h-1.5 overflow-hidden">
                                 <div class="h-1.5 rounded-full transition-all"
@@ -526,7 +737,7 @@
                             <template x-if="isBelowCost">
                                 <div class="bg-red-50 border border-red-200 rounded-md p-2 text-xs text-red-700 mt-1">
                                     ⚠ Vendés por debajo del costo. Subí el precio a al menos
-                                    <strong x-text="'$ ' + fmt(costPerUnit)"></strong>.
+                                    <strong x-text="'$ ' + fmt(costPerUnit)"></strong>.
                                 </div>
                             </template>
                         </div>
@@ -540,12 +751,12 @@
                         <input type="range" x-model.number="targetMargin" min="0" max="80" step="1"
                             class="flex-1 accent-horno h-1.5" />
                         <span class="text-sm font-mono font-medium text-corteza w-10 text-right"
-                            x-text="targetMargin + ' %'"></span>
+                            x-text="targetMargin + ' %'"></span>
                     </div>
                     <div class="flex justify-between items-baseline">
                         <span class="text-xs text-masa-madre">Precio sugerido</span>
                         <span class="text-base font-bold font-mono text-corteza"
-                            x-text="suggestedPrice ? '$ ' + fmt(suggestedPrice) : '—'"></span>
+                            x-text="suggestedPrice ? '$ ' + fmt(suggestedPrice) : '—'"></span>
                     </div>
                 </div>
 

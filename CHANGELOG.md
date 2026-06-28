@@ -5,13 +5,24 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
-## [0.8.10] — 2026-06-25
+## [0.8.10] — 2026-06-27
 
-### Boletas de compra — corrección de error al aplicar sugerencias de IA
+### Compras — Mejoras al detalle de factura + Responsive mobile en todas las vistas
+
+#### Agregado
+
+- **Modal de edición de cabecera de compra:** desde la vista detalle de compra se puede editar el proveedor, fecha, número de factura, notas, alícuota IVA por defecto y percepción por defecto sin salir de la pantalla (`UpdatePurchaseRequest` + `PATCH /purchases/{id}`).
+- **Banner de estado de vinculación:** en el detalle de compra aparece un banner con el progreso de renglones vinculados (ej. "2 de 5 renglones vinculados") y link directo a la pantalla de match cuando quedan pendientes.
+- **Columna "Costo" y badge de estado por renglón:** cada renglón muestra el costo total calculado y un badge de estado — Aplicado (verde), Pendiente (ámbar) o Sin vincular (gris).
+- **`tfoot` con totales de factura:** la tabla de renglones del detalle de compra muestra subtotal neto, IVA total, percepción total y total de la factura.
+- **Formulario "Agregar renglón" en modal:** el formulario de alta de renglón se movió a un modal dedicado siguiendo el patrón CRUD del proyecto (antes era un formulario inline).
+- **Tarjetas mobile en detalle de compra (`purchases/show`):** en mobile la tabla de renglones se reemplaza por tarjetas con descripción, cant./unidad unificadas ("2,5 kg"), precio unitario, total y badge de vinculación. Botones Editar/Eliminar debajo de cada tarjeta. Botón "Ver tabla completa" para expandir.
+- **Tarjetas mobile en todas las vistas con tablas:** el patrón de tarjetas se extendió a las 8 vistas restantes de usuario — Tipos de mano de obra, Gastos fijos, Listas de precios, Mi equipo, Compras (índice), Ingredientes, Envases/Descartables, Recetas (índice) y Recetas (detalle, las 4 secciones de líneas). En mobile muestra cards con Alpine.js `mobileExpanded`; en desktop la tabla completa. Las cards de Recetas (detalle) conservan los inputs de cantidad/horas editables en tiempo real.
 
 #### Corregido
 
-- **Error 500 al aplicar sugerencias de IA en bloque:** al presionar "Aplicar X sugerencias de la IA", el sistema lanzaba `LazyLoadingViolationException` porque la relación `purchase` de cada `PurchaseLine` no estaba pre-cargada. Se resuelve asignando la relación directamente desde el objeto `$purchase` ya disponible en el controlador, sin queries adicionales.
+- **Error 500 al aplicar sugerencias de IA en bloque:** `LazyLoadingViolationException` porque la relación `purchase` de cada `PurchaseLine` no estaba pre-cargada. Se resuelve asignando la relación directamente desde el objeto `$purchase` disponible en el controlador.
+- **`checkDuplicate` excluye la compra actual al editar:** evita falsos positivos de factura duplicada cuando se guarda sin cambiar el número de factura.
 
 ---
 
@@ -51,9 +62,6 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 #### Corregido
 
 - **`cost_per_unit` almacena precio por sub-unidad:** el campo refleja el costo de una sola sub-unidad (ej.: $1 por galleta), no el precio del paquete completo.
-
-#### Corregido
-
 - **Modal de crear/editar envase — proveedor nuevo:** el botón "+ Nuevo" ya no cierra el modal del envase antes de abrir el quick-create de proveedor. Ahora abre el quick-create encima (z-index superior), y al crear el proveedor el select se actualiza automáticamente con la nueva opción seleccionada, replicando el comportamiento del modal de ingredientes.
 
 #### Técnico
@@ -198,6 +206,49 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.7.3] — 2026-06-09
+
+### Compras — Selects con buscador y límite de decimales en inputs
+
+#### Agregado
+
+- **Tom Select en selects de compras:** todos los selects del módulo de compras cuentan ahora con campo de búsqueda integrado para agilizar la carga:
+  - Selector de proveedor en el modal "Nueva compra" y en la pantalla de revisión de factura escaneada.
+  - Selector de insumo/descartable en la vista de vinculación (`/purchases/{id}/match`), donde la lista puede tener cientos de opciones.
+- **Límite de 4 decimales en inputs de precio y cantidad:** todos los inputs numéricos de los formularios de compra (alta de renglón, edición de renglón, revisión de factura escaneada y campo de costo unitario en la vista match) limitan la entrada a un máximo de 4 lugares decimales en tiempo real. `step` también actualizado a `0.0001` para mantener consistencia.
+
+#### Cambiado
+
+- **Vista revisión de factura (`scan/review`):** el select de proveedor migró de renderizado dinámico con Alpine `x-for` a opciones server-side (`@foreach`), lo que permite inicializar Tom Select correctamente. La integración con el evento `supplier-created` (alta rápida de proveedor) se mantiene vía la API de Tom Select (`addOption` + `setValue`).
+- **`resources/css/app.css`:** importa el CSS de Tom Select con overrides de estilos para que los dropdowns de búsqueda sean coherentes con el diseño Tailwind (colores `corteza`, `horno`, `miga`).
+- **`resources/js/app.js`:** importa y expone `TomSelect` como `window.TomSelect`; inicializa automáticamente los selects con `data-searchable`; registra listener global para limitar decimales en inputs con `data-maxdecimals="4"`.
+
+---
+
+## [0.7.2] — 2026-06-09
+
+### Compras — Vinculación de renglones con catálogo (Fase 2)
+
+#### Agregado
+
+- **Vista dedicada `/purchases/{id}/match`:** pantalla exclusiva para vincular los renglones de una factura con insumos o descartables del catálogo. Separada del detalle de compra para mantener cada vista enfocada en una sola tarea.
+- **Botón de vinculación en el índice de compras:** ícono de cadena (link) por fila, visible solo cuando la compra tiene renglones. Ámbar cuando hay renglones pendientes de vincular; verde cuando todos están aplicados. El `title` muestra cuántos renglones quedan pendientes.
+- **Cálculo reactivo del costo unitario (Alpine.js):** al seleccionar un insumo en la vista de match, se calcula y muestra el costo por unidad del catálogo antes de aplicar.
+  - Unidades compatibles (kg↔gr, L↔ml, etc.): conversión automática, sin campo adicional.
+  - Unidades incompatibles (u → kg/gr/L): aparece campo divisor editable ("÷ N unidad/u").
+  - El campo costo por unidad es siempre editable antes de confirmar.
+- **Parser de descripción para cantidad de paquete:** al seleccionar un insumo con unidades incompatibles, el sistema analiza la descripción del renglón buscando patrones como "X 25 Kg", "x5lts", "× 200 ml". Si detecta una cantidad compatible con el insumo, pre-llena el divisor automáticamente con marca ✦ (ámbar) para que el usuario lo verifique antes de aplicar.
+- **`PurchaseLineRecorder::applyWithCost()`:** nuevo método que aplica un costo unitario explícito (provisto por el usuario) sin pasar por la conversión de unidades. Permite imputar compras donde la unidad de la factura (unidad/bolsa) es incompatible con la unidad del insumo (kg/gr).
+- **`applied_count` en el índice de compras:** el query de listado ahora incluye el conteo de renglones ya aplicados vía `withCount`, usado para determinar el color del botón de vinculación sin queries adicionales.
+
+#### Cambiado
+
+- **`PurchaseController::matchLine()`:** acepta campo opcional `unit_cost` (decimal). Si está presente, usa `applyWithCost()` en lugar de `apply()`, permitiendo aplicar costos calculados por el usuario para unidades incompatibles.
+- **Vista de match:** columna "Cantidad (factura)" eliminada. El foco es la descripción del producto, el precio unitario de la factura y el insumo sugerido con su costo editable.
+- **Select de insumos en vista de match:** muestra la unidad del catálogo entre paréntesis (ej: "Harina 000 (kg)") para que el usuario pueda identificar rápidamente la unidad de medida antes de vincular.
+
+---
+
 ## [0.7.1] — 2026-06-09
 
 ### Compras — IVA por renglón, iconos de acción y fixes
@@ -217,6 +268,41 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.7.0] — 2026-06-08
+
+### Módulo de Compras — Registro de facturas de proveedores
+
+#### Agregado
+
+**Módulo de compras**
+- Tabla `purchases`: cabecera de factura (tenant, proveedor, N° de factura opcional, fecha, notas)
+- Tabla `purchase_lines`: líneas de compra con tipo (ingrediente / envase), insumo, cantidad, unidad de compra, precio unitario y subtotal calculado
+- `PurchaseController`: index con filtros (proveedor, rango de fechas), show con líneas, store, destroy (solo si sin líneas), storeLine, updateLine, destroyLine
+- 3 Form Requests con validación (`StorePurchaseRequest`, `StorePurchaseLineRequest`, `UpdatePurchaseLineRequest`)
+- Modelo `Purchase` con relaciones a Tenant, Supplier y PurchaseLine; helper `totalAmount()`
+- Modelo `PurchaseLine` con helpers `isIngredient()` / `isPackaging()` y relaciones a Ingredient y Packaging
+
+**Actualización automática de costos al cargar una factura**
+- Al agregar o editar una línea de compra, el costo del ingrediente/envase se actualiza inmediatamente
+- Conversión automática de unidades: si comprás 1 kg a $500/kg y el ingrediente se mide en gr, el sistema calcula y persiste $0.50/gr usando `UnitConverter`
+- Se crea automáticamente una entrada en `ingredient_price_logs` / `packaging_price_logs`
+- `RecipeCostPropagator` dispara recálculo en cascada de todas las recetas que usan el insumo actualizado
+- Acción registrada en `AdminAuditLog`
+
+**Vistas**
+- `purchases/index.blade.php`: listado paginado con filtros por proveedor y rango de fechas
+- `purchases/show.blade.php`: detalle con header de compra, tabla de ítems, formulario inline para agregar ítems (con selects dinámicos ingrediente/envase vía Alpine.js), modal de edición de línea
+- Creación rápida de proveedor inline desde el modal de nueva compra (patrón quick-create existente)
+- Botón "← Volver a compras" visible solo en mobile en la vista de detalle
+
+**Navegación**
+- "Compras" agregado al sidebar desktop (sección Costos, debajo de Mano de Obra)
+- Barra inferior mobile: "Gastos" reemplazado por "Compras" (ícono carrito)
+- "Gastos Fijos" movido al drawer "Más"
+- Breadcrumbs actualizados para `purchases.*` y `purchases.show`
+
+---
+
 ## [0.6.5] — 2026-06-08
 
 ### Mobile — Barra de navegación inferior + fixes responsive
@@ -233,6 +319,26 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 - **Modal sin ancho completo en mobile:** el componente `modal.blade.php` ahora aplica `w-full` en mobile (antes solo lo hacía en `sm:`).
 - **Bloque capacidad productiva en Mi negocio:** colapsa a columna vertical en mobile (`flex-col sm:flex-row`).
 - **Botones del header de receta:** texto adaptativo con `whitespace-nowrap` para que no se deformen. En mobile muestran etiquetas cortas ("precio", "Desact.", "Editar") y el nombre de la receta se trunca con `truncate` cediendo espacio a los botones.
+
+---
+
+## [0.6.4] — 2026-06-05
+
+### UX — Ordenamiento completo en tablas + edición inline de precio de venta
+
+#### Agregado
+
+- **Ordenamiento asc/desc en todas las datatables:** Ingredientes, Envases, Gastos fijos, Mano de obra, Recetas y Proveedores. Las columnas sortables se marcan con ↑/↓ y preservan el filtro/búsqueda activos.
+- **Búsqueda en el dashboard:** el listado de rentabilidad acepta `?search=` por nombre de receta, consistente con el resto de los módulos.
+- **Ordenamiento de columnas calculadas en el dashboard:** Costo/u, Margen y Margen % ahora son ordenables. Al ser valores calculados en PHP (no columnas SQL), el controlador carga todas las recetas activas, computa los costos, ordena la colección en memoria (nulls siempre al final) y pagina manualmente con `LengthAwarePaginator`.
+- **Precio de venta editable inline en el dashboard:** clic sobre el precio abre un input; Enter o blur guardan vía `PATCH /recipes/{id}/selling-price`. El margen y margen % de la fila se actualizan reactivamente sin recargar la página.
+- **Precio de venta editable inline en el listado de recetas:** misma UX que el dashboard; columna "Precio venta / u" visible y editable directamente desde el índice.
+- **Recetas inactivas ocultas del dashboard:** solo recetas con `active = true` aparecen en la tabla de rentabilidad; el índice de recetas las sigue mostrando al final.
+
+#### Corregido
+
+- **Super admin bloqueado al impersonar:** `CheckTenantRole` ahora cortocircuita el chequeo de rol cuando el usuario es super admin con sesión de impersonación activa, permitiendo acceder a rutas de owner (`/business`, etc.) sin necesitar entrada en `tenant_users`.
+- **Input de precio quedaba en blanco sin cambios:** eliminado `x-model` del input numérico (bug conocido de Alpine.js v3 con `type="number"`). Ahora se usa `x-ref` + lectura imperativa del DOM; `isDirty` evita enviar la petición si el usuario no modificó el valor.
 
 ---
 
@@ -428,149 +534,6 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
-## [0.2.0] — 2026-05-13
-
-### Etapa 1 completa — Fundación Web
-
-#### Agregado
-- **Auth (Breeze):** login, logout, recuperación de contraseña, verificación de email
-- **Roles y permisos:** enum `TenantUserRole` (super_admin, owner, admin, viewer), Gates por rol, middleware `CheckTenantRole`
-- **Multi-tenancy:** middleware `SetTenantContext` resuelve tenant desde el usuario autenticado; solo TenantUsers activos son considerados
-- **Mi equipo:** invitaciones por email con token, listado de miembros, edición de rol, baja lógica (activar/desactivar)
-- **Mi negocio:** edición de nombre, país, moneda, horas productivas mensuales y logo (upload a storage)
-- **Mi perfil:** edición de nombre, email y contraseña
-- **Branding Levado:** paleta Tailwind (masa-madre, corteza, harina, miga, horno, membrillo), tipografías Inter/Lora/JetBrains Mono, logo SVG wordmark
-- **Layouts:** `app.blade.php` (tenant) y `guest.blade.php` (auth) con branding completo
-- **Navegación:** links condicionales por rol (`@can`), menú de usuario con perfil y cerrar sesión
-- **Vistas en español:** todas las vistas de auth y perfil hardcodeadas en español rioplatense
-- **Registro bloqueado:** ruta `/register` eliminada; usuarios solo entran por invitación
-- **Seeder demo:** tenant "Levado HQ" con `admin@levado.com` (super_admin) y tenant "Panadería Demo" con `owner@demo.com` (owner); password `password`
-- **Factory:** `TenantFactory` con estado `inactive()`
-- **Tests:** suite completa de 35 tests — auth, perfil, aislamiento de tenants por rol y entre tenants, usuario inactivo
-
-#### Corregido
-- `SetTenantContext` redirige al login (en vez de abort 404) cuando no hay tenant activo
-- Dashboard requiere middleware `tenant` (antes era accesible sin tenant)
-- `TenantUser.active = false` impide resolución del tenant (antes se ignoraba el estado del vínculo)
-
----
-
-## [0.1.2] — 2026-05-11
-
-### Etapas 1.1 y 1.2 — Setup y Multi-tenancy
-
-#### Agregado
-- Inicialización del proyecto Laravel 13 en Herd local
-- Base de datos MySQL con migraciones `tenants` y `tenant_settings`
-- Modelos `Tenant` y `TenantSetting` con helper `getSetting/setSetting`
-- Middleware `SetTenantContext` (estructura base)
-- Repositorio Git con ramas `master` y `develop`
-- Versionado en `config/app.php` (`config('app.version')`)
-
----
-
-## [0.6.4] — 2026-06-05
-
-### UX — Ordenamiento completo en tablas + edición inline de precio de venta
-
-#### Agregado
-
-- **Ordenamiento asc/desc en todas las datatables:** Ingredientes, Envases, Gastos fijos, Mano de obra, Recetas y Proveedores. Las columnas sortables se marcan con ↑/↓ y preservan el filtro/búsqueda activos.
-- **Búsqueda en el dashboard:** el listado de rentabilidad acepta `?search=` por nombre de receta, consistente con el resto de los módulos.
-- **Ordenamiento de columnas calculadas en el dashboard:** Costo/u, Margen y Margen % ahora son ordenables. Al ser valores calculados en PHP (no columnas SQL), el controlador carga todas las recetas activas, computa los costos, ordena la colección en memoria (nulls siempre al final) y pagina manualmente con `LengthAwarePaginator`.
-- **Precio de venta editable inline en el dashboard:** clic sobre el precio abre un input; Enter o blur guardan vía `PATCH /recipes/{id}/selling-price`. El margen y margen % de la fila se actualizan reactivamente sin recargar la página.
-- **Precio de venta editable inline en el listado de recetas:** misma UX que el dashboard; columna "Precio venta / u" visible y editable directamente desde el índice.
-- **Recetas inactivas ocultas del dashboard:** solo recetas con `active = true` aparecen en la tabla de rentabilidad; el índice de recetas las sigue mostrando al final.
-
-#### Corregido
-
-- **Super admin bloqueado al impersonar:** `CheckTenantRole` ahora cortocircuita el chequeo de rol cuando el usuario es super admin con sesión de impersonación activa, permitiendo acceder a rutas de owner (`/business`, etc.) sin necesitar entrada en `tenant_users`.
-- **Input de precio quedaba en blanco sin cambios:** eliminado `x-model` del input numérico (bug conocido de Alpine.js v3 con `type="number"`). Ahora se usa `x-ref` + lectura imperativa del DOM; `isDirty` evita enviar la petición si el usuario no modificó el valor.
-
----
-
-## [Unreleased]
-
----
-
-## [0.7.3] — 2026-06-09
-
-### Compras — Selects con buscador y límite de decimales en inputs
-
-#### Agregado
-
-- **Tom Select en selects de compras:** todos los selects del módulo de compras cuentan ahora con campo de búsqueda integrado para agilizar la carga:
-  - Selector de proveedor en el modal "Nueva compra" y en la pantalla de revisión de factura escaneada.
-  - Selector de insumo/descartable en la vista de vinculación (`/purchases/{id}/match`), donde la lista puede tener cientos de opciones.
-- **Límite de 4 decimales en inputs de precio y cantidad:** todos los inputs numéricos de los formularios de compra (alta de renglón, edición de renglón, revisión de factura escaneada y campo de costo unitario en la vista match) limitan la entrada a un máximo de 4 lugares decimales en tiempo real. `step` también actualizado a `0.0001` para mantener consistencia.
-
-#### Cambiado
-
-- **Vista revisión de factura (`scan/review`):** el select de proveedor migró de renderizado dinámico con Alpine `x-for` a opciones server-side (`@foreach`), lo que permite inicializar Tom Select correctamente. La integración con el evento `supplier-created` (alta rápida de proveedor) se mantiene vía la API de Tom Select (`addOption` + `setValue`).
-- **`resources/css/app.css`:** importa el CSS de Tom Select con overrides de estilos para que los dropdowns de búsqueda sean coherentes con el diseño Tailwind (colores `corteza`, `horno`, `miga`).
-- **`resources/js/app.js`:** importa y expone `TomSelect` como `window.TomSelect`; inicializa automáticamente los selects con `data-searchable`; registra listener global para limitar decimales en inputs con `data-maxdecimals="4"`.
-
----
-
-## [0.7.2] — 2026-06-09
-
-### Compras — Vinculación de renglones con catálogo (Fase 2)
-
-#### Agregado
-
-- **Vista dedicada `/purchases/{id}/match`:** pantalla exclusiva para vincular los renglones de una factura con insumos o descartables del catálogo. Separada del detalle de compra para mantener cada vista enfocada en una sola tarea.
-- **Botón de vinculación en el índice de compras:** ícono de cadena (link) por fila, visible solo cuando la compra tiene renglones. Ámbar cuando hay renglones pendientes de vincular; verde cuando todos están aplicados. El `title` muestra cuántos renglones quedan pendientes.
-- **Cálculo reactivo del costo unitario (Alpine.js):** al seleccionar un insumo en la vista de match, se calcula y muestra el costo por unidad del catálogo antes de aplicar.
-  - Unidades compatibles (kg↔gr, L↔ml, etc.): conversión automática, sin campo adicional.
-  - Unidades incompatibles (u → kg/gr/L): aparece campo divisor editable ("÷ N unidad/u").
-  - El campo costo por unidad es siempre editable antes de confirmar.
-- **Parser de descripción para cantidad de paquete:** al seleccionar un insumo con unidades incompatibles, el sistema analiza la descripción del renglón buscando patrones como "X 25 Kg", "x5lts", "× 200 ml". Si detecta una cantidad compatible con el insumo, pre-llena el divisor automáticamente con marca ✦ (ámbar) para que el usuario lo verifique antes de aplicar.
-- **`PurchaseLineRecorder::applyWithCost()`:** nuevo método que aplica un costo unitario explícito (provisto por el usuario) sin pasar por la conversión de unidades. Permite imputar compras donde la unidad de la factura (unidad/bolsa) es incompatible con la unidad del insumo (kg/gr).
-- **`applied_count` en el índice de compras:** el query de listado ahora incluye el conteo de renglones ya aplicados vía `withCount`, usado para determinar el color del botón de vinculación sin queries adicionales.
-
-#### Cambiado
-
-- **`PurchaseController::matchLine()`:** acepta campo opcional `unit_cost` (decimal). Si está presente, usa `applyWithCost()` en lugar de `apply()`, permitiendo aplicar costos calculados por el usuario para unidades incompatibles.
-- **Vista de match:** columna "Cantidad (factura)" eliminada. El foco es la descripción del producto, el precio unitario de la factura y el insumo sugerido con su costo editable.
-- **Select de insumos en vista de match:** muestra la unidad del catálogo entre paréntesis (ej: "Harina 000 (kg)") para que el usuario pueda identificar rápidamente la unidad de medida antes de vincular.
-
----
-
-## [0.7.0] — 2026-06-08
-
-### Módulo de Compras — Registro de facturas de proveedores
-
-#### Agregado
-
-**Módulo de compras**
-- Tabla `purchases`: cabecera de factura (tenant, proveedor, N° de factura opcional, fecha, notas)
-- Tabla `purchase_lines`: líneas de compra con tipo (ingrediente / envase), insumo, cantidad, unidad de compra, precio unitario y subtotal calculado
-- `PurchaseController`: index con filtros (proveedor, rango de fechas), show con líneas, store, destroy (solo si sin líneas), storeLine, updateLine, destroyLine
-- 3 Form Requests con validación (`StorePurchaseRequest`, `StorePurchaseLineRequest`, `UpdatePurchaseLineRequest`)
-- Modelo `Purchase` con relaciones a Tenant, Supplier y PurchaseLine; helper `totalAmount()`
-- Modelo `PurchaseLine` con helpers `isIngredient()` / `isPackaging()` y relaciones a Ingredient y Packaging
-
-**Actualización automática de costos al cargar una factura**
-- Al agregar o editar una línea de compra, el costo del ingrediente/envase se actualiza inmediatamente
-- Conversión automática de unidades: si comprás 1 kg a $500/kg y el ingrediente se mide en gr, el sistema calcula y persiste $0.50/gr usando `UnitConverter`
-- Se crea automáticamente una entrada en `ingredient_price_logs` / `packaging_price_logs`
-- `RecipeCostPropagator` dispara recálculo en cascada de todas las recetas que usan el insumo actualizado
-- Acción registrada en `AdminAuditLog`
-
-**Vistas**
-- `purchases/index.blade.php`: listado paginado con filtros por proveedor y rango de fechas
-- `purchases/show.blade.php`: detalle con header de compra, tabla de ítems, formulario inline para agregar ítems (con selects dinámicos ingrediente/envase vía Alpine.js), modal de edición de línea
-- Creación rápida de proveedor inline desde el modal de nueva compra (patrón quick-create existente)
-- Botón "← Volver a compras" visible solo en mobile en la vista de detalle
-
-**Navegación**
-- "Compras" agregado al sidebar desktop (sección Costos, debajo de Mano de Obra)
-- Barra inferior mobile: "Gastos" reemplazado por "Compras" (ícono carrito)
-- "Gastos Fijos" movido al drawer "Más"
-- Breadcrumbs actualizados para `purchases.*` y `purchases.show`
-
----
-
 ## [0.3.0] — 2026-05-18
 
 ### Backoffice B.1 + Frontend + Módulo de Costos (Etapa 2, parcial)
@@ -623,3 +586,44 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 #### Métricas
 - Tests: 106 (todos verdes) — cubre CRUD, roles, aislamiento de tenants y trazabilidad de precios
 - Nuevas tablas: `admin_audit_logs`, `locations`, `ingredients`, `ingredient_price_logs`, `suppliers`, `packagings`, `packaging_price_logs`, `fixed_costs`, `fixed_cost_logs`, `fixed_cost_categories`
+
+---
+
+## [0.2.0] — 2026-05-13
+
+### Etapa 1 completa — Fundación Web
+
+#### Agregado
+- **Auth (Breeze):** login, logout, recuperación de contraseña, verificación de email
+- **Roles y permisos:** enum `TenantUserRole` (super_admin, owner, admin, viewer), Gates por rol, middleware `CheckTenantRole`
+- **Multi-tenancy:** middleware `SetTenantContext` resuelve tenant desde el usuario autenticado; solo TenantUsers activos son considerados
+- **Mi equipo:** invitaciones por email con token, listado de miembros, edición de rol, baja lógica (activar/desactivar)
+- **Mi negocio:** edición de nombre, país, moneda, horas productivas mensuales y logo (upload a storage)
+- **Mi perfil:** edición de nombre, email y contraseña
+- **Branding Levado:** paleta Tailwind (masa-madre, corteza, harina, miga, horno, membrillo), tipografías Inter/Lora/JetBrains Mono, logo SVG wordmark
+- **Layouts:** `app.blade.php` (tenant) y `guest.blade.php` (auth) con branding completo
+- **Navegación:** links condicionales por rol (`@can`), menú de usuario con perfil y cerrar sesión
+- **Vistas en español:** todas las vistas de auth y perfil hardcodeadas en español rioplatense
+- **Registro bloqueado:** ruta `/register` eliminada; usuarios solo entran por invitación
+- **Seeder demo:** tenant "Levado HQ" con `admin@levado.com` (super_admin) y tenant "Panadería Demo" con `owner@demo.com` (owner); password `password`
+- **Factory:** `TenantFactory` con estado `inactive()`
+- **Tests:** suite completa de 35 tests — auth, perfil, aislamiento de tenants por rol y entre tenants, usuario inactivo
+
+#### Corregido
+- `SetTenantContext` redirige al login (en vez de abort 404) cuando no hay tenant activo
+- Dashboard requiere middleware `tenant` (antes era accesible sin tenant)
+- `TenantUser.active = false` impide resolución del tenant (antes se ignoraba el estado del vínculo)
+
+---
+
+## [0.1.2] — 2026-05-11
+
+### Etapas 1.1 y 1.2 — Setup y Multi-tenancy
+
+#### Agregado
+- Inicialización del proyecto Laravel 13 en Herd local
+- Base de datos MySQL con migraciones `tenants` y `tenant_settings`
+- Modelos `Tenant` y `TenantSetting` con helper `getSetting/setSetting`
+- Middleware `SetTenantContext` (estructura base)
+- Repositorio Git con ramas `master` y `develop`
+- Versionado en `config/app.php` (`config('app.version')`)

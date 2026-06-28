@@ -16,6 +16,7 @@
 
     <div class="py-8 px-6 lg:px-8"
         x-data="{
+            mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
                 this.editing = record;
@@ -89,7 +90,62 @@
                     @endif
                 </x-empty-state>
             @else
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                {{-- Cards (mobile) --}}
+                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                    @foreach($fixedCosts as $fixedCost)
+                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $fixedCost->active ? '' : 'opacity-50' }}">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="font-medium text-corteza">{{ $fixedCost->name }}</div>
+                                    @if($fixedCost->category)
+                                        <div class="text-xs text-masa-madre mt-0.5">{{ $fixedCost->category->name }}</div>
+                                    @endif
+                                    <div class="text-sm font-mono text-corteza mt-1">$ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }} / mes</div>
+                                </div>
+                                <x-status-badge :active="$fixedCost->active" />
+                            </div>
+                            @can('manage-costs')
+                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
+                                    <button type="button"
+                                        @click="openEdit({{ Js::from([
+                                            'id'                     => $fixedCost->id,
+                                            'name'                   => $fixedCost->name,
+                                            'fixed_cost_category_id' => $fixedCost->fixed_cost_category_id ?? '',
+                                            'monthly_amount'         => $fixedCost->monthly_amount,
+                                            'valid_from'             => date('Y-m-d'),
+                                        ]) }})"
+                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                        Editar
+                                    </button>
+                                    <form method="POST" action="{{ route('fixed-costs.toggle-active', $fixedCost) }}" class="flex-1">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                            class="w-full py-1.5 px-3 text-sm rounded transition-colors {{ $fixedCost->active ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-600 hover:bg-green-50' }}">
+                                            {{ $fixedCost->active ? 'Desactivar' : 'Activar' }}
+                                        </button>
+                                    </form>
+                                </div>
+                            @endcan
+                        </div>
+                    @endforeach
+                    <div class="bg-miga/50 rounded-lg px-4 py-3 text-right text-sm font-semibold text-corteza">
+                        Total mensual activo: <span class="font-mono ml-1">$ {{ number_format($totalActive, 2, ',', '.') }}</span>
+                    </div>
+                    <button type="button" @click="mobileExpanded = true"
+                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
+                        Ver tabla completa ↓
+                    </button>
+                </div>
+
+                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
+                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
+                    <div class="md:hidden px-4 py-2 border-b border-miga">
+                        <button type="button" @click="mobileExpanded = false"
+                            class="text-sm text-masa-madre hover:text-corteza">
+                            ← Volver a cards
+                        </button>
+                    </div>
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>

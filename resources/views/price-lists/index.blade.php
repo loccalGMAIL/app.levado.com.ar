@@ -15,6 +15,7 @@
 
     <div class="py-8 px-6 lg:px-8"
         x-data="{
+            mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
                 this.editing = record;
@@ -87,7 +88,80 @@
             @if($priceLists->isEmpty())
                 <x-empty-state>No se encontraron listas con esos filtros.</x-empty-state>
             @else
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                {{-- Cards (mobile) --}}
+                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                    @foreach($priceLists as $priceList)
+                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $priceList->active ? '' : 'opacity-50' }}">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-medium text-corteza">{{ $priceList->name }}</span>
+                                        @if($priceList->is_default)
+                                            <span class="text-[10px] uppercase tracking-wide bg-miga text-masa-madre px-1.5 py-0.5 rounded">Base</span>
+                                        @endif
+                                    </div>
+                                    <div class="text-sm text-masa-madre mt-1">
+                                        @if($priceList->adjustment_pct !== null)
+                                            {{ number_format($priceList->adjustment_pct, 2, ',', '.') }}% ajuste
+                                        @else
+                                            Sin ajuste
+                                        @endif
+                                        · {{ $priceList->prices_count }} precios
+                                    </div>
+                                </div>
+                                <x-status-badge :active="$priceList->active" label-active="activa" label-inactive="inactiva" />
+                            </div>
+                            @can('manage-costs')
+                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga flex-wrap">
+                                    @if(! $priceList->is_default && $priceList->adjustment_pct !== null && $priceList->active)
+                                        <form method="POST" action="{{ route('price-lists.apply-suggestions', $priceList) }}"
+                                            onsubmit="return confirm('¿Aplicar sugerencias a todas las recetas sin precio en esta lista?')"
+                                            class="flex-1">
+                                            @csrf
+                                            <button type="submit"
+                                                class="w-full py-1.5 px-3 text-sm border border-amber-300 text-horno hover:bg-amber-50 rounded transition-colors">
+                                                Aplicar sugerencias
+                                            </button>
+                                        </form>
+                                    @endif
+                                    <button type="button"
+                                        @click="openEdit({{ Js::from([
+                                            'id'             => $priceList->id,
+                                            'name'           => $priceList->name,
+                                            'adjustment_pct' => $priceList->adjustment_pct,
+                                            'is_default'     => $priceList->is_default,
+                                        ]) }})"
+                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                        Editar
+                                    </button>
+                                    @unless($priceList->is_default)
+                                        <form method="POST" action="{{ route('price-lists.toggle-active', $priceList) }}" class="flex-1">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit"
+                                                class="w-full py-1.5 px-3 text-sm rounded transition-colors {{ $priceList->active ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-600 hover:bg-green-50' }}">
+                                                {{ $priceList->active ? 'Desactivar' : 'Activar' }}
+                                            </button>
+                                        </form>
+                                    @endunless
+                                </div>
+                            @endcan
+                        </div>
+                    @endforeach
+                    <button type="button" @click="mobileExpanded = true"
+                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
+                        Ver tabla completa ↓
+                    </button>
+                </div>
+
+                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
+                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
+                    <div class="md:hidden px-4 py-2 border-b border-miga">
+                        <button type="button" @click="mobileExpanded = false"
+                            class="text-sm text-masa-madre hover:text-corteza">
+                            ← Volver a cards
+                        </button>
+                    </div>
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
