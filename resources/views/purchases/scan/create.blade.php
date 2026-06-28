@@ -31,12 +31,39 @@
                 class="bg-white rounded-lg shadow p-6 space-y-5"
                 x-data="{
                     submitting: false,
+                    preparing: false,
                     fileName: '',
                     previewUrl: '',
-                    onPick(e) {
-                        const file = e.target.files[0];
-                        this.fileName = file ? file.name : '';
-                        this.previewUrl = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+                    pickError: '',
+                    async onPick(e) {
+                        const input = e.target;
+                        const original = input.files[0];
+                        this.pickError = '';
+                        if (this.previewUrl) { URL.revokeObjectURL(this.previewUrl); }
+                        this.previewUrl = '';
+                        this.fileName = '';
+                        if (!original) { return; }
+
+                        this.preparing = true;
+                        try {
+                            const file = await (window.compressInvoiceImage ? window.compressInvoiceImage(original) : Promise.resolve(original));
+
+                            if (file.size > 10 * 1024 * 1024) {
+                                this.pickError = 'El archivo supera los 10 MB. Probá con una foto o un PDF más liviano.';
+                                input.value = '';
+                                return;
+                            }
+
+                            // Upload the (compressed) file instead of the original.
+                            const dt = new DataTransfer();
+                            dt.items.add(file);
+                            input.files = dt.files;
+
+                            this.fileName = file.name;
+                            this.previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+                        } finally {
+                            this.preparing = false;
+                        }
                     }
                 }"
                 @submit="submitting = true">
@@ -64,7 +91,9 @@
                             class="hidden" required
                             @change="onPick($event)">
                     </label>
-                    <p class="mt-1 text-xs text-masa-madre" x-show="fileName" x-text="'Archivo: ' + fileName"></p>
+                    <p class="mt-1 text-xs text-masa-madre" x-show="preparing">Preparando imagen…</p>
+                    <p class="mt-1 text-xs text-masa-madre" x-show="fileName && !preparing" x-text="'Archivo: ' + fileName"></p>
+                    <p class="mt-1 text-xs text-red-600" x-show="pickError" x-text="pickError"></p>
                     <x-input-error :messages="$errors->get('invoice')" class="mt-2" />
                 </div>
 
@@ -73,7 +102,7 @@
                         La lectura puede tardar unos segundos. No cierres la página.
                     </p>
                     <button type="submit"
-                        x-bind:disabled="submitting || !fileName"
+                        x-bind:disabled="submitting || preparing || !fileName"
                         class="inline-flex items-center gap-2 px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <template x-if="submitting">
                             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

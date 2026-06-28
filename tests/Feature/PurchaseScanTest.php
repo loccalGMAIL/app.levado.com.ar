@@ -58,6 +58,35 @@ test('scan renders the review with detected lines', function () {
         ->assertSee('Harina 000'); // suggestion hint
 });
 
+test('scan downscales an oversized invoice photo before storing it', function () {
+    Storage::fake('public');
+    [$user, $tenant] = ownerForScan();
+    Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => 'kg']);
+
+    config(['services.anthropic.key' => 'test-key']);
+    Http::fake([
+        'api.anthropic.com/*' => Http::response([
+            'content' => [['type' => 'text', 'text' => json_encode([
+                'supplier_name' => 'Molino',
+                'invoice_number' => '0012-1',
+                'invoice_date' => '2026-05-14',
+                'total' => 100,
+                'lines' => [],
+            ])]],
+        ]),
+    ]);
+
+    $this->actingAs($user)->post(route('purchases.scan'), [
+        'invoice' => UploadedFile::fake()->image('factura.jpg', 4000, 3000),
+    ])->assertOk();
+
+    $stored = Storage::disk('public')->files("purchases/{$tenant->id}");
+    expect($stored)->toHaveCount(1);
+
+    [$width, $height] = getimagesizefromstring(Storage::disk('public')->get($stored[0]));
+    expect(max($width, $height))->toBeLessThanOrEqual(1600);
+});
+
 test('storing a scanned purchase captures lines without applying cost', function () {
     [$user, $tenant] = ownerForScan();
     $supplier = Supplier::factory()->for($tenant)->create();

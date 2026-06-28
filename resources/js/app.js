@@ -10,6 +10,7 @@ Alpine.start();
 
 import './onboarding-tour';
 import './purchases/match';
+import './image-compress';
 
 // Initialize Tom Select on [data-searchable] elements (non-Alpine selects)
 document.querySelectorAll('[data-searchable]').forEach(function (el) {
