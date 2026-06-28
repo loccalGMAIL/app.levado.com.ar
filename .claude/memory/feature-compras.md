@@ -37,6 +37,12 @@ Rama: `feature/compras` — versión 0.7.1
 - Requiere `ANTHROPIC_API_KEY` en `.env`. Sin key → error amigable, no rompe.
 - Modelo configurable con `ANTHROPIC_MODEL` (default `claude-haiku-4-5`)
 
+### `InvoiceImagePreparer` (v0.8.12)
+- Defensa en profundidad en el servidor: reduce con GD las imágenes que superan 1600px de lado largo antes del `base64`/Anthropic y las re-encoda como JPEG (q80).
+- `PurchaseScanController@scan` lee los bytes del upload **una sola vez** (`file_get_contents`), los pasa por `prepare()` y los reutiliza para guardar y para el `base64` (antes hacía `store` + `Storage::get` + `base64_encode`, duplicando el archivo en RAM).
+- PDFs, imágenes ya chicas o GD ausente → devuelve el contenido original sin tocar. La imagen almacenada (`purchases/{tenant}/{uuid}.jpg|pdf`) queda optimizada.
+- No reduce tokens de la API (Anthropic ya redimensiona a ~1.15 MP); el beneficio es memoria PHP, payload, latencia y storage.
+
 ### `PurchaseLineRecorder`
 - `storePending()`: crea renglón sin imputar costo. Guarda `iva_rate`.
 - `apply()`: imputa precio al insumo/envase (price log + propagación). Marca `cost_applied_at`.
@@ -102,6 +108,7 @@ Rama: `feature/compras` — versión 0.7.1
 ### `purchases/scan/create.blade.php`
 - Dropzone con preview de imagen, acepta JPG/PNG/PDF hasta 10 MB
 - Spinner "Leyendo la factura…" mientras procesa
+- **Compresión en el cliente (v0.8.12):** al elegir/sacar una foto, `window.compressInvoiceImage` (`resources/js/image-compress.js`) reduce la imagen a 1600px de lado largo y la re-encoda como JPEG (0.8) vía `createImageBitmap`/canvas **antes** de previsualizar y subir. El archivo del `<input>` se reemplaza por la versión liviana con `DataTransfer`. Esto corrige el error "Memoria insuficiente…" en celulares de gama baja (decodificar una foto de 12–48 MP a bitmap agotaba la RAM del navegador). Estado `preparing` ("Preparando imagen…") deshabilita el submit; PDFs y errores → pasa el archivo original.
 
 ### `purchases/scan/review.blade.php`
 - Cabecera editable con select de proveedor dinámico (Alpine + `x-for`)

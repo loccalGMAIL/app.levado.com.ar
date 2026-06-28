@@ -5,6 +5,23 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.12] — 2026-06-28
+
+### Escaneo de facturas — control de calidad/tamaño de imagen (fix de memoria)
+
+#### Corregido
+
+- **"Memoria insuficiente para completar la operación anterior" al escanear con la cámara:** las fotos de cámara llegaban a resolución completa (12–48 MP) y se previsualizaban/subían sin redimensionar, agotando la memoria del navegador en celulares de gama baja. Ahora la imagen se reduce a 1600px de lado largo y se re-encoda como JPEG **en el cliente** (`resources/js/image-compress.js`, vía `createImageBitmap`/canvas) antes de previsualizarla y subirla; el archivo del input se reemplaza por la versión liviana. Tolerante a fallos: ante cualquier error usa el archivo original.
+
+#### Agregado
+
+- **Defensa en profundidad en el servidor (`InvoiceImagePreparer`):** las imágenes grandes que lleguen al backend (uploads sin JS, escritorio) se reducen con GD antes del `base64`/Anthropic, leyendo los bytes una sola vez (antes se duplicaba el archivo entero en RAM en `PurchaseScanController@scan`). Los PDF y las imágenes ya chicas pasan intactos. La imagen almacenada queda optimizada (menos storage).
+- **Estado "Preparando imagen…" y validación de tamaño en el cliente:** el botón "Leer factura" se deshabilita mientras se procesa la foto y se muestra un error amigable si el archivo supera los 10 MB.
+
+> Nota: la compresión no reduce el costo de tokens de la API (Anthropic ya redimensiona internamente toda imagen a ~1.15 MP para facturar); el beneficio es memoria del navegador y del servidor, ancho de banda, latencia y almacenamiento.
+
+---
+
 ## [0.8.11] — 2026-06-27
 
 ### Mejoras generales de UI — decimales, orden de columnas y navegación
