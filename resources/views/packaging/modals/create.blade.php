@@ -52,14 +52,14 @@
             <x-input-label for="create_pkg_cost"
                 x-text="parseInt(pkgCreateSubdivisions) > 1 ? 'Costo por presentación' : 'Costo por unidad'" />
             <x-text-input id="create_pkg_cost" name="cost_per_unit" type="number"
-                step="0.0001" min="0"
+                step="0.01" min="0"
                 class="mt-1 block w-full"
                 :value="old('cost_per_unit')"
                 x-model="pkgCreateCost"
                 required />
             <p class="mt-1 text-xs text-masa-madre"
                 x-show="parseInt(pkgCreateSubdivisions) > 1 && pkgCreateCost"
-                x-text="'≈ $' + (parseFloat(pkgCreateCost) / (parseInt(pkgCreateSubdivisions) || 1)).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 4}) + ' / ' + (pkgCreateSubdivisionLabel || 'sub-unidad')">
+                x-text="'≈ $' + (parseFloat(pkgCreateCost) / (parseInt(pkgCreateSubdivisions) || 1)).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' / ' + (pkgCreateSubdivisionLabel || 'sub-unidad')">
             </p>
             <p class="mt-1 text-xs text-masa-madre"
                 x-show="parseInt(pkgCreateSubdivisions) <= 1">En la moneda del negocio.</p>

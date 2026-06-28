@@ -35,6 +35,14 @@
             </div>
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
+                <input type="hidden" name="sort" value="{{ request('sort') }}">
+                <input type="hidden" name="dir" value="{{ request('dir') }}">
+                <div>
+                    <label class="block text-xs font-medium text-masa-madre mb-1">Buscar</label>
+                    <input type="text" name="search" value="{{ request('search') }}"
+                        placeholder="N° factura o proveedor…"
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno w-48">
+                </div>
                 <div>
                     <label class="block text-xs font-medium text-masa-madre mb-1">Proveedor</label>
                     <select name="supplier_id"
@@ -61,10 +69,22 @@
                 <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
-                @if(request('supplier_id') || request('from') || request('to'))
+                @if(request('supplier_id') || request('from') || request('to') || request('search'))
                     <a href="{{ route('purchases.index') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
                 @endif
             </form>
+
+            @php
+                $sort = request('sort', 'date');
+                $dir  = request('dir', 'desc');
+                $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
+                    array_merge(request()->except(['sort', 'dir', 'page']), [
+                        'sort' => $col,
+                        'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
+                    ])
+                );
+                $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
+            @endphp
 
             @if($purchases->isEmpty())
                 <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
@@ -142,11 +162,21 @@
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
-                                <th class="px-4 py-3 font-medium">Fecha</th>
-                                <th class="px-4 py-3 font-medium">Proveedor</th>
-                                <th class="px-4 py-3 font-medium">N° Factura</th>
-                                <th class="px-4 py-3 font-medium text-center">Ítems</th>
-                                <th class="px-4 py-3 font-medium text-right">Total {{ $includeIva ? '(c/IVA)' : '(s/IVA)' }}</th>
+                                <th class="px-4 py-3 font-medium">
+                                    <a href="{{ $sortUrl('date') }}" class="hover:text-corteza">Fecha {{ $sortIcon('date') }}</a>
+                                </th>
+                                <th class="px-4 py-3 font-medium">
+                                    <a href="{{ $sortUrl('invoice_number') }}" class="hover:text-corteza">N° Factura {{ $sortIcon('invoice_number') }}</a>
+                                </th>
+                                <th class="px-4 py-3 font-medium">
+                                    <a href="{{ $sortUrl('supplier') }}" class="hover:text-corteza">Proveedor {{ $sortIcon('supplier') }}</a>
+                                </th>
+                                <th class="px-4 py-3 font-medium text-center">
+                                    <a href="{{ $sortUrl('items') }}" class="hover:text-corteza">Ítems {{ $sortIcon('items') }}</a>
+                                </th>
+                                <th class="px-4 py-3 font-medium text-right">
+                                    <a href="{{ $sortUrl('total') }}" class="hover:text-corteza">Total {{ $includeIva ? '(c/IVA)' : '(s/IVA)' }} {{ $sortIcon('total') }}</a>
+                                </th>
                                 <th class="px-4 py-3 font-medium"></th>
                             </tr>
                         </thead>
@@ -156,11 +186,18 @@
                                     <td class="px-4 py-3 font-mono text-sm text-corteza">
                                         {{ $purchase->invoice_date->format('d/m/Y') }}
                                     </td>
+                                    <td class="px-4 py-3 text-masa-madre font-mono text-xs">
+                                        @if($purchase->invoice_number)
+                                            <a href="{{ route('purchases.show', $purchase) }}"
+                                               class="hover:underline hover:text-corteza transition-colors">
+                                                {{ $purchase->invoice_number }}
+                                            </a>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3 font-medium text-corteza">
                                         {{ $purchase->supplier->name }}
-                                    </td>
-                                    <td class="px-4 py-3 text-masa-madre font-mono text-xs">
-                                        {{ $purchase->invoice_number ?? '—' }}
                                     </td>
                                     <td class="px-4 py-3 text-center text-masa-madre">
                                         {{ $purchase->lines_count }}

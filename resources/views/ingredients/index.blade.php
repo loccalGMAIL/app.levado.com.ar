@@ -120,8 +120,8 @@
                                             'brand'             => $ingredient->brand ?? '',
                                             'supplier_id'       => $ingredient->supplier_id ?? '',
                                             'unit'              => $ingredient->unit->value,
-                                            'cost_per_unit'     => $ingredient->cost_per_unit,
-                                            'cost_per_package'  => $ingredient->cost_per_package,
+                                            'cost_per_unit'     => round((float) $ingredient->cost_per_unit, 2),
+                                            'cost_per_package'  => $ingredient->cost_per_package !== null ? round((float) $ingredient->cost_per_package, 2) : null,
                                             'subdivisions'      => $ingredient->subdivisions ?? '',
                                             'subdivision_label' => $ingredient->subdivision_label ?? '',
                                         ]) }})"
@@ -189,8 +189,8 @@
                                                     'brand'             => $ingredient->brand ?? '',
                                                     'supplier_id'       => $ingredient->supplier_id ?? '',
                                                     'unit'              => $ingredient->unit->value,
-                                                    'cost_per_unit'     => $ingredient->cost_per_unit,
-                                                    'cost_per_package'  => $ingredient->cost_per_package,
+                                                    'cost_per_unit'     => round((float) $ingredient->cost_per_unit, 2),
+                                                    'cost_per_package'  => $ingredient->cost_per_package !== null ? round((float) $ingredient->cost_per_package, 2) : null,
                                                     'subdivisions'      => $ingredient->subdivisions ?? '',
                                                     'subdivision_label' => $ingredient->subdivision_label ?? '',
                                                 ]) }})"
@@ -236,7 +236,7 @@
                                                         'brand'             => $ingredient->brand ?? '',
                                                         'supplier_id'       => $ingredient->supplier_id ?? '',
                                                         'unit'              => $ingredient->unit->value,
-                                                        'cost_per_unit'     => $ingredient->cost_per_unit,
+                                                        'cost_per_unit'     => round((float) $ingredient->cost_per_unit, 2),
                                                         'subdivisions'      => $ingredient->subdivisions ?? '',
                                                         'subdivision_label' => $ingredient->subdivision_label ?? '',
                                                     ]) }})"

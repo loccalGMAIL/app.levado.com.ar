@@ -5,6 +5,26 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.11] — 2026-06-27
+
+### Mejoras generales de UI — decimales, orden de columnas y navegación
+
+#### Agregado
+
+- **Buscador en índice de compras:** campo de texto que filtra por número de factura o nombre de proveedor en tiempo real (server-side). El filtro se combina con los filtros de proveedor y rango de fechas existentes.
+- **Columnas ordenables en índice de compras:** click en encabezado de Fecha, N° Factura, Proveedor, Ítems o Total alterna entre ascendente/descendente. El orden se preserva al paginar o filtrar.
+- **Columnas ordenables en detalle de receta:** las 4 secciones (Ingredientes, Mano de obra, Envases y Sub-recetas) tienen encabezados clicables que ordenan client-side con Alpine.js sin recargar la página.
+- **N° Factura como link en índice de compras:** hacer click en el número de factura lleva directamente al detalle de la compra.
+- **Volver al listado desde detalle de receta:** encabezado sticky con link "← Recetas" para volver al índice sin usar el botón atrás del navegador.
+- **Paginación en español:** creado `lang/es/pagination.php` — los botones de paginación ahora muestran "Anterior" y "Siguiente" en lugar de las claves crudas `pagination.previous` / `pagination.next`.
+- **Reorden de columnas en índice de compras:** el orden es ahora Fecha → N° Factura → Proveedor (antes Fecha → Proveedor → N° Factura).
+
+#### Corregido
+
+- **4 decimales en campos de costo y precio:** `step="0.0001"` en los inputs `type="number"` hacía que Chrome rellenara valores como `133.33` como `133.3300`. Cambiado a `step="0.01"` en todos los modales de ingredientes, envases y compras, y en la edición inline del detalle de compra. Los valores en pantalla (no editables) ya usaban `number_format(..., 2)`.
+
+---
+
 ## [0.8.10] — 2026-06-27
 
 ### Compras — Mejoras al detalle de factura + Responsive mobile en todas las vistas

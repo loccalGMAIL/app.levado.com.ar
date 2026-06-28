@@ -24,6 +24,56 @@
             allPrices:       @js($allPrices),
             selectedListId:  @js($defaultPriceList->id),
             savingPrice:     false,
+            ingSort: { by: 'name', dir: 1 },
+            labSort: { by: 'name', dir: 1 },
+            pkgSort: { by: 'name', dir: 1 },
+            subSort: { by: 'name', dir: 1 },
+
+            get sortedIngredientLines() {
+                const { by, dir } = this.ingSort;
+                return [...this.ingredientLines].sort((a, b) => {
+                    const av = by === 'cost' ? a.quantity * a.costPerLineUnit : a[by];
+                    const bv = by === 'cost' ? b.quantity * b.costPerLineUnit : b[by];
+                    return typeof av === 'string' ? dir * av.localeCompare(bv, 'es') : dir * (av - bv);
+                });
+            },
+            get sortedLaborLines() {
+                const { by, dir } = this.labSort;
+                return [...this.laborLines].sort((a, b) => {
+                    const av = by === 'cost' ? a.hours * a.hourlyRate : a[by];
+                    const bv = by === 'cost' ? b.hours * b.hourlyRate : b[by];
+                    return typeof av === 'string' ? dir * av.localeCompare(bv, 'es') : dir * (av - bv);
+                });
+            },
+            get sortedPackagingLines() {
+                const { by, dir } = this.pkgSort;
+                return [...this.packagingLines].sort((a, b) => {
+                    const av = by === 'cost' ? a.quantity * a.costPerUnit : a[by];
+                    const bv = by === 'cost' ? b.quantity * b.costPerUnit : b[by];
+                    return typeof av === 'string' ? dir * av.localeCompare(bv, 'es') : dir * (av - bv);
+                });
+            },
+            get sortedSubrecipeLines() {
+                const { by, dir } = this.subSort;
+                return [...this.subrecipeLines].sort((a, b) => {
+                    const av = by === 'cost' ? a.quantity * a.costPerLineUnit : a[by];
+                    const bv = by === 'cost' ? b.quantity * b.costPerLineUnit : b[by];
+                    return typeof av === 'string' ? dir * av.localeCompare(bv, 'es') : dir * (av - bv);
+                });
+            },
+            sortCol(section, col) {
+                const key = section + 'Sort';
+                if (this[key].by === col) {
+                    this[key].dir *= -1;
+                } else {
+                    this[key] = { by: col, dir: 1 };
+                }
+            },
+            sortIcon(section, col) {
+                const s = this[section + 'Sort'];
+                if (s.by !== col) return '↕';
+                return s.dir === 1 ? '↑' : '↓';
+            },
 
             get ingredientCost() {
                 return this.ingredientLines.reduce((s, l) => s + l.quantity * l.costPerLineUnit, 0);
@@ -123,6 +173,13 @@
 
         {{-- Header sticky --}}
         <div class="sticky top-0 z-20 -mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-6 bg-harina border-b border-miga flex items-center justify-between gap-2 sm:gap-4">
+            <a href="{{ route('recipes.index') }}"
+               class="shrink-0 inline-flex items-center gap-1 text-sm text-masa-madre hover:text-corteza transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                <span class="hidden sm:inline">Recetas</span>
+            </a>
             <div class="min-w-0 flex-1">
                 <h1 class="text-lg sm:text-xl font-semibold text-corteza leading-tight truncate">{{ $recipe->name }}
                     @if(!$recipe->active)
@@ -241,15 +298,21 @@
                             <table class="w-full text-sm">
                                 <thead class="bg-miga text-masa-madre">
                                     <tr>
-                                        <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Ingrediente</th>
-                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
+                                        <th @click="sortCol('ing', 'name')" class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide cursor-pointer select-none hover:text-corteza">
+                                            Ingrediente <span x-text="sortIcon('ing', 'name')" class="font-normal"></span>
+                                        </th>
+                                        <th @click="sortCol('ing', 'quantity')" class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28 cursor-pointer select-none hover:text-corteza">
+                                            Cantidad <span x-text="sortIcon('ing', 'quantity')" class="font-normal"></span>
+                                        </th>
                                         <th class="px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-wide w-20">Unidad</th>
-                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
+                                        <th @click="sortCol('ing', 'cost')" class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24 cursor-pointer select-none hover:text-corteza">
+                                            Costo <span x-text="sortIcon('ing', 'cost')" class="font-normal"></span>
+                                        </th>
                                         @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-miga">
-                                    <template x-for="line in ingredientLines" :key="line.id">
+                                    <template x-for="line in sortedIngredientLines" :key="line.id">
                                         <tr>
                                             <td class="px-4 py-2.5">
                                                 <div class="font-medium text-corteza" x-text="line.name"></div>
@@ -368,14 +431,20 @@
                             <table class="w-full text-sm">
                                 <thead class="bg-miga text-masa-madre">
                                     <tr>
-                                        <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Rol</th>
-                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Horas</th>
-                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
+                                        <th @click="sortCol('lab', 'name')" class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide cursor-pointer select-none hover:text-corteza">
+                                            Rol <span x-text="sortIcon('lab', 'name')" class="font-normal"></span>
+                                        </th>
+                                        <th @click="sortCol('lab', 'hours')" class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28 cursor-pointer select-none hover:text-corteza">
+                                            Horas <span x-text="sortIcon('lab', 'hours')" class="font-normal"></span>
+                                        </th>
+                                        <th @click="sortCol('lab', 'cost')" class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24 cursor-pointer select-none hover:text-corteza">
+                                            Costo <span x-text="sortIcon('lab', 'cost')" class="font-normal"></span>
+                                        </th>
                                         @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-miga">
-                                    <template x-for="line in laborLines" :key="line.id">
+                                    <template x-for="line in sortedLaborLines" :key="line.id">
                                         <tr>
                                             <td class="px-4 py-2.5">
                                                 <div class="font-medium text-corteza" x-text="line.name"></div>
@@ -481,14 +550,20 @@
                             <table class="w-full text-sm">
                                 <thead class="bg-miga text-masa-madre">
                                     <tr>
-                                        <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Envase</th>
-                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
-                                        <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
+                                        <th @click="sortCol('pkg', 'name')" class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide cursor-pointer select-none hover:text-corteza">
+                                            Envase <span x-text="sortIcon('pkg', 'name')" class="font-normal"></span>
+                                        </th>
+                                        <th @click="sortCol('pkg', 'quantity')" class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28 cursor-pointer select-none hover:text-corteza">
+                                            Cantidad <span x-text="sortIcon('pkg', 'quantity')" class="font-normal"></span>
+                                        </th>
+                                        <th @click="sortCol('pkg', 'cost')" class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24 cursor-pointer select-none hover:text-corteza">
+                                            Costo <span x-text="sortIcon('pkg', 'cost')" class="font-normal"></span>
+                                        </th>
                                         @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-miga">
-                                    <template x-for="line in packagingLines" :key="line.id">
+                                    <template x-for="line in sortedPackagingLines" :key="line.id">
                                         <tr>
                                             <td class="px-4 py-2.5 font-medium text-corteza" x-text="line.name"></td>
                                             <td class="px-4 py-2.5 text-right">
@@ -595,15 +670,21 @@
                                 <table class="w-full text-sm">
                                     <thead class="bg-miga text-masa-madre">
                                         <tr>
-                                            <th class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">Sub-receta</th>
-                                            <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28">Cantidad</th>
+                                            <th @click="sortCol('sub', 'name')" class="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide cursor-pointer select-none hover:text-corteza">
+                                                Sub-receta <span x-text="sortIcon('sub', 'name')" class="font-normal"></span>
+                                            </th>
+                                            <th @click="sortCol('sub', 'quantity')" class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-28 cursor-pointer select-none hover:text-corteza">
+                                                Cantidad <span x-text="sortIcon('sub', 'quantity')" class="font-normal"></span>
+                                            </th>
                                             <th class="px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-wide w-20">Unidad</th>
-                                            <th class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24">Costo</th>
+                                            <th @click="sortCol('sub', 'cost')" class="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide w-24 cursor-pointer select-none hover:text-corteza">
+                                                Costo <span x-text="sortIcon('sub', 'cost')" class="font-normal"></span>
+                                            </th>
                                             @can('manage-costs')<th class="px-4 py-2 w-8"></th>@endcan
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-miga">
-                                        <template x-for="line in subrecipeLines" :key="line.id">
+                                        <template x-for="line in sortedSubrecipeLines" :key="line.id">
                                             <tr>
                                                 <td class="px-4 py-2.5">
                                                     <div class="font-medium text-corteza" x-text="line.name"></div>
