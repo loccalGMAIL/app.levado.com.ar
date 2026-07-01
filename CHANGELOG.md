@@ -10,6 +10,7 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 ### Corregido
 
 - **Invitación de usuario al equipo:** al invitar un miembro se mostraba el error "The selected role is invalid." para cualquier rol seleccionado. La causa era que `Rule::enum()->only()` requiere instancias del enum pero recibía strings (`.value`). Corregido usando `->except([TenantUserRole::SuperAdmin])` con instancias del enum.
+- **Mail de invitación no se enviaba:** el envío de mails fue cambiado a `queue()` sin queue worker configurado en producción, por lo que los mails quedaban acumulados sin procesarse. Revertido a `send()` sincrónico. Incluye logging en el flujo de aceptación y null guard en `Invitation::isExpired()`.
 
 ---
 
