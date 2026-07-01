@@ -33,7 +33,7 @@ test('nuevo usuario recibe el welcome email al aceptar la invitación', function
         'password_confirmation' => 'secreto123',
     ])->assertRedirect(route('dashboard'));
 
-    Mail::assertQueued(WelcomeMail::class, fn ($mail) => $mail->hasTo('ana@levado.test'));
+    Mail::assertSent(WelcomeMail::class, fn ($mail) => $mail->hasTo('ana@levado.test'));
 });
 
 test('nuevo usuario creado via invitación tiene email_verified_at seteado', function () {
