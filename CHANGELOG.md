@@ -5,6 +5,14 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.12] — 2026-07-01
+
+### Corregido
+
+- **Invitación de usuario al equipo:** al invitar un miembro se mostraba el error "The selected role is invalid." para cualquier rol seleccionado. La causa era que `Rule::enum()->only()` requiere instancias del enum pero recibía strings (`.value`). Corregido usando `->except([TenantUserRole::SuperAdmin])` con instancias del enum.
+
+---
+
 ## [0.8.11] — 2026-06-27
 
 ### Mejoras generales de UI — decimales, orden de columnas y navegación
