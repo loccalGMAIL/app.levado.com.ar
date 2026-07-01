@@ -14,7 +14,8 @@
       "Bash(git merge *)",
       "Bash(git stash *)",
       "Bash(findstr \"selling-price\")",
-      "Bash(git branch *)"
+      "Bash(git branch *)",
+      "Bash(git push *)"
     ]
   },
   "enableAllProjectMcpServers": true,
