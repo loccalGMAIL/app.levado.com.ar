@@ -148,9 +148,43 @@ metadata:
 - Fix: modal de proveedor nuevo no cierra el modal del descartable
 - **281 tests, todos verdes**
 
+## v0.8.9 — Fix cálculo de costo con subdivisiones (2026-06-22)
+- **Fix crítico:** `cost_per_unit` ahora almacena el precio por sub-unidad (no por envase completo). Al guardar un ingrediente/envase con subdivisiones, el precio ingresado se divide por la cantidad de sub-unidades antes de persistirse.
+- **Columna "Por envase"** en tablas de ingredientes y envases — muestra precio del pack completo + precio por sub-unidad.
+- **Hint dinámico** en modales crear/editar: etiqueta "Costo por envase" + "≈ $X / sub-unidad" reactivo con Alpine.js.
+- **Comando artisan `ingredients:fix-subdivision-costs`:** corrige ítems existentes con subdivisiones que tenían el precio incorrecto; muestra previsualización y pide confirmación.
+- Migración: agrega `cost_per_package` (DECIMAL 10,4 nullable) a `ingredients` y `packagings`.
+- 4 nuevos tests cubriendo la división correcta, limpieza al quitar subdivisiones y no-efectos sin subdivisiones.
+
+## v0.8.10 — Compras: detalle de factura mejorado + responsive mobile en todas las vistas (2026-06-27)
+- **Modal de edición de cabecera de compra:** editar proveedor, fecha, N° factura, notas, IVA y percepción por defecto desde el detalle.
+- **Banner de progreso de vinculación:** en detalle de compra muestra "X de Y renglones vinculados" con link al match.
+- **Columna "Costo" y badge de estado por renglón:** Aplicado (verde), Pendiente (ámbar), Sin vincular (gris).
+- **`tfoot` con totales:** subtotal neto, IVA total, percepción total y total de factura.
+- **Formulario "Agregar renglón" en modal:** siguiendo el patrón CRUD del proyecto.
+- **Tarjetas mobile en todas las vistas con tablas:** 8 vistas con Alpine.js `mobileExpanded` — mobile muestra cards, desktop muestra tabla. Cubre: Tipos de mano de obra, Gastos fijos, Listas de precios, Mi equipo, Compras (índice y detalle), Ingredientes, Descartables, Recetas (índice y detalle con 4 secciones de líneas).
+- Fix: `LazyLoadingViolationException` al aplicar sugerencias de IA en bloque (relación `purchase` no pre-cargada).
+- Fix: `checkDuplicate` excluye la compra actual al editar (evita falso positivo).
+
+## v0.8.11 — Mejoras UI: decimales, columnas ordenables, buscador y navegación (2026-06-27)
+- **Buscador en índice de compras:** filtra por número de factura o nombre de proveedor (server-side, combinable con otros filtros).
+- **Columnas ordenables en índice de compras:** Fecha, N° Factura, Proveedor, Ítems, Total — alterna asc/desc, se preserva al paginar.
+- **Columnas ordenables en detalle de receta:** las 4 secciones ordenan client-side con Alpine.js.
+- **N° Factura como link** en índice de compras → va al detalle.
+- **"← Recetas" en detalle de receta:** encabezado sticky con link para volver al índice.
+- **Paginación en español:** `lang/es/pagination.php` — botones "Anterior" / "Siguiente".
+- **Reorden de columnas en índice de compras:** Fecha → N° Factura → Proveedor.
+- Fix: `step="0.01"` en todos los inputs numéricos (antes `step="0.0001"` hacía que Chrome rellenara con 4 decimales al editar).
+
+## v0.8.12 — Fix invitación de equipo, traducciones al español, mail sincrónico (2026-07-01)
+- **Fix validación de rol al invitar:** `Rule::enum()->only()` requería instancias del enum pero recibía strings. Corregido con `->except([TenantUserRole::SuperAdmin])` con instancias.
+- **Traducciones al español:** creados `lang/es/validation.php`, `lang/es/auth.php` y `lang/es/passwords.php`. El locale ya era `es` pero faltaban los archivos. Actualizado `config/app.php`.
+- **Mail sincrónico restaurado:** `Mail::queue()` fue cambiado a `Mail::send()` — sin worker en producción, los mails quedaban acumulados. Incluye logging en flujo de aceptación y null guard en `Invitation::isExpired()`.
+- **Compresión de imagen al escanear factura:** imagen de factura se comprime en cliente y servidor antes de enviarla a la API de IA (reducción de payload).
+
 ## Versioning
 - Rama activa: `master`
-- Versión actual: `0.8.8`
+- Versión actual: `0.8.12`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.

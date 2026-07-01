@@ -1,9 +1,9 @@
 ---
 name: Levado — Estado actual del proyecto
-description: Progreso al 09/06/2026
+description: Progreso al 01/07/2026
 type: project
 ---
-# Estado del proyecto — 9 de junio 2026
+# Estado del proyecto — 1 de julio 2026
 
 ## Estructura local
 ```
@@ -18,7 +18,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.7.1 (rama `feature/compras`, pendiente merge a master)
+- **Versión actual:** 0.8.12 (en rama `master`)
 
 ## Todo lo que está hecho
 
@@ -44,11 +44,22 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Reemplaza hamburger del top nav en mobile
 - Fixes responsive: tablas con overflow-x-auto, formulario Mi equipo colapsa, modal w-full en mobile, capacidad productiva colapsa, botones header receta con texto adaptativo
 
-### Módulo de Compras — v0.7.1 ✅ (rama feature/compras)
-Ver `feature-compras.md` para detalle completo.
-- Fase 1 (escaneo + digitalización) completa
-- IVA por renglón almacenado (`iva_rate` en `purchase_lines`)
-- Fase 2 (match e imputación de costos) pendiente de UI definitiva
+### Módulo de Compras — v0.8.x ✅ (en master)
+- Fase 1: escaneo, digitalización, IVA/percepciones por renglón y factura
+- Fase 2: match e imputación de costos con cálculo reactivo Alpine.js y `unit_cost` override
+- Fase 3: selects con Tom Select, límite de decimales, buscador y columnas ordenables en índice
+- Detalle de factura: modal edición de cabecera, banner de progreso, badge por renglón, tfoot con totales
+- Compresión de imagen al escanear (cliente y servidor)
+- Responsive mobile: tarjetas en todas las vistas de tablas
+
+### Otras mejoras post-MVP (v0.8.x)
+- Subdivisiones en ingredientes y descartables + `cost_per_package` + columna "Por envase"
+- Listas de precios (matriz receta × lista, ajuste %, precios por lista)
+- Responsive mobile en todas las vistas (tarjetas Alpine.js)
+- Flash toasts, iconos Heroicons, loading en modales, favicon
+- Policies, `scopeActive()`, módulos Vite, `LazilyRefreshDatabase`
+- Traducciones al español: `lang/es/{validation,auth,passwords,pagination}.php`
+- Mail de invitación sincrónico (sin queue worker en producción)
 
 ## Convenciones establecidas
 - Baja lógica siempre (nunca DELETE físico)
@@ -60,7 +71,7 @@ Ver `feature-compras.md` para detalle completo.
 - Memoria del proyecto en `.claude/memory/` (versionada en el repo)
 
 ## Próximos pasos sugeridos
-- **Fase 2 compras:** definir y construir la pantalla de match (asociar renglones escaneados con insumos e imputar costos). `matchLine` y `applyLineSuggestions` ya existen en el controller, falta la UI.
-- Merge de `feature/compras` a `master` y deploy a producción (configurar `ANTHROPIC_API_KEY` en Hostinger)
-- Mejoras UX mobile adicionales si surgen al probar en dispositivo real
+- Deploy a producción (Hostinger) — configurar `ANTHROPIC_API_KEY` y queue/mail settings
 - Importación CSV de ingredientes/packaging/gastos fijos
+- Backoffice SaaS (B.2) — prerequisito para apertura pública
+- Etapa 3: Productos y Stock
