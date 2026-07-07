@@ -9,19 +9,33 @@
             if (this.isStandalone() || this.isDismissed()) {
                 return;
             }
-            if (window.deferredInstallPrompt) {
-                this.mode = 'android';
-                this.visible = true;
-            }
             window.addEventListener('pwa-installable', () => {
                 if (! this.isStandalone() && ! this.isDismissed()) {
                     this.mode = 'android';
                     this.visible = true;
                 }
             });
-            if (! this.visible && this.isIos()) {
+            if (window.deferredInstallPrompt) {
+                this.mode = 'android';
+                this.visible = true;
+
+                return;
+            }
+            if (this.isIos()) {
                 this.mode = 'ios';
                 this.visible = true;
+
+                return;
+            }
+            // Android sin beforeinstallprompt (app ya conocida por Chrome, otro
+            // navegador, etc.): tras una espera corta, instrucciones manuales.
+            if (this.isAndroid()) {
+                setTimeout(() => {
+                    if (! this.visible && ! this.isDismissed()) {
+                        this.mode = 'android-manual';
+                        this.visible = true;
+                    }
+                }, 3000);
             }
         },
         isStandalone() {
@@ -29,6 +43,9 @@
         },
         isIos() {
             return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+        },
+        isAndroid() {
+            return /android/i.test(window.navigator.userAgent);
         },
         isDismissed() {
             const at = parseInt(localStorage.getItem(this.dismissKey) || '0', 10);
@@ -76,6 +93,17 @@
                         Instalar
                     </button>
                 </div>
+            </template>
+
+            <template x-if="mode === 'android-manual'">
+                <p class="text-xs text-masa-madre mt-1.5 leading-relaxed">
+                    Abrí el menú
+                    <svg class="w-3.5 h-3.5 inline -mt-0.5 text-horno" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="5" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="12" cy="19" r="1.8" />
+                    </svg>
+                    del navegador y elegí
+                    <strong class="text-corteza">Agregar a la pantalla principal</strong> o <strong class="text-corteza">Instalar app</strong>.
+                </p>
             </template>
 
             <template x-if="mode === 'ios'">
