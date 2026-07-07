@@ -5,6 +5,31 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.13] — 2026-07-07
+
+### Estado de tablas preservado, PWA instalable y selects ordenados
+
+#### Agregado
+
+- **App instalable (PWA):** Levado ahora se puede instalar en el teléfono como una app. Se agregaron `manifest.webmanifest`, service worker (`sw.js`) con soporte offline básico — assets estáticos con cache-first, navegaciones siempre por red con página "Sin conexión" de cortesía (nunca se cachea HTML con datos) — e íconos PNG (192, 512, maskable y apple-touch) generados desde el favicon SVG con la tipografía Lora original.
+- **Banner de instalación mobile:** componente `<x-pwa-install-banner />` en el layout de la app. En Android/Chrome captura `beforeinstallprompt` y muestra el botón "Instalar" (prompt nativo); en iOS muestra las instrucciones "Compartir → Agregar a inicio" con íconos. Se puede descartar por 30 días (`localStorage`).
+- **Restauración de posición de scroll:** al volver a un listado (tras guardar un modal o regresar de un detalle) la página se restaura en la fila donde estaba el usuario (`scroll-restore.js`, `sessionStorage` por URL, TTL 5 minutos).
+- **Parámetro `volver` en detalles:** los links del índice al detalle de recetas y compras llevan la query string del listado; el botón "Volver" y el breadcrumb la reinyectan para regresar a la misma página/búsqueda/filtros.
+
+#### Corregido
+
+- **Se perdía el contexto del listado al guardar:** los `store`/`update` de los CRUD con modal (ingredientes, envases, gastos fijos, mano de obra, listas de precios, proveedores, sucursales, categorías de gastos y admin→usuarios) redirigían al índice "limpio", perdiendo `page`, `search`, `status`, `sort` y `dir`. Ahora usan `back()` con fallback al índice — el mismo patrón que ya usaban los toggles de activo. Las acciones de líneas del detalle de receta también, por lo que conservan la lista de precios seleccionada y el parámetro `volver`.
+- **Select de sub-recetas sin ordenar:** `RecipeController::availableSemiElaborates()` devolvía las semi-elaboraciones en orden de creación; ahora ordena por nombre. Era el único select de datos sin orden alfabético — los selects de opciones fijas (unidades, roles, condición IVA) mantienen su orden lógico intencionalmente.
+
+#### Técnico
+
+- Metas PWA (`manifest`, `theme-color`, `apple-touch-icon`, `apple-mobile-web-app-*`) en los tres layouts (`app`, `guest`, `admin`); el layout `guest` además ahora referencia el favicon.
+- Registro del service worker y captura global de `beforeinstallprompt` en `resources/js/app.js`.
+- Nuevo test en `IngredientCrudTest`: editar un ingrediente redirige a la misma URL del listado con filtros y página (287 tests en total, todos verdes).
+- Versión `0.8.13` en `config/app.php`.
+
+---
+
 ## [0.8.12] — 2026-07-01
 
 ### Corregido
