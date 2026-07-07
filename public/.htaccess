@@ -1,3 +1,8 @@
+# Tipo MIME del web app manifest (PWA) — algunos hostings no lo traen mapeado
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

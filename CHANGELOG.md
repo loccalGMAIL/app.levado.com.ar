@@ -5,6 +5,16 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [Sin publicar]
+
+### Corregido
+
+- **Banner PWA invisible en Android:** el banner solo aparecía si Chrome disparaba `beforeinstallprompt`; si no lo hacía (app ya conocida por el navegador, criterios de instalabilidad no cumplidos, navegador sin soporte), no se mostraba nada. Ahora, en Android sin el evento, tras 3 segundos aparece un fallback con instrucciones manuales ("Abrí el menú ⋮ → Agregar a la pantalla principal / Instalar app").
+- **Íconos `icon-192.png` y `apple-touch-icon.png` en blanco:** se generaron sin la tipografía cargada (archivos de ~500 bytes con solo el fondo). Regenerados correctamente — el banner ahora muestra el ícono "lvd".
+- **Tipo MIME de `manifest.webmanifest`:** agregado `AddType application/manifest+json .webmanifest` en `public/.htaccess` para hostings compartidos que no mapean la extensión (necesario para la instalabilidad en Android).
+
+---
+
 ## [0.8.14] — 2026-07-07
 
 ### Corregido
