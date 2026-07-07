@@ -116,12 +116,12 @@
                     </div>
                     <div class="text-right shrink-0 space-y-2">
                         <div>
-                            <p class="text-xs text-masa-madre">Total renglones (sin IVA)</p>
+                            <p class="text-xs text-masa-madre">Total renglones{{ $totalIva > 0 ? ' (sin IVA)' : '' }}</p>
                             <p class="text-xl font-mono font-semibold text-corteza">
                                 ${{ number_format($purchase->totalAmount(), 2, ',', '.') }}
                             </p>
                         </div>
-                        @if($purchase->invoice_total)
+                        @if($purchase->invoice_total && $totalIva > 0)
                             <div>
                                 <p class="text-xs text-masa-madre">Total factura (con IVA)</p>
                                 <p class="text-sm font-mono text-corteza">
@@ -263,7 +263,7 @@
 
                         {{-- Total mobile --}}
                         <div class="px-4 py-3 bg-miga/30 flex items-center justify-between gap-4">
-                            <span class="text-xs font-semibold text-corteza">Total con IVA</span>
+                            <span class="text-xs font-semibold text-corteza">{{ $totalIva > 0 ? 'Total con IVA' : 'Total' }}</span>
                             <span class="font-mono font-semibold text-corteza whitespace-nowrap"
                                   x-text="'$ ' + fmt(tfootGrandTotal)"></span>
                         </div>
@@ -393,8 +393,10 @@
 
                                         <td class="px-4 py-3 align-top text-right font-mono font-semibold text-corteza whitespace-nowrap"
                                             x-text="'$ ' + fmt(subtotal)"></td>
-                                        <td class="px-4 py-3 align-top text-right font-mono text-masa-madre whitespace-nowrap"
-                                            x-text="'$ ' + fmt(ivaAmount)"></td>
+                                        <td class="px-4 py-3 align-top text-right font-mono text-masa-madre whitespace-nowrap">
+                                            <span x-show="ivaAmount > 0" x-text="'$ ' + fmt(ivaAmount)"></span>
+                                            <span x-show="ivaAmount <= 0">—</span>
+                                        </td>
                                         <td class="px-4 py-3 align-top text-right font-mono text-masa-madre whitespace-nowrap">
                                             <span x-show="percepcionAmount > 0" x-text="'$ ' + fmt(percepcionAmount)"></span>
                                             <span x-show="percepcionAmount <= 0">—</span>
@@ -465,8 +467,10 @@
                                     <td colspan="3" class="px-4 py-3 text-xs font-semibold text-corteza text-right">Totales</td>
                                     <td class="px-4 py-3 text-right font-mono font-semibold text-corteza text-xs whitespace-nowrap"
                                         x-text="'$ ' + fmt(tfootSubtotal)"></td>
-                                    <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs whitespace-nowrap"
-                                        x-text="'$ ' + fmt(tfootIva)"></td>
+                                    <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs whitespace-nowrap">
+                                        <span x-show="tfootIva > 0" x-text="'$ ' + fmt(tfootIva)"></span>
+                                        <span x-show="tfootIva <= 0">—</span>
+                                    </td>
                                     <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs whitespace-nowrap">
                                         <span x-show="tfootPercepcion > 0" x-text="'$ ' + fmt(tfootPercepcion)"></span>
                                         <span x-show="tfootPercepcion <= 0">—</span>

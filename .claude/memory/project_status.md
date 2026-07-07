@@ -1,9 +1,9 @@
 ---
 name: Levado — Estado actual del proyecto
-description: Progreso al 01/07/2026
+description: Progreso al 07/07/2026
 type: project
 ---
-# Estado del proyecto — 1 de julio 2026
+# Estado del proyecto — 7 de julio 2026
 
 ## Estructura local
 ```
@@ -18,7 +18,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.8.13 (rama `v0.8.13-selects-table-state-pwa`; `master` en 0.8.12)
+- **Versión actual:** 0.8.14 (rama `v0.8.14-compras-iva-detalle`; `master` en 0.8.12)
 
 ## Todo lo que está hecho
 
@@ -49,6 +49,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Fase 2: match e imputación de costos con cálculo reactivo Alpine.js y `unit_cost` override
 - Fase 3: selects con Tom Select, límite de decimales, buscador y columnas ordenables en índice
 - Detalle de factura: modal edición de cabecera, banner de progreso, badge por renglón, tfoot con totales
+- v0.8.14: si la factura no tiene IVA (todos los renglones con alícuota 0) el detalle oculta "Total factura (con IVA)" y muestra "—" en la columna IVA (patrón Percepción), con etiquetas ajustadas
 - Compresión de imagen al escanear (cliente y servidor)
 - Responsive mobile: tarjetas en todas las vistas de tablas
 

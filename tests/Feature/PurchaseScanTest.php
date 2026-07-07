@@ -161,6 +161,53 @@ test('the purchase detail page renders with captured lines', function () {
         ->assertSee('Renglones de la factura');
 });
 
+test('the purchase detail hides the con IVA total when no line has IVA', function () {
+    [$user, $tenant] = ownerForScan();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-07-03',
+        'invoice_total' => 404.50,
+    ]);
+    $purchase->lines()->create([
+        'raw_name' => 'CAMISETA AD 40X50',
+        'quantity_purchased' => 5,
+        'purchase_unit' => 'u',
+        'unit_price' => 56250,
+        'subtotal' => 281250,
+        'iva_rate' => 0,
+    ]);
+
+    $this->actingAs($user)->get(route('purchases.show', $purchase))
+        ->assertOk()
+        ->assertSee('Total renglones')
+        ->assertDontSee('Total factura (con IVA)')
+        ->assertDontSee('(sin IVA)');
+});
+
+test('the purchase detail shows the con IVA total when lines have IVA', function () {
+    [$user, $tenant] = ownerForScan();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-07-03',
+        'invoice_total' => 12100,
+    ]);
+    $purchase->lines()->create([
+        'raw_name' => 'HARINA X 25 Kg',
+        'quantity_purchased' => 10,
+        'purchase_unit' => 'u',
+        'unit_price' => 1000,
+        'subtotal' => 10000,
+        'iva_rate' => 0.21,
+    ]);
+
+    $this->actingAs($user)->get(route('purchases.show', $purchase))
+        ->assertOk()
+        ->assertSee('Total renglones (sin IVA)')
+        ->assertSee('Total factura (con IVA)');
+});
+
 test('adding a manual line digitises it without applying cost', function () {
     [$user, $tenant] = ownerForScan();
     $supplier = Supplier::factory()->for($tenant)->create();

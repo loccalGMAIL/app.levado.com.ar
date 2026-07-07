@@ -5,6 +5,11 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.8.14] — 2026-07-07
+
+### Corregido
+
+- **IVA en detalle de compra cuando la factura no tiene IVA:** si todos los renglones tienen alícuota 0, ya no se muestra el "Total factura (con IVA)" del encabezado (dato que viene del escaneo y podía ser incorrecto) ni montos "$ 0,00" en la columna IVA. La columna "IVA $" y su total en el pie ahora muestran "—" cuando el monto es cero (mismo patrón que la columna Percepción), y las etiquetas se ajustan: "Total renglones" sin el sufijo "(sin IVA)" y "Total" en lugar de "Total con IVA" en el resumen mobile.
 ## [0.8.13] — 2026-07-07
 
 ### Estado de tablas preservado, PWA instalable y selects ordenados
