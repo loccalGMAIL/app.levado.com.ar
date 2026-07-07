@@ -94,6 +94,7 @@ Rama: `feature/compras` — versión 0.7.1
 
 ### `purchases/show.blade.php`
 - Header: proveedor, fecha, total renglones (sin IVA), total factura (con IVA si existe), botón "Ver factura original" (modal con imagen servida por `purchases.invoice`)
+- v0.8.14: si la factura no tiene IVA (`$totalIva == 0`, todos los renglones con alícuota 0) el header oculta "Total factura (con IVA)" y omite el sufijo "(sin IVA)"; la columna IVA $ (por renglón y tfoot) muestra "—" cuando el monto es 0, igual que Percepción
 - Tabla de renglones: Descripción, Cantidad, Unidad, Precio unit., Subtotal, **IVA $**, **Subtotal c/IVA** (calculados server-side desde `$line->iva_rate`)
 - Acciones: lápiz (modal edit-line), papelera (elimina renglón)
 - Form "Agregar renglón": incluye selector de alícuota IVA
