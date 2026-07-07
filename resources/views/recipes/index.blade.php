@@ -3,6 +3,7 @@
 
     @php
         $errorsInCreate = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit']) && old('_form') === 'create';
+        $showUrl = fn ($recipe) => route('recipes.show', array_filter(['recipe' => $recipe->id, 'volver' => request()->getQueryString()]));
     @endphp
 
     <div class="py-8 px-6 lg:px-8" x-data="{ mobileExpanded: false }">
@@ -123,7 +124,7 @@
                             }">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1 min-w-0">
-                                    <a href="{{ route('recipes.show', $recipe) }}" class="font-medium text-corteza hover:underline">
+                                    <a href="{{ $showUrl($recipe) }}" class="font-medium text-corteza hover:underline">
                                         {{ $recipe->name }}
                                         @if($recipe->is_semi_elaborate)
                                             <span class="ml-1 text-[10px] font-medium bg-amber-100 text-amber-700 rounded px-1 py-0.5">semi</span>
@@ -164,7 +165,7 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
-                                <a href="{{ route('recipes.show', $recipe) }}"
+                                <a href="{{ $showUrl($recipe) }}"
                                     class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
                                     Ver receta
                                 </a>
@@ -233,7 +234,7 @@
                                 @endphp
                                 <tr class="{{ $recipe->active ? '' : 'opacity-50' }}">
                                     <td class="px-4 py-3 font-medium text-corteza">
-                                        <a href="{{ route('recipes.show', $recipe) }}" class="hover:underline">
+                                        <a href="{{ $showUrl($recipe) }}" class="hover:underline">
                                             {{ $recipe->name }}
                                             @if($recipe->is_semi_elaborate)
                                                 <span class="ml-1 text-[10px] font-medium bg-amber-100 text-amber-700 rounded px-1 py-0.5">semi</span>
@@ -317,7 +318,7 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-1">
-                                            <a href="{{ route('recipes.show', $recipe) }}"
+                                            <a href="{{ $showUrl($recipe) }}"
                                                 aria-label="Ver detalle de receta" title="Ver detalle"
                                                 class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">

@@ -125,6 +125,22 @@ test('owner puede editar un ingrediente propio', function () {
     expect($ingredient->fresh()->name)->toBe('Actualizado');
 });
 
+test('editar un ingrediente vuelve a la misma página y filtros del listado', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $ingredient = Ingredient::factory()->for($tenant)->create(['name' => 'Original']);
+
+    $listadoConFiltros = route('ingredients.index').'?search=harina&status=active&sort=name&dir=asc&page=2';
+
+    $this->actingAs($user)
+        ->from($listadoConFiltros)
+        ->put(route('ingredients.update', $ingredient), [
+            'name' => 'Actualizado',
+            'unit' => Unit::Gramo->value,
+            'cost_per_unit' => '5',
+        ])
+        ->assertRedirect($listadoConFiltros);
+});
+
 // --- Toggle ---
 
 test('owner puede desactivar un ingrediente', function () {

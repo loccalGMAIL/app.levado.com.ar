@@ -54,7 +54,7 @@
 
         {{-- Botón volver --}}
         <div class="px-6 pt-4 pb-0">
-            <a href="{{ route('purchases.index') }}"
+            <a href="{{ route('purchases.index') . (request()->filled('volver') ? '?' . request('volver') : '') }}"
                 class="inline-flex items-center gap-1.5 text-sm text-masa-madre hover:text-corteza transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />

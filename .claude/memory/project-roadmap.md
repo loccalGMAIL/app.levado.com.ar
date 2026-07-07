@@ -182,9 +182,17 @@ metadata:
 - **Mail sincrónico restaurado:** `Mail::queue()` fue cambiado a `Mail::send()` — sin worker en producción, los mails quedaban acumulados. Incluye logging en flujo de aceptación y null guard en `Invitation::isExpired()`.
 - **Compresión de imagen al escanear factura:** imagen de factura se comprime en cliente y servidor antes de enviarla a la API de IA (reducción de payload).
 
+## v0.8.13 — Estado de tablas preservado, PWA instalable, selects ordenados (2026-07-07)
+- **Redirects que preservan contexto:** store/update de los CRUD con modal (ingredientes, envases, gastos fijos, mano de obra, listas de precios, proveedores, sucursales, categorías de gastos, admin usuarios) ahora usan `back(fallback: ...)` en vez de `redirect()->route('x.index')` — se conservan `page`/`search`/`status`/`sort`/`dir` al guardar. Las acciones de líneas de receta también.
+- **Parámetro `volver` en detalle:** los links índice → `recipes.show` / `purchases.show` llevan la query string del índice en `?volver=`; el botón "Volver" y el breadcrumb la reinyectan al volver al índice.
+- **Restauración de scroll:** `resources/js/scroll-restore.js` guarda `scrollY` por URL en `sessionStorage` (`pagehide`) y lo restaura al recargar la misma URL (TTL 5 min).
+- **PWA instalable con offline básico:** `public/manifest.webmanifest`, `public/sw.js` (cache-first solo para `/build/`, `/icons/`, favicon; navegaciones network-first con fallback a `public/offline.html`, nunca cachea HTML), íconos PNG generados del favicon SVG en `public/icons/` (192, 512, maskable, apple-touch). Metas PWA en los 3 layouts.
+- **Banner de instalación:** `components/pwa-install-banner.blade.php` (solo mobile, layout app) — botón "Instalar" con `beforeinstallprompt` en Android/Chrome, instrucciones "Compartir → Agregar a inicio" en iOS. Dismiss por 30 días en `localStorage`.
+- **Select de sub-recetas ordenado:** `RecipeController::availableSemiElaborates()` con `orderBy('name')` (era el único select de datos sin ordenar). Los selects de enums/estáticos mantienen orden lógico a pedido del usuario.
+
 ## Versioning
 - Rama activa: `master`
-- Versión actual: `0.8.12`
+- Versión actual: `0.8.13`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.

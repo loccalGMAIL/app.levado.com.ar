@@ -48,7 +48,7 @@ class LocationController extends Controller
             tenantId: $tenant->id,
         );
 
-        return redirect()->route('locations.index')->with('status', 'Sucursal creada.');
+        return back(fallback: route('locations.index'))->with('status', 'Sucursal creada.');
     }
 
     public function update(UpdateLocationRequest $request, Location $location): RedirectResponse
@@ -73,7 +73,7 @@ class LocationController extends Controller
             tenantId: $location->tenant_id,
         );
 
-        return redirect()->route('locations.index')->with('status', 'Sucursal actualizada.');
+        return back(fallback: route('locations.index'))->with('status', 'Sucursal actualizada.');
     }
 
     public function toggleActive(Location $location): RedirectResponse

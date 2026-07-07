@@ -68,7 +68,7 @@ class IngredientController extends Controller
             tenantId: $tenant->id,
         );
 
-        return redirect()->route('ingredients.index')->with('status', 'Ingrediente creado.');
+        return back(fallback: route('ingredients.index'))->with('status', 'Ingrediente creado.');
     }
 
     public function update(UpdateIngredientRequest $request, Ingredient $ingredient): RedirectResponse
@@ -108,7 +108,7 @@ class IngredientController extends Controller
             tenantId: $ingredient->tenant_id,
         );
 
-        return redirect()->route('ingredients.index')->with('status', 'Ingrediente actualizado.');
+        return back(fallback: route('ingredients.index'))->with('status', 'Ingrediente actualizado.');
     }
 
     public function toggleActive(Ingredient $ingredient): RedirectResponse

@@ -173,7 +173,7 @@
 
         {{-- Header sticky --}}
         <div class="sticky top-0 z-20 -mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-6 bg-harina border-b border-miga flex items-center justify-between gap-2 sm:gap-4">
-            <a href="{{ route('recipes.index') }}"
+            <a href="{{ route('recipes.index') . (request()->filled('volver') ? '?' . request('volver') : '') }}"
                class="shrink-0 inline-flex items-center gap-1 text-sm text-masa-madre hover:text-corteza transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />

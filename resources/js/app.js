@@ -11,6 +11,24 @@ Alpine.start();
 import './onboarding-tour';
 import './purchases/match';
 import './image-compress';
+import './scroll-restore';
+
+// Capturar el prompt de instalación de la PWA (Android/Chrome) antes de que
+// Alpine monte el banner; el componente escucha el evento 'pwa-installable'.
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window.deferredInstallPrompt = e;
+    window.dispatchEvent(new CustomEvent('pwa-installable'));
+});
+
+// Registrar el service worker de la PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // sin SW la app sigue funcionando; solo pierde instalación/offline
+        });
+    });
+}
 
 // Initialize Tom Select on [data-searchable] elements (non-Alpine selects)
 document.querySelectorAll('[data-searchable]').forEach(function (el) {

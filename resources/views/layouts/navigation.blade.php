@@ -38,7 +38,7 @@
                 if (request()->routeIs('dashboard')) {
                     // no extra crumbs
                 } elseif (request()->routeIs('recipes.show')) {
-                    $crumbs[] = ['label' => 'Recetas', 'href' => route('recipes.index')];
+                    $crumbs[] = ['label' => 'Recetas', 'href' => route('recipes.index').(request()->filled('volver') ? '?'.request('volver') : '')];
                     $recipe = request()->route('recipe');
                     if ($recipe) { $crumbs[] = ['label' => $recipe->name, 'href' => null]; }
                 } elseif (request()->routeIs('recipes.*')) {
@@ -59,7 +59,7 @@
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Mano de Obra', 'href' => null];
                 } elseif (request()->routeIs('purchases.show')) {
-                    $crumbs[] = ['label' => 'Compras', 'href' => route('purchases.index')];
+                    $crumbs[] = ['label' => 'Compras', 'href' => route('purchases.index').(request()->filled('volver') ? '?'.request('volver') : '')];
                     $purchase = request()->route('purchase');
                     $label = $purchase?->invoice_number ? "Factura #{$purchase->invoice_number}" : 'Compra #' . $purchase?->id;
                     $crumbs[] = ['label' => $label, 'href' => null];
