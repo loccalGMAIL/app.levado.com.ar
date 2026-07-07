@@ -5,7 +5,11 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
-## [Sin publicar]
+## [0.8.15] — 2026-07-07
+
+### Cambiado
+
+- **Banner PWA con un único botón "Instalar":** el banner ya no muestra instrucciones de entrada. Siempre ofrece el botón "Instalar"; si el navegador permite la instalación directa (`beforeinstallprompt`) la ejecuta con un toque, y solo si no la permite (iOS, o Android sin el evento) al tocar el botón se muestran los pasos según la plataforma.
 
 ### Corregido
 
