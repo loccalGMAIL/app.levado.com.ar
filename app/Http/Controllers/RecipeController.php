@@ -305,7 +305,7 @@ class RecipeController extends Controller
             tenantId: $recipe->tenant_id,
         );
 
-        return redirect()->route('recipes.show', $recipe)->with('status', 'Receta actualizada.');
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Receta actualizada.');
     }
 
     public function toggleActive(Recipe $recipe): RedirectResponse
@@ -370,7 +370,7 @@ class RecipeController extends Controller
         $recipe->ingredientLines()->create($data);
         $this->propagator->propagateFrom($recipe);
 
-        return redirect()->route('recipes.show', $recipe)->with('status', 'Ingrediente agregado.');
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Ingrediente agregado.');
     }
 
     public function destroyIngredientLine(Recipe $recipe, RecipeIngredientLine $line): RedirectResponse
@@ -380,7 +380,7 @@ class RecipeController extends Controller
         $line->delete();
         $this->propagator->propagateFrom($recipe);
 
-        return redirect()->route('recipes.show', $recipe)->with('status', 'Ingrediente eliminado.');
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Ingrediente eliminado.');
     }
 
     public function storePackagingLine(Request $request, Recipe $recipe): RedirectResponse
@@ -398,7 +398,7 @@ class RecipeController extends Controller
         $recipe->packagingLines()->create($data);
         $this->propagator->propagateFrom($recipe);
 
-        return redirect()->route('recipes.show', $recipe)->with('status', 'Envase agregado.');
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Envase agregado.');
     }
 
     public function destroyPackagingLine(Recipe $recipe, RecipePackagingLine $line): RedirectResponse
@@ -408,7 +408,7 @@ class RecipeController extends Controller
         $line->delete();
         $this->propagator->propagateFrom($recipe);
 
-        return redirect()->route('recipes.show', $recipe)->with('status', 'Envase eliminado.');
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Envase eliminado.');
     }
 
     public function storeLaborLine(Request $request, Recipe $recipe): RedirectResponse
@@ -426,7 +426,7 @@ class RecipeController extends Controller
         $recipe->laborLines()->create($data);
         $this->propagator->propagateFrom($recipe);
 
-        return redirect()->route('recipes.show', $recipe)->with('status', 'Mano de obra agregada.');
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Mano de obra agregada.');
     }
 
     public function destroyLaborLine(Recipe $recipe, RecipeLaborLine $line): RedirectResponse
@@ -436,7 +436,7 @@ class RecipeController extends Controller
         $line->delete();
         $this->propagator->propagateFrom($recipe);
 
-        return redirect()->route('recipes.show', $recipe)->with('status', 'Mano de obra eliminada.');
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Mano de obra eliminada.');
     }
 
     public function updateIngredientLine(Request $request, Recipe $recipe, RecipeIngredientLine $line): JsonResponse
@@ -510,7 +510,7 @@ class RecipeController extends Controller
         $recipe->subrecipeLines()->create($data);
         $this->propagator->propagateFrom($recipe);
 
-        return redirect()->route('recipes.show', $recipe)->with('status', 'Sub-receta agregada.');
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Sub-receta agregada.');
     }
 
     public function updateSubrecipeLine(Request $request, Recipe $recipe, RecipeSubrecipeLine $line): JsonResponse
@@ -532,7 +532,7 @@ class RecipeController extends Controller
         $line->delete();
         $this->propagator->propagateFrom($recipe);
 
-        return redirect()->route('recipes.show', $recipe)->with('status', 'Sub-receta eliminada.');
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Sub-receta eliminada.');
     }
 
     private function availableSemiElaborates(Recipe $recipe, Tenant $tenant): Collection
@@ -541,6 +541,7 @@ class RecipeController extends Controller
             ->where('is_semi_elaborate', true)
             ->active()
             ->where('id', '!=', $recipe->id)
+            ->orderBy('name')
             ->get()
             ->filter(fn ($candidate) => ! $this->propagator->isAncestor($candidate->id, $recipe->id, $tenant->id))
             ->values();

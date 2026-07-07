@@ -3,6 +3,7 @@
 
     @php
         $errorsInCreate = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes']) && old('_form') === 'create';
+        $showUrl = fn ($purchase) => route('purchases.show', array_filter(['purchase' => $purchase->id, 'volver' => request()->getQueryString()]));
     @endphp
 
     <div class="py-8 px-6 lg:px-8"
@@ -121,7 +122,7 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
-                                <a href="{{ route('purchases.show', $purchase) }}"
+                                <a href="{{ $showUrl($purchase) }}"
                                     class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
                                     Ver detalle
                                 </a>
@@ -188,7 +189,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-masa-madre font-mono text-xs">
                                         @if($purchase->invoice_number)
-                                            <a href="{{ route('purchases.show', $purchase) }}"
+                                            <a href="{{ $showUrl($purchase) }}"
                                                class="hover:underline hover:text-corteza transition-colors">
                                                 {{ $purchase->invoice_number }}
                                             </a>
@@ -212,7 +213,7 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-1">
-                                            <a href="{{ route('purchases.show', $purchase) }}"
+                                            <a href="{{ $showUrl($purchase) }}"
                                                 class="inline-flex p-1 text-masa-madre hover:text-corteza transition-colors"
                                                 title="Ver detalle">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">

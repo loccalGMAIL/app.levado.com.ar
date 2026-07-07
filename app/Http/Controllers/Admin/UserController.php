@@ -72,7 +72,7 @@ class UserController extends Controller
 
         $action = $userExists ? 'asociado a' : 'creado y asociado a';
 
-        return redirect()->route('admin.users.index')
+        return back(fallback: route('admin.users.index'))
             ->with('status', "Usuario {$user->email} {$action} {$tenant->name}. Se envió el correo para establecer la contraseña.");
     }
 
@@ -93,7 +93,7 @@ class UserController extends Controller
             payload: ['name' => $user->name, 'email' => $user->email],
         );
 
-        return redirect()->route('admin.users.index')
+        return back(fallback: route('admin.users.index'))
             ->with('status', "Usuario {$user->email} actualizado.");
     }
 
@@ -113,7 +113,7 @@ class UserController extends Controller
 
         $label = $user->active ? 'activado' : 'desactivado';
 
-        return redirect()->route('admin.users.index')
+        return back(fallback: route('admin.users.index'))
             ->with('status', "Usuario {$user->email} {$label}.");
     }
 

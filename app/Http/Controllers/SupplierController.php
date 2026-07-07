@@ -73,7 +73,7 @@ class SupplierController extends Controller
             tenantId: $supplier->tenant_id,
         );
 
-        return redirect()->route('suppliers.index')->with('status', 'Proveedor actualizado.');
+        return back(fallback: route('suppliers.index'))->with('status', 'Proveedor actualizado.');
     }
 
     public function toggleActive(Supplier $supplier): RedirectResponse

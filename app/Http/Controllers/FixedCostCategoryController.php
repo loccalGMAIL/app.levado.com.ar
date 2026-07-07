@@ -33,7 +33,7 @@ class FixedCostCategoryController extends Controller
             return response()->json(['id' => $category->id, 'name' => $category->name], 201);
         }
 
-        return redirect()->route('fixed-costs.index')
+        return back(fallback: route('fixed-costs.index'))
             ->with('reopen_categories', true)
             ->with('status', 'Categoría creada.');
     }
@@ -54,7 +54,7 @@ class FixedCostCategoryController extends Controller
             tenantId: $fixedCostCategory->tenant_id,
         );
 
-        return redirect()->route('fixed-costs.index')
+        return back(fallback: route('fixed-costs.index'))
             ->with('reopen_categories', true)
             ->with('status', 'Categoría actualizada.');
     }
@@ -64,7 +64,7 @@ class FixedCostCategoryController extends Controller
         $this->authorizeCategory($fixedCostCategory);
 
         if ($fixedCostCategory->fixedCosts()->exists()) {
-            return redirect()->route('fixed-costs.index')
+            return back(fallback: route('fixed-costs.index'))
                 ->with('reopen_categories', true)
                 ->with('category_error', "No se puede eliminar «{$fixedCostCategory->name}» porque tiene gastos asignados.");
         }
@@ -80,7 +80,7 @@ class FixedCostCategoryController extends Controller
 
         $fixedCostCategory->delete();
 
-        return redirect()->route('fixed-costs.index')
+        return back(fallback: route('fixed-costs.index'))
             ->with('reopen_categories', true)
             ->with('status', 'Categoría eliminada.');
     }

@@ -62,7 +62,7 @@ class FixedCostController extends Controller
             tenantId: $tenant->id,
         );
 
-        return redirect()->route('fixed-costs.index')->with('status', 'Gasto fijo creado.');
+        return back(fallback: route('fixed-costs.index'))->with('status', 'Gasto fijo creado.');
     }
 
     public function update(UpdateFixedCostRequest $request, FixedCost $fixedCost): RedirectResponse
@@ -89,7 +89,7 @@ class FixedCostController extends Controller
             tenantId: $fixedCost->tenant_id,
         );
 
-        return redirect()->route('fixed-costs.index')->with('status', 'Gasto fijo actualizado.');
+        return back(fallback: route('fixed-costs.index'))->with('status', 'Gasto fijo actualizado.');
     }
 
     public function toggleActive(FixedCost $fixedCost): RedirectResponse

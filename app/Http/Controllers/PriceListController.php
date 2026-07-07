@@ -107,7 +107,7 @@ class PriceListController extends Controller
             tenantId: $tenant->id,
         );
 
-        return redirect()->route('price-lists.index')->with('status', 'Lista de precios creada.');
+        return back(fallback: route('price-lists.index'))->with('status', 'Lista de precios creada.');
     }
 
     public function update(UpdatePriceListRequest $request, PriceList $priceList): RedirectResponse
@@ -131,7 +131,7 @@ class PriceListController extends Controller
             tenantId: $priceList->tenant_id,
         );
 
-        return redirect()->route('price-lists.index')->with('status', 'Lista de precios actualizada.');
+        return back(fallback: route('price-lists.index'))->with('status', 'Lista de precios actualizada.');
     }
 
     public function toggleActive(PriceList $priceList): RedirectResponse
@@ -185,7 +185,7 @@ class PriceListController extends Controller
             return $count;
         });
 
-        return redirect()->route('price-lists.index')
+        return back(fallback: route('price-lists.index'))
             ->with('status', "Se aplicaron {$applied} sugerencia(s) en la lista \"{$priceList->name}\".");
     }
 
@@ -215,7 +215,7 @@ class PriceListController extends Controller
             return $count;
         });
 
-        return redirect()->route('price-lists.matrix')
+        return back(fallback: route('price-lists.matrix'))
             ->with('status', "Se aplicaron {$applied} sugerencia(s) en todas las listas.");
     }
 }

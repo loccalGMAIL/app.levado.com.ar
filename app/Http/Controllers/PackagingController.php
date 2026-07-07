@@ -68,7 +68,7 @@ class PackagingController extends Controller
             tenantId: $tenant->id,
         );
 
-        return redirect()->route('packaging.index')->with('status', 'Envase creado.');
+        return back(fallback: route('packaging.index'))->with('status', 'Envase creado.');
     }
 
     public function update(UpdatePackagingRequest $request, Packaging $packaging): RedirectResponse
@@ -108,7 +108,7 @@ class PackagingController extends Controller
             tenantId: $packaging->tenant_id,
         );
 
-        return redirect()->route('packaging.index')->with('status', 'Envase actualizado.');
+        return back(fallback: route('packaging.index'))->with('status', 'Envase actualizado.');
     }
 
     public function toggleActive(Packaging $packaging): RedirectResponse

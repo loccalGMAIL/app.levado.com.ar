@@ -53,7 +53,7 @@ class LaborTypeController extends Controller
             tenantId: $tenant->id,
         );
 
-        return redirect()->route('labor-types.index')->with('status', 'Tipo de mano de obra creado.');
+        return back(fallback: route('labor-types.index'))->with('status', 'Tipo de mano de obra creado.');
     }
 
     public function update(UpdateLaborTypeRequest $request, LaborType $laborType): RedirectResponse
@@ -78,7 +78,7 @@ class LaborTypeController extends Controller
             tenantId: $laborType->tenant_id,
         );
 
-        return redirect()->route('labor-types.index')->with('status', 'Tipo de mano de obra actualizado.');
+        return back(fallback: route('labor-types.index'))->with('status', 'Tipo de mano de obra actualizado.');
     }
 
     public function toggleActive(LaborType $laborType): RedirectResponse
