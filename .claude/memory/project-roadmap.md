@@ -190,9 +190,17 @@ metadata:
 - **Banner de instalación:** `components/pwa-install-banner.blade.php` (solo mobile, layout app) — botón "Instalar" con `beforeinstallprompt` en Android/Chrome, instrucciones "Compartir → Agregar a inicio" en iOS. Dismiss por 30 días en `localStorage`.
 - **Select de sub-recetas ordenado:** `RecipeController::availableSemiElaborates()` con `orderBy('name')` (era el único select de datos sin ordenar). Los selects de enums/estáticos mantienen orden lógico a pedido del usuario.
 
+## v0.8.14 — Detalle de compra sin IVA (2026-07-07)
+- Si la factura no tiene IVA (alícuota 0 en todos los renglones), el detalle oculta "Total factura (con IVA)" y muestra "—" en la columna IVA.
+
+## v0.8.15 — Banner PWA solo con botón "Instalar" + fixes (2026-07-07)
+- **Banner con un único botón "Instalar":** ejecuta el prompt nativo si está disponible; solo muestra pasos manuales (por plataforma) al tocar el botón cuando el navegador no permite instalación directa. Nada de instrucciones de entrada.
+- Fixes previos ya desplegados: fallback Android sin `beforeinstallprompt`, íconos 192/apple-touch regenerados (estaban en blanco), `AddType application/manifest+json` en `.htaccess`.
+- Aprendizaje: `beforeinstallprompt` puede no dispararse (app ya instalada/conocida por Chrome, criterios de instalabilidad); iOS nunca permite instalación programática.
+
 ## Versioning
 - Rama activa: `master`
-- Versión actual: `0.8.13`
+- Versión actual: `0.8.15`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.

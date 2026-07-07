@@ -18,7 +18,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.8.14 (rama `v0.8.14-compras-iva-detalle`; `master` en 0.8.12)
+- **Versión actual:** 0.8.15 (rama `v0.8.13-selects-table-state-pwa` con PR a `master`; `master` en 0.8.14 + fixes PWA)
 
 ## Todo lo que está hecho
 
