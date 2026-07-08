@@ -22,6 +22,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipePriceController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -69,6 +70,12 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::get('purchases/{purchase}/match', [PurchaseController::class, 'match'])->name('purchases.match');
     Route::get('purchases/{purchase}/invoice', [PurchaseController::class, 'invoiceImage'])->name('purchases.invoice');
+
+    Route::get('stock', [StockController::class, 'index'])->name('stock.index');
+    Route::get('stock/{type}/{id}', [StockController::class, 'show'])
+        ->whereIn('type', ['ingredient', 'packaging'])
+        ->whereNumber('id')
+        ->name('stock.show');
 });
 
 // Costos — escritura (owner y admin)
@@ -133,6 +140,15 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->name('purchases.lines.destroy');
     Route::post('purchases/{purchase}/lines/{line}/match', [PurchaseController::class, 'matchLine'])->name('purchases.lines.match');
     Route::post('purchases/{purchase}/apply-suggestions', [PurchaseController::class, 'applyLineSuggestions'])->name('purchases.apply-suggestions');
+
+    Route::post('stock/{type}/{id}/adjustments', [StockController::class, 'storeAdjustment'])
+        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.adjustments.store');
+    Route::post('stock/{type}/{id}/wastes', [StockController::class, 'storeWaste'])
+        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.wastes.store');
+    Route::post('stock/{type}/{id}/counts', [StockController::class, 'storeCount'])
+        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.counts.store');
+    Route::patch('stock/{type}/{id}/min', [StockController::class, 'updateMin'])
+        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.min.update');
 
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
     Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');

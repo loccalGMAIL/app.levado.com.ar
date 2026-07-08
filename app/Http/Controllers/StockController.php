@@ -1,0 +1,206 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreStockAdjustmentRequest;
+use App\Http\Requests\StoreStockCountRequest;
+use App\Http\Requests\StoreStockWasteRequest;
+use App\Http\Requests\UpdateStockMinRequest;
+use App\Models\Ingredient;
+use App\Models\Location;
+use App\Models\Packaging;
+use App\Models\StockLevel;
+use App\Models\Tenant;
+use App\Services\AdminActivityRecorder;
+use App\Services\StockService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+
+class StockController extends Controller
+{
+    public function __construct(
+        private readonly AdminActivityRecorder $recorder,
+        private readonly StockService $stock,
+    ) {}
+
+    public function index(): View
+    {
+        $tenant = app(Tenant::class);
+        $location = $this->resolveLocation($tenant);
+        $type = request('type') === 'packaging' ? 'packaging' : 'ingredient';
+
+        $itemsQuery = $type === 'ingredient'
+            ? $tenant->ingredients()->active()
+            : $tenant->packagings()->active();
+
+        $items = $itemsQuery
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where('name', 'like', "%{$escaped}%");
+            })
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
+
+        $levels = StockLevel::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('location_id', $location->id)
+            ->where('stockable_type', $type)
+            ->whereIn('stockable_id', $items->pluck('id'))
+            ->get()
+            ->keyBy('stockable_id');
+
+        $locations = $tenant->locations()->active()->orderBy('name')->get();
+
+        return view('stock.index', compact('items', 'levels', 'type', 'location', 'locations'));
+    }
+
+    public function show(string $type, int $id): View
+    {
+        $tenant = app(Tenant::class);
+        $item = $this->resolveStockable($type, $id);
+        $this->authorize('view', $item);
+
+        $location = $this->resolveLocation($tenant);
+
+        $movements = $item->stockMovements()
+            ->where('location_id', $location->id)
+            ->with('user')
+            ->latest('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        $level = $this->stock->levelFor($item, $location);
+
+        return view('stock.show', compact('item', 'type', 'movements', 'level', 'location'));
+    }
+
+    public function storeAdjustment(StoreStockAdjustmentRequest $request, string $type, int $id): RedirectResponse
+    {
+        $item = $this->resolveStockable($type, $id);
+        $this->authorize('update', $item);
+
+        $tenant = app(Tenant::class);
+        $movement = $this->stock->registerAdjustment(
+            item: $item,
+            location: $this->resolveLocation($tenant),
+            signedQuantity: (float) $request->validated('quantity'),
+            reason: $request->validated('reason'),
+            user: $request->user(),
+        );
+
+        $this->recordActivity($request->user(), $type, $item, 'stock.adjustment', [
+            'quantity' => (float) $movement->quantity,
+            'reason' => $movement->reason,
+        ]);
+
+        return back(fallback: route('stock.index'))->with('status', 'Ajuste de stock registrado.');
+    }
+
+    public function storeWaste(StoreStockWasteRequest $request, string $type, int $id): RedirectResponse
+    {
+        $item = $this->resolveStockable($type, $id);
+        $this->authorize('update', $item);
+
+        $tenant = app(Tenant::class);
+        $movement = $this->stock->registerWaste(
+            item: $item,
+            location: $this->resolveLocation($tenant),
+            quantity: (float) $request->validated('quantity'),
+            reason: $request->validated('reason'),
+            user: $request->user(),
+        );
+
+        $this->recordActivity($request->user(), $type, $item, 'stock.waste', [
+            'quantity' => (float) $movement->quantity,
+            'reason' => $movement->reason,
+        ]);
+
+        return back(fallback: route('stock.index'))->with('status', 'Merma registrada.');
+    }
+
+    public function storeCount(StoreStockCountRequest $request, string $type, int $id): RedirectResponse
+    {
+        $item = $this->resolveStockable($type, $id);
+        $this->authorize('update', $item);
+
+        $tenant = app(Tenant::class);
+        $movement = $this->stock->applyCount(
+            item: $item,
+            location: $this->resolveLocation($tenant),
+            countedQuantity: (float) $request->validated('counted_quantity'),
+            user: $request->user(),
+        );
+
+        if ($movement === null) {
+            return back(fallback: route('stock.index'))->with('status', 'Recuento sin diferencias: el stock ya estaba al día.');
+        }
+
+        $this->recordActivity($request->user(), $type, $item, 'stock.count', [
+            'counted_quantity' => (float) $request->validated('counted_quantity'),
+            'delta' => (float) $movement->quantity,
+        ]);
+
+        return back(fallback: route('stock.index'))->with('status', 'Recuento registrado.');
+    }
+
+    public function updateMin(UpdateStockMinRequest $request, string $type, int $id): RedirectResponse
+    {
+        $item = $this->resolveStockable($type, $id);
+        $this->authorize('update', $item);
+
+        $tenant = app(Tenant::class);
+        $minQuantity = $request->validated('min_quantity');
+
+        $this->stock->setMinQuantity(
+            item: $item,
+            location: $this->resolveLocation($tenant),
+            minQuantity: $minQuantity !== null ? (float) $minQuantity : null,
+        );
+
+        $this->recordActivity($request->user(), $type, $item, 'stock.min_updated', [
+            'min_quantity' => $minQuantity,
+        ]);
+
+        return back(fallback: route('stock.index'))->with('status', 'Stock mínimo actualizado.');
+    }
+
+    private function resolveStockable(string $type, int $id): Ingredient|Packaging
+    {
+        $tenant = app(Tenant::class);
+
+        return $type === 'ingredient'
+            ? $tenant->ingredients()->findOrFail($id)
+            : $tenant->packagings()->findOrFail($id);
+    }
+
+    /**
+     * Sucursal de trabajo: la elegida por query string (validada contra el tenant)
+     * o la default. Hoy la UI no expone selector; queda la costura para sucursales.
+     */
+    private function resolveLocation(Tenant $tenant): Location
+    {
+        if (request('location_id')) {
+            $location = $tenant->locations()->active()->find(request('location_id'));
+
+            if ($location !== null) {
+                return $location;
+            }
+        }
+
+        return $tenant->defaultLocation();
+    }
+
+    private function recordActivity($actor, string $type, Ingredient|Packaging $item, string $action, array $payload): void
+    {
+        $this->recorder->record(
+            actor: $actor,
+            targetType: $type,
+            targetId: $item->id,
+            action: $action,
+            payload: $payload + ['name' => $item->name],
+            tenantId: $item->tenant_id,
+        );
+    }
+}

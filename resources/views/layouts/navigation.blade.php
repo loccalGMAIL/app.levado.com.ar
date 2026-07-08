@@ -66,6 +66,12 @@
                 } elseif (request()->routeIs('purchases.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Compras', 'href' => null];
+                } elseif (request()->routeIs('stock.show')) {
+                    $crumbs[] = ['label' => 'Existencias', 'href' => route('stock.index')];
+                    $crumbs[] = ['label' => 'Kardex', 'href' => null];
+                } elseif (request()->routeIs('stock.*')) {
+                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Existencias', 'href' => null];
                 } elseif (request()->routeIs('business.*')) {
                     $crumbs[] = ['label' => 'Negocio', 'href' => null];
                     $crumbs[] = ['label' => 'Mi negocio', 'href' => null];

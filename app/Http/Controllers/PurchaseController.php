@@ -12,6 +12,7 @@ use App\Models\PurchaseLine;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\PurchaseLineRecorder;
+use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ class PurchaseController extends Controller
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly PurchaseLineRecorder $lineRecorder,
+        private readonly StockService $stock,
     ) {}
 
     public function index(): View
@@ -168,7 +170,16 @@ class PurchaseController extends Controller
         $purchaseId = $purchase->id;
         $imagePath = $purchase->invoice_image_path;
 
-        $purchase->delete(); // lines cascade via FK
+        // Revertir el stock de las líneas aplicadas ANTES del delete: el cascade
+        // de la FK borra las líneas y perderíamos la referencia para el contramovimiento.
+        DB::transaction(function () use ($purchase) {
+            $purchase->lines()
+                ->whereNotNull('cost_applied_at')
+                ->get()
+                ->each(fn (PurchaseLine $line) => $this->stock->reversePurchaseLineEntry($line, request()->user()));
+
+            $purchase->delete(); // lines cascade via FK
+        });
 
         if ($imagePath) {
             Storage::disk('public')->delete($imagePath);
@@ -286,7 +297,13 @@ class PurchaseController extends Controller
         $this->authorize('update', $purchase);
         abort_unless($line->purchase_id === $purchase->id, 403);
 
-        $line->delete();
+        DB::transaction(function () use ($line) {
+            if ($line->isApplied()) {
+                $this->stock->reversePurchaseLineEntry($line, request()->user());
+            }
+
+            $line->delete();
+        });
 
         $this->recorder->record(
             actor: request()->user(),
@@ -341,9 +358,16 @@ class PurchaseController extends Controller
             ? (float) $validated['unit_cost']
             : null;
 
-        // "— sin asociar —": mark the line as pending again (does not revert costs).
+        // "— sin asociar —": mark the line as pending again (does not revert costs,
+        // but does revert its stock entry so the ledger stays consistent).
         if (blank($match)) {
-            $line->update(['purchaseable_type' => null, 'purchaseable_id' => null, 'cost_applied_at' => null]);
+            DB::transaction(function () use ($line) {
+                if ($line->isApplied()) {
+                    $this->stock->reversePurchaseLineEntry($line, request()->user());
+                }
+
+                $line->update(['purchaseable_type' => null, 'purchaseable_id' => null, 'cost_applied_at' => null]);
+            });
 
             return back()->with('status', 'Renglón marcado como pendiente.');
         }

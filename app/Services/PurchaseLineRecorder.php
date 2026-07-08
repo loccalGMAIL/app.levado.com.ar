@@ -7,6 +7,7 @@ use App\Models\Ingredient;
 use App\Models\Packaging;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Records purchase lines and keeps the related item's cost in sync.
@@ -23,6 +24,7 @@ class PurchaseLineRecorder
     public function __construct(
         private readonly RecipeCostPropagator $propagator,
         private readonly UnitConverter $converter,
+        private readonly StockService $stock,
     ) {}
 
     /**
@@ -32,10 +34,12 @@ class PurchaseLineRecorder
      */
     public function record(Purchase $purchase, array $data): PurchaseLine
     {
-        $line = $this->storePending($purchase, $data);
-        $this->apply($line);
+        return DB::transaction(function () use ($purchase, $data) {
+            $line = $this->storePending($purchase, $data);
+            $this->apply($line);
 
-        return $line;
+            return $line;
+        });
     }
 
     /**
@@ -80,11 +84,13 @@ class PurchaseLineRecorder
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Ingrediente no válido.');
 
             $costPerUnit = $this->costPerUnit($purchaseUnit, $item->unit, (float) $line->unit_price);
+            $stockQuantity = $this->converter->convert((float) $line->quantity_purchased, $purchaseUnit, $item->unit);
 
             if ($costPerUnit === null) {
                 $pkgQty = $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
                 abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del ingrediente.');
                 $costPerUnit = (float) $line->unit_price / $pkgQty;
+                $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
             }
 
             // When ingredient tracks sub-units (subdivisions), the stored cost_per_unit must
@@ -92,6 +98,7 @@ class PurchaseLineRecorder
             if ($item->subdivisions && $purchaseUnit === Unit::Unidad && $item->unit === Unit::Unidad) {
                 $item->cost_per_package = $costPerUnit;
                 $costPerUnit = $costPerUnit / $item->subdivisions;
+                $stockQuantity = (float) $line->quantity_purchased * $item->subdivisions;
             } else {
                 $item->cost_per_package = null;
             }
@@ -106,12 +113,18 @@ class PurchaseLineRecorder
             if ($item->subdivisions) {
                 $item->cost_per_package = $packagePrice;
                 $costPerUnit = $packagePrice / $item->subdivisions;
+                $stockQuantity = (float) $line->quantity_purchased * $item->subdivisions;
             } else {
                 $item->cost_per_package = null;
                 $costPerUnit = $packagePrice;
+                $stockQuantity = (float) $line->quantity_purchased;
             }
 
             $this->applyPackagingCost($item, $costPerUnit);
+        }
+
+        if ($stockQuantity !== null && $stockQuantity > 0) {
+            $this->stock->syncPurchaseLineEntry($line, $item, $stockQuantity, $costPerUnit, auth()->user());
         }
 
         $line->update(['cost_applied_at' => now()]);
@@ -166,7 +179,32 @@ class PurchaseLineRecorder
             $this->applyPackagingCost($item, $unitCost);
         }
 
+        $this->syncStockFromExplicitCost($line, $item, $unitCost);
+
         $line->update(['cost_applied_at' => now()]);
+    }
+
+    /**
+     * Stock para líneas con costo unitario explícito (unidades incompatibles):
+     * el divisor precio-del-bulto / costo-por-unidad da cuántas unidades de
+     * catálogo trae cada bulto. Si el costo no permite derivarlo, se imputa el
+     * costo igual y la línea queda sin movimiento de stock.
+     */
+    private function syncStockFromExplicitCost(PurchaseLine $line, Ingredient|Packaging $item, float $unitCost): void
+    {
+        if ($unitCost <= 0) {
+            return;
+        }
+
+        $pkgQty = (float) $line->unit_price / $unitCost;
+
+        if (! is_finite($pkgQty) || $pkgQty <= 0) {
+            return;
+        }
+
+        $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
+
+        $this->stock->syncPurchaseLineEntry($line, $item, $stockQuantity, $unitCost, auth()->user());
     }
 
     private function applyIngredientCost(Ingredient $item, float $costPerUnit): void
