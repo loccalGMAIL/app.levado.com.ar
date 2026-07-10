@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="title">Existencias</x-slot>
+    <x-slot name="title">Stock</x-slot>
 
     @php
         $stockErrorForms = ['stock-adjust', 'stock-waste', 'stock-count', 'stock-min'];
@@ -44,7 +44,7 @@
 
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-base font-semibold text-corteza">Existencias</h2>
+                    <h2 class="text-base font-semibold text-corteza">Stock</h2>
                     <p class="text-sm text-masa-madre mt-0.5">Stock de insumos y descartables en {{ $location->name }}.</p>
                 </div>
             </div>

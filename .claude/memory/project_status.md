@@ -58,6 +58,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Entrada automática de stock al imputar costos de compras (con conversión de unidades y subdivisiones); reversión por contramovimientos
 - UI `/stock` (tabs, valuación, alertas, mínimos) + kardex por ítem + modales ajuste/merma/recuento/mínimo
 - Columna Stock con edición inline en `/ingredients` y `/packaging` (valor absoluto → recuento)
+- Sidebar en grupos colapsables (Producción / Existencias / Costos / Administración) con persistencia en localStorage; ítem "Existencias" renombrado a "Stock"
 - Ver `.claude/memory/feature-existencias.md`
 
 ### Otras mejoras post-MVP (v0.8.x)

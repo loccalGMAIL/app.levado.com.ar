@@ -31,25 +31,29 @@
         </div>
 
         <div class="px-4 py-3">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Existencias</p>
+
+            <a href="{{ route('suppliers.index') }}" @click="open = false"
+                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
+                    {{ request()->routeIs('suppliers.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 18H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v3M8 10h8M8 14h4m4 4v-4m0 4h-4m4 0l-3-3" />
+                </svg>
+                Proveedores
+            </a>
+
+            <a href="{{ route('stock.index') }}" @click="open = false"
+                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
+                    {{ request()->routeIs('stock.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+                Stock
+            </a>
+        </div>
+
+        <div class="px-4 pb-3">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Costos</p>
-
-            <a href="{{ route('price-lists.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('price-lists.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                Listas de Precios
-            </a>
-
-            <a href="{{ route('fixed-costs.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('fixed-costs.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                Gastos
-            </a>
 
             <a href="{{ route('packaging.index') }}" @click="open = false"
                 class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
@@ -69,28 +73,28 @@
                 Mano de Obra
             </a>
 
-            <a href="{{ route('stock.index') }}" @click="open = false"
+            <a href="{{ route('fixed-costs.index') }}" @click="open = false"
                 class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('stock.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                    {{ request()->routeIs('fixed-costs.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
                 <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
-                Existencias
+                Gastos
             </a>
 
-            <a href="{{ route('suppliers.index') }}" @click="open = false"
+            <a href="{{ route('price-lists.index') }}" @click="open = false"
                 class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('suppliers.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                    {{ request()->routeIs('price-lists.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
                 <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 18H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v3M8 10h8M8 14h4m4 4v-4m0 4h-4m4 0l-3-3" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                Proveedores
+                Listas de Precios
             </a>
         </div>
 
         @canany(['edit-settings', 'manage-team'])
         <div class="px-4 pb-3">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Negocio</p>
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Administración</p>
 
             @can('edit-settings')
             <a href="{{ route('business.edit') }}" @click="open = false"

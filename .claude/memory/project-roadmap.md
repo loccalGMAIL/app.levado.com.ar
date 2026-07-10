@@ -205,6 +205,10 @@ metadata:
 - Nota: existía una rama previa `v0.9.0/feature/stock-insumos` (arquitectura duplicada por entidad, `stock_on_hand` mutable) que se descartó; solo se rescató la idea de la edición inline.
 - **340 tests, todos verdes**
 
+## Navegación en grupos colapsables (2026-07-10, rama v0.9.0)
+- Sidebar reorganizado en grupos colapsables (`components/sidebar-group.blade.php`, estado en localStorage, grupo activo forzado abierto): Producción (Recetas), Existencias (Compras, Proveedores, Stock), Costos (Ingredientes, Descartables, Mano de Obra, Gastos, Listas de Precios), Administración (Mi negocio, Sucursales, Mi equipo). Ítem "Existencias" renombrado a "Stock" (grupo se llama Existencias). Breadcrumbs y drawer mobile alineados.
+- **Módulos futuros ya decididos para el menú**: "Artículos" (productos fabricados a partir de recetas + productos de reventa; inicio de Etapa 3) y "Movimientos" (listado global de stock_movements con filtros) van en el grupo Existencias; "Producción" (módulo) va en el grupo Producción.
+
 ## Versioning
 - Rama activa: `claude/stock-ingredients-v0.9.0-idhggs` (PR pendiente a `master`)
 - Versión actual: `0.9.0`
