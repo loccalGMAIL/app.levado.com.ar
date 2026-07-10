@@ -108,8 +108,14 @@
                                 @endif
                             </div>
                             <div class="mt-2 flex items-baseline justify-between">
-                                <span class="text-sm font-mono {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }}">
+                                <span class="text-sm font-mono {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }} inline-flex items-center gap-1.5">
                                     {{ number_format($qty, 2, ',', '.') }} <span class="text-xs text-masa-madre">{{ $displayUnit($item) }}</span>
+                                    <a href="{{ route('stock.show', [$type, $item->id]) }}"
+                                        class="text-masa-madre hover:text-corteza" title="Ver movimientos de stock">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </a>
                                 </span>
                                 <span class="text-xs text-masa-madre font-mono">$ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}</span>
                             </div>
@@ -164,8 +170,16 @@
                                         <a href="{{ route('stock.show', [$type, $item->id]) }}" class="hover:underline">{{ $item->name }}</a>
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }}">
-                                        {{ number_format($qty, 2, ',', '.') }}
-                                        <span class="text-xs text-masa-madre font-normal">{{ $displayUnit($item) }}</span>
+                                        <div class="inline-flex items-center justify-end gap-1.5">
+                                            {{ number_format($qty, 2, ',', '.') }}
+                                            <span class="text-xs text-masa-madre font-normal">{{ $displayUnit($item) }}</span>
+                                            <a href="{{ route('stock.show', [$type, $item->id]) }}"
+                                                class="text-masa-madre hover:text-corteza" title="Ver movimientos de stock">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </a>
+                                        </div>
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs">
                                         {{ $level?->min_quantity !== null ? number_format($level->min_quantity, 2, ',', '.') : '—' }}
