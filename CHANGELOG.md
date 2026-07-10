@@ -5,6 +5,29 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.9.0] — 2026-07-10
+
+### Existencias (stock de insumos y descartables)
+
+#### Agregado
+
+- **Módulo de existencias:** nueva pantalla `/stock` con tabs de insumos y descartables, stock actual, mínimo, valuación (al último costo de cada ítem) y alertas visuales de stock negativo o bajo mínimo. Kardex por ítem (`/stock/{tipo}/{id}`) con el historial completo de movimientos.
+- **Ledger inmutable:** cada movimiento queda registrado en `stock_movements` (compra, ajuste, merma, recuento) con costo snapshot; el saldo se cachea en `stock_levels`. Toda corrección es un contramovimiento — el historial nunca se edita ni se borra. El stock negativo está permitido (la alerta es solo visual).
+- **Integración con Compras:** al imputar el costo de un renglón se registra la entrada de stock automáticamente (convertida a la unidad del ítem, con soporte de subdivisiones). Editar o eliminar renglones/compras revierte el stock con contramovimientos exactos.
+- **Acciones manuales:** modales de ajuste (entrada/salida con motivo), merma, recuento físico (con delta en vivo) y stock mínimo.
+- **Columna Stock en los catálogos:** las tablas de `/ingredients` y `/packaging` muestran el stock actual con edición inline (mismo patrón que el costo de descartables): al guardar el valor absoluto se registra la diferencia como recuento, conservando el historial. Ícono de historial junto al valor que lleva al kardex; en las cards mobile se muestra el stock con link al historial. El mismo ícono de historial se agregó al listado de stock.
+- **Menú lateral en grupos colapsables:** el sidebar se reorganizó en grupos temáticos — Producción (Recetas), Existencias (Compras, Proveedores, Stock), Costos (Ingredientes, Descartables, Mano de Obra, Gastos, Listas de Precios) y Administración (Mi negocio, Sucursales, Mi equipo). Cada grupo se pliega/despliega con un clic, recuerda su estado (localStorage) y se auto-expande cuando contiene la página activa. El ítem "Existencias" pasó a llamarse "Stock" (el grupo se llama Existencias). Breadcrumbs y drawer mobile "Más" alineados a los grupos nuevos; se agregó el breadcrumb faltante de Listas de Precios.
+- **Sucursal default:** los movimientos se registran en la sucursal "Casa Central" del tenant (creada en forma lazy), dejando la costura lista para multi-sucursal.
+
+#### Técnico
+
+- `StockService` como único punto de escritura del stock (lock pesimista por ítem/sucursal para escrituras concurrentes).
+- Endpoint JSON `PATCH /stock/{tipo}/{id}/level` para la edición inline desde los catálogos (reutiliza el recuento).
+- 51 tests nuevos (servicio, integración con compras, HTTP, permisos y aislamiento multi-tenant).
+- Versión `0.9.0` en `config/app.php`.
+
+---
+
 ## [0.8.15] — 2026-07-07
 
 ### Cambiado

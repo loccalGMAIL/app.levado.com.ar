@@ -93,6 +93,13 @@
                 {{-- Cards (mobile) --}}
                 <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
                     @foreach($packagings as $packaging)
+                        @php
+                            $stockLevel = $stockLevels->get($packaging->id);
+                            $stockQty = $stockLevel !== null ? (float) $stockLevel->quantity : 0.0;
+                            $stockUnit = $packaging->subdivisions && $packaging->subdivision_label
+                                ? $packaging->subdivision_label
+                                : 'u.';
+                        @endphp
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $packaging->active ? '' : 'opacity-50' }}"
                             x-data="{
                                 editing: false,
@@ -170,6 +177,12 @@
                                     $ <span>{{ number_format($packaging->cost_per_unit, 2, ',', '.') }}</span>
                                 @endcan
                             </div>
+                            <div class="mt-1 text-xs text-masa-madre">
+                                Stock:
+                                <span class="font-mono {{ $stockQty < 0 ? 'text-red-600' : 'text-corteza' }}">{{ number_format($stockQty, 2, ',', '.') }}</span>
+                                {{ $stockUnit }}
+                                <a href="{{ route('stock.show', ['packaging', $packaging->id]) }}" class="hover:text-corteza underline">historial</a>
+                            </div>
                             @can('manage-costs')
                                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
                                     <button type="button"
@@ -228,6 +241,7 @@
                                         Costo / sub-unidad <span class="text-xs">{{ $sortIcon('cost_per_unit') }}</span>
                                     </a>
                                 </th>
+                                <th class="px-4 py-3 font-medium text-right">Stock</th>
                                 <th class="px-4 py-3 font-medium">Estado</th>
                                 @can('manage-costs')
                                     <th class="px-4 py-3"></th>
@@ -236,6 +250,13 @@
                         </thead>
                         <tbody class="divide-y divide-miga">
                             @foreach($packagings as $packaging)
+                                @php
+                                    $stockLevel = $stockLevels->get($packaging->id);
+                                    $stockQty = $stockLevel !== null ? (float) $stockLevel->quantity : 0.0;
+                                    $stockUnit = $packaging->subdivisions && $packaging->subdivision_label
+                                        ? $packaging->subdivision_label
+                                        : 'u.';
+                                @endphp
                                 <tr class="{{ $packaging->active ? '' : 'opacity-50' }}">
                                     <td class="px-4 py-3 font-medium text-corteza">
                                         @can('manage-costs')
@@ -329,6 +350,73 @@
                                         @else
                                             $ <span x-text="costFormatted"></span>
                                         @endcan
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-mono"
+                                        x-data="{
+                                            editing: false,
+                                            saving: false,
+                                            isDirty: false,
+                                            qty: {{ $stockQty }},
+                                            qtyFormatted: '{{ number_format($stockQty, 2, ',', '.') }}',
+                                            startEdit() {
+                                                this.isDirty = false;
+                                                this.$refs.stockInput.value = parseFloat(this.qty).toFixed(2);
+                                                this.editing = true;
+                                                this.$nextTick(() => this.$refs.stockInput.select());
+                                            },
+                                            async saveStock() {
+                                                if (this.saving) return;
+                                                if (!this.isDirty) { this.editing = false; return; }
+                                                const raw = this.$refs.stockInput.value.trim();
+                                                if (raw === '') { this.editing = false; return; }
+                                                this.saving = true;
+                                                this.editing = false;
+                                                try {
+                                                    const res = await fetch('{{ route('stock.level.update', ['packaging', $packaging->id]) }}', {
+                                                        method: 'PATCH',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                                            'Accept': 'application/json',
+                                                        },
+                                                        body: JSON.stringify({ counted_quantity: raw })
+                                                    });
+                                                    const data = await res.json();
+                                                    this.qty = data.quantity;
+                                                    this.qtyFormatted = data.quantity_formatted;
+                                                } finally {
+                                                    this.saving = false;
+                                                }
+                                            }
+                                        }">
+                                        <div class="inline-flex items-center justify-end gap-1.5">
+                                            @can('manage-costs')
+                                                <div x-show="!editing && !saving"
+                                                    @click="startEdit()"
+                                                    class="cursor-pointer hover:text-horno select-none"
+                                                    :class="qty < 0 ? 'text-red-600' : 'text-corteza'"
+                                                    x-text="qtyFormatted"></div>
+                                                <input
+                                                    x-show="editing"
+                                                    x-ref="stockInput"
+                                                    type="number" step="0.01" min="0"
+                                                    @input="isDirty = true"
+                                                    @keydown.enter.prevent="saveStock()"
+                                                    @keydown.escape="editing = false; isDirty = false"
+                                                    @blur="saveStock()"
+                                                    class="w-24 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                                <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                            @else
+                                                <span :class="qty < 0 ? 'text-red-600' : 'text-corteza'" x-text="qtyFormatted"></span>
+                                            @endcan
+                                            <span class="text-masa-madre text-xs">{{ $stockUnit }}</span>
+                                            <a href="{{ route('stock.show', ['packaging', $packaging->id]) }}"
+                                                class="text-masa-madre hover:text-corteza" title="Ver movimientos de stock">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </a>
+                                        </div>
                                     </td>
                                     <td class="px-4 py-3">
                                         <x-status-badge :active="$packaging->active" />

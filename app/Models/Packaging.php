@@ -54,4 +54,14 @@ class Packaging extends Model
     {
         return $this->hasMany(PackagingPriceLog::class);
     }
+
+    public function stockLevels(): HasMany
+    {
+        return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', 'packaging');
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', 'packaging');
+    }
 }

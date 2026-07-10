@@ -46,6 +46,17 @@ class Tenant extends Model
         return $this->hasMany(Location::class);
     }
 
+    /**
+     * Sucursal por defecto para operaciones de stock. Lazy, espejo de defaultPriceList():
+     * cubre tenants existentes sin locations y tenants nuevos sin hooks de creación.
+     */
+    public function defaultLocation(): Location
+    {
+        return $this->locations()->where('is_default', true)->first()
+            ?? $this->locations()->orderBy('id')->first()
+            ?? $this->locations()->create(['name' => 'Casa Central', 'is_default' => true, 'active' => true]);
+    }
+
     public function ingredients(): HasMany
     {
         return $this->hasMany(Ingredient::class);

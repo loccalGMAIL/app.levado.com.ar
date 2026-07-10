@@ -58,4 +58,14 @@ class Ingredient extends Model
     {
         return $this->hasMany(IngredientPriceLog::class);
     }
+
+    public function stockLevels(): HasMany
+    {
+        return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', 'ingredient');
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', 'ingredient');
+    }
 }

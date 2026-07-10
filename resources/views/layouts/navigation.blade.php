@@ -42,12 +42,13 @@
                     $recipe = request()->route('recipe');
                     if ($recipe) { $crumbs[] = ['label' => $recipe->name, 'href' => null]; }
                 } elseif (request()->routeIs('recipes.*')) {
+                    $crumbs[] = ['label' => 'Producción', 'href' => null];
                     $crumbs[] = ['label' => 'Recetas', 'href' => null];
                 } elseif (request()->routeIs('ingredients.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Ingredientes', 'href' => null];
                 } elseif (request()->routeIs('suppliers.*')) {
-                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Existencias', 'href' => null];
                     $crumbs[] = ['label' => 'Proveedores', 'href' => null];
                 } elseif (request()->routeIs('packaging.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
@@ -64,17 +65,26 @@
                     $label = $purchase?->invoice_number ? "Factura #{$purchase->invoice_number}" : 'Compra #' . $purchase?->id;
                     $crumbs[] = ['label' => $label, 'href' => null];
                 } elseif (request()->routeIs('purchases.*')) {
-                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Existencias', 'href' => null];
                     $crumbs[] = ['label' => 'Compras', 'href' => null];
+                } elseif (request()->routeIs('stock.show')) {
+                    $crumbs[] = ['label' => 'Stock', 'href' => route('stock.index')];
+                    $crumbs[] = ['label' => 'Kardex', 'href' => null];
+                } elseif (request()->routeIs('stock.*')) {
+                    $crumbs[] = ['label' => 'Existencias', 'href' => null];
+                    $crumbs[] = ['label' => 'Stock', 'href' => null];
                 } elseif (request()->routeIs('business.*')) {
-                    $crumbs[] = ['label' => 'Negocio', 'href' => null];
+                    $crumbs[] = ['label' => 'Administración', 'href' => null];
                     $crumbs[] = ['label' => 'Mi negocio', 'href' => null];
                 } elseif (request()->routeIs('team.*')) {
-                    $crumbs[] = ['label' => 'Negocio', 'href' => null];
+                    $crumbs[] = ['label' => 'Administración', 'href' => null];
                     $crumbs[] = ['label' => 'Mi equipo', 'href' => null];
                 } elseif (request()->routeIs('locations.*')) {
-                    $crumbs[] = ['label' => 'Negocio', 'href' => null];
+                    $crumbs[] = ['label' => 'Administración', 'href' => null];
                     $crumbs[] = ['label' => 'Sucursales', 'href' => null];
+                } elseif (request()->routeIs('price-lists.*')) {
+                    $crumbs[] = ['label' => 'Costos', 'href' => null];
+                    $crumbs[] = ['label' => 'Listas de Precios', 'href' => null];
                 } elseif (request()->routeIs('profile.*')) {
                     $crumbs[] = ['label' => 'Mi perfil', 'href' => null];
                 } elseif (request()->routeIs('admin.*')) {

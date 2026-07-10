@@ -18,7 +18,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.8.15 (rama `v0.8.13-selects-table-state-pwa` con PR a `master`; `master` en 0.8.14 + fixes PWA)
+- **Versión actual:** 0.9.0 (rama `claude/stock-ingredients-v0.9.0-idhggs` con PR pendiente a `master`; `master` en 0.8.15)
 
 ## Todo lo que está hecho
 
@@ -52,6 +52,14 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - v0.8.14: si la factura no tiene IVA (todos los renglones con alícuota 0) el detalle oculta "Total factura (con IVA)" y muestra "—" en la columna IVA (patrón Percepción), con etiquetas ajustadas
 - Compresión de imagen al escanear (cliente y servidor)
 - Responsive mobile: tarjetas en todas las vistas de tablas
+
+### Módulo de Existencias — v0.9.0 ✅ (en rama, PR pendiente)
+- Ledger inmutable `stock_movements` + cache `stock_levels`; `StockService` único punto de escritura
+- Entrada automática de stock al imputar costos de compras (con conversión de unidades y subdivisiones); reversión por contramovimientos
+- UI `/stock` (tabs, valuación, alertas, mínimos) + kardex por ítem + modales ajuste/merma/recuento/mínimo
+- Columna Stock con edición inline en `/ingredients` y `/packaging` (valor absoluto → recuento)
+- Sidebar en grupos colapsables (Producción / Existencias / Costos / Administración) con persistencia en localStorage; ítem "Existencias" renombrado a "Stock"
+- Ver `.claude/memory/feature-existencias.md`
 
 ### Otras mejoras post-MVP (v0.8.x)
 - Subdivisiones en ingredientes y descartables + `cost_per_package` + columna "Por envase"
