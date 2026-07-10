@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\StockMovementType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
@@ -202,6 +203,98 @@ test('no se puede ver ni operar el stock de un ítem de otro tenant', function (
         ->post(route('stock.adjustments.store', ['ingredient', $foreignIngredient->id]), [
             'quantity' => 10,
             'reason' => 'Cruce',
+        ])
+        ->assertNotFound();
+
+    expect($foreignIngredient->stockMovements()->count())->toBe(0);
+});
+
+// --- Edición inline desde los catálogos ---
+
+test('la edición inline de stock registra un recuento con el delta', function () {
+    [$user, $tenant] = stockCrudUser();
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo]);
+
+    app(StockService::class)->registerAdjustment($ingredient, $tenant->defaultLocation(), 1000, 'Carga inicial', $user);
+
+    $this->actingAs($user)
+        ->patchJson(route('stock.level.update', ['ingredient', $ingredient->id]), [
+            'counted_quantity' => 850,
+        ])
+        ->assertOk()
+        ->assertJson(['quantity' => 850.0]);
+
+    $movement = $ingredient->stockMovements()->latest('id')->first();
+    expect($movement->type)->toBe(StockMovementType::Count)
+        ->and((float) $movement->quantity)->toBe(-150.0)
+        ->and((float) $ingredient->stockLevels()->first()->quantity)->toBe(850.0);
+});
+
+test('la edición inline de stock funciona para descartables', function () {
+    [$user, $tenant] = stockCrudUser(TenantUserRole::Admin);
+    $packaging = Packaging::factory()->for($tenant)->create();
+
+    $this->actingAs($user)
+        ->patchJson(route('stock.level.update', ['packaging', $packaging->id]), [
+            'counted_quantity' => 40,
+        ])
+        ->assertOk()
+        ->assertJson(['quantity' => 40.0]);
+
+    expect((float) $packaging->stockLevels()->first()->quantity)->toBe(40.0);
+});
+
+test('la edición inline sin diferencia no crea movimientos', function () {
+    [$user, $tenant] = stockCrudUser();
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo]);
+
+    app(StockService::class)->registerAdjustment($ingredient, $tenant->defaultLocation(), 500, 'Carga inicial', $user);
+
+    $this->actingAs($user)
+        ->patchJson(route('stock.level.update', ['ingredient', $ingredient->id]), [
+            'counted_quantity' => 500,
+        ])
+        ->assertOk()
+        ->assertJson(['quantity' => 500.0]);
+
+    expect($ingredient->stockMovements()->count())->toBe(1);
+});
+
+test('la edición inline rechaza cantidades negativas', function () {
+    [$user, $tenant] = stockCrudUser();
+    $ingredient = Ingredient::factory()->for($tenant)->create();
+
+    $this->actingAs($user)
+        ->patchJson(route('stock.level.update', ['ingredient', $ingredient->id]), [
+            'counted_quantity' => -10,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('counted_quantity');
+
+    expect($ingredient->stockMovements()->count())->toBe(0);
+});
+
+test('viewer no puede editar stock inline', function () {
+    [$user, $tenant] = stockCrudUser(TenantUserRole::Viewer);
+    $ingredient = Ingredient::factory()->for($tenant)->create();
+
+    $this->actingAs($user)
+        ->patchJson(route('stock.level.update', ['ingredient', $ingredient->id]), [
+            'counted_quantity' => 10,
+        ])
+        ->assertForbidden();
+
+    expect($ingredient->stockMovements()->count())->toBe(0);
+});
+
+test('no se puede editar inline el stock de un ítem de otro tenant', function () {
+    [$userA] = stockCrudUser();
+    [, $tenantB] = stockCrudUser();
+    $foreignIngredient = Ingredient::factory()->for($tenantB)->create();
+
+    $this->actingAs($userA)
+        ->patchJson(route('stock.level.update', ['ingredient', $foreignIngredient->id]), [
+            'counted_quantity' => 10,
         ])
         ->assertNotFound();
 

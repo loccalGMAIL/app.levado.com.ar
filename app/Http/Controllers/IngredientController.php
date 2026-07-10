@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreIngredientRequest;
 use App\Http\Requests\UpdateIngredientRequest;
 use App\Models\Ingredient;
+use App\Models\StockLevel;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
@@ -39,7 +40,15 @@ class IngredientController extends Controller
             ->withQueryString();
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
 
-        return view('ingredients.index', compact('ingredients', 'suppliers'));
+        $stockLevels = StockLevel::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('location_id', $tenant->defaultLocation()->id)
+            ->where('stockable_type', 'ingredient')
+            ->whereIn('stockable_id', $ingredients->pluck('id'))
+            ->get()
+            ->keyBy('stockable_id');
+
+        return view('ingredients.index', compact('ingredients', 'suppliers', 'stockLevels'));
     }
 
     public function store(StoreIngredientRequest $request): RedirectResponse

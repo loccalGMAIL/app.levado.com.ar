@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePackagingRequest;
 use App\Http\Requests\UpdatePackagingRequest;
 use App\Models\Packaging;
+use App\Models\StockLevel;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
@@ -39,7 +40,15 @@ class PackagingController extends Controller
             ->withQueryString();
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
 
-        return view('packaging.index', compact('packagings', 'suppliers'));
+        $stockLevels = StockLevel::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('location_id', $tenant->defaultLocation()->id)
+            ->where('stockable_type', 'packaging')
+            ->whereIn('stockable_id', $packagings->pluck('id'))
+            ->get()
+            ->keyBy('stockable_id');
+
+        return view('packaging.index', compact('packagings', 'suppliers', 'stockLevels'));
     }
 
     public function store(StorePackagingRequest $request): RedirectResponse

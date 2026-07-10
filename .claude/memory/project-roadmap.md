@@ -198,9 +198,16 @@ metadata:
 - Fixes previos ya desplegados: fallback Android sin `beforeinstallprompt`, íconos 192/apple-touch regenerados (estaban en blanco), `AddType application/manifest+json` en `.htaccess`.
 - Aprendizaje: `beforeinstallprompt` puede no dispararse (app ya instalada/conocida por Chrome, criterios de instalabilidad); iOS nunca permite instalación programática.
 
+## v0.9.0 — Módulo de Existencias (2026-07-10)
+- Ledger inmutable `stock_movements` + cache `stock_levels`, `StockService` único punto de escritura. Ver [[feature-existencias]].
+- Integración con compras (entrada automática al imputar costo, reversión por contramovimiento), ajuste/merma/recuento/mínimo, UI `/stock` con tabs + kardex.
+- Edición inline de stock en catálogos `/ingredients` y `/packaging` (valor absoluto → recuento con delta, endpoint JSON `stock.level.update`).
+- Nota: existía una rama previa `v0.9.0/feature/stock-insumos` (arquitectura duplicada por entidad, `stock_on_hand` mutable) que se descartó; solo se rescató la idea de la edición inline.
+- **340 tests, todos verdes**
+
 ## Versioning
-- Rama activa: `master`
-- Versión actual: `0.8.15`
+- Rama activa: `claude/stock-ingredients-v0.9.0-idhggs` (PR pendiente a `master`)
+- Versión actual: `0.9.0`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.

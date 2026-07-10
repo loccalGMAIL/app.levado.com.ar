@@ -149,6 +149,8 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
         ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.counts.store');
     Route::patch('stock/{type}/{id}/min', [StockController::class, 'updateMin'])
         ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.min.update');
+    Route::patch('stock/{type}/{id}/level', [StockController::class, 'updateLevel'])
+        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.level.update');
 
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
     Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');

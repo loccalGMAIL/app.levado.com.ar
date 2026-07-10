@@ -13,6 +13,7 @@ use App\Models\StockLevel;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\StockService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -143,6 +144,41 @@ class StockController extends Controller
         ]);
 
         return back(fallback: route('stock.index'))->with('status', 'Recuento registrado.');
+    }
+
+    /**
+     * Edición inline desde los catálogos: recibe el stock absoluto contado y
+     * registra la diferencia como recuento (applyCount). Responde JSON para
+     * actualizar la celda sin recargar.
+     */
+    public function updateLevel(StoreStockCountRequest $request, string $type, int $id): JsonResponse
+    {
+        $item = $this->resolveStockable($type, $id);
+        $this->authorize('update', $item);
+
+        $tenant = app(Tenant::class);
+        $location = $this->resolveLocation($tenant);
+
+        $movement = $this->stock->applyCount(
+            item: $item,
+            location: $location,
+            countedQuantity: (float) $request->validated('counted_quantity'),
+            user: $request->user(),
+        );
+
+        if ($movement !== null) {
+            $this->recordActivity($request->user(), $type, $item, 'stock.count', [
+                'counted_quantity' => (float) $request->validated('counted_quantity'),
+                'delta' => (float) $movement->quantity,
+            ]);
+        }
+
+        $quantity = (float) ($this->stock->levelFor($item, $location)?->quantity ?? 0);
+
+        return response()->json([
+            'quantity' => $quantity,
+            'quantity_formatted' => number_format($quantity, 2, ',', '.'),
+        ]);
     }
 
     public function updateMin(UpdateStockMinRequest $request, string $type, int $id): RedirectResponse
