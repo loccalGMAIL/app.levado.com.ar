@@ -5,6 +5,24 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.9.1] — 2026-07-13
+
+### Compras: comprobante en la carga manual
+
+#### Agregado
+
+- **Comprobante opcional en compra manual:** el modal "+ Nueva compra" ahora permite adjuntar una foto o PDF del ticket/factura, sin pasar por la lectura con IA. Pensado para comprobantes manuscritos que la IA lee mal — los renglones se cargan a mano (como ya era posible) y la imagen queda guardada como respaldo, visible desde "Ver factura original" en el detalle de la compra.
+- **Reemplazo del comprobante al editar:** el modal de edición de compra permite adjuntar el comprobante si no se cargó al crear, o reemplazarlo por uno nuevo (borra el archivo anterior del storage).
+
+#### Técnico
+
+- `StorePurchaseRequest`/`UpdatePurchaseRequest`: regla `invoice` opcional (mismos mimetypes y límite de 10 MB que el escaneo).
+- `PurchaseController`: nuevo helper `storeInvoiceImage()` (reutiliza `InvoiceImagePreparer` para downscale) compartido entre alta y edición.
+- 5 tests nuevos (`PurchaseCrudTest`) — creación con/sin comprobante, formato inválido rechazado, reemplazo y conservación del archivo existente.
+- Versión `0.9.1` en `config/app.php`.
+
+---
+
 ## [0.9.0] — 2026-07-10
 
 ### Existencias (stock de insumos y descartables)

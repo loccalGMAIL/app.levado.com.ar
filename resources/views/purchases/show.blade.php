@@ -6,7 +6,7 @@
     @php
         $errorsInAddLine      = $errors->hasAny(['raw_name', 'quantity_purchased', 'purchase_unit', 'unit_price']) && old('_form') === 'add-line';
         $errorsInEditLine     = $errors->hasAny(['quantity_purchased', 'purchase_unit', 'unit_price']) && old('_form') === 'edit-line';
-        $errorsInEditPurchase = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'default_iva_rate', 'default_percepcion_rate']) && old('_form') === 'edit-purchase';
+        $errorsInEditPurchase = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'default_iva_rate', 'default_percepcion_rate', 'invoice']) && old('_form') === 'edit-purchase';
 
         $editingLine = null;
         if ($errorsInEditLine) {

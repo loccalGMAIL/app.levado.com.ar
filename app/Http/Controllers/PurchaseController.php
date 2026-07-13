@@ -11,13 +11,16 @@ use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\InvoiceImagePreparer;
 use App\Services\PurchaseLineRecorder;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -28,6 +31,7 @@ class PurchaseController extends Controller
         private readonly AdminActivityRecorder $recorder,
         private readonly PurchaseLineRecorder $lineRecorder,
         private readonly StockService $stock,
+        private readonly InvoiceImagePreparer $imagePreparer,
     ) {}
 
     public function index(): View
@@ -79,7 +83,12 @@ class PurchaseController extends Controller
             403,
         );
 
-        $purchase = $tenant->purchases()->create($request->validated());
+        $data = $request->safe()->except('invoice');
+        if ($request->hasFile('invoice')) {
+            $data['invoice_image_path'] = $this->storeInvoiceImage($request->file('invoice'), $tenant);
+        }
+
+        $purchase = $tenant->purchases()->create($data);
 
         $this->recorder->record(
             actor: $request->user(),
@@ -103,7 +112,16 @@ class PurchaseController extends Controller
             403,
         );
 
-        $purchase->update($request->validated());
+        $data = $request->safe()->except('invoice');
+        if ($request->hasFile('invoice')) {
+            $previousImagePath = $purchase->invoice_image_path;
+            $data['invoice_image_path'] = $this->storeInvoiceImage($request->file('invoice'), $tenant);
+            if ($previousImagePath) {
+                Storage::disk('public')->delete($previousImagePath);
+            }
+        }
+
+        $purchase->update($data);
 
         $this->recorder->record(
             actor: $request->user(),
@@ -258,6 +276,18 @@ class PurchaseController extends Controller
         );
 
         return back()->with('status', 'Renglón agregado.');
+    }
+
+    private function storeInvoiceImage(UploadedFile $file, Tenant $tenant): string
+    {
+        $contents = (string) file_get_contents($file->getRealPath());
+        [$contents, $mime] = $this->imagePreparer->prepare($contents, $file->getMimeType() ?? 'image/jpeg');
+
+        $extension = $mime === 'application/pdf' ? 'pdf' : 'jpg';
+        $path = "purchases/{$tenant->id}/".Str::uuid()->toString().'.'.$extension;
+        Storage::disk('public')->put($path, $contents);
+
+        return $path;
     }
 
     public function invoiceImage(Purchase $purchase): StreamedResponse

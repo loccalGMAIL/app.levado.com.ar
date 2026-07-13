@@ -1,9 +1,9 @@
 ---
 name: Levado — Estado actual del proyecto
-description: Progreso al 07/07/2026
+description: Progreso al 13/07/2026
 type: project
 ---
-# Estado del proyecto — 7 de julio 2026
+# Estado del proyecto — 13 de julio 2026
 
 ## Estructura local
 ```
@@ -18,7 +18,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.9.0 (rama `claude/stock-ingredients-v0.9.0-idhggs` con PR pendiente a `master`; `master` en 0.8.15)
+- **Versión actual:** 0.9.1 (rama `v0.9.1-compras-comprobante-manual`; `master` en 0.9.0)
 
 ## Todo lo que está hecho
 
@@ -44,7 +44,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Reemplaza hamburger del top nav en mobile
 - Fixes responsive: tablas con overflow-x-auto, formulario Mi equipo colapsa, modal w-full en mobile, capacidad productiva colapsa, botones header receta con texto adaptativo
 
-### Módulo de Compras — v0.8.x ✅ (en master)
+### Módulo de Compras — v0.8.x–v0.9.1 ✅ (en master hasta v0.9.0; v0.9.1 en rama)
 - Fase 1: escaneo, digitalización, IVA/percepciones por renglón y factura
 - Fase 2: match e imputación de costos con cálculo reactivo Alpine.js y `unit_cost` override
 - Fase 3: selects con Tom Select, límite de decimales, buscador y columnas ordenables en índice
@@ -52,8 +52,9 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - v0.8.14: si la factura no tiene IVA (todos los renglones con alícuota 0) el detalle oculta "Total factura (con IVA)" y muestra "—" en la columna IVA (patrón Percepción), con etiquetas ajustadas
 - Compresión de imagen al escanear (cliente y servidor)
 - Responsive mobile: tarjetas en todas las vistas de tablas
+- **v0.9.1:** comprobante (foto/PDF) adjuntable en la carga manual de compras (sin IA), reemplazable al editar — para tickets manuscritos
 
-### Módulo de Existencias — v0.9.0 ✅ (en rama, PR pendiente)
+### Módulo de Existencias — v0.9.0 ✅ (en master)
 - Ledger inmutable `stock_movements` + cache `stock_levels`; `StockService` único punto de escritura
 - Entrada automática de stock al imputar costos de compras (con conversión de unidades y subdivisiones); reversión por contramovimientos
 - UI `/stock` (tabs, valuación, alertas, mínimos) + kardex por ítem + modales ajuste/merma/recuento/mínimo
