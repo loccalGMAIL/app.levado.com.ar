@@ -209,9 +209,14 @@ metadata:
 - Sidebar reorganizado en grupos colapsables (`components/sidebar-group.blade.php`, estado en localStorage, grupo activo forzado abierto): Producción (Recetas), Existencias (Compras, Proveedores, Stock), Costos (Ingredientes, Descartables, Mano de Obra, Gastos, Listas de Precios), Administración (Mi negocio, Sucursales, Mi equipo). Ítem "Existencias" renombrado a "Stock" (grupo se llama Existencias). Breadcrumbs y drawer mobile alineados.
 - **Módulos futuros ya decididos para el menú**: "Artículos" (productos fabricados a partir de recetas + productos de reventa; inicio de Etapa 3) y "Movimientos" (listado global de stock_movements con filtros) van en el grupo Existencias; "Producción" (módulo) va en el grupo Producción.
 
+## v0.9.1 — Compras: comprobante en la carga manual (2026-07-13)
+- El flujo manual de compras (sin IA) ya existía; se agregó la posibilidad de adjuntar la foto/PDF del comprobante en el modal "+ Nueva compra" y reemplazarla desde "Editar compra" — pensado para tickets manuscritos que la IA de visión lee mal.
+- Ver [[feature-compras]] sección "Compra manual con comprobante".
+- 345 tests, todos verdes (5 nuevos en `PurchaseCrudTest`).
+
 ## Versioning
-- Rama activa: `claude/stock-ingredients-v0.9.0-idhggs` (PR pendiente a `master`)
-- Versión actual: `0.9.0`
+- Rama activa: `v0.9.1-compras-comprobante-manual` (sobre `master`, que ya tiene v0.9.0 mergeado)
+- Versión actual: `0.9.1`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.

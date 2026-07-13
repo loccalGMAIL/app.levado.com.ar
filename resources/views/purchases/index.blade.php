@@ -2,7 +2,7 @@
     <x-slot name="title">Compras</x-slot>
 
     @php
-        $errorsInCreate = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes']) && old('_form') === 'create';
+        $errorsInCreate = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'invoice']) && old('_form') === 'create';
         $showUrl = fn ($purchase) => route('purchases.show', array_filter(['purchase' => $purchase->id, 'volver' => request()->getQueryString()]));
     @endphp
 

@@ -1,5 +1,5 @@
 <x-crud-modal name="purchase-create" title="Nueva compra" :show="$errorsInCreate">
-    <form method="POST" action="{{ route('purchases.store') }}" class="space-y-4"
+    <form method="POST" action="{{ route('purchases.store') }}" enctype="multipart/form-data" class="space-y-4"
           x-data="{
               supplierId: '{{ old('supplier_id', '') }}',
               invoiceNumber: '{{ old('invoice_number', '') }}',
@@ -20,6 +20,39 @@
                       const data = await res.json();
                       this.duplicateWarning = data.duplicate ? data : null;
                   }, 400);
+              },
+              invoiceFileName: '',
+              invoicePreviewUrl: '',
+              invoicePreparing: false,
+              invoicePickError: '',
+              async onPickInvoice(e) {
+                  const input = e.target;
+                  const original = input.files[0];
+                  this.invoicePickError = '';
+                  if (this.invoicePreviewUrl) { URL.revokeObjectURL(this.invoicePreviewUrl); }
+                  this.invoicePreviewUrl = '';
+                  this.invoiceFileName = '';
+                  if (!original) { return; }
+
+                  this.invoicePreparing = true;
+                  try {
+                      const file = await (window.compressInvoiceImage ? window.compressInvoiceImage(original) : Promise.resolve(original));
+
+                      if (file.size > 10 * 1024 * 1024) {
+                          this.invoicePickError = 'El archivo supera los 10 MB. Probá con una foto o un PDF más liviano.';
+                          input.value = '';
+                          return;
+                      }
+
+                      const dt = new DataTransfer();
+                      dt.items.add(file);
+                      input.files = dt.files;
+
+                      this.invoiceFileName = file.name;
+                      this.invoicePreviewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+                  } finally {
+                      this.invoicePreparing = false;
+                  }
               }
           }"
           x-on:supplier-created.window="
@@ -92,6 +125,28 @@
                 class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm"
                 placeholder="Opcional">{{ old('notes') }}</textarea>
             <x-input-error :messages="$errors->get('notes')" class="mt-2" />
+        </div>
+
+        <div>
+            <x-input-label for="create_purchase_invoice_file" value="Comprobante" />
+            <label class="block">
+                <div class="border-2 border-dashed border-miga rounded-md p-4 text-center cursor-pointer hover:border-horno transition-colors"
+                    :class="invoiceFileName ? 'border-horno bg-miga/40' : ''">
+                    <template x-if="!invoicePreviewUrl">
+                        <p class="text-sm text-masa-madre">Tocá para sacar una foto o subir un archivo</p>
+                    </template>
+                    <template x-if="invoicePreviewUrl">
+                        <img :src="invoicePreviewUrl" alt="Vista previa" class="max-h-40 mx-auto rounded-md">
+                    </template>
+                </div>
+                <input type="file" id="create_purchase_invoice_file" name="invoice" accept="image/*,application/pdf" capture="environment"
+                    class="hidden"
+                    @change="onPickInvoice($event)">
+            </label>
+            <p class="mt-1 text-xs text-masa-madre" x-show="invoicePreparing">Preparando imagen…</p>
+            <p class="mt-1 text-xs text-masa-madre" x-show="invoiceFileName && !invoicePreparing" x-text="'Archivo: ' + invoiceFileName"></p>
+            <p class="mt-1 text-xs text-red-600" x-show="invoicePickError" x-text="invoicePickError"></p>
+            <x-input-error :messages="$errors->get('invoice')" class="mt-2" />
         </div>
 
         {{-- IVA y percepciones --}}

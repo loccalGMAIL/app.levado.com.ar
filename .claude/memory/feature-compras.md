@@ -114,3 +114,15 @@ Rama: `feature/compras` — versión 0.7.1
 - `ANTHROPIC_API_KEY` requerida en `.env` de producción (Hostinger) para que funcione el escaneo
 - `purchase_price_includes_iva` en `tenant_settings` (default `'1'`) controla si el índice muestra totales con o sin IVA
 - Imagen de factura servida por `PurchaseController@invoiceImage` (evita 403 del symlink en dev)
+
+## Compra manual con comprobante (v0.9.1)
+
+El flujo manual (`purchases.modals.create` → `PurchaseController::store()`) ya existía en paralelo al escaneo con IA (sin match server-side; líneas se cargan a mano vía "Agregar renglón"). Lo único que faltaba era poder adjuntar la imagen del comprobante sin pasar por la IA — pensado para tickets manuscritos que el modelo de visión interpreta mal.
+
+- `StorePurchaseRequest`/`UpdatePurchaseRequest`: campo `invoice` opcional (`file`, mismos mimetypes/10 MB que el escaneo).
+- `PurchaseController::storeInvoiceImage()`: helper privado que reutiliza `InvoiceImagePreparer` (downscale) y guarda en `purchases/{tenant_id}/{uuid}.{ext}` — mismo patrón que `PurchaseScanController::scan()`, sin extraer una clase compartida (poca duplicación, solo 2 controllers).
+- `store()`: si viene `invoice`, sube y setea `invoice_image_path` antes de crear.
+- `update()`: si viene `invoice`, sube el nuevo archivo y borra el anterior del storage (reemplazo); si no viene, conserva el que ya había.
+- Modales `create.blade.php` y `edit-purchase.blade.php`: input de archivo compacto (no dropzone completo, es un modal), reutiliza `window.compressInvoiceImage` (mismo compresor cliente que el scan) y el patrón `onPick` de `scan/create.blade.php`. `enctype="multipart/form-data"` agregado a ambos forms.
+- `show.blade.php` no necesitó cambios: el botón "Ver factura original" ya era condicional a `invoice_image_path`, sin importar si vino de IA o de carga manual.
+- Tests: `tests/Feature/PurchaseCrudTest.php` (no existía cobertura de `purchases.store`/`update` antes de esto).
