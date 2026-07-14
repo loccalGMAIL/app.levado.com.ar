@@ -29,6 +29,25 @@
             pkgSort: { by: 'name', dir: 1 },
             subSort: { by: 'name', dir: 1 },
 
+            unitGroups: { gr: 'weight', kg: 'weight', ml: 'volume', L: 'volume', cc: 'volume', u: 'unit' },
+            allUnits: @js(collect(\App\Enums\Unit::cases())->map(fn ($u) => ['value' => $u->value, 'label' => $u->label()])->values()),
+            compatibleUnits(line) {
+                const group = this.unitGroups[line.ingredientUnit];
+                return this.allUnits.filter(u => this.unitGroups[u.value] === group);
+            },
+            convertUnit(amount, from, to) {
+                if (from === to) return amount;
+                const toBase = (n, u) => (u === 'kg' || u === 'L') ? n * 1000 : n;
+                const fromBase = (n, u) => (u === 'kg' || u === 'L') ? n / 1000 : n;
+                return fromBase(toBase(amount, from), to);
+            },
+            changeIngredientUnit(line, newUnit) {
+                const converted = this.convertUnit(line.quantity, line.unit, newUnit);
+                line.quantity = Math.round(converted * 1000) / 1000;
+                line.unit = newUnit;
+                this.saveIngredientLine(line);
+            },
+
             get sortedIngredientLines() {
                 const { by, dir } = this.ingSort;
                 return [...this.ingredientLines].sort((a, b) => {
@@ -136,11 +155,16 @@
                 }
             },
             async saveIngredientLine(line) {
-                await fetch('/recipes/{{ $recipe->id }}/ingredient-lines/' + line.id, {
+                const res = await fetch('/recipes/{{ $recipe->id }}/ingredient-lines/' + line.id, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                    body: JSON.stringify({ quantity: line.quantity }),
+                    body: JSON.stringify({ quantity: line.quantity, unit: line.unit }),
                 });
+                if (res.ok) {
+                    const data = await res.json();
+                    line.unitLabel = data.unitLabel;
+                    line.costPerLineUnit = data.costPerLineUnit;
+                }
             },
             async savePackagingLine(line) {
                 await fetch('/recipes/{{ $recipe->id }}/packaging-lines/' + line.id, {
@@ -264,7 +288,17 @@
                                             @change="saveIngredientLine(line)"
                                             min="0.001" step="any"
                                             class="flex-1 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
-                                        <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono shrink-0" x-text="line.unitLabel"></span>
+                                        <template x-if="compatibleUnits(line).length > 1">
+                                            <select @change="changeIngredientUnit(line, $event.target.value)"
+                                                class="text-xs border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono shrink-0">
+                                                <template x-for="u in compatibleUnits(line)" :key="u.value">
+                                                    <option :value="u.value" :selected="u.value === line.unit" x-text="u.label"></option>
+                                                </template>
+                                            </select>
+                                        </template>
+                                        <template x-if="compatibleUnits(line).length <= 1">
+                                            <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono shrink-0" x-text="line.unitLabel"></span>
+                                        </template>
                                         @can('manage-costs')
                                             <form method="POST" action="{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}"
                                                 :action="'{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
@@ -333,7 +367,17 @@
                                                     class="w-24 text-right text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono" />
                                             </td>
                                             <td class="px-4 py-2.5 text-center">
-                                                <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono" x-text="line.unitLabel"></span>
+                                                <template x-if="compatibleUnits(line).length > 1">
+                                                    <select @change="changeIngredientUnit(line, $event.target.value)"
+                                                        class="text-xs border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono">
+                                                        <template x-for="u in compatibleUnits(line)" :key="u.value">
+                                                            <option :value="u.value" :selected="u.value === line.unit" x-text="u.label"></option>
+                                                        </template>
+                                                    </select>
+                                                </template>
+                                                <template x-if="compatibleUnits(line).length <= 1">
+                                                    <span class="inline-block px-2 py-0.5 bg-miga rounded text-xs text-masa-madre font-mono" x-text="line.unitLabel"></span>
+                                                </template>
                                             </td>
                                             <td class="px-4 py-2.5 text-right font-mono text-corteza">
                                                 <span x-text="'$ ' + fmt(line.quantity * line.costPerLineUnit)"></span>

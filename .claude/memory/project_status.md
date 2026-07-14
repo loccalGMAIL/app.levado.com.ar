@@ -18,7 +18,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.9.2 (rama `v0.9.2-existencias-orden-elimina-merma-badge-semi`; `master` en 0.9.1)
+- **Versión actual:** 0.9.3 (rama `v0.9.3-recetas-editar-unidad-ingrediente`; `master` en 0.9.2)
 
 ## Todo lo que está hecho
 
@@ -37,6 +37,13 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Búsqueda, paginación (20 items), ordenamiento en todas las datatables
 - Botón "Copiar" en recetas, header sticky en detalle de receta
 - **216 tests, todos verdes**
+
+### v0.9.3 — Recetas: editar unidad de una línea de ingrediente
+- Ya existía (desde v0.4.0) poder elegir, al agregar un ingrediente a una receta, una unidad distinta a la unidad base del ingrediente (con conversión automática de costo vía `UnitConverter`). Faltaba poder cambiar esa unidad en una línea ya creada — solo se podía editar la cantidad.
+- `RecipeController::updateIngredientLine()` ahora acepta y valida `unit` igual que al agregar; el `<select>` de unidad en `/recipes/{id}` (antes un badge de solo lectura) se habilita en edición, filtrado a unidades compatibles. Al cambiar la unidad, la cantidad se recalcula automáticamente en el cliente para mantener la misma proporción (ej: 2 kg → 2000 gr).
+- Fix de Alpine.js: `x-model` en `<select>` con `<option>` de `x-for` no reflejaba el valor inicial; se resolvió con `:selected` explícito por opción + `@change` propio.
+- El módulo de "Producción" (descuento de stock al fabricar) sigue sin construir — fuera de alcance a pedido del usuario.
+- **352 tests, todos verdes**
 
 ### UX Mobile — v0.7.0 ✅
 - Bottom navigation bar fija en mobile (< 640px): Inicio, Recetas, Ingredientes, Gastos Fijos + drawer "Más"

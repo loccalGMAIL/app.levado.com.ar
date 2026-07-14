@@ -221,9 +221,16 @@ metadata:
 - **Paginación en castellano:** `lang/es.json` traduce "Showing/to/of/results/Pagination Navigation" (Laravel las deja en inglés si falta el JSON de locale, aunque `pagination.previous/next` ya estuvieran traducidos). Corrige las 15 tablas paginadas del sistema de una sola vez.
 - 350 tests, todos verdes (6 nuevos + 1 de regresión de paginación).
 
+## v0.9.3 — Recetas: editar unidad de una línea de ingrediente (2026-07-14)
+- Hasta esta versión, una vez agregado un ingrediente a una receta solo se podía editar la cantidad de la línea; para cambiar la unidad había que borrar y volver a cargar. `RecipeController::updateIngredientLine()` ahora valida y acepta `unit` igual que al agregar, filtrado a unidades compatibles con la del ingrediente vía `UnitConverter`.
+- Al cambiar la unidad de una línea existente, la cantidad se convierte automáticamente en el cliente (Alpine.js) para mantener la misma proporción real (ej: 2 kg → 2000 gr), en vez de dejar el número tal cual.
+- Fix de un bug de Alpine.js encontrado durante la verificación: `x-model` en un `<select>` con `<option>` generadas por `x-for` no reflejaba el valor inicial; se resolvió con `:selected` explícito por opción + handler `@change` propio (sin `x-model` en el `<select>`).
+- Nota: la selección de unidad por línea (independiente de la unidad base del ingrediente, con conversión automática de costo) **ya existía desde la v0.4.0** — este release solo cierra el vacío de no poder editarla en una línea ya creada. El módulo de "Producción" (descuento de stock al fabricar una receta) sigue sin construir; quedó fuera de alcance a pedido explícito del usuario.
+- 352 tests, todos verdes (2 nuevos).
+
 ## Versioning
-- Rama activa: `v0.9.2-existencias-orden-elimina-merma-badge-semi` (sobre `master`, que ya tiene v0.9.1 mergeado)
-- Versión actual: `0.9.2`
+- Rama activa: `v0.9.3-recetas-editar-unidad-ingrediente` (sobre `master`, que ya tiene v0.9.2 mergeado)
+- Versión actual: `0.9.3`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.

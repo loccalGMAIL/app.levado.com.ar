@@ -5,6 +5,26 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.9.3] — 2026-07-14
+
+### Recetas: editar unidad de una línea de ingrediente
+
+#### Agregado
+
+- **Edición de unidad en líneas de ingrediente ya cargadas:** hasta ahora, una vez agregado un ingrediente a una receta, solo se podía editar su cantidad — para cambiar la unidad había que borrar la línea y volver a cargarla. Ahora el selector de unidad (ya existente al agregar) también aparece al editar, filtrado a las unidades compatibles con la del ingrediente (peso: gr/kg — volumen: ml/L/cc — unidad: u), y el costo de la línea y de la receta se recalculan automáticamente vía `UnitConverter` sin recargar la página.
+- **Conversión automática de la cantidad al cambiar unidad:** al elegir una nueva unidad en una línea existente, la cantidad se recalcula al vuelo para mantener la misma proporción real (ej: `2 kg` → `2000 gr`), en vez de dejar el número tal cual y obligar a recalcularlo a mano.
+- Si el ingrediente solo tiene una unidad compatible (ítems por `u`, incluyendo los que usan subdivisiones), se mantiene el badge de solo lectura tal como estaba, evitando un selector sin opciones reales.
+
+#### Técnico
+
+- `RecipeController::updateIngredientLine()` valida `unit` igual que `storeIngredientLine()` y devuelve `unitLabel`/`costPerLineUnit` recalculados en la respuesta JSON.
+- Fix de un bug de Alpine.js: `x-model` en un `<select>` con opciones generadas por `x-for` no reflejaba el valor inicial (mostraba siempre la primera opción); se resolvió con `:selected` explícito por opción y un handler `@change` propio en vez de `x-model` en el `<select>`.
+- Conversión de cantidad al cambiar unidad implementada en el cliente (Alpine.js, misma tabla de factores que `UnitConverter`: ×1000 para kg/L) — el servidor sigue siendo la fuente de verdad final vía la validación de compatibilidad ya existente.
+- 2 tests nuevos en `RecipeCostTest` (actualización con unidad compatible, rechazo de unidad incompatible).
+- Versión `0.9.3` en `config/app.php`.
+
+---
+
 ## [0.9.2] — 2026-07-14
 
 ### Existencias: columnas ordenables

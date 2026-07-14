@@ -93,6 +93,61 @@ test('owner puede eliminar una línea de ingrediente', function () {
     expect($recipe->ingredientLines()->count())->toBe(0);
 });
 
+test('owner puede actualizar cantidad y unidad de una línea de ingrediente a una unidad compatible', function () {
+    [$user, $tenant] = ownerForRecipeCost();
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 1, 'yield_unit' => 'u']);
+    $ingredient = Ingredient::factory()->for($tenant)->create([
+        'unit' => Unit::Kilogramo->value,
+        'cost_per_unit' => 1000,
+    ]);
+    $line = RecipeIngredientLine::create([
+        'recipe_id' => $recipe->id,
+        'ingredient_id' => $ingredient->id,
+        'quantity' => 1,
+        'unit' => Unit::Kilogramo->value,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->patchJson(route('recipes.ingredient-lines.update', [$recipe, $line]), [
+            'quantity' => '500',
+            'unit' => Unit::Gramo->value,
+        ])
+        ->assertOk()
+        ->assertJson(['ok' => true]);
+
+    // 500 gr * $1000/kg = $0.5/gr * 500 = $500 → costPerLineUnit = $1/gr
+    expect((float) $response->json('costPerLineUnit'))->toBe(1.0);
+
+    $line->refresh();
+    expect($line->unit)->toBe(Unit::Gramo)
+        ->and((float) $line->quantity)->toBe(500.0)
+        ->and((float) $recipe->fresh()->unit_cost)->toBe(500.0);
+});
+
+test('unidad incompatible es rechazada al actualizar línea de ingrediente', function () {
+    [$user, $tenant] = ownerForRecipeCost();
+    $recipe = Recipe::factory()->for($tenant)->create();
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Kilogramo->value]);
+    $line = RecipeIngredientLine::create([
+        'recipe_id' => $recipe->id,
+        'ingredient_id' => $ingredient->id,
+        'quantity' => 1,
+        'unit' => Unit::Kilogramo->value,
+    ]);
+
+    $this->actingAs($user)
+        ->patchJson(route('recipes.ingredient-lines.update', [$recipe, $line]), [
+            'quantity' => '500',
+            'unit' => Unit::Mililitro->value,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('unit');
+
+    $line->refresh();
+    expect($line->unit)->toBe(Unit::Kilogramo)
+        ->and((float) $line->quantity)->toBe(1.0);
+});
+
 test('owner puede agregar envase a una receta', function () {
     [$user, $tenant] = ownerForRecipeCost();
     $recipe = Recipe::factory()->for($tenant)->create();
