@@ -69,6 +69,80 @@ test('el listado marca el stock negativo', function () {
         ->assertSee('Negativo');
 });
 
+// --- Orden ---
+
+test('el listado se puede ordenar por nombre descendente', function () {
+    [$user, $tenant] = stockCrudUser();
+    Ingredient::factory()->for($tenant)->create(['name' => 'Azúcar']);
+    Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000']);
+
+    $this->actingAs($user)
+        ->get(route('stock.index', ['sort' => 'name', 'dir' => 'desc']))
+        ->assertOk()
+        ->assertSeeInOrder(['Harina 000', 'Azúcar']);
+});
+
+test('el listado se puede ordenar por stock actual', function () {
+    [$user, $tenant] = stockCrudUser();
+    $low = Ingredient::factory()->for($tenant)->create(['name' => 'Sal', 'unit' => Unit::Gramo]);
+    $high = Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => Unit::Gramo]);
+    $location = $tenant->defaultLocation();
+
+    app(StockService::class)->registerAdjustment($low, $location, 10, 'Carga inicial', $user);
+    app(StockService::class)->registerAdjustment($high, $location, 500, 'Carga inicial', $user);
+
+    $this->actingAs($user)
+        ->get(route('stock.index', ['sort' => 'quantity', 'dir' => 'asc']))
+        ->assertOk()
+        ->assertSeeInOrder(['Sal', 'Harina 000']);
+
+    $this->actingAs($user)
+        ->get(route('stock.index', ['sort' => 'quantity', 'dir' => 'desc']))
+        ->assertOk()
+        ->assertSeeInOrder(['Harina 000', 'Sal']);
+});
+
+test('el listado se puede ordenar por mínimo', function () {
+    [$user, $tenant] = stockCrudUser();
+    $low = Ingredient::factory()->for($tenant)->create(['name' => 'Sal', 'unit' => Unit::Gramo]);
+    $high = Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => Unit::Gramo]);
+    $location = $tenant->defaultLocation();
+
+    app(StockService::class)->setMinQuantity($low, $location, 10);
+    app(StockService::class)->setMinQuantity($high, $location, 500);
+
+    $this->actingAs($user)
+        ->get(route('stock.index', ['sort' => 'min_quantity', 'dir' => 'desc']))
+        ->assertOk()
+        ->assertSeeInOrder(['Harina 000', 'Sal']);
+});
+
+test('un ítem sin movimientos de stock aparece con stock 0 al ordenar', function () {
+    [$user, $tenant] = stockCrudUser();
+    $withStock = Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => Unit::Gramo]);
+    $withoutStock = Ingredient::factory()->for($tenant)->create(['name' => 'Sal', 'unit' => Unit::Gramo]);
+    $location = $tenant->defaultLocation();
+
+    app(StockService::class)->registerAdjustment($withStock, $location, 100, 'Carga inicial', $user);
+
+    $this->actingAs($user)
+        ->get(route('stock.index', ['sort' => 'quantity', 'dir' => 'asc']))
+        ->assertOk()
+        ->assertSee('Harina 000')
+        ->assertSee('Sal');
+});
+
+test('un sort inválido se ignora y usa el orden alfabético por defecto', function () {
+    [$user, $tenant] = stockCrudUser();
+    Ingredient::factory()->for($tenant)->create(['name' => 'Azúcar']);
+    Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000']);
+
+    $this->actingAs($user)
+        ->get(route('stock.index', ['sort' => 'cost_per_unit']))
+        ->assertOk()
+        ->assertSeeInOrder(['Azúcar', 'Harina 000']);
+});
+
 // --- Kardex ---
 
 test('el kardex muestra los movimientos del ítem', function () {
@@ -108,21 +182,6 @@ test('owner registra un ajuste por HTTP', function () {
         ->assertSessionHas('status');
 
     expect((float) $ingredient->stockLevels()->first()->quantity)->toBe(250.0);
-});
-
-test('admin registra una merma de un descartable por HTTP', function () {
-    [$user, $tenant] = stockCrudUser(TenantUserRole::Admin);
-    $packaging = Packaging::factory()->for($tenant)->create();
-
-    $this->actingAs($user)
-        ->post(route('stock.wastes.store', ['packaging', $packaging->id]), [
-            'quantity' => 5,
-            'reason' => 'Cajas mojadas',
-        ])
-        ->assertRedirect()
-        ->assertSessionHas('status');
-
-    expect((float) $packaging->stockLevels()->first()->quantity)->toBe(-5.0);
 });
 
 test('el recuento por HTTP persiste el delta', function () {

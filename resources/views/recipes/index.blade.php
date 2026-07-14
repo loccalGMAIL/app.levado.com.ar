@@ -126,9 +126,7 @@
                                 <div class="flex-1 min-w-0">
                                     <a href="{{ $showUrl($recipe) }}" class="font-medium text-corteza hover:underline">
                                         {{ $recipe->name }}
-                                        @if($recipe->is_semi_elaborate)
-                                            <span class="ml-1 text-[10px] font-medium bg-amber-100 text-amber-700 rounded px-1 py-0.5">semi</span>
-                                        @endif
+                                        <x-semi-badge :is-semi-elaborate="$recipe->is_semi_elaborate" />
                                     </a>
                                     <div class="text-xs text-masa-madre mt-0.5">
                                         {{ number_format((float)$recipe->yield_quantity, 0, ',', '.') }} {{ $recipe->yield_unit->short() }} rendimiento
@@ -236,9 +234,7 @@
                                     <td class="px-4 py-3 font-medium text-corteza">
                                         <a href="{{ $showUrl($recipe) }}" class="hover:underline">
                                             {{ $recipe->name }}
-                                            @if($recipe->is_semi_elaborate)
-                                                <span class="ml-1 text-[10px] font-medium bg-amber-100 text-amber-700 rounded px-1 py-0.5">semi</span>
-                                            @endif
+                                            <x-semi-badge :is-semi-elaborate="$recipe->is_semi_elaborate" />
                                         </a>
                                     </td>
                                     <td class="px-4 py-3 text-right text-corteza font-mono">

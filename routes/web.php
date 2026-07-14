@@ -143,8 +143,6 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
 
     Route::post('stock/{type}/{id}/adjustments', [StockController::class, 'storeAdjustment'])
         ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.adjustments.store');
-    Route::post('stock/{type}/{id}/wastes', [StockController::class, 'storeWaste'])
-        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.wastes.store');
     Route::post('stock/{type}/{id}/counts', [StockController::class, 'storeCount'])
         ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.counts.store');
     Route::patch('stock/{type}/{id}/min', [StockController::class, 'updateMin'])

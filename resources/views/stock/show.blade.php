@@ -19,7 +19,6 @@
 
         $typeBadge = fn ($movementType) => match ($movementType->value) {
             'purchase' => 'bg-green-100 text-green-700',
-            'waste' => 'bg-red-100 text-red-700',
             'count' => 'bg-amber-100 text-amber-700',
             default => 'bg-blue-100 text-blue-700',
         };
@@ -42,8 +41,6 @@
                     <div class="flex items-center gap-2 text-sm">
                         <button type="button" @click="$dispatch('open-modal', 'stock-adjust')"
                             class="px-3 py-1.5 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Ajuste</button>
-                        <button type="button" @click="$dispatch('open-modal', 'stock-waste')"
-                            class="px-3 py-1.5 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Merma</button>
                         <button type="button" @click="$dispatch('open-modal', 'stock-count')"
                             class="px-3 py-1.5 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Recuento</button>
                         <button type="button" @click="$dispatch('open-modal', 'stock-min')"
@@ -152,7 +149,6 @@
 
         @can('manage-costs')
             @include('stock.modals.adjust')
-            @include('stock.modals.waste')
             @include('stock.modals.count')
             @include('stock.modals.min')
         @endcan

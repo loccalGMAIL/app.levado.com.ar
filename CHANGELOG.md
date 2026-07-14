@@ -5,6 +5,40 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.9.2] — 2026-07-14
+
+### Existencias: columnas ordenables
+
+#### Agregado
+
+- **Ordenamiento en el listado de Existencias:** las columnas Nombre, Stock actual y Mínimo ahora son ordenables (ascendente/descendente) desde `/stock`, con el mismo patrón de `sort`/`dir` ya usado en el resto de las tablas del sistema. Se preservan búsqueda, filtro de pestaña (insumos/descartables) y paginación.
+
+### Eliminación de "Merma"
+
+#### Quitado
+
+- **Función "Merma" eliminada del módulo de Stock:** quedaba redundante con "Ajuste" (mismo mecanismo de entrada/salida con motivo). Se quitaron el botón, la ruta, el controlador, el form request, el modal y el caso `Waste` del enum `StockMovementType`. La tabla `stock_movements` y el resto de las acciones (Ajuste, Recuento, Compra) no se modificaron — no había registros históricos de tipo merma.
+
+### Dashboard: badge "Semi"
+
+#### Agregado
+
+- **Badge "semi" en el Dashboard:** las recetas semielaboradas ahora muestran la misma badge "semi" que ya existía en el listado de Recetas, junto al nombre en la tabla de rentabilidad. Se extrajo a un componente reutilizable (`x-semi-badge`), eliminando la duplicación que existía entre la vista de cards y la de tabla en `/recipes`.
+
+### Paginación en castellano
+
+#### Corregido
+
+- **Textos de paginación en inglés:** la vista de paginación de Laravel (usada en las 15 tablas del sistema) mostraba "Showing X to Y of Z results" y "Pagination Navigation" sin traducir, a pesar de que "Anterior"/"Siguiente" ya estaban en español. Se agregó `lang/es.json` con las traducciones faltantes.
+
+#### Técnico
+
+- `StockController::index()`: `LEFT JOIN` a `stock_levels` para permitir ordenar por columnas que no viven en la tabla paginada (Ingredient/Packaging), preservando la unicidad `(tenant_id, stockable_type, stockable_id, location_id)` para evitar duplicar filas.
+- 6 tests nuevos (5 de ordenamiento en `StockCrudTest`, 1 de la badge en `DashboardRentabilidadTest`) + 1 test de regresión de paginación en castellano.
+- Versión `0.9.2` en `config/app.php`.
+
+---
+
 ## [0.9.1] — 2026-07-13
 
 ### Compras: comprobante en la carga manual
