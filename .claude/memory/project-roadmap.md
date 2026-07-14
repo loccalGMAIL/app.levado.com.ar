@@ -226,6 +226,7 @@ metadata:
 - Al cambiar la unidad de una línea existente, la cantidad se convierte automáticamente en el cliente (Alpine.js) para mantener la misma proporción real (ej: 2 kg → 2000 gr), en vez de dejar el número tal cual.
 - Fix de un bug de Alpine.js encontrado durante la verificación: `x-model` en un `<select>` con `<option>` generadas por `x-for` no reflejaba el valor inicial; se resolvió con `:selected` explícito por opción + handler `@change` propio (sin `x-model` en el `<select>`).
 - Nota: la selección de unidad por línea (independiente de la unidad base del ingrediente, con conversión automática de costo) **ya existía desde la v0.4.0** — este release solo cierra el vacío de no poder editarla en una línea ya creada. El módulo de "Producción" (descuento de stock al fabricar una receta) sigue sin construir; quedó fuera de alcance a pedido explícito del usuario.
+- **Abreviaturas en todos los selectores de unidad:** `Unit::label()` ("Kilogramo (kg)") reemplazado por `Unit::short()` ("kg") en los 9 `<select>` de unidad de la app (recetas: agregar/editar ingrediente, rendimiento, sub-recetas; ingredientes: alta/edición; compras: unidad de compra al agregar/editar renglón) — consistente con los badges de solo lectura, que ya usaban `short()`.
 - 352 tests, todos verdes (2 nuevos).
 
 ## Versioning

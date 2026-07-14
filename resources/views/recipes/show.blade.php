@@ -30,7 +30,7 @@
             subSort: { by: 'name', dir: 1 },
 
             unitGroups: { gr: 'weight', kg: 'weight', ml: 'volume', L: 'volume', cc: 'volume', u: 'unit' },
-            allUnits: @js(collect(\App\Enums\Unit::cases())->map(fn ($u) => ['value' => $u->value, 'label' => $u->label()])->values()),
+            allUnits: @js(collect(\App\Enums\Unit::cases())->map(fn ($u) => ['value' => $u->value, 'label' => $u->short()])->values()),
             compatibleUnits(line) {
                 const group = this.unitGroups[line.ingredientUnit];
                 return this.allUnits.filter(u => this.unitGroups[u.value] === group);

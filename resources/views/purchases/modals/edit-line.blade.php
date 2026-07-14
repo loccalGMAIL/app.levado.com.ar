@@ -44,7 +44,7 @@
                     @foreach($units as $unit)
                         <option value="{{ $unit->value }}"
                             x-bind:selected="editingLine?.purchase_unit === '{{ $unit->value }}'">
-                            {{ $unit->label() }}
+                            {{ $unit->short() }}
                         </option>
                     @endforeach
                 </select>

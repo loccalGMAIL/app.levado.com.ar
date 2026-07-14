@@ -29,7 +29,7 @@
                     class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
                     @foreach($units as $unit)
                         <option value="{{ $unit->value }}" @selected(old('purchase_unit') === $unit->value)>
-                            {{ $unit->label() }}
+                            {{ $unit->short() }}
                         </option>
                     @endforeach
                 </select>

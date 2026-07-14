@@ -52,7 +52,7 @@
                     x-model="editing.unit"
                     class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
                     @foreach(\App\Enums\Unit::cases() as $unit)
-                        <option value="{{ $unit->value }}">{{ $unit->label() }}</option>
+                        <option value="{{ $unit->value }}">{{ $unit->short() }}</option>
                     @endforeach
                 </select>
                 <x-input-error :messages="$errors->get('unit')" class="mt-2" />
