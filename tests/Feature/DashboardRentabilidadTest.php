@@ -63,6 +63,25 @@ test('dashboard muestra las recetas activas con su costo', function () {
         ->assertSee('600,00');
 });
 
+test('dashboard muestra la badge semi para recetas semielaboradas', function () {
+    [$user, $tenant] = ownerForDashboard();
+
+    Recipe::factory()->for($tenant)->create([
+        'name' => 'Masa madre base',
+        'is_semi_elaborate' => true,
+    ]);
+    Recipe::factory()->for($tenant)->create([
+        'name' => 'Pan lactal',
+        'is_semi_elaborate' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSeeInOrder(['Masa madre base', 'semi'])
+        ->assertSeeInOrder(['Pan lactal']);
+});
+
 test('dashboard muestra el margen cuando hay precio de venta', function () {
     [$user, $tenant] = ownerForDashboard();
 

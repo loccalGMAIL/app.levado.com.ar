@@ -201,6 +201,7 @@
                                     <td class="px-4 py-3 font-medium text-corteza">
                                         <a href="{{ route('recipes.show', $recipe) }}" class="hover:underline">
                                             {{ $recipe->name }}
+                                            <x-semi-badge :is-semi-elaborate="$recipe->is_semi_elaborate" />
                                         </a>
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono text-corteza">

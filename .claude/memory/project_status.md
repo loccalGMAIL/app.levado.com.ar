@@ -1,9 +1,9 @@
 ---
 name: Levado — Estado actual del proyecto
-description: Progreso al 13/07/2026
+description: Progreso al 14/07/2026
 type: project
 ---
-# Estado del proyecto — 13 de julio 2026
+# Estado del proyecto — 14 de julio 2026
 
 ## Estructura local
 ```
@@ -18,7 +18,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.9.1 (rama `v0.9.1-compras-comprobante-manual`; `master` en 0.9.0)
+- **Versión actual:** 0.9.2 (rama `v0.9.2-existencias-orden-elimina-merma-badge-semi`; `master` en 0.9.1)
 
 ## Todo lo que está hecho
 
@@ -54,13 +54,21 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Responsive mobile: tarjetas en todas las vistas de tablas
 - **v0.9.1:** comprobante (foto/PDF) adjuntable en la carga manual de compras (sin IA), reemplazable al editar — para tickets manuscritos
 
-### Módulo de Existencias — v0.9.0 ✅ (en master)
+### Módulo de Existencias — v0.9.0, act. v0.9.2 ✅ (en rama v0.9.2)
 - Ledger inmutable `stock_movements` + cache `stock_levels`; `StockService` único punto de escritura
 - Entrada automática de stock al imputar costos de compras (con conversión de unidades y subdivisiones); reversión por contramovimientos
-- UI `/stock` (tabs, valuación, alertas, mínimos) + kardex por ítem + modales ajuste/merma/recuento/mínimo
+- UI `/stock` (tabs, valuación, alertas, mínimos) + kardex por ítem + modales ajuste/recuento/mínimo
 - Columna Stock con edición inline en `/ingredients` y `/packaging` (valor absoluto → recuento)
 - Sidebar en grupos colapsables (Producción / Existencias / Costos / Administración) con persistencia en localStorage; ítem "Existencias" renombrado a "Stock"
+- **v0.9.2:** columnas Nombre/Stock actual/Mínimo ordenables; función "Merma" eliminada (redundante con Ajuste)
 - Ver `.claude/memory/feature-existencias.md`
+
+### v0.9.2 — Orden en Existencias, sin Merma, badge Semi, paginación en castellano
+- Ordenamiento por columnas en `/stock` (Nombre, Stock actual, Mínimo)
+- Eliminación completa de "Merma" (ruta, controlador, form request, modal, caso de enum) — sin datos históricos que migrar
+- Badge "semi" agregada al Dashboard para recetas semielaboradas, extraída a componente reutilizable `x-semi-badge`
+- `lang/es.json`: traduce "Showing/to/of/results/Pagination Navigation" — corrige el texto en inglés de la paginación en las 15 tablas del sistema
+- 350 tests, todos verdes
 
 ### Otras mejoras post-MVP (v0.8.x)
 - Subdivisiones en ingredientes y descartables + `cost_per_package` + columna "Por envase"
@@ -68,7 +76,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Responsive mobile en todas las vistas (tarjetas Alpine.js)
 - Flash toasts, iconos Heroicons, loading en modales, favicon
 - Policies, `scopeActive()`, módulos Vite, `LazilyRefreshDatabase`
-- Traducciones al español: `lang/es/{validation,auth,passwords,pagination}.php`
+- Traducciones al español: `lang/es/{validation,auth,passwords,pagination}.php` + `lang/es.json` (cadenas sueltas de vistas vendor, ej. paginación)
 - Mail de invitación sincrónico (sin queue worker en producción)
 
 ## Convenciones establecidas

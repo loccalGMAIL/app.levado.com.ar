@@ -214,9 +214,16 @@ metadata:
 - Ver [[feature-compras]] sección "Compra manual con comprobante".
 - 345 tests, todos verdes (5 nuevos en `PurchaseCrudTest`).
 
+## v0.9.2 — Existencias ordenable, eliminación de Merma, badge Semi, paginación en castellano (2026-07-14)
+- **Existencias ordenable:** columnas Nombre, Stock actual y Mínimo ordenables en `/stock` (`LEFT JOIN` a `stock_levels` antes del `paginate()`). Ver [[feature-existencias]].
+- **Eliminación de "Merma":** quedaba redundante con "Ajuste"; se quitó el caso `Waste` del enum, ruta, controlador, form request y modal. Sin registros históricos, no hizo falta migración de datos.
+- **Badge "semi" en el Dashboard:** las recetas semielaboradas muestran la misma badge que en `/recipes`, ahora en un componente reutilizable (`x-semi-badge`).
+- **Paginación en castellano:** `lang/es.json` traduce "Showing/to/of/results/Pagination Navigation" (Laravel las deja en inglés si falta el JSON de locale, aunque `pagination.previous/next` ya estuvieran traducidos). Corrige las 15 tablas paginadas del sistema de una sola vez.
+- 350 tests, todos verdes (6 nuevos + 1 de regresión de paginación).
+
 ## Versioning
-- Rama activa: `v0.9.1-compras-comprobante-manual` (sobre `master`, que ya tiene v0.9.0 mergeado)
-- Versión actual: `0.9.1`
+- Rama activa: `v0.9.2-existencias-orden-elimina-merma-badge-semi` (sobre `master`, que ya tiene v0.9.1 mergeado)
+- Versión actual: `0.9.2`
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.

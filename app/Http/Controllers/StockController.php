@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreStockAdjustmentRequest;
 use App\Http\Requests\StoreStockCountRequest;
-use App\Http\Requests\StoreStockWasteRequest;
 use App\Http\Requests\UpdateStockMinRequest;
 use App\Models\Ingredient;
 use App\Models\Location;
@@ -15,6 +14,7 @@ use App\Services\AdminActivityRecorder;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class StockController extends Controller
@@ -29,18 +29,38 @@ class StockController extends Controller
         $tenant = app(Tenant::class);
         $location = $this->resolveLocation($tenant);
         $type = request('type') === 'packaging' ? 'packaging' : 'ingredient';
+        $table = $type === 'ingredient' ? 'ingredients' : 'packagings';
 
         $itemsQuery = $type === 'ingredient'
             ? $tenant->ingredients()->active()
             : $tenant->packagings()->active();
 
+        $sortable = [
+            'name' => "{$table}.name",
+            'quantity' => DB::raw('COALESCE(stock_levels.quantity, 0)'),
+            'min_quantity' => 'stock_levels.min_quantity',
+        ];
+        $sort = array_key_exists(request('sort'), $sortable) ? request('sort') : null;
+        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+
         $items = $itemsQuery
-            ->when(request('search'), function ($q, $search) {
+            ->leftJoin('stock_levels', function ($join) use ($table, $type, $tenant, $location) {
+                $join->on('stock_levels.stockable_id', '=', "{$table}.id")
+                    ->where('stock_levels.stockable_type', $type)
+                    ->where('stock_levels.tenant_id', $tenant->id)
+                    ->where('stock_levels.location_id', $location->id);
+            })
+            ->select("{$table}.*")
+            ->when(request('search'), function ($q, $search) use ($table) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
-                return $q->where('name', 'like', "%{$escaped}%");
+                return $q->where("{$table}.name", 'like', "%{$escaped}%");
             })
-            ->orderBy('name')
+            ->when(
+                $sort,
+                fn ($q) => $q->orderBy($sortable[$sort], $dir),
+                fn ($q) => $q->orderBy($sortable['name'], 'asc')
+            )
             ->paginate(20)
             ->withQueryString();
 
@@ -97,28 +117,6 @@ class StockController extends Controller
         ]);
 
         return back(fallback: route('stock.index'))->with('status', 'Ajuste de stock registrado.');
-    }
-
-    public function storeWaste(StoreStockWasteRequest $request, string $type, int $id): RedirectResponse
-    {
-        $item = $this->resolveStockable($type, $id);
-        $this->authorize('update', $item);
-
-        $tenant = app(Tenant::class);
-        $movement = $this->stock->registerWaste(
-            item: $item,
-            location: $this->resolveLocation($tenant),
-            quantity: (float) $request->validated('quantity'),
-            reason: $request->validated('reason'),
-            user: $request->user(),
-        );
-
-        $this->recordActivity($request->user(), $type, $item, 'stock.waste', [
-            'quantity' => (float) $movement->quantity,
-            'reason' => $movement->reason,
-        ]);
-
-        return back(fallback: route('stock.index'))->with('status', 'Merma registrada.');
     }
 
     public function storeCount(StoreStockCountRequest $request, string $type, int $id): RedirectResponse

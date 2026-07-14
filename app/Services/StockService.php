@@ -45,7 +45,7 @@ class StockService
         ?PurchaseLine $reference = null,
         ?StockMovement $reverses = null,
     ): StockMovement {
-        abort_unless(! $type->requiresReason() || filled($reason), 422, 'El motivo es obligatorio para ajustes y mermas.');
+        abort_unless(! $type->requiresReason() || filled($reason), 422, 'El motivo es obligatorio para ajustes.');
         abort_unless($location->tenant_id === $item->tenant_id, 422, 'La sucursal no pertenece al tenant del ítem.');
 
         return DB::transaction(function () use ($item, $location, $type, $quantity, $unitCost, $reason, $user, $reference, $reverses) {
@@ -114,22 +114,6 @@ class StockService
             location: $location,
             type: StockMovementType::Adjustment,
             quantity: $signedQuantity,
-            unitCost: (float) $item->cost_per_unit,
-            reason: $reason,
-            user: $user,
-        );
-    }
-
-    /**
-     * Merma: siempre resta, valuada al costo actual del ítem.
-     */
-    public function registerWaste(Ingredient|Packaging $item, Location $location, float $quantity, string $reason, User $user): StockMovement
-    {
-        return $this->registerMovement(
-            item: $item,
-            location: $location,
-            type: StockMovementType::Waste,
-            quantity: -abs($quantity),
             unitCost: (float) $item->cost_per_unit,
             reason: $reason,
             user: $user,

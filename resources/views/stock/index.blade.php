@@ -2,7 +2,7 @@
     <x-slot name="title">Stock</x-slot>
 
     @php
-        $stockErrorForms = ['stock-adjust', 'stock-waste', 'stock-count', 'stock-min'];
+        $stockErrorForms = ['stock-adjust', 'stock-count', 'stock-min'];
         $errorsInStockModal = in_array(old('_form'), $stockErrorForms, true) && $errors->any();
         $selectedDefault = ['type' => $type, 'id' => null, 'name' => '', 'unit' => '', 'qty' => 0, 'min' => null];
         $selectedOnError = $errorsInStockModal ? [
@@ -28,6 +28,16 @@
         ];
 
         $tabUrl = fn (string $tab) => route('stock.index', array_filter(['type' => $tab, 'search' => request('search')]));
+
+        $sort = request('sort', 'name');
+        $dir  = request('dir', 'asc');
+        $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
+            array_merge(request()->except(['sort', 'dir', 'page']), [
+                'sort' => $col,
+                'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
+            ])
+        );
+        $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
     @endphp
 
     <div class="py-8 px-6 lg:px-8"
@@ -63,6 +73,8 @@
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <input type="hidden" name="type" value="{{ $type }}">
+                <input type="hidden" name="sort" value="{{ request('sort') }}">
+                <input type="hidden" name="dir" value="{{ request('dir') }}">
                 <div class="flex-1 min-w-48">
                     <input type="text" name="search" value="{{ request('search') }}"
                         placeholder="Buscar por nombre..."
@@ -123,8 +135,6 @@
                                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga text-sm">
                                     <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-adjust')"
                                         class="flex-1 py-1.5 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Ajuste</button>
-                                    <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-waste')"
-                                        class="flex-1 py-1.5 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Merma</button>
                                     <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-count')"
                                         class="flex-1 py-1.5 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Recuento</button>
                                 </div>
@@ -148,9 +158,21 @@
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
-                                <th class="px-4 py-3 font-medium">Nombre</th>
-                                <th class="px-4 py-3 font-medium text-right">Stock actual</th>
-                                <th class="px-4 py-3 font-medium text-right">Mínimo</th>
+                                <th class="px-4 py-3 font-medium">
+                                    <a href="{{ $sortUrl('name') }}" class="hover:text-corteza inline-flex items-center gap-1">
+                                        Nombre <span class="text-xs">{{ $sortIcon('name') }}</span>
+                                    </a>
+                                </th>
+                                <th class="px-4 py-3 font-medium text-right">
+                                    <a href="{{ $sortUrl('quantity') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
+                                        Stock actual <span class="text-xs">{{ $sortIcon('quantity') }}</span>
+                                    </a>
+                                </th>
+                                <th class="px-4 py-3 font-medium text-right">
+                                    <a href="{{ $sortUrl('min_quantity') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
+                                        Mínimo <span class="text-xs">{{ $sortIcon('min_quantity') }}</span>
+                                    </a>
+                                </th>
                                 <th class="px-4 py-3 font-medium text-right">Valuación</th>
                                 <th class="px-4 py-3 font-medium">Alerta</th>
                                 @can('manage-costs')
@@ -201,8 +223,6 @@
                                             <div class="flex items-center justify-end gap-2 text-xs">
                                                 <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-adjust')"
                                                     class="px-2 py-1 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Ajuste</button>
-                                                <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-waste')"
-                                                    class="px-2 py-1 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Merma</button>
                                                 <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-count')"
                                                     class="px-2 py-1 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Recuento</button>
                                                 <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-min')"
@@ -229,7 +249,6 @@
 
         @can('manage-costs')
             @include('stock.modals.adjust')
-            @include('stock.modals.waste')
             @include('stock.modals.count')
             @include('stock.modals.min')
         @endcan

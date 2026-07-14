@@ -6,7 +6,6 @@ enum StockMovementType: string
 {
     case Purchase = 'purchase';
     case Adjustment = 'adjustment';
-    case Waste = 'waste';
     case Count = 'count';
 
     // Reservados para etapas futuras (producción, ventas, transferencias entre sucursales).
@@ -19,7 +18,6 @@ enum StockMovementType: string
         return match ($this) {
             self::Purchase => 'Compra',
             self::Adjustment => 'Ajuste',
-            self::Waste => 'Merma',
             self::Count => 'Recuento',
             self::Production => 'Producción',
             self::Sale => 'Venta',
@@ -29,6 +27,6 @@ enum StockMovementType: string
 
     public function requiresReason(): bool
     {
-        return $this === self::Adjustment || $this === self::Waste;
+        return $this === self::Adjustment;
     }
 }

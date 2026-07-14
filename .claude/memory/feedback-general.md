@@ -29,7 +29,7 @@ Las ramas siempre llevan el número de versión primero, seguido del cambio en k
 **Why:** el usuario lo indicó explícitamente y corrigió una rama nombrada `feat/compras-iva-percepciones`.
 **How to apply:** al crear o renombrar una rama de feature, usar el formato `v{version}-{descripcion-kebab}`. Nunca usar prefijos tipo `feat/`, `fix/`, etc.
 
-## Guardar memorias en ambas rutas
-Siempre escribir cada memoria en DOS rutas: `.claude/memory/` (proyecto, versionado en git) Y `C:\Users\Claudio\.claude\projects\D--DESARROLLO-CoDiGo-levado-com-ar-app\memory\` (global, cargada por el harness).
-**Why:** el harness auto-carga desde la ruta global, pero CLAUDE.md exige la ruta del proyecto para portabilidad entre dispositivos. Si solo se escribe en una, divergen.
-**How to apply:** cada vez que se cree o modifique un archivo de memoria, hacer Edit/Write en ambas rutas. También actualizar MEMORY.md en ambas si corresponde.
+## Memorias solo en la ruta del proyecto (no en la global)
+`CLAUDE.md` indica explícitamente escribir toda memoria en `.claude/memory/` (proyecto, versionado en git) **en vez de** la ruta global `~/.claude/projects/.../memory/`.
+**Why:** mantiene las memorias versionadas y portables entre dispositivos/apps. Una entrada anterior de este archivo pedía duplicar en ambas rutas, pero esa ruta global (con el nombre de carpeta viejo `levado-com-ar-app`) no existe en disco — la instrucción de `CLAUDE.md` es la vigente y la reemplaza.
+**How to apply:** escribir y actualizar memorias únicamente en `.claude/memory/` del proyecto. No crear ni mantener una copia en la ruta global.

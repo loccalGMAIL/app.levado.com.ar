@@ -118,19 +118,6 @@ test('el ajuste sin motivo aborta con 422', function () {
     stockService()->registerMovement($ingredient, $location, StockMovementType::Adjustment, 10, 0, null, $user);
 })->throws(HttpException::class);
 
-test('la merma registra cantidad negativa valuada al costo actual del ítem', function () {
-    [$user, $tenant] = stockTenantUser();
-    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo, 'cost_per_unit' => 0.75]);
-    $location = $tenant->defaultLocation();
-
-    $movement = stockService()->registerWaste($ingredient, $location, 200, 'Se quemó la tanda', $user);
-
-    expect((float) $movement->quantity)->toBe(-200.0)
-        ->and((float) $movement->unit_cost)->toBe(0.75)
-        ->and($movement->type)->toBe(StockMovementType::Waste)
-        ->and((float) $ingredient->stockLevels()->first()->quantity)->toBe(-200.0);
-});
-
 // --- Recuento ---
 
 test('el recuento registra el delta entre lo contado y el stock actual', function () {
@@ -196,15 +183,14 @@ test('los descartables se manejan en stock igual que los insumos', function () {
     $location = $tenant->defaultLocation();
 
     stockService()->registerAdjustment($packaging, $location, 100, 'Carga inicial', $user);
-    stockService()->registerWaste($packaging, $location, 10, 'Cajas rotas', $user);
     $count = stockService()->applyCount($packaging, $location, 85, $user);
 
     $level = $packaging->stockLevels()->first();
 
     expect($level->stockable_type)->toBe('packaging')
         ->and((float) $level->quantity)->toBe(85.0)
-        ->and((float) $count->quantity)->toBe(-5.0)
-        ->and($packaging->stockMovements()->count())->toBe(3);
+        ->and((float) $count->quantity)->toBe(-15.0)
+        ->and($packaging->stockMovements()->count())->toBe(2);
 });
 
 test('insumo y descartable con el mismo id no comparten stock', function () {
