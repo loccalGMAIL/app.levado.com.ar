@@ -63,7 +63,7 @@
                         <option value="{{ $unit->value }}"
                             x-show="isCompatible('{{ $unit->value }}')"
                             {{ old('unit') === $unit->value ? 'selected' : '' }}>
-                            {{ $unit->label() }}
+                            {{ $unit->short() }}
                         </option>
                     @endforeach
                 </select>

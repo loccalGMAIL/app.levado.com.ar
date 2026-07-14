@@ -197,6 +197,7 @@ class RecipeController extends Controller
                 'quantity' => (float) $line->quantity,
                 'unit' => $line->unit->value,
                 'unitLabel' => $subLabel ?? $line->unit->short(),
+                'ingredientUnit' => $ingredient->unit->value,
                 'costPerLineUnit' => $converter->convert(1.0, $line->unit, $ingredient->unit) * (float) $ingredient->cost_per_unit,
                 'refCost' => (float) $ingredient->cost_per_unit,
                 'refUnit' => $subLabel ?? $ingredient->unit->short(),
@@ -444,11 +445,30 @@ class RecipeController extends Controller
         $this->authorize('update', $recipe);
         abort_unless($line->recipe_id === $recipe->id, 403);
 
-        $data = $request->validate(['quantity' => ['required', 'numeric', 'min:0.001']]);
+        $data = $request->validate([
+            'quantity' => ['required', 'numeric', 'min:0.001'],
+            'unit' => ['required', Rule::enum(Unit::class)],
+        ]);
+
+        $converter = new UnitConverter;
+        $ingredient = $line->ingredient;
+
+        if (! $converter->compatible(Unit::from($data['unit']), $ingredient->unit)) {
+            throw ValidationException::withMessages([
+                'unit' => 'La unidad seleccionada no es compatible con la unidad del ingrediente.',
+            ]);
+        }
+
         $line->update($data);
         $this->propagator->propagateFrom($recipe);
 
-        return response()->json(['ok' => true]);
+        $subLabel = $ingredient->subdivisions ? ($ingredient->subdivision_label ?? 'u') : null;
+
+        return response()->json([
+            'ok' => true,
+            'unitLabel' => $subLabel ?? $line->unit->short(),
+            'costPerLineUnit' => $converter->convert(1.0, $line->unit, $ingredient->unit) * (float) $ingredient->cost_per_unit,
+        ]);
     }
 
     public function updatePackagingLine(Request $request, Recipe $recipe, RecipePackagingLine $line): JsonResponse

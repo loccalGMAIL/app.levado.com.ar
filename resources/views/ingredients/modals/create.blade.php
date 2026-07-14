@@ -58,7 +58,7 @@
                     @foreach(\App\Enums\Unit::cases() as $unit)
                         <option value="{{ $unit->value }}"
                             @selected(old('unit') === $unit->value)>
-                            {{ $unit->label() }}
+                            {{ $unit->short() }}
                         </option>
                     @endforeach
                 </select>

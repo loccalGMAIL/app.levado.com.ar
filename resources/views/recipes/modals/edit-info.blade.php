@@ -38,7 +38,7 @@
                     required>
                     @foreach(\App\Enums\Unit::cases() as $unit)
                         <option value="{{ $unit->value }}" {{ old('yield_unit', $recipe->yield_unit->value) === $unit->value ? 'selected' : '' }}>
-                            {{ $unit->label() }}
+                            {{ $unit->short() }}
                         </option>
                     @endforeach
                 </select>
