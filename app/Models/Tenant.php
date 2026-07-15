@@ -82,6 +82,16 @@ class Tenant extends Model
         return $this->hasMany(FixedCostCategory::class);
     }
 
+    public function variableExpenses(): HasMany
+    {
+        return $this->hasMany(VariableExpense::class);
+    }
+
+    public function variableExpenseCategories(): HasMany
+    {
+        return $this->hasMany(VariableExpenseCategory::class);
+    }
+
     public function laborTypes(): HasMany
     {
         return $this->hasMany(LaborType::class);

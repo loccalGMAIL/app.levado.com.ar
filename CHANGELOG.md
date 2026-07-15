@@ -5,6 +5,47 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.10.0] — 2026-07-15
+
+### Gastos Variables
+
+#### Agregado
+
+- **Nueva pestaña "Gastos Variables" en la pantalla de Gastos:** hasta ahora el módulo solo registraba gastos fijos (costos operativos mensuales que se reparten sobre las recetas vía overhead por hora). Ahora se pueden registrar también gastos ocasionales o imprevistos —una reparación, una compra puntual— que **no forman parte de los costos de producción y no intervienen en el costo de recetas, márgenes ni ningún cálculo productivo**. Quedan como registro administrativo, preparados para los reportes y el análisis financiero que vienen más adelante.
+- **Un gasto variable es un evento puntual:** nombre, categoría, fecha en que ocurrió, monto único y, opcionalmente, **proveedor**. A diferencia de un gasto fijo, no tiene monto mensual, ni interruptor activo/inactivo, ni historial de precios — nada de eso aplica a un gasto que pasó una sola vez.
+- **Proveedor opcional, tomado del listado de proveedores ya existente:** permite registrar a quién se le pagó ("Bolsas → Papeluca") y dejar el dato listo para cruzar gasto por proveedor en los reportes. Es opcional a propósito: una multa, un gasto bancario o una reparación informal no tienen proveedor. Incluye el mismo "+ Nuevo proveedor" inline que ya usan Compras e Ingredientes, que ahora se abre **encima** del formulario sin perder lo que se venía cargando.
+- **Catálogo de categorías propio:** las categorías de gastos variables se administran por separado de las de gastos fijos, así "Alquiler" no aparece al cargar una reparación ni "Reparaciones" al cargar un gasto fijo. Incluye el mismo "+ Nueva categoría" inline que ya tenían los fijos.
+- **Filtros pensados para el análisis financiero:** búsqueda por nombre, filtro por categoría, por proveedor y por rango de fechas (Desde/Hasta), con un "Total del período" que respeta los filtros aplicados. Permite responder "cuánto le pagué a X este mes" sin esperar a los reportes. Sin filtro de fecha por defecto, para que un gasto recién cargado nunca quede oculto.
+- **Los gastos variables se pueden eliminar** (los fijos no, porque borrarlos alteraría costos históricos). Como son registros puntuales sin nada que dependa de ellos, equivocarse de pestaña se corrige borrando y recargando.
+- Los gastos fijos siguen funcionando exactamente igual: mismo listado, mismo alta/edición, mismo toggle activo/inactivo, mismo "Total mensual activo".
+
+#### Técnico
+
+- **Tabla separada `variable_expenses` en vez de una columna `type` en `fixed_costs`.** El overhead se calcula con `$tenant->fixedCosts()->active()->sum('monthly_amount')` duplicado en 5 lugares (`DashboardController`, `RecipePriceController`, `RecipeController`, `BusinessController` y un getter Alpine en `recipes/show.blade.php`). Con una columna `type`, los 5 pasaban a necesitar `->where('type','fixed')` y olvidar uno habría inflado en silencio el costo de todas las recetas, sin que ningún test fallara. Con tabla separada la garantía es estructural —la relación no puede ver la tabla nueva— y esos 5 call sites no se tocaron. Como beneficio secundario, no hubo migración de datos: las filas existentes ya eran gastos fijos en la tabla de gastos fijos.
+- **La pestaña es el selector de tipo.** Al tener campos divergentes entre ambos tipos (`monthly_amount`+`active`+`valid_from` vs `amount`+`expense_date`), un selector dentro del formulario tendría que mutar el formulario entero al cambiar; la pestaña activa define el tipo sin estado oculto. Como consecuencia, un gasto no se puede convertir de un tipo al otro.
+- Nuevos: `VariableExpense` (casts `decimal:2`/`date`, scope `between()` para el filtro de período y los reportes futuros), `VariableExpenseCategory`, `VariableExpenseController` (`index`/`store`/`update`/`destroy`), `VariableExpenseCategoryController`, `Store`/`UpdateVariableExpenseRequest` (regla `exists` scopeada por tenant), `VariableExpensePolicy` (auto-discovery) y 2 factories. 7 rutas nuevas: `index` en el grupo de lectura, las 6 mutaciones tras `role:super_admin,owner,admin`.
+- Migraciones `create_variable_expense_categories_table` y `create_variable_expenses_table`, con índices `[tenant_id, expense_date]` y `[tenant_id, supplier_id]` para los reportes financieros futuros. La URL `/fixed-costs` no se renombró.
+- **`supplier_id` nullable + `nullOnDelete`.** El `<select>` de proveedor evita el bug del proveedor dado de baja (ver *Corregido*): el controller pasa **todos** los proveedores en una sola query y la vista filtra según el uso — sólo activos en el alta, todos (marcando `(inactivo)`) en la edición, y todos en el filtro para poder acotar gastos históricos de un proveedor ya dado de baja. Cubierto por test de regresión.
+- El `supplier_id` se valida con la misma regla `exists` scopeada por tenant que la categoría, en vez del `abort_unless` que usa `PurchaseController:81`.
+- 2 componentes Blade nuevos: `x-expense-tabs` (data-driven; un tipo nuevo es una línea en el array) y `x-expense-categories-modal`, extracción parametrizada del modal de categorías que ahora comparten ambas pestañas — único punto donde se tocó una vista de gastos fijos, con markup idéntico.
+- El onboarding no se modificó: al vivir en otra tabla, `$tenant->fixedCosts()->count() === 0` (`AppServiceProvider:31`) sigue exigiendo un gasto fijo real. Test agregado para fijarlo.
+- 2 componentes Blade reutilizados de otros módulos: el modal compartido `suppliers/modals/quick-create.blade.php` (que despacha `supplier-created`) se incluye tal cual; el "+ Nuevo proveedor" **apila** el quick-create con `:z="60"` como hace `purchases/modals/create.blade.php:72`, en vez de cerrar y reabrir el modal padre como hace el de ingredientes, que hace perder el formulario.
+- 35 tests nuevos: `VariableExpenseCrudTest` (33: CRUD por rol, validación, filtros, categorías, proveedor, aislamiento entre tenants, y las ausencias deliberadas de `toggle-active` e historial de precios) + 2 anclas de la invariante central: cargar gastos variables no mueve `overheadPerHour` ni el margen del dashboard, y un gasto variable no completa el paso de gastos fijos del onboarding.
+- Versión `0.10.0` en `config/app.php`.
+
+#### Corregido
+
+- **Un proveedor dado de baja ya no rompe la edición de ingredientes, descartables y compras.** Los `<select>` de proveedor listaban sólo proveedores activos, así que cuando el proveedor de un registro se daba de baja su opción desaparecía y el select caía en la opción vacía. En **Ingredientes** y **Descartables** eso **borraba el proveedor en silencio** al guardar cualquier otro campo (por ejemplo, al corregir un costo). En **Compras** el select es obligatorio, así que el efecto era el opuesto pero igual de molesto: **no se podía editar nada** de una compra vieja —ni la fecha— sin reasignarle antes otro proveedor. Ahora el select de edición incluye también los proveedores dados de baja, marcados como `(inactivo)`, mientras que el de alta sigue ofreciendo sólo los activos. Casos reales que corrige en datos existentes: la compra #48 (proveedor "Vendix Rollos de Film") y los ingredientes "Azucar" y "Limon esc" (proveedor "Ariel azucar").
+- **Aislamiento entre negocios en el proveedor de ingredientes y descartables.** `Store`/`UpdateIngredientRequest` y `Store`/`UpdatePackagingRequest` validaban `supplier_id` con `exists:suppliers,id` sin acotar por tenant, y sus controllers no tenían el chequeo que sí hace `PurchaseController:81`. Como los IDs de proveedor son seriales globales, un usuario podía asignarle a un ingrediente propio un proveedor de otro negocio y ver su nombre en su propio listado, pudiendo así enumerar nombres de proveedores ajenos probando IDs. Ahora usan la regla `exists` acotada por tenant. Verificado con un test que falla sin el arreglo.
+
+#### Técnico (correcciones)
+
+- `IngredientController:41`, `PackagingController:41` y `PurchaseController:176` pasan `$tenant->suppliers()` sin `->active()`; el filtrado por estado se hace en la vista (`$suppliers->where('active', true)` en los modales de alta), porque el mismo `$suppliers` alimenta alta y edición. Cada uno lleva un comentario explicando el porqué, para que no se "optimice" de vuelta.
+- **No se tocaron** `PurchaseController:71` (index: sólo alimenta el filtro y el modal de alta) ni `PurchaseScanController:76` (alta pura desde escaneo, donde no ofrecer inactivos es lo correcto).
+- 9 tests nuevos (396 en total) en `IngredientCrudTest`, `PackagingCrudTest` y `PurchaseCrudTest`: el proveedor inactivo sobrevive a la edición, el alta no lo ofrece, y el aislamiento por tenant. Verificados reintroduciendo el bug a propósito para confirmar que fallan.
+
+---
+
 ## [0.9.3] — 2026-07-14
 
 ### Recetas: editar unidad de una línea de ingrediente

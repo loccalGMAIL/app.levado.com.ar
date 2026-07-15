@@ -8,6 +8,7 @@ use App\Models\Recipe;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
+use App\Models\VariableExpense;
 
 // Creates an owner for a fresh empty tenant (no onboarding_completed_at, no productive hours)
 function freshOwner(): array
@@ -64,6 +65,20 @@ test('dashboard inyecta step 0 cuando tenant no tiene horas productivas configur
 test('dashboard inyecta step 1 cuando tenant tiene horas pero no tiene gastos fijos', function () {
     [$user, $tenant] = freshOwner();
     $tenant->update(['productive_hours_month' => 160]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('step: 1,', false);
+});
+
+test('un gasto variable no completa el paso de gastos fijos del onboarding', function () {
+    [$user, $tenant] = freshOwner();
+    $tenant->update(['productive_hours_month' => 160]);
+    $category = $tenant->variableExpenseCategories()->create(['name' => 'Imprevistos']);
+    VariableExpense::factory()->for($tenant)->create([
+        'variable_expense_category_id' => $category->id,
+    ]);
 
     $this->actingAs($user)
         ->get(route('dashboard'))

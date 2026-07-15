@@ -12,6 +12,7 @@ use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
+use App\Models\VariableExpense;
 
 function ownerForDashboard(): array
 {
@@ -150,6 +151,54 @@ test('dashboard muestra overhead por hora cuando hay horas productivas', functio
         ->get(route('dashboard'))
         ->assertOk()
         ->assertSee('100,00');
+});
+
+test('los gastos variables no afectan el overhead ni el margen', function () {
+    [$user, $tenant] = ownerForDashboard();
+
+    $category = FixedCostCategory::create(['tenant_id' => $tenant->id, 'name' => 'Infra']);
+    FixedCost::factory()->for($tenant)->create([
+        'monthly_amount' => 16000,
+        'active' => true,
+        'fixed_cost_category_id' => $category->id,
+    ]);
+
+    $recipe = Recipe::factory()->for($tenant)->create([
+        'yield_quantity' => 10,
+        'yield_unit' => Unit::Unidad->value,
+    ]);
+    RecipePrice::factory()->for($tenant)->create([
+        'price_list_id' => $tenant->defaultPriceList()->id,
+        'recipe_id' => $recipe->id,
+        'price' => 100,
+    ]);
+    $ingredient = Ingredient::factory()->for($tenant)->create([
+        'unit' => Unit::Unidad->value,
+        'cost_per_unit' => 50,
+    ]);
+    RecipeIngredientLine::create([
+        'recipe_id' => $recipe->id,
+        'ingredient_id' => $ingredient->id,
+        'quantity' => 10,
+        'unit' => Unit::Unidad->value,
+    ]);
+
+    $before = $this->actingAs($user)->get(route('dashboard'))->assertOk();
+    $overheadBefore = $before->viewData('overheadPerHour');
+    $marginBefore = $before->viewData('recipeRows')->first()['margin'];
+
+    // Gastos variables de montos grandes: son administrativos, no costos de producción.
+    $veCategory = $tenant->variableExpenseCategories()->create(['name' => 'Imprevistos']);
+    VariableExpense::factory()->count(3)->for($tenant)->create([
+        'variable_expense_category_id' => $veCategory->id,
+        'amount' => 999999,
+    ]);
+
+    $after = $this->actingAs($user)->get(route('dashboard'))->assertOk();
+
+    expect($after->viewData('overheadPerHour'))->toBe($overheadBefore)
+        ->and($after->viewData('recipeRows')->first()['margin'])->toBe($marginBefore)
+        ->and((float) $after->viewData('totalFixedCosts'))->toBe(16000.0);
 });
 
 test('el selector de lista muestra los márgenes de la lista elegida', function () {

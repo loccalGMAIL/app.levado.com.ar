@@ -3,6 +3,7 @@
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
+use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
@@ -41,6 +42,93 @@ test('viewer puede ver la lista de ingredientes', function () {
         ->get(route('ingredients.index'))
         ->assertOk()
         ->assertSee('Levadura');
+});
+
+// --- Proveedor dado de baja ---
+
+test('editar un ingrediente cuyo proveedor está inactivo no borra el proveedor', function () {
+    // El select de edición debe listar también los proveedores inactivos: si listara sólo
+    // activos, el de un proveedor dado de baja no matchearía, el select caería en
+    // «— Ninguno —» y guardar cualquier otro campo perdería el dato.
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $supplier = Supplier::factory()->for($tenant)->create(['name' => 'Proveedor Baja', 'active' => false]);
+    $ingredient = Ingredient::factory()->for($tenant)->create([
+        'supplier_id' => $supplier->id,
+        'cost_per_unit' => '100',
+    ]);
+
+    // Mirar el select de edición puntualmente: el nombre del proveedor también se renderiza
+    // en la tabla, así que un assertSee suelto pasaría aunque el select estuviera roto.
+    $html = $this->actingAs($user)->get(route('ingredients.index'))->assertOk()->getContent();
+    $editSelect = str($html)->after('id="edit_supplier"')->before('</select>')->toString();
+
+    expect($editSelect)->toContain('Proveedor Baja')
+        ->and($editSelect)->toContain('(inactivo)')
+        ->and($editSelect)->toContain('value="'.$supplier->id.'"');
+
+    $this->actingAs($user)
+        ->put(route('ingredients.update', $ingredient), [
+            'name' => $ingredient->name,
+            'unit' => $ingredient->unit->value,
+            'cost_per_unit' => '250',
+            'supplier_id' => $supplier->id,
+        ])
+        ->assertRedirect(route('ingredients.index'));
+
+    expect($ingredient->refresh()->supplier_id)->toBe($supplier->id)
+        ->and((float) $ingredient->cost_per_unit)->toBe(250.0);
+});
+
+test('el alta de ingredientes no ofrece proveedores inactivos', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    Supplier::factory()->for($tenant)->create(['name' => 'ProveedorActivo', 'active' => true]);
+    Supplier::factory()->for($tenant)->create(['name' => 'ProveedorInactivo', 'active' => false]);
+
+    $html = $this->actingAs($user)->get(route('ingredients.index'))->assertOk()->getContent();
+    expect($html)->toContain('id="create_supplier"');
+
+    // Sólo el select de alta: el de edición sí lista los inactivos a propósito.
+    $createSelect = str($html)->after('id="create_supplier"')->before('</select>')->toString();
+
+    expect($createSelect)->toContain('ProveedorActivo')
+        ->and($createSelect)->not->toContain('ProveedorInactivo');
+});
+
+// --- Aislamiento del proveedor ---
+
+test('aislamiento: no se puede asignar un proveedor de otro tenant a un ingrediente', function () {
+    [$user] = tenantUserAs(TenantUserRole::Owner);
+
+    $otherTenant = Tenant::factory()->create();
+    $otherSupplier = Supplier::factory()->for($otherTenant)->create(['name' => 'ProveedorAjeno']);
+
+    $this->actingAs($user)
+        ->post(route('ingredients.store'), [
+            'name' => 'Con proveedor ajeno',
+            'unit' => Unit::Kilogramo->value,
+            'cost_per_unit' => '100',
+            'supplier_id' => $otherSupplier->id,
+        ])
+        ->assertSessionHasErrors('supplier_id');
+});
+
+test('aislamiento: no se puede reasignar un ingrediente a un proveedor de otro tenant', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $ingredient = Ingredient::factory()->for($tenant)->create();
+
+    $otherTenant = Tenant::factory()->create();
+    $otherSupplier = Supplier::factory()->for($otherTenant)->create();
+
+    $this->actingAs($user)
+        ->put(route('ingredients.update', $ingredient), [
+            'name' => $ingredient->name,
+            'unit' => $ingredient->unit->value,
+            'cost_per_unit' => '100',
+            'supplier_id' => $otherSupplier->id,
+        ])
+        ->assertSessionHasErrors('supplier_id');
+
+    expect($ingredient->refresh()->supplier_id)->toBeNull();
 });
 
 // --- Crear ---

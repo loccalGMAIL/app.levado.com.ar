@@ -37,7 +37,8 @@
                 <select id="create_supplier" name="supplier_id"
                     class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
                     <option value="">— Ninguno —</option>
-                    @foreach($suppliers as $supplier)
+                    {{-- Sólo activos: $suppliers trae todos porque el modal de edición los necesita. --}}
+                    @foreach($suppliers->where('active', true) as $supplier)
                         <option value="{{ $supplier->id }}"
                             @selected(old('supplier_id') == $supplier->id)>
                             {{ $supplier->name }}

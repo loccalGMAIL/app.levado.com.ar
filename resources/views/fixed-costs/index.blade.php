@@ -28,7 +28,7 @@
 
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-base font-semibold text-corteza">Gastos Fijos</h2>
+                    <h2 class="text-base font-semibold text-corteza">Gastos</h2>
                     <p class="text-sm text-masa-madre mt-0.5">Costos operativos mensuales del negocio: alquiler, servicios, personal y otros.</p>
                 </div>
                 @can('manage-costs')
@@ -46,6 +46,8 @@
                     </div>
                 @endcan
             </div>
+
+            <x-expense-tabs />
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <input type="hidden" name="sort" value="{{ request('sort') }}">
@@ -260,7 +262,14 @@
         @can('manage-costs')
             @include('fixed-costs.modals.create')
             @include('fixed-costs.modals.edit')
-            @include('fixed-costs.modals.categories')
+            <x-expense-categories-modal
+                name="fixed-cost-categories"
+                title="Categorías de gastos fijos"
+                :categories="$categories"
+                :show="$showCategories"
+                store-route="fixed-cost-categories.store"
+                update-route="fixed-cost-categories.update"
+                destroy-route="fixed-cost-categories.destroy" />
         @endcan
 
     </div>

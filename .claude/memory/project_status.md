@@ -1,9 +1,9 @@
 ---
 name: Levado — Estado actual del proyecto
-description: Progreso al 14/07/2026
+description: Progreso al 15/07/2026
 type: project
 ---
-# Estado del proyecto — 14 de julio 2026
+# Estado del proyecto — 15 de julio 2026
 
 ## Estructura local
 ```
@@ -18,7 +18,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.9.3 (rama `v0.9.3-recetas-editar-unidad-ingrediente`; `master` en 0.9.2)
+- **Versión actual:** 0.10.0 (rama `v0.10.0-gastos-variables`; `master` en 0.9.3)
 
 ## Todo lo que está hecho
 
@@ -37,6 +37,19 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Búsqueda, paginación (20 items), ordenamiento en todas las datatables
 - Botón "Copiar" en recetas, header sticky en detalle de receta
 - **216 tests, todos verdes**
+
+### v0.10.0 — Gastos Variables
+- La pantalla de Gastos ahora tiene dos pestañas: **Gastos Fijos** (los de siempre, que alimentan el overhead por hora) y **Gastos Variables** (gastos ocasionales o imprevistos, puramente administrativos, que **no intervienen en ningún cálculo de costo, margen ni receta**). Preparados para los reportes y el análisis financiero futuros.
+- Un gasto variable es un evento puntual: nombre, categoría, **fecha**, **monto único** y **proveedor opcional** (del listado de proveedores ya existente). Sin `active`, sin historial de precios. Catálogo de categorías propio, separado del de fijos. Tiene borrado (los fijos no).
+- **Trampa del proveedor inactivo (regla general del proyecto):** todo `<select>` de edición debe listar **todos** los proveedores (marcando `(inactivo)`), no sólo los activos. Si lista sólo activos, un proveedor dado de baja no matchea, el select cae en la opción vacía, y guardar cualquier otro campo **borra el proveedor en silencio** (selects opcionales) o **bloquea el guardado** (selects `required`). El filtrado por activo va en la **vista** (`$suppliers->where('active', true)` en el alta), no en el controller, porque el mismo `$suppliers` alimenta alta y edición. Arreglado en v0.10.0 en gastos variables, ingredientes, descartables y compras, con tests de regresión en las 4 suites.
+- **El mismo patrón sigue sin revisar en otras entidades con `active`:** `RecipeController:178-180` pasa `$ingredients`/`$packagings`/`$laborTypes` activos a `recipes/show`, y `PurchaseController:357-358` a las líneas de compra. Una receta con una línea cuyo ingrediente se dio de baja podría sufrir lo mismo. Pendiente de encarar.
+- **Decisión de arquitectura clave:** tabla separada `variable_expenses` en vez de una columna `type` en `fixed_costs`. El overhead se calcula con `$tenant->fixedCosts()->active()->sum('monthly_amount')` **duplicado en 5 lugares** (`DashboardController:50`, `RecipePriceController:43`, `RecipeController:182`, `BusinessController:19` y un getter Alpine en `recipes/show.blade.php:112`); con una columna `type` los 5 pasaban a necesitar `->where('type','fixed')` y olvidar uno habría inflado el costo de todas las recetas en silencio. Con tabla separada el aislamiento es estructural y esos 5 call sites no se tocaron. Además no hubo migración de datos.
+- **La pestaña es el selector de tipo** (no hay selector en el formulario): los campos divergen entre tipos, así que un gasto no se puede convertir de uno a otro.
+- Componentes nuevos reutilizables: `x-expense-tabs` (data-driven, un tipo nuevo = una línea) y `x-expense-categories-modal` (extracción parametrizada del modal de categorías, compartido por ambas pestañas).
+- Deuda deliberada: `VariableExpenseCategoryController` duplica ~90 L de `FixedCostCategoryController`. Con 2 consumidores una abstracción es prematura; extraer a base class cuando aparezca un tercer tipo.
+- Pendiente de considerar: la entrada "Gastos" vive en el grupo "Costos" del sidebar, y los gastos variables explícitamente no son costos. Revisar cuando lleguen los reportes financieros.
+- **Corregido en la misma versión:** el bug del proveedor inactivo en ingredientes, descartables y compras (casos reales en datos: compra #48 y los ingredientes "Azucar"/"Limon esc"), y un **agujero de aislamiento entre tenants**: `Store`/`Update` de ingredientes y descartables validaban `supplier_id` con `exists:suppliers,id` sin scope de tenant y sin el `abort_unless` que sí tiene `PurchaseController:81`, permitiendo asignarse un proveedor ajeno y ver su nombre en el listado propio. Confirmado con un test que fallaba y ahora pasa.
+- **396 tests, todos verdes** (44 nuevos, incluido el ancla de que los gastos variables no mueven el overhead y los de regresión del proveedor inactivo).
 
 ### v0.9.3 — Recetas: editar unidad de una línea de ingrediente
 - Ya existía (desde v0.4.0) poder elegir, al agregar un ingrediente a una receta, una unidad distinta a la unidad base del ingrediente (con conversión automática de costo vía `UnitConverter`). Faltaba poder cambiar esa unidad en una línea ya creada — solo se podía editar la cantidad.
