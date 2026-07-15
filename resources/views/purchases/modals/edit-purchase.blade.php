@@ -62,6 +62,10 @@
 
         <div>
             <x-input-label for="edit_purchase_supplier" value="Proveedor" />
+            {{-- Lista todos los proveedores, no sólo los activos: el select es `required`, así
+                 que si el proveedor de la compra fue dado de baja su opción no existiría, el
+                 select caería en la opción vacía y no se podría guardar ningún otro campo sin
+                 reasignarle proveedor a la compra. --}}
             <select id="edit_purchase_supplier" name="supplier_id" required
                 data-searchable
                 @change="supplierId = $event.target.value; checkDuplicate()"
@@ -70,7 +74,7 @@
                 @foreach($suppliers as $supplier)
                     <option value="{{ $supplier->id }}"
                         @selected(old('supplier_id', $purchase->supplier_id) == $supplier->id)>
-                        {{ $supplier->name }}
+                        {{ $supplier->name }}{{ $supplier->active ? '' : ' (inactivo)' }}
                     </option>
                 @endforeach
             </select>

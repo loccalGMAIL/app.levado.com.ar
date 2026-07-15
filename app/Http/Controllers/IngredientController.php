@@ -38,7 +38,10 @@ class IngredientController extends Controller
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
-        $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
+        // Todos, no sólo los activos: el modal de alta filtra a activos, pero el de edición
+        // debe poder mostrar un proveedor ya dado de baja o el select caería en «Ninguno»
+        // y guardar borraría el proveedor en silencio.
+        $suppliers = $tenant->suppliers()->orderBy('name')->get();
 
         $stockLevels = StockLevel::query()
             ->where('tenant_id', $tenant->id)

@@ -173,7 +173,10 @@ class PurchaseController extends Controller
 
         $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
         $packagings = $tenant->packagings()->active()->orderBy('name')->get();
-        $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
+        // Todos, no sólo los activos: el select de edición es `required`, así que si el
+        // proveedor de la compra fue dado de baja su opción no existiría, el select caería
+        // en la opción vacía y el navegador bloquearía el guardado de cualquier otro campo.
+        $suppliers = $tenant->suppliers()->orderBy('name')->get();
         $units = Unit::cases();
 
         return view('purchases.show', compact('purchase', 'ingredients', 'packagings', 'suppliers', 'units'));

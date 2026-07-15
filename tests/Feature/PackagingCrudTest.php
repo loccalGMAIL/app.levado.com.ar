@@ -2,6 +2,7 @@
 
 use App\Enums\TenantUserRole;
 use App\Models\Packaging;
+use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
@@ -45,6 +46,70 @@ test('viewer puede ver la lista de envases', function () {
         ->get(route('packaging.index'))
         ->assertOk()
         ->assertSee('Caja medialuna');
+});
+
+// --- Proveedor dado de baja ---
+
+test('editar un envase cuyo proveedor está inactivo no borra el proveedor', function () {
+    // Mismo motivo que en ingredientes: el select de edición debe listar los inactivos o
+    // caería en «— Ninguno —» y guardar cualquier otro campo perdería el proveedor.
+    [$user, $tenant] = ownerForPackaging();
+    $supplier = Supplier::factory()->for($tenant)->create(['name' => 'Proveedor Baja', 'active' => false]);
+    $packaging = Packaging::factory()->for($tenant)->create([
+        'supplier_id' => $supplier->id,
+        'cost_per_unit' => '10',
+    ]);
+
+    // Mirar el select de edición puntualmente: el nombre del proveedor también se renderiza
+    // en la tabla, así que un assertSee suelto pasaría aunque el select estuviera roto.
+    $html = $this->actingAs($user)->get(route('packaging.index'))->assertOk()->getContent();
+    $editSelect = str($html)->after('id="edit_pkg_supplier"')->before('</select>')->toString();
+
+    expect($editSelect)->toContain('Proveedor Baja')
+        ->and($editSelect)->toContain('(inactivo)')
+        ->and($editSelect)->toContain('value="'.$supplier->id.'"');
+
+    $this->actingAs($user)
+        ->put(route('packaging.update', $packaging), [
+            'name' => $packaging->name,
+            'cost_per_unit' => '35',
+            'supplier_id' => $supplier->id,
+        ])
+        ->assertRedirect(route('packaging.index'));
+
+    expect($packaging->refresh()->supplier_id)->toBe($supplier->id)
+        ->and((float) $packaging->cost_per_unit)->toBe(35.0);
+});
+
+test('el alta de envases no ofrece proveedores inactivos', function () {
+    [$user, $tenant] = ownerForPackaging();
+    Supplier::factory()->for($tenant)->create(['name' => 'ProveedorActivo', 'active' => true]);
+    Supplier::factory()->for($tenant)->create(['name' => 'ProveedorInactivo', 'active' => false]);
+
+    $html = $this->actingAs($user)->get(route('packaging.index'))->assertOk()->getContent();
+    expect($html)->toContain('id="create_pkg_supplier"');
+
+    $createSelect = str($html)->after('id="create_pkg_supplier"')->before('</select>')->toString();
+
+    expect($createSelect)->toContain('ProveedorActivo')
+        ->and($createSelect)->not->toContain('ProveedorInactivo');
+});
+
+// --- Aislamiento del proveedor ---
+
+test('aislamiento: no se puede asignar un proveedor de otro tenant a un envase', function () {
+    [$user] = ownerForPackaging();
+
+    $otherTenant = Tenant::factory()->create();
+    $otherSupplier = Supplier::factory()->for($otherTenant)->create();
+
+    $this->actingAs($user)
+        ->post(route('packaging.store'), [
+            'name' => 'Con proveedor ajeno',
+            'cost_per_unit' => '10',
+            'supplier_id' => $otherSupplier->id,
+        ])
+        ->assertSessionHasErrors('supplier_id');
 });
 
 test('owner puede crear un envase', function () {

@@ -22,6 +22,49 @@ function ownerForPurchaseCrud(): array
     return [$user, $tenant];
 }
 
+// --- Proveedor dado de baja ---
+
+test('el detalle de una compra con proveedor inactivo ofrece su opción marcada', function () {
+    // El select de edición es `required`: si listara sólo activos, el proveedor dado de baja
+    // no matchearía, el select caería en la opción vacía y el navegador bloquearía el
+    // guardado de cualquier otro campo hasta reasignarle proveedor a la compra.
+    [$user, $tenant] = ownerForPurchaseCrud();
+    $supplier = Supplier::factory()->for($tenant)->create(['name' => 'Proveedor Baja', 'active' => false]);
+    $purchase = $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-07-13',
+    ]);
+
+    // Mirar el select de edición puntualmente: el nombre del proveedor también se renderiza
+    // en la cabecera de la compra, así que un assertSee suelto pasaría aunque el select
+    // estuviera roto. Y sin la opción `selected`, el `required` bloquearía el guardado.
+    $html = $this->actingAs($user)->get(route('purchases.show', $purchase))->assertOk()->getContent();
+    $editSelect = str($html)->after('id="edit_purchase_supplier"')->before('</select>')->toString();
+
+    expect($editSelect)->toContain('Proveedor Baja')
+        ->and($editSelect)->toContain('(inactivo)')
+        ->and($editSelect)->toContain('selected');
+});
+
+test('editar una compra con proveedor inactivo conserva el proveedor', function () {
+    [$user, $tenant] = ownerForPurchaseCrud();
+    $supplier = Supplier::factory()->for($tenant)->create(['active' => false]);
+    $purchase = $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-07-13',
+    ]);
+
+    $this->actingAs($user)
+        ->patch(route('purchases.update', $purchase), [
+            'supplier_id' => $supplier->id,
+            'invoice_date' => '2026-07-20',
+        ])
+        ->assertRedirect();
+
+    expect($purchase->refresh()->supplier_id)->toBe($supplier->id)
+        ->and($purchase->invoice_date->format('Y-m-d'))->toBe('2026-07-20');
+});
+
 test('owner puede crear una compra manual sin comprobante', function () {
     [$user, $tenant] = ownerForPurchaseCrud();
     $supplier = Supplier::factory()->for($tenant)->create();

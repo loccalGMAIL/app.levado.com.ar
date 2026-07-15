@@ -38,12 +38,17 @@
                         + Nuevo
                     </button>
                 </div>
+                {{-- Lista todos los proveedores, no sólo los activos: si el descartable apunta
+                     a uno dado de baja, su opción tiene que existir o el select caería en
+                     «Ninguno» y guardar borraría el proveedor en silencio. --}}
                 <select id="edit_pkg_supplier" name="supplier_id"
                     x-model="editing.supplier_id"
                     class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
                     <option value="">— Ninguno —</option>
                     @foreach($suppliers as $supplier)
-                        <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                        <option value="{{ $supplier->id }}">
+                            {{ $supplier->name }}{{ $supplier->active ? '' : ' (inactivo)' }}
+                        </option>
                     @endforeach
                 </select>
                 <x-input-error :messages="$errors->get('supplier_id')" class="mt-2" />
