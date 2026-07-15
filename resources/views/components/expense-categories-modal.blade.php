@@ -1,4 +1,14 @@
-<x-crud-modal name="fixed-cost-categories" title="Categorías de gastos fijos" :show="$showCategories">
+@props([
+    'name',
+    'title',
+    'categories',
+    'show' => false,
+    'storeRoute',
+    'updateRoute',
+    'destroyRoute',
+])
+
+<x-crud-modal :name="$name" :title="$title" :show="$show">
     <div x-data="{ editingId: null, editingName: '' }" class="space-y-4">
 
         @if(session('category_error'))
@@ -24,7 +34,7 @@
                                     class="text-xs text-masa-madre hover:text-corteza hover:underline">
                                     Editar
                                 </button>
-                                <form method="POST" action="{{ route('fixed-cost-categories.destroy', $cat) }}">
+                                <form method="POST" action="{{ route($destroyRoute, $cat) }}">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"
@@ -38,7 +48,7 @@
 
                         {{-- Modo edición inline --}}
                         <div x-show="editingId === {{ $cat->id }}" x-cloak>
-                            <form method="POST" action="{{ route('fixed-cost-categories.update', $cat) }}"
+                            <form method="POST" action="{{ route($updateRoute, $cat) }}"
                                 class="flex items-center gap-2">
                                 @csrf
                                 @method('PUT')
@@ -65,7 +75,7 @@
         {{-- Agregar nueva categoría --}}
         <div class="border-t border-miga pt-4">
             <p class="text-xs font-medium text-masa-madre mb-2">Nueva categoría</p>
-            <form method="POST" action="{{ route('fixed-cost-categories.store') }}"
+            <form method="POST" action="{{ route($storeRoute) }}"
                 class="flex items-center gap-2">
                 @csrf
                 <input type="text" name="name"

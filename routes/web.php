@@ -25,6 +25,8 @@ use App\Http\Controllers\RecipePriceController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\VariableExpenseCategoryController;
+use App\Http\Controllers\VariableExpenseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -53,6 +55,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
     Route::get('packaging', [PackagingController::class, 'index'])->name('packaging.index');
     Route::get('fixed-costs', [FixedCostController::class, 'index'])->name('fixed-costs.index');
+    Route::get('variable-expenses', [VariableExpenseController::class, 'index'])->name('variable-expenses.index');
     Route::get('labor-types', [LaborTypeController::class, 'index'])->name('labor-types.index');
     Route::get('price-lists', [PriceListController::class, 'index'])->name('price-lists.index');
     Route::get('price-lists/matrix', [PriceListController::class, 'matrix'])->name('price-lists.matrix');
@@ -96,6 +99,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('fixed-costs', [FixedCostController::class, 'store'])->name('fixed-costs.store');
     Route::put('fixed-costs/{fixedCost}', [FixedCostController::class, 'update'])->name('fixed-costs.update');
     Route::patch('fixed-costs/{fixedCost}/toggle-active', [FixedCostController::class, 'toggleActive'])->name('fixed-costs.toggle-active');
+
+    Route::post('variable-expenses', [VariableExpenseController::class, 'store'])->name('variable-expenses.store');
+    Route::put('variable-expenses/{variableExpense}', [VariableExpenseController::class, 'update'])->name('variable-expenses.update');
+    Route::delete('variable-expenses/{variableExpense}', [VariableExpenseController::class, 'destroy'])->name('variable-expenses.destroy');
 
     Route::post('labor-types', [LaborTypeController::class, 'store'])->name('labor-types.store');
     Route::put('labor-types/{laborType}', [LaborTypeController::class, 'update'])->name('labor-types.update');
@@ -153,6 +160,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
     Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');
     Route::delete('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'destroy'])->name('fixed-cost-categories.destroy');
+
+    Route::post('variable-expense-categories', [VariableExpenseCategoryController::class, 'store'])->name('variable-expense-categories.store');
+    Route::put('variable-expense-categories/{variableExpenseCategory}', [VariableExpenseCategoryController::class, 'update'])->name('variable-expense-categories.update');
+    Route::delete('variable-expense-categories/{variableExpenseCategory}', [VariableExpenseCategoryController::class, 'destroy'])->name('variable-expense-categories.destroy');
 });
 
 // Mi negocio y sucursales (solo owner y super_admin)
