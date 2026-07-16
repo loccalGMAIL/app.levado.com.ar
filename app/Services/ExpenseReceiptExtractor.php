@@ -82,15 +82,26 @@ class ExpenseReceiptExtractor
             {$catalog}
 
             Devolvé:
-            - name: una descripción CORTA (máximo 60 caracteres) de qué se pagó.
+            - name: una descripción CORTA (máximo 60 caracteres) de QUÉ SE COMPRÓ o qué servicio se pagó.
+              NO uses el nombre del proveedor como descripción: el proveedor va en supplier_name.
               Si el comprobante tiene UN SOLO concepto, usá ese concepto (ej. "Cambio de cubierta trasera").
-              Si tiene VARIOS ÍTEMS, resumilos en una sola frase, del rubro general a los ítems principales
-              (ej. "Ferretería: tornillos, cinta y silicona"). NO devuelvas una lista ni un renglón por ítem.
+              Si tiene VARIOS ÍTEMS, resumilos en una sola frase, del rubro general a los ítems principales,
+              nombrando ítems que estén REALMENTE en el comprobante (ej. "Ferretería: tornillos, cinta y silicona").
+              NO devuelvas una lista ni un renglón por ítem, y NO agregues ítems que no figuran.
               Si no se entiende qué se pagó, devolvé null. NO inventes.
-            - amount: el TOTAL FINAL del comprobante, tal como figura. Es el importe que se pagó, con IVA incluido si lo tiene.
-              Si hay varios totales (subtotal, IVA, total), tomá SIEMPRE el total final. NO lo recalcules.
-            - expense_date: la fecha del comprobante en formato YYYY-MM-DD. Hoy es {$today}, usala para desambiguar años de 2 dígitos.
+            - amount: el TOTAL FINAL del comprobante: la plata que efectivamente se pagó, con IVA incluido si lo tiene.
+              ¡MUY IMPORTANTE! Si el comprobante muestra SUBTOTAL, IVA y TOTAL, devolvé SIEMPRE el que dice TOTAL.
+              NUNCA devuelvas el SUBTOTAL ni el importe de un renglón suelto: el TOTAL es el importe MÁS GRANDE
+              y suele ser el último de la columna, muchas veces resaltado o en letra más grande.
+              Control obligatorio: el amount tiene que ser MAYOR O IGUAL que cualquier otro importe del comprobante.
+              Si el número que elegiste es menor que algún otro, estás tomando el renglón equivocado.
+              Copialo tal como figura: NO lo recalcules, NO le sumes ni le restes el IVA.
+            - expense_date: la fecha del comprobante, devuelta en formato YYYY-MM-DD.
+              ¡OJO! En Argentina las fechas se escriben DÍA/MES/AÑO. "14/05/2026" es el 14 de MAYO de 2026 → "2026-05-14".
+              NUNCA interpretes el primer número como si fuera el mes (eso sería formato de EE.UU.).
+              Hoy es {$today}: usalo sólo para desambiguar años de 2 dígitos, no para inventar una fecha si no figura.
             - supplier_name: la razón social o nombre de fantasía de QUIEN EMITE el comprobante (el que cobra), no el cliente.
+              Suele estar arriba de todo y en letra más grande. Copiá el nombre COMPLETO tal como figura.
             - category_id: el id de la categoría del catálogo de arriba que mejor encaje. null si no estás razonablemente seguro
               o si ninguna encaja. NO inventes ids que no estén en el catálogo.
 
