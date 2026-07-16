@@ -56,6 +56,26 @@ Ver `AUDITORIA_DEUDA_TECNICA.md` para el diagnóstico completo. Solo diagnóstic
 - Se quitaron los logs de depuración del flujo de aceptación de invitaciones.
 - 4 tests nuevos (duplicados de factura ×3, scoped binding de líneas) y actualización de los tests de storage al disco privado. **400 tests, todos verdes.**
 
+### Girar el comprobante antes de guardarlo
+
+#### Agregado
+
+- **Botones para girar la foto, en los 5 lugares donde se captura un comprobante:** el alta y la edición de gastos variables, y las tres pantallas de Compras (el escaneo de facturas, el alta manual y la edición). Aparecen apenas se elige una imagen, giran de a 90° para cada lado, y lo que se guarda o se manda a leer es la imagen ya derecha. Una factura derecha además se lee mejor.
+- Los controles no aparecen para PDFs, que no se giran en el navegador.
+
+#### Corregido
+
+- **Las fotos de teléfono ya no salen giradas.** Los teléfonos guardan la orientación en el EXIF y no en los píxeles, y `canvas.toBlob()` descarta el EXIF al re-encodear: la foto se subía acostada aunque en la galería se viera derecha. `createImageBitmap()` se llamaba sin declarar `imageOrientation`, y como el valor por defecto cambió a lo largo de las versiones del estándar, el resultado dependía del navegador. Ahora se declara `from-image` explícitamente, así la orientación se hornea en los píxeles antes del re-encode. **Afecta también al escaneo de facturas en Compras**, que usa el mismo helper.
+
+#### Técnico
+
+- `rotateInvoiceImage(file, degrees)` en `resources/js/image-compress.js`, expuesto como global igual que `compressInvoiceImage` (el proyecto no usa `Alpine.data()`: la lógica pesada va en helpers de `resources/js/` y el `x-data` queda fino). Degrada al archivo original ante cualquier error, como el resto del helper.
+- **Cada giro re-encodea desde el archivo original, no desde el resultado anterior**, acumulando el ángulo en el estado. Girar 4 veces sobre el resultado previo apilaría 4 generaciones de pérdida JPEG.
+- El giro re-inyecta el archivo en el `<input type="file">` vía `DataTransfer`, el mismo mecanismo que ya usaba la compresión para subir el JPEG chico en vez del original.
+- En el alta de gastos, girar después de haber leído con IA resetea el estado de lectura y limpia el `receipt_image_path`: el archivo que quedó en disco no está girado, así que el rotado vuelve a viajar con el submit. El botón vuelve a decir "Leer con IA".
+- Componente `x-rotate-button` con props `direction` y `method`, para no repetir el SVG y las etiquetas accesibles en 10 botones. La lógica de `x-data` sí queda duplicada en las 5 vistas: es la misma decisión que ya tomó v0.9.1 con estos pickers, y unificarlas exigía renombrar el estado de las 3 vistas de Compras (`invoiceFileName` vs `receiptName`), que no tienen cobertura de browser que lo respalde.
+- 4 tests nuevos (`ReceiptRotationTest`) que fijan que los controles se rendericen en las 5 pantallas: el giro pasa entero en el navegador, pero el helper es compartido y un componente roto los rompe a todos a la vez.
+
 ---
 
 ## [0.10.0] — 2026-07-15

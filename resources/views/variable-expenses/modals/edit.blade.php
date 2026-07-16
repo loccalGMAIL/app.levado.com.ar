@@ -12,10 +12,14 @@
             receiptPreviewUrl: '',
             receiptPreparing: false,
             receiptPickError: '',
+            receiptBaseFile: null,
+            receiptRotation: 0,
             async onPickReceipt(e) {
                 const input = e.target;
                 const original = input.files[0];
                 this.receiptPickError = '';
+                this.receiptBaseFile = null;
+                this.receiptRotation = 0;
                 if (this.receiptPreviewUrl) { URL.revokeObjectURL(this.receiptPreviewUrl); }
                 this.receiptPreviewUrl = '';
                 this.receiptName = '';
@@ -35,8 +39,28 @@
                     dt.items.add(file);
                     input.files = dt.files;
 
+                    this.receiptBaseFile = file;
                     this.receiptName = file.name;
                     this.receiptPreviewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+                } finally {
+                    this.receiptPreparing = false;
+                }
+            },
+            async rotateReceipt(direction) {
+                if (!this.receiptBaseFile || this.receiptPreparing) { return; }
+
+                this.receiptRotation = (this.receiptRotation + direction * 90 + 360) % 360;
+                this.receiptPreparing = true;
+                try {
+                    const rotated = await window.rotateInvoiceImage(this.receiptBaseFile, this.receiptRotation);
+
+                    const input = document.getElementById('edit_ve_receipt');
+                    const dt = new DataTransfer();
+                    dt.items.add(rotated);
+                    input.files = dt.files;
+
+                    if (this.receiptPreviewUrl) { URL.revokeObjectURL(this.receiptPreviewUrl); }
+                    this.receiptPreviewUrl = URL.createObjectURL(rotated);
                 } finally {
                     this.receiptPreparing = false;
                 }
@@ -207,6 +231,13 @@
 
             <p class="mt-1 text-xs text-masa-madre" x-show="receiptPreparing">Preparando imagen…</p>
             <p class="mt-1 text-xs text-masa-madre" x-show="receiptName && !receiptPreparing" x-text="'Archivo: ' + receiptName"></p>
+
+            {{-- Sólo para imágenes: un PDF no se gira en el navegador. --}}
+            <div class="mt-2 flex items-center gap-2" x-show="receiptPreviewUrl && !receiptPreparing" x-cloak>
+                <x-rotate-button direction="-1" />
+                <x-rotate-button direction="1" />
+                <span class="text-xs text-masa-madre">Girá el comprobante si quedó de costado.</span>
+            </div>
             <p class="mt-1 text-xs text-masa-madre" x-show="receiptName && !receiptPreparing && editing.receipt_image_path">
                 Al guardar, este archivo reemplaza al comprobante anterior.
             </p>

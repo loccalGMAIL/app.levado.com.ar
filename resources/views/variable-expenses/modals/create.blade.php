@@ -11,6 +11,8 @@
               receiptPath: {{ Js::from(old('receipt_image_path', '')) }},
               receiptPreparing: false,
               receiptPickError: '',
+              receiptBaseFile: null,
+              receiptRotation: 0,
               scanning: false,
               scanError: '',
               scanned: false,
@@ -21,6 +23,8 @@
                   this.scanError = '';
                   this.scanned = false;
                   this.receiptPath = '';
+                  this.receiptBaseFile = null;
+                  this.receiptRotation = 0;
                   if (this.receiptPreviewUrl) { URL.revokeObjectURL(this.receiptPreviewUrl); }
                   this.receiptPreviewUrl = '';
                   this.receiptName = '';
@@ -40,8 +44,35 @@
                       dt.items.add(file);
                       input.files = dt.files;
 
+                      this.receiptBaseFile = file;
                       this.receiptName = file.name;
                       this.receiptPreviewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+                  } finally {
+                      this.receiptPreparing = false;
+                  }
+              },
+              async rotateReceipt(direction) {
+                  if (!this.receiptBaseFile || this.receiptPreparing) { return; }
+
+                  this.receiptRotation = (this.receiptRotation + direction * 90 + 360) % 360;
+                  this.receiptPreparing = true;
+                  try {
+                      // Siempre desde el archivo original: re-encodear el resultado
+                      // anterior apilaría una generación de pérdida por cada giro.
+                      const rotated = await window.rotateInvoiceImage(this.receiptBaseFile, this.receiptRotation);
+
+                      const input = document.getElementById('create_ve_receipt');
+                      const dt = new DataTransfer();
+                      dt.items.add(rotated);
+                      input.files = dt.files;
+
+                      if (this.receiptPreviewUrl) { URL.revokeObjectURL(this.receiptPreviewUrl); }
+                      this.receiptPreviewUrl = URL.createObjectURL(rotated);
+
+                      // Lo que se leyó ya no coincide con la imagen: el archivo del
+                      // scan quedó sin girar, así que vuelve a viajar con el submit.
+                      this.scanned = false;
+                      this.receiptPath = '';
                   } finally {
                       this.receiptPreparing = false;
                   }
@@ -221,6 +252,13 @@
             <p class="mt-1 text-xs text-masa-madre" x-show="receiptPreparing">Preparando imagen…</p>
             <p class="mt-1 text-xs text-masa-madre" x-show="receiptName && !receiptPreparing" x-text="'Archivo: ' + receiptName"></p>
             <p class="mt-1 text-xs text-red-600" x-show="receiptPickError" x-text="receiptPickError"></p>
+
+            {{-- Sólo para imágenes: un PDF no se gira en el navegador. --}}
+            <div class="mt-2 flex items-center gap-2" x-show="receiptPreviewUrl && !receiptPreparing" x-cloak>
+                <x-rotate-button direction="-1" />
+                <x-rotate-button direction="1" />
+                <span class="text-xs text-masa-madre">Girá el comprobante si quedó de costado.</span>
+            </div>
 
             <div class="mt-2 flex items-center gap-3" x-show="receiptName && !receiptPreparing" x-cloak>
                 <button type="button"

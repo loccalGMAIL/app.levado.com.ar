@@ -25,10 +25,14 @@
               invoicePreviewUrl: '',
               invoicePreparing: false,
               invoicePickError: '',
+              invoiceBaseFile: null,
+              invoiceRotation: 0,
               async onPickInvoice(e) {
                   const input = e.target;
                   const original = input.files[0];
                   this.invoicePickError = '';
+                  this.invoiceBaseFile = null;
+                  this.invoiceRotation = 0;
                   if (this.invoicePreviewUrl) { URL.revokeObjectURL(this.invoicePreviewUrl); }
                   this.invoicePreviewUrl = '';
                   this.invoiceFileName = '';
@@ -48,8 +52,30 @@
                       dt.items.add(file);
                       input.files = dt.files;
 
+                      this.invoiceBaseFile = file;
                       this.invoiceFileName = file.name;
                       this.invoicePreviewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+                  } finally {
+                      this.invoicePreparing = false;
+                  }
+              },
+              async rotateInvoice(direction) {
+                  if (!this.invoiceBaseFile || this.invoicePreparing) { return; }
+
+                  this.invoiceRotation = (this.invoiceRotation + direction * 90 + 360) % 360;
+                  this.invoicePreparing = true;
+                  try {
+                      // Siempre desde el archivo original: re-encodear el resultado
+                      // anterior apilaría una generación de pérdida por cada giro.
+                      const rotated = await window.rotateInvoiceImage(this.invoiceBaseFile, this.invoiceRotation);
+
+                      const input = document.getElementById('create_purchase_invoice_file');
+                      const dt = new DataTransfer();
+                      dt.items.add(rotated);
+                      input.files = dt.files;
+
+                      if (this.invoicePreviewUrl) { URL.revokeObjectURL(this.invoicePreviewUrl); }
+                      this.invoicePreviewUrl = URL.createObjectURL(rotated);
                   } finally {
                       this.invoicePreparing = false;
                   }
@@ -146,6 +172,13 @@
             <p class="mt-1 text-xs text-masa-madre" x-show="invoicePreparing">Preparando imagen…</p>
             <p class="mt-1 text-xs text-masa-madre" x-show="invoiceFileName && !invoicePreparing" x-text="'Archivo: ' + invoiceFileName"></p>
             <p class="mt-1 text-xs text-red-600" x-show="invoicePickError" x-text="invoicePickError"></p>
+
+            {{-- Sólo para imágenes: un PDF no se gira en el navegador. --}}
+            <div class="mt-2 flex items-center gap-2" x-show="invoicePreviewUrl && !invoicePreparing" x-cloak>
+                <x-rotate-button direction="-1" method="rotateInvoice" />
+                <x-rotate-button direction="1" method="rotateInvoice" />
+                <span class="text-xs text-masa-madre">Girá el comprobante si quedó de costado.</span>
+            </div>
             <x-input-error :messages="$errors->get('invoice')" class="mt-2" />
         </div>
 

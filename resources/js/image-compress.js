@@ -9,6 +9,13 @@
 const MAX_EDGE = 1600;
 const JPEG_QUALITY = 0.8;
 
+// Phone photos carry their orientation in EXIF rather than in the pixels, and
+// canvas.toBlob() drops EXIF on re-encode. Decoding with the orientation
+// applied bakes it into the pixels, so the upright photo survives the
+// re-encode. The spec default changed over time, so we state it explicitly
+// instead of depending on the browser version.
+const BITMAP_OPTS = { imageOrientation: 'from-image' };
+
 /**
  * Returns a downscaled JPEG File, or the original file when it is not a raster
  * image (e.g. PDF) or when anything goes wrong (so the feature never breaks).
@@ -49,6 +56,112 @@ export async function compressInvoiceImage(file, opts = {}) {
 }
 
 /**
+ * Returns the file rotated clockwise by `degrees` (0/90/180/270), re-encoded as
+ * JPEG. Returns the file untouched for 0°, for non-raster files (PDF) or when
+ * anything goes wrong, so the feature never breaks.
+ *
+ * Callers pass the ORIGINAL compressed file and the cumulative angle rather
+ * than rotating the previous result: re-encoding a JPEG on every click would
+ * stack a generation of lossy artefacts per turn.
+ *
+ * @param {File} file
+ * @param {number} degrees
+ * @param {{ quality?: number }} [opts]
+ * @returns {Promise<File>}
+ */
+export async function rotateInvoiceImage(file, degrees, opts = {}) {
+    const angle = ((degrees % 360) + 360) % 360;
+
+    if (!file || !file.type || !file.type.startsWith('image/') || angle === 0) {
+        return file;
+    }
+
+    try {
+        const blob = await drawRotatedJpeg(file, angle, opts.quality || JPEG_QUALITY);
+
+        return blob
+            ? new File([blob], file.name || 'factura.jpg', { type: 'image/jpeg', lastModified: Date.now() })
+            : file;
+    } catch (e) {
+        return file;
+    }
+}
+
+/**
+ * @param {File} file
+ * @param {number} angle Normalised to 90, 180 or 270.
+ * @param {number} quality
+ * @returns {Promise<Blob|null>}
+ */
+async function drawRotatedJpeg(file, angle, quality) {
+    const source = await decodeToDrawable(file);
+    const { width, height } = intrinsicSize(source);
+    const swapped = angle === 90 || angle === 270;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = swapped ? height : width;
+    canvas.height = swapped ? width : height;
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Rotate about the centre of the (already swapped) canvas, then draw the
+    // source centred on that origin.
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((angle * Math.PI) / 180);
+    ctx.drawImage(source, -width / 2, -height / 2, width, height);
+
+    if (typeof source.close === 'function') {
+        source.close();
+    }
+
+    const blob = await new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/jpeg', quality);
+    });
+
+    canvas.width = 0;
+    canvas.height = 0;
+
+    return blob;
+}
+
+/**
+ * @param {File} file
+ * @returns {Promise<ImageBitmap|HTMLImageElement>}
+ */
+async function decodeToDrawable(file) {
+    if (typeof createImageBitmap === 'function') {
+        return await createImageBitmap(file, BITMAP_OPTS);
+    }
+
+    return await new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(img);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('decode failed'));
+        };
+        img.src = url;
+    });
+}
+
+/**
+ * @param {ImageBitmap|HTMLImageElement} source
+ * @returns {{ width: number, height: number }}
+ */
+function intrinsicSize(source) {
+    return {
+        width: source.width || source.naturalWidth,
+        height: source.height || source.naturalHeight,
+    };
+}
+
+/**
  * Reads the intrinsic pixel size without holding a full bitmap around.
  *
  * @param {File} file
@@ -56,7 +169,7 @@ export async function compressInvoiceImage(file, opts = {}) {
  */
 async function readDimensions(file) {
     if (typeof createImageBitmap === 'function') {
-        const bitmap = await createImageBitmap(file);
+        const bitmap = await createImageBitmap(file, BITMAP_OPTS);
         const dims = { width: bitmap.width, height: bitmap.height };
         bitmap.close();
 
@@ -101,6 +214,7 @@ async function drawToJpeg(file, targetWidth, targetHeight, quality) {
 
     if (typeof createImageBitmap === 'function') {
         const bitmap = await createImageBitmap(file, {
+            ...BITMAP_OPTS,
             resizeWidth: targetWidth,
             resizeHeight: targetHeight,
             resizeQuality: 'high',
@@ -136,3 +250,4 @@ async function drawToJpeg(file, targetWidth, targetHeight, quality) {
 }
 
 window.compressInvoiceImage = compressInvoiceImage;
+window.rotateInvoiceImage = rotateInvoiceImage;
