@@ -33,6 +33,17 @@ class StoreVariableExpenseRequest extends FormRequest
             ],
             'amount' => ['required', 'numeric', 'min:0'],
             'expense_date' => ['required', 'date'],
+            'receipt' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,application/pdf', 'max:10240'],
+            // Free string here on purpose: the real guard is ReceiptStorer::safePath().
+            'receipt_image_path' => ['nullable', 'string', 'max:255'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return ['receipt' => 'comprobante'];
     }
 }

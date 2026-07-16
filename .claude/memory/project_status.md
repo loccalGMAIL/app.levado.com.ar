@@ -18,7 +18,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.10.1 (rama `claude/technical-debt-audit-obzekw`; `master` en 0.10.0)
+- **Versión actual:** 0.11.0 (rama `v0.11.0/gastos-comprobantes`; `master` en 0.10.1 con la auditoría mergeada)
 
 ## Todo lo que está hecho
 
@@ -46,6 +46,18 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Búsqueda, paginación (20 items), ordenamiento en todas las datatables
 - Botón "Copiar" en recetas, header sticky en detalle de receta
 - **216 tests, todos verdes**
+
+### v0.11.0 — Comprobantes en Gastos Variables
+- Los gastos variables guardan su comprobante (foto o PDF), con dos caminos como en Compras: adjuntar sin más, o **"Leer con IA"** que prellena descripción, monto, fecha, proveedor y categoría. El botón es opcional: sin tocarlo el comprobante se guarda igual (mismo criterio que v0.9.1, por los tickets manuscritos). Los gastos fijos no lo tienen: son montos mensuales sin fecha propia.
+- **El scan vive dentro del modal, no en una pantalla aparte.** Un gasto son 4 campos: el modal ya es la pantalla de revisión, así que sube por `fetch` y prellena ahí mismo. Compras necesita su `scan/review` porque una factura son 30 renglones que hay que asociar al catálogo uno por uno — la asimetría es deliberada.
+- **Un comprobante de varios ítems se resume en la descripción** (un gasto es un monto único, no tiene renglones).
+- **`ReceiptStorer::safePath()` es el guard de la feature:** tras el scan el archivo ya está en disco y el form lo referencia por path en un hidden input, o sea que es controlable por el cliente. Sin el guard, un path armado a mano apunta un gasto propio al comprobante de otro negocio. Mismo patrón que `PurchaseScanController::safeImagePath()`. **Toda feature que devuelva un path al navegador y lo acepte de vuelta necesita este guard.**
+- El archivo se guarda **antes** de llamar a la IA y se borra si la lectura falla (no deja huérfanos, no le hace perder la foto al usuario). El scan responde 422 con el mensaje ya en español.
+- Doble guardado evitado con: el botón limpia el `<input type="file">` tras el scan, y el controller usa `hasFile()` / `elseif filled(path)`.
+- **Un `<input type="file">` no se puede repopular tras un error de validación** (restricción del navegador). El hidden del path sí sobrevive vía `old()`; para el adjunto manual hay que avisarle al usuario que re-adjunte. Ojo: la lista de `$errors->hasAny([...])` que reabre el modal debe incluir el campo del archivo, si no un mime rechazado se pierde sin mostrarse.
+- **`SupplierMatcher` pliega acentos (`Str::ascii`) antes de comparar:** los comprobantes se imprimen en mayúsculas y sin tildes ("PANIFICACION GUEMES S.A.") y el proveedor se carga como se escribe ("Panificación Güemes"). Sin plegarlos nunca matchean. Arregla de paso el matcheo en Compras, que arrastraba la limitación.
+- **Compras no se tocó** (salvo extraer `SupplierMatcher`): `storeInvoiceImage()` sigue duplicado en sus 2 controllers y `ExpenseReceiptExtractor` duplica ~40 L de la mecánica HTTP de `InvoiceExtractor`. Deuda asumida: refactorizar el módulo más crítico dentro de una feature de Gastos mezclaba un cambio de comportamiento con uno estructural. Si aparece un 4º consumidor de visión, ahí sí extraer un `ClaudeVision`.
+- Riesgo conocido no resuelto: escanear y cerrar el modal sin guardar deja el archivo huérfano en disco. Compras tiene lo mismo (abandonar el review). Candidato a un comando de limpieza.
 
 ### v0.10.0 — Gastos Variables
 - La pantalla de Gastos ahora tiene dos pestañas: **Gastos Fijos** (los de siempre, que alimentan el overhead por hora) y **Gastos Variables** (gastos ocasionales o imprevistos, puramente administrativos, que **no intervienen en ningún cálculo de costo, margen ni receta**). Preparados para los reportes y el análisis financiero futuros.

@@ -10,6 +10,7 @@ Alpine.start();
 
 import './onboarding-tour';
 import './purchases/match';
+import './expenses/receipt-scan';
 import './image-compress';
 import './scroll-restore';
 

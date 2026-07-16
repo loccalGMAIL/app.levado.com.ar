@@ -5,6 +5,34 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.11.0] — 2026-07-17
+
+### Comprobantes en Gastos Variables
+
+#### Agregado
+
+- **Los gastos variables ahora guardan su comprobante.** Casi todo gasto ocasional —un flete, una reparación, una boleta de luz, una compra de ferretería— viene con un papel que hasta ahora no tenía dónde ir: el gasto quedaba registrado sin respaldo. Se adjunta desde el mismo formulario de alta, sacando una foto con el teléfono (se abre la cámara trasera directamente) o subiendo una imagen o PDF.
+- **Botón "Leer con IA", opcional.** Con el comprobante adjunto, un botón lo lee y completa solo la descripción, el monto, la fecha, el proveedor y la categoría. Los campos quedan editables: la IA propone, el usuario confirma antes de guardar. **Si no se toca el botón, el comprobante se guarda igual** — el mismo criterio que Compras adoptó en v0.9.1 para los tickets manuscritos, que el modelo de visión interpreta mal.
+- **Un comprobante de varios ítems se resume en una descripción.** Un gasto es un monto único, no una factura con renglones: un ticket de ferretería con cinco cosas se convierte en "Ferretería: tornillos, cinta y silicona" y el total del ticket, en vez de cinco gastos sueltos.
+- **El proveedor se busca solo entre los tuyos.** El nombre que la IA lee del comprobante se cruza contra el listado de proveedores; si no encuentra ninguno parecido, el campo queda vacío y está el "+ Nuevo proveedor" de siempre. La categoría se sugiere sólo dentro de tu catálogo: la IA no puede inventar una.
+- **Clip en el listado** en la fila (escritorio) y en la card (móvil) de los gastos que tienen comprobante, que lo abre en una pestaña nueva. Desde la edición se puede ver el comprobante actual o reemplazarlo por otro.
+- Los gastos fijos no se tocaron: son montos mensuales recurrentes sin fecha propia, así que un comprobante ahí no tendría a qué referirse.
+
+#### Técnico
+
+- **El escaneo vive dentro del modal de alta, no en una pantalla aparte.** Compras necesita su página de revisión porque una factura son 30 renglones que hay que asociar uno por uno con el catálogo; un gasto son 4 campos. El modal ya es la pantalla de revisión, así que el scan sube el archivo por `fetch` y prellena los campos ahí mismo — sin las rutas `scan/create` ni `scan/review`, sin controller de confirmación y sin el paso intermedio para el usuario.
+- **Compras no se tocó.** `storeInvoiceImage()` sigue duplicado en `PurchaseController` y `PurchaseScanController`, como decidió v0.9.1: refactorizar el módulo más crítico del sistema dentro de una feature de Gastos habría mezclado un cambio de comportamiento con uno estructural. Lo nuevo (`ReceiptStorer`) sólo lo consume el código de gastos, e `InvoiceImagePreparer` y `window.compressInvoiceImage` se reusaron tal cual. El precio asumido: `ExpenseReceiptExtractor` duplica ~40 líneas de la mecánica HTTP de `InvoiceExtractor`.
+- Nuevos: `ExpenseReceiptExtractor` (prompt propio, sin catálogo de insumos ni renglones ni IVA; descarta la `category_id` sugerida si no es del tenant), `ReceiptStorer` (`store`/`storeContents`/`delete`/`safePath`), `SupplierMatcher`, `VariableExpenseScanController@scan`, el componente `x-receipt-link` y `resources/js/expenses/receipt-scan.js`. Migración `add_receipt_image_path_to_variable_expenses_table`: una sola columna `string` nullable, como `purchases.invoice_image_path` — el mime se infiere del sufijo y el disco es siempre `public`.
+- **`ReceiptStorer::safePath()` es el guard de seguridad de la feature.** Tras el scan el archivo ya está en disco y el formulario lo referencia por path en un hidden input, o sea que el valor es controlable por el cliente: sin el guard, un path armado a mano apuntaría un gasto propio al comprobante de otro negocio. Sólo se acepta un path bajo el prefijo del tenant y que exista en disco. Cubierto por dos tests.
+- **El archivo se guarda antes de llamar a la IA y se borra si la lectura falla**, así un error de la API no deja comprobantes huérfanos ni le hace perder la foto al usuario. La ruta de scan devuelve 422 con el mensaje ya redactado en español, que el modal muestra inline.
+- **`SupplierMatcher` ahora pliega los acentos** (`Str::ascii`) antes de comparar. Los comprobantes se imprimen en mayúsculas y sin tildes ("PANIFICACION GUEMES S.A.") mientras que el proveedor se carga como se escribe ("Panificación Güemes"): sin plegarlos, esos dos nunca matcheaban. **Corrige también el matcheo de proveedores al escanear facturas en Compras**, que arrastraba la misma limitación desde v0.8.x.
+- El botón "Leer con IA" limpia el `<input type="file">` tras el scan y pasa a referenciar el path, y el controller usa `hasFile()` / `elseif filled(path)`: es lo que evita que el mismo comprobante se guarde dos veces.
+- Un `<input type="file">` no se puede repopular tras un error de validación (restricción del navegador). El path del scan sí sobrevive vía `old()`; para el adjunto manual el modal avisa que hay que volver a adjuntarlo. `$errorsInCreate` ahora incluye `receipt`, así un mime rechazado reabre el modal en vez de perderse.
+- 25 tests nuevos: `VariableExpenseReceiptTest` (13: alta con y sin comprobante, mime inválido, downscale, reemplazo que borra el anterior, borrado en cascada, la ruta que sirve el archivo, 404 y aislamiento entre negocios) y `VariableExpenseScanTest` (12: campos leídos, resumen de varios ítems, formato numérico argentino, matcheo con y sin tildes, categoría de otro negocio descartada, fallo de la API sin huérfanos, falta de API key, rol sin permiso y los dos casos de `safePath`). `PurchaseScanTest` y `PurchaseCrudTest` pasan sin modificarse.
+- Versión `0.11.0` en `config/app.php`.
+
+---
+
 ## [0.10.1] — 2026-07-17
 
 ### Quick wins de la auditoría técnica (corto plazo del plan aprobado)

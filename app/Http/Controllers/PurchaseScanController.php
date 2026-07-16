@@ -5,15 +5,14 @@ namespace App\Http\Controllers;
 use App\Enums\Unit;
 use App\Http\Requests\StoreScannedPurchaseRequest;
 use App\Models\Purchase;
-use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceExtractor;
 use App\Services\InvoiceImagePreparer;
 use App\Services\PurchaseLineRecorder;
+use App\Services\SupplierMatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -27,6 +26,7 @@ class PurchaseScanController extends Controller
         private readonly InvoiceExtractor $extractor,
         private readonly InvoiceImagePreparer $preparer,
         private readonly PurchaseLineRecorder $lineRecorder,
+        private readonly SupplierMatcher $supplierMatcher,
     ) {}
 
     public function create(): View
@@ -75,7 +75,7 @@ class PurchaseScanController extends Controller
         }
 
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
-        $matchedSupplierId = $this->matchSupplier($draft['header']['supplier_name'] ?? null, $suppliers);
+        $matchedSupplierId = $this->supplierMatcher->match($draft['header']['supplier_name'] ?? null, $suppliers);
         $invoiceNumber = $draft['header']['invoice_number'] ?? null;
 
         $possibleDuplicate = null;
@@ -182,28 +182,6 @@ class PurchaseScanController extends Controller
             || ($type === 'packaging' && in_array($id, $packagingIds, true));
 
         return $valid ? [$type, $id] : [null, null];
-    }
-
-    /**
-     * @param  Collection<int, Supplier>  $suppliers
-     */
-    private function matchSupplier(?string $name, Collection $suppliers): ?int
-    {
-        if (blank($name)) {
-            return null;
-        }
-
-        $needle = mb_strtolower(trim($name));
-
-        foreach ($suppliers as $supplier) {
-            $hay = mb_strtolower($supplier->name);
-
-            if ($hay === $needle || str_contains($hay, $needle) || str_contains($needle, $hay)) {
-                return $supplier->id;
-            }
-        }
-
-        return null;
     }
 
     /**

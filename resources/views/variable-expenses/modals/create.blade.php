@@ -1,10 +1,78 @@
 <x-crud-modal name="variable-expense-create" title="Nuevo gasto variable" :show="$errorsInCreate">
     <form method="POST" action="{{ route('variable-expenses.store') }}" class="space-y-4"
+          enctype="multipart/form-data"
           x-data="{
               showNewCat: false,
               newCatName: '',
               newCatLoading: false,
               newCatError: '',
+              receiptName: '',
+              receiptPreviewUrl: '',
+              receiptPath: {{ Js::from(old('receipt_image_path', '')) }},
+              receiptPreparing: false,
+              receiptPickError: '',
+              scanning: false,
+              scanError: '',
+              scanned: false,
+              async onPickReceipt(e) {
+                  const input = e.target;
+                  const original = input.files[0];
+                  this.receiptPickError = '';
+                  this.scanError = '';
+                  this.scanned = false;
+                  this.receiptPath = '';
+                  if (this.receiptPreviewUrl) { URL.revokeObjectURL(this.receiptPreviewUrl); }
+                  this.receiptPreviewUrl = '';
+                  this.receiptName = '';
+                  if (!original) { return; }
+
+                  this.receiptPreparing = true;
+                  try {
+                      const file = await (window.compressInvoiceImage ? window.compressInvoiceImage(original) : Promise.resolve(original));
+
+                      if (file.size > 10 * 1024 * 1024) {
+                          this.receiptPickError = 'El archivo supera los 10 MB. Probá con una foto o un PDF más liviano.';
+                          input.value = '';
+                          return;
+                      }
+
+                      const dt = new DataTransfer();
+                      dt.items.add(file);
+                      input.files = dt.files;
+
+                      this.receiptName = file.name;
+                      this.receiptPreviewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+                  } finally {
+                      this.receiptPreparing = false;
+                  }
+              },
+              async scanReceipt() {
+                  const input = document.getElementById('create_ve_receipt');
+                  const file = input.files[0];
+                  if (!file) { return; }
+
+                  this.scanning = true;
+                  this.scanError = '';
+                  try {
+                      const draft = await window.scanExpenseReceipt(file, '{{ route('variable-expenses.scan') }}');
+
+                      if (draft.name) { document.getElementById('create_ve_name').value = draft.name; }
+                      if (draft.amount !== null) { document.getElementById('create_ve_amount').value = draft.amount; }
+                      if (draft.expense_date) { document.getElementById('create_ve_date').value = draft.expense_date; }
+                      if (draft.category_id) { document.getElementById('create_ve_category').value = String(draft.category_id); }
+                      if (draft.supplier_id) { document.getElementById('create_ve_supplier').value = String(draft.supplier_id); }
+
+                      // El archivo ya quedó guardado por el scan: se referencia por
+                      // path y se limpia el input para no volver a subirlo al guardar.
+                      this.receiptPath = draft.path;
+                      input.value = '';
+                      this.scanned = true;
+                  } catch (err) {
+                      this.scanError = err.message;
+                  } finally {
+                      this.scanning = false;
+                  }
+              },
               async createCategory() {
                   this.newCatLoading = true;
                   this.newCatError = '';
@@ -129,6 +197,55 @@
                 required />
             <p class="mt-1 text-xs text-masa-madre">En la moneda del negocio. No se incluye en el costo de las recetas.</p>
             <x-input-error :messages="$errors->get('amount')" class="mt-2" />
+        </div>
+
+        <div>
+            <x-input-label for="create_ve_receipt" value="Comprobante" />
+            <input type="hidden" name="receipt_image_path" x-bind:value="receiptPath">
+
+            <label class="block">
+                <div class="border-2 border-dashed border-miga rounded-md p-4 text-center cursor-pointer hover:border-horno transition-colors"
+                    :class="(receiptName || receiptPath) ? 'border-horno bg-miga/40' : ''">
+                    <template x-if="!receiptPreviewUrl">
+                        <p class="text-sm text-masa-madre">Tocá para sacar una foto o subir un archivo</p>
+                    </template>
+                    <template x-if="receiptPreviewUrl">
+                        <img :src="receiptPreviewUrl" alt="Vista previa" class="max-h-40 mx-auto rounded-md">
+                    </template>
+                </div>
+                <input type="file" id="create_ve_receipt" name="receipt" accept="image/*,application/pdf" capture="environment"
+                    class="hidden"
+                    @change="onPickReceipt($event)">
+            </label>
+
+            <p class="mt-1 text-xs text-masa-madre" x-show="receiptPreparing">Preparando imagen…</p>
+            <p class="mt-1 text-xs text-masa-madre" x-show="receiptName && !receiptPreparing" x-text="'Archivo: ' + receiptName"></p>
+            <p class="mt-1 text-xs text-red-600" x-show="receiptPickError" x-text="receiptPickError"></p>
+
+            <div class="mt-2 flex items-center gap-3" x-show="receiptName && !receiptPreparing" x-cloak>
+                <button type="button"
+                    @click="scanReceipt()"
+                    :disabled="scanning || scanned"
+                    class="px-3 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
+                    <span x-text="scanning ? 'Leyendo el comprobante…' : (scanned ? 'Leído ✓' : 'Leer con IA')"></span>
+                </button>
+                <span class="text-xs text-masa-madre" x-show="!scanned && !scanning">
+                    Opcional: completa los campos por vos. Si no, el comprobante se guarda igual.
+                </span>
+                <span class="text-xs text-masa-madre" x-show="scanned">
+                    Revisá los datos antes de guardar.
+                </span>
+            </div>
+
+            <p class="mt-1 text-xs text-red-600" x-show="scanError" x-text="scanError"></p>
+
+            @if($errorsInCreate && blank(old('receipt_image_path')))
+                <p class="mt-1 text-xs text-yellow-700">
+                    Si habías adjuntado un comprobante, volvé a adjuntarlo: el navegador no lo conserva.
+                </p>
+            @endif
+
+            <x-input-error :messages="$errors->get('receipt')" class="mt-2" />
         </div>
 
         <div class="flex gap-3 pt-2">
