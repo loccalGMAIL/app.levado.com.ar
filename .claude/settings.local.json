@@ -15,7 +15,12 @@
       "Bash(git stash *)",
       "Bash(findstr \"selling-price\")",
       "Bash(git branch *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git log *)",
+      "Bash(find app *)",
+      "Bash(find app/Livewire -type f)",
+      "Bash(timeout 60 bash -c 'while true; do sleep 5; done')",
+      "PowerShell(herd sites 2>&1)"
     ]
   },
   "enableAllProjectMcpServers": true,
