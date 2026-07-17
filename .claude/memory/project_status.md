@@ -18,7 +18,8 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.11.0 (rama `v0.11.0/gastos-comprobantes`; `master` en 0.10.1 con la auditoría mergeada)
+- **Versión actual:** 0.11.0 — **mergeada (PR #43) y desplegada en producción el 17/07/2026**. Producción venía de 0.9.x, así que ese deploy le trajo de una v0.10.0 (gastos variables), v0.10.1 (auditoría) y v0.11.0. Se corrió `invoices:relocate`: **165 comprobantes movidos al disco privado**.
+- **Al subir una base corregida a producción, el orden es: respaldo → subir la base → desplegar código → `migrate` → `invoices:relocate` → `optimize:clear`.** Si se despliega el código y se corre `migrate` antes de subir la base, la migración del índice único aborta contra los duplicados viejos. Con la base ya subida, `migrate` saltea lo que viene registrado y sólo corre lo que falta. Ojo: el import pisa `sessions` y cierra todas las sesiones.
 
 ## Todo lo que está hecho
 
