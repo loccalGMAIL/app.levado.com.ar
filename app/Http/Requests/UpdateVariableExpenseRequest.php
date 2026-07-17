@@ -33,6 +33,17 @@ class UpdateVariableExpenseRequest extends FormRequest
             ],
             'amount' => ['required', 'numeric', 'min:0'],
             'expense_date' => ['required', 'date'],
+            // Sin receipt_image_path: la edición sólo adjunta o reemplaza a mano,
+            // no pasa por la IA, así que nunca llega un path desde el navegador.
+            'receipt' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,application/pdf', 'max:10240'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return ['receipt' => 'comprobante'];
     }
 }

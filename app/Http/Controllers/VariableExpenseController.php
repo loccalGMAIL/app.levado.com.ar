@@ -7,12 +7,18 @@ use App\Http\Requests\UpdateVariableExpenseRequest;
 use App\Models\Tenant;
 use App\Models\VariableExpense;
 use App\Services\AdminActivityRecorder;
+use App\Services\ReceiptStorer;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class VariableExpenseController extends Controller
 {
-    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+    public function __construct(
+        private readonly AdminActivityRecorder $recorder,
+        private readonly ReceiptStorer $storer,
+    ) {}
 
     public function index(): View
     {
@@ -53,7 +59,17 @@ class VariableExpenseController extends Controller
     public function store(StoreVariableExpenseRequest $request): RedirectResponse
     {
         $tenant = app(Tenant::class);
-        $variableExpense = $tenant->variableExpenses()->create($request->validated());
+        $data = $request->safe()->except(['receipt', 'receipt_image_path']);
+
+        // Un archivo nuevo se guarda acá; un path ya vino del scan, con el
+        // archivo en disco. El elseif es lo que evita guardarlo dos veces.
+        if ($request->hasFile('receipt')) {
+            $data['receipt_image_path'] = $this->storer->store($request->file('receipt'), $this->folderFor($tenant));
+        } elseif (filled($request->input('receipt_image_path'))) {
+            $data['receipt_image_path'] = $this->storer->safePath($request->input('receipt_image_path'), $this->folderFor($tenant));
+        }
+
+        $variableExpense = $tenant->variableExpenses()->create($data);
 
         $this->recorder->record(
             actor: $request->user(),
@@ -71,7 +87,18 @@ class VariableExpenseController extends Controller
     {
         $this->authorize('update', $variableExpense);
 
-        $variableExpense->update($request->validated());
+        $data = $request->safe()->except('receipt');
+        $previousPath = $variableExpense->receipt_image_path;
+
+        if ($request->hasFile('receipt')) {
+            $data['receipt_image_path'] = $this->storer->store($request->file('receipt'), $this->folderFor($variableExpense->tenant));
+        }
+
+        $variableExpense->update($data);
+
+        if ($request->hasFile('receipt')) {
+            $this->storer->delete($previousPath);
+        }
 
         $this->recorder->record(
             actor: $request->user(),
@@ -98,8 +125,32 @@ class VariableExpenseController extends Controller
             tenantId: $variableExpense->tenant_id,
         );
 
+        $receiptPath = $variableExpense->receipt_image_path;
+
         $variableExpense->delete();
 
+        $this->storer->delete($receiptPath);
+
         return back(fallback: route('variable-expenses.index'))->with('status', 'Gasto variable eliminado.');
+    }
+
+    public function receipt(VariableExpense $variableExpense): StreamedResponse
+    {
+        $this->authorize('view', $variableExpense);
+
+        abort_if(
+            blank($variableExpense->receipt_image_path)
+                || ! Storage::disk('local')->exists($variableExpense->receipt_image_path),
+            404,
+        );
+
+        // Única vía de acceso: el archivo vive en el disco privado, así que no
+        // hay URL que sirva sin pasar por la autorización de arriba.
+        return Storage::disk('local')->response($variableExpense->receipt_image_path);
+    }
+
+    private function folderFor(Tenant $tenant): string
+    {
+        return "variable-expenses/{$tenant->id}";
     }
 }

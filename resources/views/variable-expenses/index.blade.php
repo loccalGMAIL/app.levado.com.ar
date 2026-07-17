@@ -2,9 +2,10 @@
     <x-slot name="title">Gastos Variables</x-slot>
 
     @php
-        $errorsInCreate = $errors->hasAny(['name', 'variable_expense_category_id', 'supplier_id', 'amount', 'expense_date']) && old('_form') === 've-create';
-        $errorsInEdit   = $errors->hasAny(['name', 'variable_expense_category_id', 'supplier_id', 'amount', 'expense_date']) && old('_form') === 've-edit';
-        $editingDefault = ['id' => null, 'name' => '', 'variable_expense_category_id' => '', 'supplier_id' => '', 'amount' => '', 'expense_date' => date('Y-m-d')];
+        $expenseFields  = ['name', 'variable_expense_category_id', 'supplier_id', 'amount', 'expense_date', 'receipt'];
+        $errorsInCreate = $errors->hasAny($expenseFields) && old('_form') === 've-create';
+        $errorsInEdit   = $errors->hasAny($expenseFields) && old('_form') === 've-edit';
+        $editingDefault = ['id' => null, 'name' => '', 'variable_expense_category_id' => '', 'supplier_id' => '', 'amount' => '', 'expense_date' => date('Y-m-d'), 'receipt_image_path' => null];
         $editingOnError = $errorsInEdit ? [
             'id'                           => old('variable_expense_id'),
             'name'                         => old('name'),
@@ -12,6 +13,7 @@
             'supplier_id'                  => old('supplier_id'),
             'amount'                       => old('amount'),
             'expense_date'                 => old('expense_date'),
+            'receipt_image_path'           => old('receipt_image_path'),
         ] : $editingDefault;
     @endphp
 
@@ -119,7 +121,12 @@
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
                             <div class="flex items-start justify-between">
                                 <div>
-                                    <div class="font-medium text-corteza">{{ $variableExpense->name }}</div>
+                                    <div class="font-medium text-corteza flex items-center gap-1.5">
+                                        {{ $variableExpense->name }}
+                                        @if($variableExpense->receipt_image_path)
+                                            <x-receipt-link :href="route('variable-expenses.receipt', $variableExpense)" />
+                                        @endif
+                                    </div>
                                     <div class="text-xs text-masa-madre mt-0.5">
                                         {{ implode(' · ', array_filter([$variableExpense->category?->name, $variableExpense->supplier?->name])) ?: '—' }}
                                     </div>
@@ -137,6 +144,7 @@
                                             'supplier_id'                  => $variableExpense->supplier_id ?? '',
                                             'amount'                       => $variableExpense->amount,
                                             'expense_date'                 => $variableExpense->expense_date->format('Y-m-d'),
+                                            'receipt_image_path'           => $variableExpense->receipt_image_path,
                                         ]) }})"
                                         class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
                                         Editar
@@ -200,22 +208,28 @@
                             @foreach($variableExpenses as $variableExpense)
                                 <tr>
                                     <td class="px-4 py-3 font-medium text-corteza">
-                                        @can('manage-costs')
-                                            <button type="button"
-                                                @click="openEdit({{ Js::from([
-                                                    'id'                           => $variableExpense->id,
-                                                    'name'                         => $variableExpense->name,
-                                                    'variable_expense_category_id' => $variableExpense->variable_expense_category_id ?? '',
-                                                    'supplier_id'                  => $variableExpense->supplier_id ?? '',
-                                                    'amount'                       => $variableExpense->amount,
-                                                    'expense_date'                 => $variableExpense->expense_date->format('Y-m-d'),
-                                                ]) }})"
-                                                class="hover:underline text-left">
+                                        <div class="flex items-center gap-1.5">
+                                            @can('manage-costs')
+                                                <button type="button"
+                                                    @click="openEdit({{ Js::from([
+                                                        'id'                           => $variableExpense->id,
+                                                        'name'                         => $variableExpense->name,
+                                                        'variable_expense_category_id' => $variableExpense->variable_expense_category_id ?? '',
+                                                        'supplier_id'                  => $variableExpense->supplier_id ?? '',
+                                                        'amount'                       => $variableExpense->amount,
+                                                        'expense_date'                 => $variableExpense->expense_date->format('Y-m-d'),
+                                                        'receipt_image_path'           => $variableExpense->receipt_image_path,
+                                                    ]) }})"
+                                                    class="hover:underline text-left">
+                                                    {{ $variableExpense->name }}
+                                                </button>
+                                            @else
                                                 {{ $variableExpense->name }}
-                                            </button>
-                                        @else
-                                            {{ $variableExpense->name }}
-                                        @endcan
+                                            @endcan
+                                            @if($variableExpense->receipt_image_path)
+                                                <x-receipt-link :href="route('variable-expenses.receipt', $variableExpense)" />
+                                            @endif
+                                        </div>
                                     </td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $variableExpense->category?->name ?? '—' }}</td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $variableExpense->supplier?->name ?? '—' }}</td>
@@ -234,6 +248,7 @@
                                                         'supplier_id'                  => $variableExpense->supplier_id ?? '',
                                                         'amount'                       => $variableExpense->amount,
                                                         'expense_date'                 => $variableExpense->expense_date->format('Y-m-d'),
+                                                        'receipt_image_path'           => $variableExpense->receipt_image_path,
                                                     ]) }})"
                                                     aria-label="Editar gasto" title="Editar gasto"
                                                     class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">

@@ -35,10 +35,14 @@
                     fileName: '',
                     previewUrl: '',
                     pickError: '',
+                    baseFile: null,
+                    rotation: 0,
                     async onPick(e) {
                         const input = e.target;
                         const original = input.files[0];
                         this.pickError = '';
+                        this.baseFile = null;
+                        this.rotation = 0;
                         if (this.previewUrl) { URL.revokeObjectURL(this.previewUrl); }
                         this.previewUrl = '';
                         this.fileName = '';
@@ -59,8 +63,30 @@
                             dt.items.add(file);
                             input.files = dt.files;
 
+                            this.baseFile = file;
                             this.fileName = file.name;
                             this.previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+                        } finally {
+                            this.preparing = false;
+                        }
+                    },
+                    async rotateInvoice(direction) {
+                        if (!this.baseFile || this.preparing) { return; }
+
+                        this.rotation = (this.rotation + direction * 90 + 360) % 360;
+                        this.preparing = true;
+                        try {
+                            // Siempre desde el archivo original: re-encodear el resultado
+                            // anterior apilaría una generación de pérdida por cada giro.
+                            const rotated = await window.rotateInvoiceImage(this.baseFile, this.rotation);
+
+                            const input = document.getElementById('scan_invoice_file');
+                            const dt = new DataTransfer();
+                            dt.items.add(rotated);
+                            input.files = dt.files;
+
+                            if (this.previewUrl) { URL.revokeObjectURL(this.previewUrl); }
+                            this.previewUrl = URL.createObjectURL(rotated);
                         } finally {
                             this.preparing = false;
                         }
@@ -87,13 +113,20 @@
                                 <img :src="previewUrl" alt="Vista previa" class="max-h-64 mx-auto rounded-md">
                             </template>
                         </div>
-                        <input type="file" name="invoice" accept="image/*,application/pdf" capture="environment"
+                        <input type="file" id="scan_invoice_file" name="invoice" accept="image/*,application/pdf" capture="environment"
                             class="hidden" required
                             @change="onPick($event)">
                     </label>
                     <p class="mt-1 text-xs text-masa-madre" x-show="preparing">Preparando imagen…</p>
                     <p class="mt-1 text-xs text-masa-madre" x-show="fileName && !preparing" x-text="'Archivo: ' + fileName"></p>
                     <p class="mt-1 text-xs text-red-600" x-show="pickError" x-text="pickError"></p>
+
+                    {{-- Sólo para imágenes: un PDF no se gira en el navegador. --}}
+                    <div class="mt-2 flex items-center gap-2" x-show="previewUrl && !preparing" x-cloak>
+                        <x-rotate-button direction="-1" method="rotateInvoice" />
+                        <x-rotate-button direction="1" method="rotateInvoice" />
+                        <span class="text-xs text-masa-madre">Girá la factura si quedó de costado: se lee mejor derecha.</span>
+                    </div>
                     <x-input-error :messages="$errors->get('invoice')" class="mt-2" />
                 </div>
 

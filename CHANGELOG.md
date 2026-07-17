@@ -5,6 +5,40 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.11.0] — 2026-07-17
+
+> **Al deployar:** `php artisan migrate`. Los comprobantes de gastos nacen en el disco privado, así que `invoices:relocate` no los necesita (es sólo para las facturas de compras anteriores a 0.10.1).
+>
+> **Limpieza de datos previa (17/07/2026), ya aplicada en producción:** el escáner de facturas venía creando compras duplicadas —el aviso del front era sólo informativo y no había constraint— y el índice único de 0.10.1 no podía crearse hasta resolverlas. Se revisaron las 11 duplicaciones **contra la factura escaneada, una por una**: 14 bajas y 2 totales corregidos (una compra de $38.000 estaba cargada como $3.800 y una de $105.000 como $105; en ambas el renglón estaba bien, así que los costos de los insumos nunca se vieron afectados). Sin movimientos de stock involucrados.
+
+### Comprobantes en Gastos Variables
+
+#### Agregado
+
+- **Los gastos variables ahora guardan su comprobante.** Casi todo gasto ocasional —un flete, una reparación, una boleta de luz, una compra de ferretería— viene con un papel que hasta ahora no tenía dónde ir: el gasto quedaba registrado sin respaldo. Se adjunta desde el mismo formulario de alta, sacando una foto con el teléfono (se abre la cámara trasera directamente) o subiendo una imagen o PDF.
+- **Botón "Leer con IA", opcional.** Con el comprobante adjunto, un botón lo lee y completa solo la descripción, el monto, la fecha, el proveedor y la categoría. Los campos quedan editables: la IA propone, el usuario confirma antes de guardar. **Si no se toca el botón, el comprobante se guarda igual** — el mismo criterio que Compras adoptó en v0.9.1 para los tickets manuscritos, que el modelo de visión interpreta mal.
+- **Un comprobante de varios ítems se resume en una descripción.** Un gasto es un monto único, no una factura con renglones: un ticket de ferretería con cinco cosas se convierte en "Ferretería: tornillos, cinta y silicona" y el total del ticket, en vez de cinco gastos sueltos.
+- **El proveedor se busca solo entre los tuyos.** El nombre que la IA lee del comprobante se cruza contra el listado de proveedores; si no encuentra ninguno parecido, el campo queda vacío y está el "+ Nuevo proveedor" de siempre. La categoría se sugiere sólo dentro de tu catálogo: la IA no puede inventar una.
+- **Clip en el listado** en la fila (escritorio) y en la card (móvil) de los gastos que tienen comprobante, que lo abre en una pestaña nueva. Desde la edición se puede ver el comprobante actual o reemplazarlo por otro.
+- Los gastos fijos no se tocaron: son montos mensuales recurrentes sin fecha propia, así que un comprobante ahí no tendría a qué referirse.
+
+#### Técnico
+
+- **El escaneo vive dentro del modal de alta, no en una pantalla aparte.** Compras necesita su página de revisión porque una factura son 30 renglones que hay que asociar uno por uno con el catálogo; un gasto son 4 campos. El modal ya es la pantalla de revisión, así que el scan sube el archivo por `fetch` y prellena los campos ahí mismo — sin las rutas `scan/create` ni `scan/review`, sin controller de confirmación y sin el paso intermedio para el usuario.
+- **Compras no se tocó.** `storeInvoiceImage()` sigue duplicado en `PurchaseController` y `PurchaseScanController`, como decidió v0.9.1: refactorizar el módulo más crítico del sistema dentro de una feature de Gastos habría mezclado un cambio de comportamiento con uno estructural. Lo nuevo (`ReceiptStorer`) sólo lo consume el código de gastos, e `InvoiceImagePreparer` y `window.compressInvoiceImage` se reusaron tal cual. El precio asumido: `ExpenseReceiptExtractor` duplica ~40 líneas de la mecánica HTTP de `InvoiceExtractor`.
+- **Los comprobantes de gastos nacen en el disco privado** (`storage/app/private`), igual que los de compras desde v0.10.1: son datos fiscales y el symlink `/storage` los dejaría accesibles sin login. Se sirven sólo por la ruta autenticada `variable-expenses.receipt`. A diferencia de compras **no hay fallback al disco público**, porque no existen archivos anteriores que relocalizar: `invoices:relocate` no los necesita. Dos tests fijan que el archivo quede en el privado y que el público siga vacío.
+- **`throttle:10,1` en el escaneo de gastos**, el mismo que v0.10.1 le puso al de facturas y por lo mismo: cada lectura es una llamada paga a la API de Anthropic que bloquea un worker hasta 60 s.
+- Nuevos: `ExpenseReceiptExtractor` (prompt propio, sin catálogo de insumos ni renglones ni IVA; descarta la `category_id` sugerida si no es del tenant), `ReceiptStorer` (`store`/`storeContents`/`delete`/`safePath`), `SupplierMatcher`, `VariableExpenseScanController@scan`, el componente `x-receipt-link` y `resources/js/expenses/receipt-scan.js`. Migración `add_receipt_image_path_to_variable_expenses_table`: una sola columna `string` nullable, como `purchases.invoice_image_path` — el mime se infiere del sufijo del archivo.
+- **`ReceiptStorer::safePath()` es el guard de seguridad de la feature.** Tras el scan el archivo ya está en disco y el formulario lo referencia por path en un hidden input, o sea que el valor es controlable por el cliente: sin el guard, un path armado a mano apuntaría un gasto propio al comprobante de otro negocio. Sólo se acepta un path bajo el prefijo del tenant y que exista en disco. Cubierto por dos tests.
+- **El archivo se guarda antes de llamar a la IA y se borra si la lectura falla**, así un error de la API no deja comprobantes huérfanos ni le hace perder la foto al usuario. La ruta de scan devuelve 422 con el mensaje ya redactado en español, que el modal muestra inline.
+- **`SupplierMatcher` ahora pliega los acentos** (`Str::ascii`) antes de comparar. Los comprobantes se imprimen en mayúsculas y sin tildes ("PANIFICACION GUEMES S.A.") mientras que el proveedor se carga como se escribe ("Panificación Güemes"): sin plegarlos, esos dos nunca matcheaban. **Corrige también el matcheo de proveedores al escanear facturas en Compras**, que arrastraba la misma limitación desde v0.8.x.
+- El botón "Leer con IA" limpia el `<input type="file">` tras el scan y pasa a referenciar el path, y el controller usa `hasFile()` / `elseif filled(path)`: es lo que evita que el mismo comprobante se guarde dos veces.
+- Un `<input type="file">` no se puede repopular tras un error de validación (restricción del navegador). El path del scan sí sobrevive vía `old()`; para el adjunto manual el modal avisa que hay que volver a adjuntarlo. `$errorsInCreate` ahora incluye `receipt`, así un mime rechazado reabre el modal en vez de perderse.
+- 25 tests nuevos: `VariableExpenseReceiptTest` (13: alta con y sin comprobante, mime inválido, downscale, reemplazo que borra el anterior, borrado en cascada, la ruta que sirve el archivo, 404 y aislamiento entre negocios) y `VariableExpenseScanTest` (12: campos leídos, resumen de varios ítems, formato numérico argentino, matcheo con y sin tildes, categoría de otro negocio descartada, fallo de la API sin huérfanos, falta de API key, rol sin permiso y los dos casos de `safePath`). `PurchaseScanTest` y `PurchaseCrudTest` pasan sin modificarse.
+- Versión `0.11.0` en `config/app.php`.
+
+---
+
 ## [0.10.1] — 2026-07-17
 
 ### Quick wins de la auditoría técnica (corto plazo del plan aprobado)
@@ -27,6 +61,44 @@ Ver `AUDITORIA_DEUDA_TECNICA.md` para el diagnóstico completo. Solo diagnóstic
 - `RecipeController::copy()` ahora corre en transacción: una falla a mitad de la copia ya no deja una receta parcial.
 - Se quitaron los logs de depuración del flujo de aceptación de invitaciones.
 - 4 tests nuevos (duplicados de factura ×3, scoped binding de líneas) y actualización de los tests de storage al disco privado. **400 tests, todos verdes.**
+
+### Orientación de los comprobantes: giro manual y fotos de costado
+
+#### Agregado
+
+- **Botones para girar la foto, en los 5 lugares donde se captura un comprobante:** el alta y la edición de gastos variables, y las tres pantallas de Compras (el escaneo de facturas, el alta manual y la edición). Aparecen apenas se elige una imagen, giran de a 90° para cada lado, y lo que se guarda o se manda a leer es la imagen ya derecha. Una factura derecha además se lee mejor.
+- Los controles no aparecen para PDFs, que no se giran en el navegador.
+
+#### Corregido
+
+- **Una foto sacada de costado ya no queda acostada para siempre, y ya no falsea los datos.** Si el navegador no llegaba a procesar la foto antes de subirla —scripts deshabilitados, o el compresor del navegador dándose por vencido, que es justo lo que pasa en los celulares con poca memoria— la foto viajaba tal cual salió de la cámara. El servidor la achicaba **ignorando la orientación y descartándola en el proceso**, así que quedaba acostada y ya no había forma de enderezarla: el dato que decía cómo mostrarla se había perdido. Y una factura de costado la IA la lee mal.
+
+  **No es hipotético: pasó, y quedó medido sobre datos reales.** En la base de producción había **42 compras guardadas de costado**, todas anteriores al 28/06/2026 —el día que llegó la compresión del navegador, que tapaba el problema sin arreglarlo—. La factura `0004-00084240` (que en el papel dice `02/06/2026`) se leyó dos veces: la copia acostada quedó cargada como **6 de febrero** y la derecha como **2 de junio**. Con esa misma foto, el A/B es contundente: **acostada la IA devuelve `2026-02-16`** —una fecha que no existe en el papel— **y derecha devuelve `2026-06-02`**, la correcta.
+
+#### Técnico
+
+- **`InvoiceImagePreparer` ahora aplica la orientación EXIF antes de re-encodear.** El teléfono no rota los píxeles: los deja como salieron del sensor y anota en el EXIF cómo mostrarlos. Como `imagejpeg()` descarta el EXIF, hay que hornear el giro en los píxeles **antes**; si no, la orientación se pierde de forma irreversible. Se lee con `exif_read_data()` sobre un stream en memoria y se aplica con `imagerotate`/`imageflip`, cubriendo los 8 valores del estándar (incluidos los espejados). Se re-encodea también cuando la foto no necesita achicarse, porque antes un early-return la dejaba pasar de largo. Degrada al archivo original si falta la extensión `exif` o si algo falla, igual que el resto de la clase. **Era el escenario que el propio docblock de la clase decía venir a cubrir** ("defence in depth for uploads that bypass the JS"): el único camino donde la clase importa era justo donde corrompía la orientación.
+- 16 tests nuevos (`InvoiceImagePreparerTest`), con un helper que inyecta un bloque APP1 con el campo Orientation porque `UploadedFile::fake()->image()` no genera EXIF. Las 8 orientaciones se verifican por la esquina donde queda una marca asimétrica: el tamaño no alcanza para detectar un giro de 180° ni un espejado.
+- **`imageOrientation: 'from-image'` declarado explícitamente** al decodificar. Los teléfonos guardan la orientación en el EXIF y no en los píxeles, y `canvas.toBlob()` la descarta al re-encodear: si el decode no la aplica, la foto se sube acostada aunque en la galería se vea derecha. El valor por defecto cambió a lo largo de las versiones del estándar, así que dependía del navegador. **Es blindaje, no un arreglo de un bug observado:** se verificó contra Chrome 148 que el default ya aplicaba el EXIF correctamente, y el pipeline entero (foto horizontal + EXIF=6 → JPEG vertical legible) se probó end-to-end. Queda declarado para no depender del navegador ni de su versión. Aplica también al escaneo de facturas en Compras, que usa el mismo helper.
+- `rotateInvoiceImage(file, degrees)` en `resources/js/image-compress.js`, expuesto como global igual que `compressInvoiceImage` (el proyecto no usa `Alpine.data()`: la lógica pesada va en helpers de `resources/js/` y el `x-data` queda fino). Degrada al archivo original ante cualquier error, como el resto del helper.
+- **Cada giro re-encodea desde el archivo original, no desde el resultado anterior**, acumulando el ángulo en el estado. Girar 4 veces sobre el resultado previo apilaría 4 generaciones de pérdida JPEG.
+- El giro re-inyecta el archivo en el `<input type="file">` vía `DataTransfer`, el mismo mecanismo que ya usaba la compresión para subir el JPEG chico en vez del original.
+- En el alta de gastos, girar después de haber leído con IA resetea el estado de lectura y limpia el `receipt_image_path`: el archivo que quedó en disco no está girado, así que el rotado vuelve a viajar con el submit. El botón vuelve a decir "Leer con IA".
+- Componente `x-rotate-button` con props `direction` y `method`, para no repetir el SVG y las etiquetas accesibles en 10 botones. La lógica de `x-data` sí queda duplicada en las 5 vistas: es la misma decisión que ya tomó v0.9.1 con estos pickers, y unificarlas exigía renombrar el estado de las 3 vistas de Compras (`invoiceFileName` vs `receiptName`), que no tienen cobertura de browser que lo respalde.
+- 4 tests nuevos (`ReceiptRotationTest`) que fijan que los controles se rendericen en las 5 pantallas: el giro pasa entero en el navegador, pero el helper es compartido y un componente roto los rompe a todos a la vez.
+
+### Lector con IA: qué lee bien y qué no
+
+#### Cambiado
+
+- **Los comprobantes manuscritos no se leen más con IA: se cargan a mano y la foto queda como respaldo.** Decisión tomada con la evidencia de los presupuestos reales del talonario en la mano: el modelo no los lee, inventa. Leyó **"105,000" como 105** —una compra de ciento cinco mil pesos anotada como ciento cinco— y una fecha escrita `10|6|26` como **2027-12-16**. Al releerlos con el pipeline ya arreglado **empeoraban**, así que no es cuestión de orientación ni de prompt: el modelo no da para manuscrito. La lectura con IA queda para comprobantes impresos, que es donde funciona bien.
+
+#### Técnico
+
+- **El error de fechas era la orientación, no el prompt.** Se había atribuido a que el prompt no aclaraba el formato argentino; revisando las facturas reales una por una quedó claro que la causa es que la foto llegaba de costado (ver la sección anterior). Las reglas de prompt se conservan igual como red de seguridad, pero **el arreglo de fondo es el EXIF**.
+- **Releer en masa las facturas viejas para "corregirlas" haría más daño que bien, y se midió:** sobre las 7 compras cuya relectura difería de lo cargado, mirar el papel mostró que la relectura **arreglaba 2 y rompía 5**. El lector es ruidoso con fotos reales. De 154 compras, sólo 2 tenían la fecha mal y se corrigieron a mano.
+- **Los dos prompts (`InvoiceExtractor` y `ExpenseReceiptExtractor`) llevan ahora la regla DÍA/MES/AÑO y el control del total**, más "la descripción es qué se compró, no el proveedor". Son red de seguridad: con la foto derecha el modelo ya acertaba, así que ninguno es el arreglo de fondo — pero los comprobantes reales son bastante más sucios que un fixture y las reglas no cuestan nada. El de Compras además explicita el control de que el total no pierda dígitos, porque en producción una factura quedó con 3.800 en vez de 38.000.
+- **Un comprobante generado por código no sirve para medir un lector de visión: da falsos verdes.** Contra un JPEG hecho con GD el prompt acertaba 5/5 en fecha y monto, y de ahí se concluyó dos veces —mal— que no había nada que arreglar. Las facturas reales lo desmintieron en los dos casos. Para medir esto hacen falta fotos de verdad.
 
 ---
 
