@@ -120,32 +120,39 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('recipes/{recipe}/prices/{priceList}', [RecipePriceController::class, 'update'])->name('recipes.prices.update');
     Route::patch('recipes/{recipe}/toggle-active', [RecipeController::class, 'toggleActive'])->name('recipes.toggle-active');
 
+    // Los parámetros de línea ({ingredientLine}, {line}, etc.) usan scoped bindings:
+    // Laravel resuelve la línea DENTRO de la relación del padre (404 si no pertenece),
+    // sin necesidad de chequeos manuales de recipe_id/purchase_id en el controller.
     Route::post('recipes/{recipe}/ingredient-lines', [RecipeController::class, 'storeIngredientLine'])->name('recipes.ingredient-lines.store');
-    Route::patch('recipes/{recipe}/ingredient-lines/{line}', [RecipeController::class, 'updateIngredientLine'])->name('recipes.ingredient-lines.update');
-    Route::delete('recipes/{recipe}/ingredient-lines/{line}', [RecipeController::class, 'destroyIngredientLine'])->name('recipes.ingredient-lines.destroy');
+    Route::patch('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeController::class, 'updateIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.update');
+    Route::delete('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeController::class, 'destroyIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.destroy');
 
     Route::post('recipes/{recipe}/packaging-lines', [RecipeController::class, 'storePackagingLine'])->name('recipes.packaging-lines.store');
-    Route::patch('recipes/{recipe}/packaging-lines/{line}', [RecipeController::class, 'updatePackagingLine'])->name('recipes.packaging-lines.update');
-    Route::delete('recipes/{recipe}/packaging-lines/{line}', [RecipeController::class, 'destroyPackagingLine'])->name('recipes.packaging-lines.destroy');
+    Route::patch('recipes/{recipe}/packaging-lines/{packagingLine}', [RecipeController::class, 'updatePackagingLine'])->scopeBindings()->name('recipes.packaging-lines.update');
+    Route::delete('recipes/{recipe}/packaging-lines/{packagingLine}', [RecipeController::class, 'destroyPackagingLine'])->scopeBindings()->name('recipes.packaging-lines.destroy');
 
     Route::post('recipes/{recipe}/labor-lines', [RecipeController::class, 'storeLaborLine'])->name('recipes.labor-lines.store');
-    Route::patch('recipes/{recipe}/labor-lines/{line}', [RecipeController::class, 'updateLaborLine'])->name('recipes.labor-lines.update');
-    Route::delete('recipes/{recipe}/labor-lines/{line}', [RecipeController::class, 'destroyLaborLine'])->name('recipes.labor-lines.destroy');
+    Route::patch('recipes/{recipe}/labor-lines/{laborLine}', [RecipeController::class, 'updateLaborLine'])->scopeBindings()->name('recipes.labor-lines.update');
+    Route::delete('recipes/{recipe}/labor-lines/{laborLine}', [RecipeController::class, 'destroyLaborLine'])->scopeBindings()->name('recipes.labor-lines.destroy');
 
     Route::post('recipes/{recipe}/subrecipe-lines', [RecipeController::class, 'storeSubrecipeLine'])->name('recipes.subrecipe-lines.store');
-    Route::patch('recipes/{recipe}/subrecipe-lines/{line}', [RecipeController::class, 'updateSubrecipeLine'])->name('recipes.subrecipe-lines.update');
-    Route::delete('recipes/{recipe}/subrecipe-lines/{line}', [RecipeController::class, 'destroySubrecipeLine'])->name('recipes.subrecipe-lines.destroy');
+    Route::patch('recipes/{recipe}/subrecipe-lines/{subrecipeLine}', [RecipeController::class, 'updateSubrecipeLine'])->scopeBindings()->name('recipes.subrecipe-lines.update');
+    Route::delete('recipes/{recipe}/subrecipe-lines/{subrecipeLine}', [RecipeController::class, 'destroySubrecipeLine'])->scopeBindings()->name('recipes.subrecipe-lines.destroy');
 
     Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
     Route::patch('purchases/{purchase}', [PurchaseController::class, 'update'])->name('purchases.update');
-    Route::post('purchases/scan', [PurchaseScanController::class, 'scan'])->name('purchases.scan');
+    // Cada escaneo dispara una llamada a la API de Anthropic (costo directo):
+    // el throttle acota abuso accidental o malicioso por usuario.
+    Route::post('purchases/scan', [PurchaseScanController::class, 'scan'])
+        ->middleware('throttle:10,1')
+        ->name('purchases.scan');
     Route::post('purchases/scan/confirm', [PurchaseScanController::class, 'store'])->name('purchases.scan.store');
     Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
     Route::post('purchases/{purchase}/lines', [PurchaseController::class, 'storeLine'])->name('purchases.lines.store');
-    Route::patch('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'updateLine'])->name('purchases.lines.update');
-    Route::patch('purchases/{purchase}/lines/{line}/price', [PurchaseController::class, 'updateLinePrice'])->name('purchases.lines.price.update');
-    Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->name('purchases.lines.destroy');
-    Route::post('purchases/{purchase}/lines/{line}/match', [PurchaseController::class, 'matchLine'])->name('purchases.lines.match');
+    Route::patch('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'updateLine'])->scopeBindings()->name('purchases.lines.update');
+    Route::patch('purchases/{purchase}/lines/{line}/price', [PurchaseController::class, 'updateLinePrice'])->scopeBindings()->name('purchases.lines.price.update');
+    Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->scopeBindings()->name('purchases.lines.destroy');
+    Route::post('purchases/{purchase}/lines/{line}/match', [PurchaseController::class, 'matchLine'])->scopeBindings()->name('purchases.lines.match');
     Route::post('purchases/{purchase}/apply-suggestions', [PurchaseController::class, 'applyLineSuggestions'])->name('purchases.apply-suggestions');
 
     Route::post('stock/{type}/{id}/adjustments', [StockController::class, 'storeAdjustment'])

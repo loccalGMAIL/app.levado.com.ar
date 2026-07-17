@@ -25,7 +25,7 @@ function ownerForScan(): array
 }
 
 test('scan renders the review with detected lines', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     [$user, $tenant] = ownerForScan();
     $ingredient = Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => 'kg']);
 
@@ -59,7 +59,7 @@ test('scan renders the review with detected lines', function () {
 });
 
 test('scan downscales an oversized invoice photo before storing it', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     [$user, $tenant] = ownerForScan();
     Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => 'kg']);
 
@@ -80,10 +80,10 @@ test('scan downscales an oversized invoice photo before storing it', function ()
         'invoice' => UploadedFile::fake()->image('factura.jpg', 4000, 3000),
     ])->assertOk();
 
-    $stored = Storage::disk('public')->files("purchases/{$tenant->id}");
+    $stored = Storage::disk('local')->files("purchases/{$tenant->id}");
     expect($stored)->toHaveCount(1);
 
-    [$width, $height] = getimagesizefromstring(Storage::disk('public')->get($stored[0]));
+    [$width, $height] = getimagesizefromstring(Storage::disk('local')->get($stored[0]));
     expect(max($width, $height))->toBeLessThanOrEqual(1600);
 });
 
@@ -248,6 +248,9 @@ test('the purchases index shows the total according to the IVA setting', functio
 });
 
 test('the invoice image is served through the app', function () {
+    // El archivo vive en el disco público (legacy, pre-migración): el fallback
+    // de invoiceDiskFor() debe seguir sirviéndolo.
+    Storage::fake('local');
     Storage::fake('public');
     [$user, $tenant] = ownerForScan();
     $supplier = Supplier::factory()->for($tenant)->create();

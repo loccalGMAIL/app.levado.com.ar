@@ -148,11 +148,35 @@ class Tenant extends Model
             || $this->recipes()->exists();
     }
 
+    /**
+     * Suma de gastos fijos activos del mes. Único dueño de esta consulta:
+     * no repetir `fixedCosts()->active()->sum(...)` en controllers ni vistas.
+     */
+    public function totalFixedCosts(): float
+    {
+        return (float) $this->fixedCosts()->active()->sum('monthly_amount');
+    }
+
+    /**
+     * Overhead por hora productiva (gastos fijos ÷ horas productivas del mes).
+     * Es la fórmula central del costeo: cualquier cambio va acá y solo acá.
+     * Devuelve null si el tenant no cargó horas productivas.
+     */
+    public function overheadPerHour(): ?float
+    {
+        $productiveHours = (int) $this->productive_hours_month;
+
+        return $productiveHours > 0 ? $this->totalFixedCosts() / $productiveHours : null;
+    }
+
+    /** @var array<string, string>|null Cache por instancia de tenant_settings (evita una query por getSetting) */
+    private ?array $cachedSettings = null;
+
     public function getSetting(string $key, mixed $default = null): mixed
     {
-        $setting = $this->settings()->where('key', $key)->first();
+        $this->cachedSettings ??= $this->settings()->pluck('value', 'key')->all();
 
-        return $setting ? $setting->value : $default;
+        return $this->cachedSettings[$key] ?? $default;
     }
 
     public function setSetting(string $key, mixed $value): void
@@ -161,5 +185,7 @@ class Tenant extends Model
             ['key' => $key],
             ['value' => $value],
         );
+
+        $this->cachedSettings = null;
     }
 }

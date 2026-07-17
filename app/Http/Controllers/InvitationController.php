@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -78,41 +77,32 @@ class InvitationController extends Controller
 
     public function accept(AcceptInvitationRequest $request, string $token): RedirectResponse
     {
-        Log::info('invitation.accept.start', ['token' => substr($token, 0, 8)]);
-
         $invitation = Invitation::where('token', $token)->firstOrFail();
 
         if ($invitation->isExpired() || $invitation->isAccepted()) {
             return redirect()->route('login')->withErrors(['email' => 'La invitación no es válida.']);
         }
 
-        try {
-            $user = User::firstOrCreate(
-                ['email' => $invitation->email],
-                [
-                    'name' => $request->validated('name'),
-                    'password' => $request->validated('password'),
-                ],
-            );
+        $user = User::firstOrCreate(
+            ['email' => $invitation->email],
+            [
+                'name' => $request->validated('name'),
+                'password' => $request->validated('password'),
+            ],
+        );
 
-            Log::info('invitation.accept.user', ['user_id' => $user->id, 'new' => $user->wasRecentlyCreated]);
-
-            if ($user->wasRecentlyCreated) {
-                $user->email_verified_at = now();
-                $user->save();
-                Mail::to($user->email)->send(new WelcomeMail($user, $invitation->tenant));
-            }
-
-            TenantUser::firstOrCreate(
-                ['tenant_id' => $invitation->tenant_id, 'user_id' => $user->id],
-                ['role' => $invitation->role, 'active' => true],
-            );
-
-            $invitation->update(['accepted_at' => now()]);
-        } catch (\Throwable $e) {
-            Log::error('invitation.accept.failed', ['token' => substr($token, 0, 8), 'error' => $e->getMessage()]);
-            throw $e;
+        if ($user->wasRecentlyCreated) {
+            $user->email_verified_at = now();
+            $user->save();
+            Mail::to($user->email)->send(new WelcomeMail($user, $invitation->tenant));
         }
+
+        TenantUser::firstOrCreate(
+            ['tenant_id' => $invitation->tenant_id, 'user_id' => $user->id],
+            ['role' => $invitation->role, 'active' => true],
+        );
+
+        $invitation->update(['accepted_at' => now()]);
 
         Auth::login($user);
 

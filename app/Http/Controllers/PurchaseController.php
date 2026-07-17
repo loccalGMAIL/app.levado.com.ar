@@ -117,7 +117,7 @@ class PurchaseController extends Controller
             $previousImagePath = $purchase->invoice_image_path;
             $data['invoice_image_path'] = $this->storeInvoiceImage($request->file('invoice'), $tenant);
             if ($previousImagePath) {
-                Storage::disk('public')->delete($previousImagePath);
+                $this->deleteInvoiceImage($previousImagePath);
             }
         }
 
@@ -203,7 +203,7 @@ class PurchaseController extends Controller
         });
 
         if ($imagePath) {
-            Storage::disk('public')->delete($imagePath);
+            $this->deleteInvoiceImage($imagePath);
         }
 
         $this->recorder->record(
@@ -221,7 +221,6 @@ class PurchaseController extends Controller
     public function updateLinePrice(Request $request, Purchase $purchase, PurchaseLine $line): JsonResponse
     {
         $this->authorize('update', $purchase);
-        abort_unless($line->purchase_id === $purchase->id, 403);
 
         $validated = $request->validate([
             'unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
@@ -288,28 +287,48 @@ class PurchaseController extends Controller
 
         $extension = $mime === 'application/pdf' ? 'pdf' : 'jpg';
         $path = "purchases/{$tenant->id}/".Str::uuid()->toString().'.'.$extension;
-        Storage::disk('public')->put($path, $contents);
+        // Disco privado: los comprobantes son datos fiscales y no deben quedar
+        // accesibles sin autenticación vía el symlink /storage.
+        Storage::disk('local')->put($path, $contents);
 
         return $path;
+    }
+
+    /**
+     * Disco donde vive el comprobante: 'local' (privado) para los nuevos,
+     * con fallback a 'public' para archivos anteriores a la migración
+     * (relocalizables con `php artisan invoices:relocate`).
+     */
+    private function invoiceDiskFor(string $path): ?string
+    {
+        return match (true) {
+            Storage::disk('local')->exists($path) => 'local',
+            Storage::disk('public')->exists($path) => 'public',
+            default => null,
+        };
+    }
+
+    private function deleteInvoiceImage(string $path): void
+    {
+        Storage::disk('local')->delete($path);
+        Storage::disk('public')->delete($path);
     }
 
     public function invoiceImage(Purchase $purchase): StreamedResponse
     {
         $this->authorize('update', $purchase);
 
-        abort_if(
-            blank($purchase->invoice_image_path) || ! Storage::disk('public')->exists($purchase->invoice_image_path),
-            404,
-        );
+        $disk = blank($purchase->invoice_image_path) ? null : $this->invoiceDiskFor($purchase->invoice_image_path);
+
+        abort_if($disk === null, 404);
 
         // Served through the app (not the /storage symlink) so it works on any host.
-        return Storage::disk('public')->response($purchase->invoice_image_path);
+        return Storage::disk($disk)->response($purchase->invoice_image_path);
     }
 
     public function updateLine(UpdatePurchaseLineRequest $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
         $this->authorize('update', $purchase);
-        abort_unless($line->purchase_id === $purchase->id, 403);
 
         $this->lineRecorder->recompute($line, $request->validated());
 
@@ -328,7 +347,6 @@ class PurchaseController extends Controller
     public function destroyLine(Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
         $this->authorize('update', $purchase);
-        abort_unless($line->purchase_id === $purchase->id, 403);
 
         DB::transaction(function () use ($line) {
             if ($line->isApplied()) {
@@ -379,7 +397,6 @@ class PurchaseController extends Controller
     public function matchLine(Request $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
         $this->authorize('update', $purchase);
-        abort_unless($line->purchase_id === $purchase->id, 403);
 
         $validated = $request->validate([
             'match' => ['nullable', 'string'],

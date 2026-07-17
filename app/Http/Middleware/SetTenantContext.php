@@ -41,7 +41,9 @@ class SetTenantContext
             return Tenant::find($request->session()->get('impersonating_tenant_id'));
         }
 
-        $tenantId = $user->tenantUsers()->where('active', true)->value('tenant_id');
+        // orderBy garantiza un resultado determinista si el usuario pertenece
+        // a más de un tenant (el selector de tenant aún no existe).
+        $tenantId = $user->tenantUsers()->where('active', true)->orderBy('tenant_id')->value('tenant_id');
 
         if ($tenantId === null) {
             return null;

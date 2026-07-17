@@ -57,7 +57,8 @@ class PurchaseScanController extends Controller
 
         $extension = $mime === 'application/pdf' ? 'pdf' : 'jpg';
         $path = "purchases/{$tenant->id}/".Str::uuid()->toString().'.'.$extension;
-        Storage::disk('public')->put($path, $contents);
+        // Disco privado: los comprobantes son datos fiscales, ver PurchaseController::storeInvoiceImage().
+        Storage::disk('local')->put($path, $contents);
 
         try {
             $draft = $this->extractor->extract(
@@ -67,7 +68,7 @@ class PurchaseScanController extends Controller
                 $packagings,
             );
         } catch (\Throwable $e) {
-            Storage::disk('public')->delete($path);
+            Storage::disk('local')->delete($path);
             Log::error('invoice scan: extraction failed', ['error' => $e->getMessage(), 'exception' => $e::class]);
 
             return back()->with('error', $e->getMessage());
@@ -215,6 +216,9 @@ class PurchaseScanController extends Controller
             return null;
         }
 
-        return Storage::disk('public')->exists($path) ? $path : null;
+        // 'public' cubre escaneos hechos antes de la migración al disco privado.
+        return Storage::disk('local')->exists($path) || Storage::disk('public')->exists($path)
+            ? $path
+            : null;
     }
 }

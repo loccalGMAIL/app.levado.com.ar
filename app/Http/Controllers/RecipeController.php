@@ -80,43 +80,47 @@ class RecipeController extends Controller
 
         $recipe->load(['ingredientLines', 'laborLines', 'packagingLines', 'subrecipeLines']);
 
-        $newRecipe = $recipe->replicate(['unit_cost']);
-        $newRecipe->name = $recipe->name.' (copia)';
-        $newRecipe->active = false;
-        $newRecipe->unit_cost = null;
-        $newRecipe->save();
+        $newRecipe = DB::transaction(function () use ($recipe) {
+            $newRecipe = $recipe->replicate(['unit_cost']);
+            $newRecipe->name = $recipe->name.' (copia)';
+            $newRecipe->active = false;
+            $newRecipe->unit_cost = null;
+            $newRecipe->save();
 
-        foreach ($recipe->ingredientLines as $line) {
-            $newRecipe->ingredientLines()->create([
-                'ingredient_id' => $line->ingredient_id,
-                'quantity' => $line->quantity,
-                'unit' => $line->unit,
-            ]);
-        }
-        foreach ($recipe->laborLines as $line) {
-            $newRecipe->laborLines()->create([
-                'labor_type_id' => $line->labor_type_id,
-                'hours' => $line->hours,
-            ]);
-        }
-        foreach ($recipe->packagingLines as $line) {
-            $newRecipe->packagingLines()->create([
-                'packaging_id' => $line->packaging_id,
-                'quantity' => $line->quantity,
-            ]);
-        }
-        foreach ($recipe->subrecipeLines as $line) {
-            $newRecipe->subrecipeLines()->create([
-                'child_recipe_id' => $line->child_recipe_id,
-                'quantity_used' => $line->quantity_used,
-                'unit' => $line->unit,
-            ]);
-        }
-        foreach ($recipe->prices()->with('priceList')->get() as $recipePrice) {
-            $this->priceWriter->set($newRecipe, $recipePrice->priceList, (float) $recipePrice->price);
-        }
+            foreach ($recipe->ingredientLines as $line) {
+                $newRecipe->ingredientLines()->create([
+                    'ingredient_id' => $line->ingredient_id,
+                    'quantity' => $line->quantity,
+                    'unit' => $line->unit,
+                ]);
+            }
+            foreach ($recipe->laborLines as $line) {
+                $newRecipe->laborLines()->create([
+                    'labor_type_id' => $line->labor_type_id,
+                    'hours' => $line->hours,
+                ]);
+            }
+            foreach ($recipe->packagingLines as $line) {
+                $newRecipe->packagingLines()->create([
+                    'packaging_id' => $line->packaging_id,
+                    'quantity' => $line->quantity,
+                ]);
+            }
+            foreach ($recipe->subrecipeLines as $line) {
+                $newRecipe->subrecipeLines()->create([
+                    'child_recipe_id' => $line->child_recipe_id,
+                    'quantity_used' => $line->quantity_used,
+                    'unit' => $line->unit,
+                ]);
+            }
+            foreach ($recipe->prices()->with('priceList')->get() as $recipePrice) {
+                $this->priceWriter->set($newRecipe, $recipePrice->priceList, (float) $recipePrice->price);
+            }
 
-        $this->propagator->propagateFrom($newRecipe);
+            $this->propagator->propagateFrom($newRecipe);
+
+            return $newRecipe;
+        });
 
         $this->recorder->record(
             actor: request()->user(),
@@ -179,9 +183,7 @@ class RecipeController extends Controller
         $packagings = $tenant->packagings()->active()->orderBy('name')->get();
         $laborTypes = $tenant->laborTypes()->active()->orderBy('name')->get();
 
-        $totalFixedCosts = $tenant->fixedCosts()->active()->sum('monthly_amount');
-        $productiveHours = (int) $tenant->productive_hours_month;
-        $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : 0.0;
+        $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
 
         $converter = new UnitConverter;
 
@@ -374,11 +376,10 @@ class RecipeController extends Controller
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Ingrediente agregado.');
     }
 
-    public function destroyIngredientLine(Recipe $recipe, RecipeIngredientLine $line): RedirectResponse
+    public function destroyIngredientLine(Recipe $recipe, RecipeIngredientLine $ingredientLine): RedirectResponse
     {
         $this->authorize('update', $recipe);
-        abort_unless($line->recipe_id === $recipe->id, 403);
-        $line->delete();
+        $ingredientLine->delete();
         $this->propagator->propagateFrom($recipe);
 
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Ingrediente eliminado.');
@@ -402,11 +403,10 @@ class RecipeController extends Controller
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Envase agregado.');
     }
 
-    public function destroyPackagingLine(Recipe $recipe, RecipePackagingLine $line): RedirectResponse
+    public function destroyPackagingLine(Recipe $recipe, RecipePackagingLine $packagingLine): RedirectResponse
     {
         $this->authorize('update', $recipe);
-        abort_unless($line->recipe_id === $recipe->id, 403);
-        $line->delete();
+        $packagingLine->delete();
         $this->propagator->propagateFrom($recipe);
 
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Envase eliminado.');
@@ -430,20 +430,18 @@ class RecipeController extends Controller
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Mano de obra agregada.');
     }
 
-    public function destroyLaborLine(Recipe $recipe, RecipeLaborLine $line): RedirectResponse
+    public function destroyLaborLine(Recipe $recipe, RecipeLaborLine $laborLine): RedirectResponse
     {
         $this->authorize('update', $recipe);
-        abort_unless($line->recipe_id === $recipe->id, 403);
-        $line->delete();
+        $laborLine->delete();
         $this->propagator->propagateFrom($recipe);
 
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Mano de obra eliminada.');
     }
 
-    public function updateIngredientLine(Request $request, Recipe $recipe, RecipeIngredientLine $line): JsonResponse
+    public function updateIngredientLine(Request $request, Recipe $recipe, RecipeIngredientLine $ingredientLine): JsonResponse
     {
         $this->authorize('update', $recipe);
-        abort_unless($line->recipe_id === $recipe->id, 403);
 
         $data = $request->validate([
             'quantity' => ['required', 'numeric', 'min:0.001'],
@@ -451,7 +449,7 @@ class RecipeController extends Controller
         ]);
 
         $converter = new UnitConverter;
-        $ingredient = $line->ingredient;
+        $ingredient = $ingredientLine->ingredient;
 
         if (! $converter->compatible(Unit::from($data['unit']), $ingredient->unit)) {
             throw ValidationException::withMessages([
@@ -459,37 +457,35 @@ class RecipeController extends Controller
             ]);
         }
 
-        $line->update($data);
+        $ingredientLine->update($data);
         $this->propagator->propagateFrom($recipe);
 
         $subLabel = $ingredient->subdivisions ? ($ingredient->subdivision_label ?? 'u') : null;
 
         return response()->json([
             'ok' => true,
-            'unitLabel' => $subLabel ?? $line->unit->short(),
-            'costPerLineUnit' => $converter->convert(1.0, $line->unit, $ingredient->unit) * (float) $ingredient->cost_per_unit,
+            'unitLabel' => $subLabel ?? $ingredientLine->unit->short(),
+            'costPerLineUnit' => $converter->convert(1.0, $ingredientLine->unit, $ingredient->unit) * (float) $ingredient->cost_per_unit,
         ]);
     }
 
-    public function updatePackagingLine(Request $request, Recipe $recipe, RecipePackagingLine $line): JsonResponse
+    public function updatePackagingLine(Request $request, Recipe $recipe, RecipePackagingLine $packagingLine): JsonResponse
     {
         $this->authorize('update', $recipe);
-        abort_unless($line->recipe_id === $recipe->id, 403);
 
         $data = $request->validate(['quantity' => ['required', 'numeric', 'min:0.001']]);
-        $line->update($data);
+        $packagingLine->update($data);
         $this->propagator->propagateFrom($recipe);
 
         return response()->json(['ok' => true]);
     }
 
-    public function updateLaborLine(Request $request, Recipe $recipe, RecipeLaborLine $line): JsonResponse
+    public function updateLaborLine(Request $request, Recipe $recipe, RecipeLaborLine $laborLine): JsonResponse
     {
         $this->authorize('update', $recipe);
-        abort_unless($line->recipe_id === $recipe->id, 403);
 
         $data = $request->validate(['hours' => ['required', 'numeric', 'min:0.01']]);
-        $line->update($data);
+        $laborLine->update($data);
         $this->propagator->propagateFrom($recipe);
 
         return response()->json(['ok' => true]);
@@ -533,23 +529,21 @@ class RecipeController extends Controller
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Sub-receta agregada.');
     }
 
-    public function updateSubrecipeLine(Request $request, Recipe $recipe, RecipeSubrecipeLine $line): JsonResponse
+    public function updateSubrecipeLine(Request $request, Recipe $recipe, RecipeSubrecipeLine $subrecipeLine): JsonResponse
     {
         $this->authorize('update', $recipe);
-        abort_unless($line->recipe_id === $recipe->id, 403);
 
         $data = $request->validate(['quantity_used' => ['required', 'numeric', 'min:0.001']]);
-        $line->update($data);
+        $subrecipeLine->update($data);
         $this->propagator->propagateFrom($recipe);
 
         return response()->json(['ok' => true]);
     }
 
-    public function destroySubrecipeLine(Recipe $recipe, RecipeSubrecipeLine $line): RedirectResponse
+    public function destroySubrecipeLine(Recipe $recipe, RecipeSubrecipeLine $subrecipeLine): RedirectResponse
     {
         $this->authorize('update', $recipe);
-        abort_unless($line->recipe_id === $recipe->id, 403);
-        $line->delete();
+        $subrecipeLine->delete();
         $this->propagator->propagateFrom($recipe);
 
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Sub-receta eliminada.');

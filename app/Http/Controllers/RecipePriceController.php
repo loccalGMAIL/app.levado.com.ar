@@ -40,9 +40,7 @@ class RecipePriceController extends Controller
         ]);
         $costs = (new RecipeCostCalculator(new UnitConverter))->calculate($recipe);
 
-        $totalFixedCosts = $tenant->fixedCosts()->active()->sum('monthly_amount');
-        $productiveHours = (int) $tenant->productive_hours_month;
-        $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : null;
+        $overheadPerHour = $tenant->overheadPerHour();
         $fixedCost = $overheadPerHour !== null ? $costs['total_labor_hours'] * $overheadPerHour : 0.0;
         $totalCost = $costs['total_cost'] + $fixedCost;
         $yieldQty = (float) $recipe->yield_quantity;
