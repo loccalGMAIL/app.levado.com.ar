@@ -3,7 +3,7 @@ name: Levado — Estado actual del proyecto
 description: Progreso al 15/07/2026
 type: project
 ---
-# Estado del proyecto — 15 de julio 2026
+# Estado del proyecto — 17 de julio 2026
 
 ## Estructura local
 ```
@@ -18,9 +18,18 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.10.0 (rama `v0.10.0-gastos-variables`; `master` en 0.9.3)
+- **Versión actual:** 0.10.1 (rama `claude/technical-debt-audit-obzekw`; `master` en 0.10.0)
 
 ## Todo lo que está hecho
+
+### v0.10.1 — Auditoría técnica + quick wins de seguridad
+- **`AUDITORIA_DEUDA_TECNICA.md`** en la raíz del repo: auditoría externa completa (seguridad, arquitectura, BD, rendimiento, frontend, SaaS) con plan priorizado en 3 etapas. La etapa de **corto plazo** se implementó completa en esta versión.
+- Implementado (quick wins): comprobantes de compras al **disco privado** (+ comando `invoices:relocate` y fallback legacy al público), `throttle:10,1` en el escaneo IA, resolución de tenant determinista (`orderBy('tenant_id')`), **unique** `(tenant_id, supplier_id, invoice_number)` en purchases + validación con mensaje amable en los 3 requests, `Tenant::totalFixedCosts()`/`overheadPerHour()` como único dueño de la fórmula (cierra la deuda DD3 en los 4 controllers), **scoped bindings** en rutas anidadas de líneas (404 en vez de 403 para línea ajena; params renombrados `{line}` → `{ingredientLine}`/`{packagingLine}`/`{laborLine}`/`{subrecipeLine}`, URLs sin cambios), `getSetting()` memoizado por instancia, transacción en `RecipeController::copy()`, checklist de producción en `.env.example`, sin logs de debug en invitaciones.
+- **Pendiente del plan — mediano plazo:** trait `BelongsToTenant` con global scope (prioridad #1), dashboard sobre `unit_cost` cacheado, componente `x-data-table`, partir `RecipeController` + ViewModel, morph map para polimorfismos, factories faltantes (Purchase/PurchaseLine/StockMovement/Invitation/MailTemplate), DD2 (selects con ítems inactivos en recetas y líneas de compra).
+- **Pendiente del plan — largo plazo:** colas al migrar de hosting, cuotas por tenant antes de la apertura pública, selector de tenant, cache por tenant, flujo de baja/exportación de datos.
+- **Decisión (17/07/2026):** el hallazgo S3 de la auditoría (impersonación de super admin sin acotar al tenant impersonado, sin auditoría de accesos cruzados) **no se parchea sobre el backoffice actual**: el plan es construir un **panel administrativo completo nuevo y retirar el backoffice actual**. S3 se resuelve como requisito de diseño de ese panel (impersonación acotada + auditoría desde el día uno).
+- **Al deployar:** correr `php artisan migrate` (la migración del unique aborta con detalle si hay facturas duplicadas preexistentes) y `php artisan invoices:relocate`.
+- **400 tests, todos verdes** (4 nuevos)
 
 ### Etapa 1 — Fundación Web ✅
 - Auth (Breeze), roles (super_admin/owner/admin/viewer), multi-tenancy
@@ -111,5 +120,5 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 ## Próximos pasos sugeridos
 - Deploy a producción (Hostinger) — configurar `ANTHROPIC_API_KEY` y queue/mail settings
 - Importación CSV de ingredientes/packaging/gastos fijos
-- Backoffice SaaS (B.2) — prerequisito para apertura pública
+- Panel administrativo completo nuevo (reemplaza el backoffice actual; ver `project-backoffice.md`) — prerequisito para apertura pública; resuelve S3 de la auditoría por diseño
 - Etapa 3: Productos y Stock

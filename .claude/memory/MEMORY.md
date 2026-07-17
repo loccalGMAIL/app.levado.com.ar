@@ -4,7 +4,7 @@
 - [Estado del proyecto](project_status.md) — Versión actual, lo que está hecho y próximos pasos
 - [Módulo de Compras](feature-compras.md) — Tablas, flujos, servicios, vistas y estado de fases del módulo de compras (act. v0.9.1)
 - [Módulo de Existencias](feature-existencias.md) — Ledger inmutable, StockService, integración con compras, edición inline y orden por columnas (act. v0.9.2, sin Merma)
-- [Backoffice de Administración](project-backoffice.md) — B.1 MVP y B.2 SaaS: diseño, tablas, impersonación, auditoría
+- [Backoffice de Administración](project-backoffice.md) — B.1 MVP y B.2 SaaS: diseño, tablas, impersonación, auditoría. **Será reemplazado por un panel administrativo completo nuevo** (decisión 17/07/2026)
 - [Arquitectura del proyecto](project-architecture.md) — Dominio, resolución de tenant, stack, convenciones de desarrollo
 - [Perfil del usuario](user-profile.md) — Fundador/dev de Levado, contexto del negocio, idioma, preferencias
 - [Feedback general](feedback-general.md) — Boost ≠ auth, no i18n, no comentarios innecesarios

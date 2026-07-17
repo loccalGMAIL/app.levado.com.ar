@@ -11,6 +11,8 @@ metadata:
 
 Herramientas internas para el equipo Levado (no accesibles por owners/admins de tenant).
 
+> **⚠️ Plan vigente (17/07/2026):** el backoffice actual (B.1) va a ser **reemplazado por un panel administrativo completo nuevo** y retirado. Requisitos de diseño ya definidos para el panel nuevo, salidos de la auditoría técnica (`AUDITORIA_DEUDA_TECNICA.md`, hallazgo S3): impersonación **acotada al tenant impersonado** (sin acceso cruzado a otros tenants por URL durante la sesión de impersonación) y **auditoría en `admin_audit_logs` de todo acceso fuera del tenant impersonado**, desde el día uno. Hasta entonces, no invertir en mejoras del backoffice actual más allá de fixes.
+
 ## Acceso y modelo de usuarios admin
 - Ruta dedicada: `app.levado.com.ar/admin`
 - Middleware: `EnsureSuperAdmin` — bloquea cualquier `/admin/*` si el usuario no tiene rol `super_admin`
