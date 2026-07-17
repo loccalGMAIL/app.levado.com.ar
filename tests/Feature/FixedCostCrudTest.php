@@ -285,7 +285,7 @@ test('aislamiento: no se puede eliminar categoría de otro tenant', function () 
 
     $this->actingAs($user)
         ->delete(route('fixed-cost-categories.destroy', $otherCategory))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 // --- Aislamiento ---
@@ -316,5 +316,5 @@ test('aislamiento: no se puede editar gasto fijo de otro tenant', function () {
             'monthly_amount' => '1',
             'valid_from' => date('Y-m-d'),
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });

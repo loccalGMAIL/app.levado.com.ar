@@ -266,5 +266,5 @@ test('no se puede ver el comprobante de un gasto de otro negocio', function () {
 
     $this->actingAs($user)
         ->get(route('variable-expenses.receipt', $otherExpense))
-        ->assertForbidden();
+        ->assertNotFound();
 });

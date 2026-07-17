@@ -168,11 +168,11 @@ test('aislamiento: no se puede editar ni desactivar una lista de otro tenant', f
 
     $this->actingAs($user)
         ->put(route('price-lists.update', $foreignList), ['name' => 'Hackeada'])
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->actingAs($user)
         ->patch(route('price-lists.toggle-active', $foreignList))
-        ->assertForbidden();
+        ->assertNotFound();
 
     expect($foreignList->refresh()->name)->toBe('Ajena');
 });

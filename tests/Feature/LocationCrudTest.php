@@ -117,5 +117,5 @@ test('aislamiento: owner no puede editar sucursal de otro tenant', function () {
 
     $this->actingAs($user)
         ->put(route('locations.update', $otherLocation), ['name' => 'Hack'])
-        ->assertForbidden();
+        ->assertNotFound();
 });

@@ -77,7 +77,7 @@ test('no se puede actualizar el costo de un packaging de otro tenant', function 
 
     $this->actingAs($user)
         ->patchJson(route('packaging.cost.update', $packaging), ['cost_per_unit' => '12.50'])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('costo negativo retorna error de validacion', function () {

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StockMovementType;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
@@ -14,6 +15,8 @@ use LogicException;
  */
 class StockMovement extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
         'tenant_id',
         'location_id',

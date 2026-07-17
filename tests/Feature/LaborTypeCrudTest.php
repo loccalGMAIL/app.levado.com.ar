@@ -158,5 +158,5 @@ test('aislamiento: no se puede editar tipo de mano de obra de otro tenant', func
             'name' => 'Hack',
             'hourly_rate' => '1',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });

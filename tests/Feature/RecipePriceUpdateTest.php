@@ -135,13 +135,13 @@ test('aislamiento: receta o lista de otro tenant devuelve 403', function () {
     $ownList = PriceList::factory()->for($tenant)->create();
     $this->actingAs($user)
         ->patchJson(route('recipes.prices.update', [$foreignRecipe, $ownList]), ['price' => 100])
-        ->assertForbidden();
+        ->assertNotFound();
 
     $ownRecipe = Recipe::factory()->for($tenant)->create();
     $foreignList = PriceList::factory()->for($other)->create();
     $this->actingAs($user)
         ->patchJson(route('recipes.prices.update', [$ownRecipe, $foreignList]), ['price' => 100])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('una lista inactiva devuelve 422', function () {

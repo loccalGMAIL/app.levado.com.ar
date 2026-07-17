@@ -279,5 +279,5 @@ test('aislamiento: no se puede editar envase de otro tenant', function () {
             'name' => 'Hack',
             'cost_per_unit' => '1',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });

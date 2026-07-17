@@ -6,6 +6,7 @@ use App\Http\Middleware\SetTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,6 +20,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => CheckTenantRole::class,
             'super-admin' => EnsureSuperAdmin::class,
         ]);
+
+        // El tenant debe quedar resuelto ANTES de que se resuelva el
+        // route-model binding: así el global scope de BelongsToTenant aplica
+        // también al binding y un recurso de otro tenant da 404 directo.
+        $middleware->prependToPriorityList(
+            SubstituteBindings::class,
+            SetTenantContext::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
