@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\Unit;
+use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,7 +18,12 @@ class StoreScannedPurchaseRequest extends FormRequest
     {
         return [
             'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
-            'invoice_number' => ['nullable', 'string', 'max:50'],
+            'invoice_number' => [
+                'nullable', 'string', 'max:50',
+                Rule::unique('purchases', 'invoice_number')
+                    ->where('tenant_id', app(Tenant::class)->id)
+                    ->where('supplier_id', (int) $this->input('supplier_id')),
+            ],
             'invoice_date' => ['required', 'date'],
             'invoice_total' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -35,6 +41,13 @@ class StoreScannedPurchaseRequest extends FormRequest
             'lines.*.percepcion_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'default_iva_rate' => ['nullable', 'numeric', 'in:0,0.105,0.21'],
             'default_percepcion_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'invoice_number.unique' => 'Ya existe una compra con este número de factura para este proveedor.',
         ];
     }
 }

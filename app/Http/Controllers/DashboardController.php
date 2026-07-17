@@ -47,9 +47,9 @@ class DashboardController extends Controller
             ->whereIn('recipe_id', $recipes->pluck('id'))
             ->pluck('price', 'recipe_id');
 
-        $totalFixedCosts = $tenant->fixedCosts()->active()->sum('monthly_amount');
+        $totalFixedCosts = $tenant->totalFixedCosts();
         $productiveHours = $tenant->productive_hours_month ?? 0;
-        $overheadPerHour = $productiveHours > 0 ? (float) $totalFixedCosts / $productiveHours : null;
+        $overheadPerHour = $tenant->overheadPerHour();
 
         $allRows = $recipes->map(function ($recipe) use ($calculator, $prices, $overheadPerHour) {
             $costs = $calculator->calculate($recipe);

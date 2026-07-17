@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePurchaseRequest extends FormRequest
 {
@@ -15,7 +17,12 @@ class StorePurchaseRequest extends FormRequest
     {
         return [
             'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
-            'invoice_number' => ['nullable', 'string', 'max:50'],
+            'invoice_number' => [
+                'nullable', 'string', 'max:50',
+                Rule::unique('purchases', 'invoice_number')
+                    ->where('tenant_id', app(Tenant::class)->id)
+                    ->where('supplier_id', (int) $this->input('supplier_id')),
+            ],
             'invoice_date' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'default_iva_rate' => ['nullable', 'numeric', 'in:0,0.105,0.21'],
@@ -27,5 +34,12 @@ class StorePurchaseRequest extends FormRequest
     public function attributes(): array
     {
         return ['invoice' => 'comprobante'];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'invoice_number.unique' => 'Ya existe una compra con este número de factura para este proveedor.',
+        ];
     }
 }

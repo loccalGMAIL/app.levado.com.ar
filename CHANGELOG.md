@@ -5,6 +5,31 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.10.1] — 2026-07-17
+
+### Quick wins de la auditoría técnica (corto plazo del plan aprobado)
+
+Ver `AUDITORIA_DEUDA_TECNICA.md` para el diagnóstico completo. Solo diagnóstico → implementación de la etapa de corto plazo: seguridad y quick wins, sin cambios de comportamiento funcional visibles salvo los indicados.
+
+#### Seguridad
+
+- **Los comprobantes de compras pasan al disco privado** (`storage/app/private`). Antes se guardaban en el disco `public`: aunque la app los sirve por una ruta autenticada (`purchases.invoice`), el symlink `/storage` los dejaba accesibles **sin login** a quien conociera la URL — y son datos fiscales (CUIT, precios de proveedores). Los archivos nuevos van al disco privado; los existentes se sirven por fallback hasta correr el nuevo comando `php artisan invoices:relocate` (con `--dry-run` para previsualizar). Los logos de negocio siguen en el disco público (son branding).
+- **Rate limiting en el escaneo de facturas con IA** (`throttle:10,1`): cada escaneo dispara una llamada paga a la API de Anthropic y bloquea un worker hasta 60 s; sin límite, un usuario podía quemar crédito sin tope.
+- **Resolución de tenant determinista:** si un usuario perteneciera a más de un tenant, el middleware elegía uno según el plan de ejecución de MySQL (sin `ORDER BY`). Ahora resuelve siempre el de menor ID, hasta que exista el selector de tenant.
+- **Facturas duplicadas bloqueadas en base de datos:** índice único `(tenant_id, supplier_id, invoice_number)` en `purchases` + regla de validación con mensaje claro en alta manual, edición y escaneo. El chequeo previo del front era solo advisory: dos submits simultáneos o un usuario que ignorara el aviso duplicaban costos y stock. Las compras sin número de factura no se limitan. La migración aborta con detalle si encuentra duplicados preexistentes que resolver a mano.
+- `.env.example` con checklist de producción (APP_DEBUG=false, SESSION_SECURE_COOKIE=true, timezone/locale argentinos, relocación de comprobantes).
+
+#### Técnico
+
+- **`Tenant::totalFixedCosts()` y `Tenant::overheadPerHour()`** como único dueño de la fórmula de overhead, que estaba duplicada en 4 controllers (`Dashboard`, `RecipePrice`, `Recipe`, `Business`) — la deuda DD3 documentada en v0.10.0. Cualquier cambio futuro a la fórmula va a un solo lugar.
+- **Scoped bindings en las rutas anidadas de líneas** (recetas y compras): Laravel resuelve la línea dentro de la relación del padre (404 si no le pertenece), eliminando los 12 chequeos manuales `abort_unless($line->recipe_id === $recipe->id)`. Cambio de contrato menor: una línea ajena ahora responde 404 en vez de 403 (mejor: no revela existencia). Los parámetros de ruta de recetas se renombraron (`{line}` → `{ingredientLine}`, etc.) para que el binding encuentre la relación; las URLs no cambian.
+- `Tenant::getSetting()` memoiza los settings por instancia (una query por request en vez de una por llamada); `setSetting()` invalida el cache.
+- `RecipeController::copy()` ahora corre en transacción: una falla a mitad de la copia ya no deja una receta parcial.
+- Se quitaron los logs de depuración del flujo de aceptación de invitaciones.
+- 4 tests nuevos (duplicados de factura ×3, scoped binding de líneas) y actualización de los tests de storage al disco privado. **400 tests, todos verdes.**
+
+---
+
 ## [0.10.0] — 2026-07-15
 
 ### Gastos Variables

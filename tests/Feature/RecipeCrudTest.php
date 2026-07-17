@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\TenantUserRole;
+use App\Models\Ingredient;
 use App\Models\Recipe;
 use App\Models\Tenant;
 use App\Models\TenantUser;
@@ -163,4 +164,25 @@ test('aislamiento: no se puede ver receta de otro tenant', function () {
     $this->actingAs($user)
         ->get(route('recipes.show', $other))
         ->assertForbidden();
+});
+
+test('aislamiento: una línea de otra receta no es alcanzable (scoped binding)', function () {
+    [$user, $tenant] = ownerForRecipe();
+
+    $recipe = Recipe::factory()->for($tenant)->create();
+    $otherRecipe = Recipe::factory()->for($tenant)->create();
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => 'kg']);
+    $foreignLine = $otherRecipe->ingredientLines()->create([
+        'ingredient_id' => $ingredient->id,
+        'quantity' => 1,
+        'unit' => 'kg',
+    ]);
+
+    // La línea pertenece a $otherRecipe: pedirla bajo $recipe debe dar 404,
+    // el binding se resuelve dentro de la relación del padre.
+    $this->actingAs($user)
+        ->delete(route('recipes.ingredient-lines.destroy', [$recipe, $foreignLine]))
+        ->assertNotFound();
+
+    expect($otherRecipe->ingredientLines()->count())->toBe(1);
 });

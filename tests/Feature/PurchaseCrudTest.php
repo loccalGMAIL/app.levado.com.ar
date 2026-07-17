@@ -82,7 +82,8 @@ test('owner puede crear una compra manual sin comprobante', function () {
 });
 
 test('crear una compra manual adjunta el comprobante', function () {
-    Storage::fake('public');
+    // Los comprobantes van al disco privado (local), nunca al público.
+    Storage::fake('local');
     [$user, $tenant] = ownerForPurchaseCrud();
     $supplier = Supplier::factory()->for($tenant)->create();
 
@@ -96,7 +97,7 @@ test('crear una compra manual adjunta el comprobante', function () {
 
     $purchase = $tenant->purchases()->firstOrFail();
     expect($purchase->invoice_image_path)->not->toBeNull();
-    Storage::disk('public')->assertExists($purchase->invoice_image_path);
+    Storage::disk('local')->assertExists($purchase->invoice_image_path);
 });
 
 test('un comprobante con formato inválido es rechazado', function () {
@@ -115,6 +116,9 @@ test('un comprobante con formato inválido es rechazado', function () {
 });
 
 test('editar una compra reemplaza el comprobante y borra el anterior', function () {
+    // El comprobante viejo puede estar en el disco público (legacy): el nuevo
+    // se guarda en el privado y el viejo se borra de donde esté.
+    Storage::fake('local');
     Storage::fake('public');
     [$user, $tenant] = ownerForPurchaseCrud();
     $supplier = Supplier::factory()->for($tenant)->create();
@@ -135,7 +139,7 @@ test('editar una compra reemplaza el comprobante y borra el anterior', function 
 
     $purchase->refresh();
     expect($purchase->invoice_image_path)->not->toBe("purchases/{$tenant->id}/original.jpg");
-    Storage::disk('public')->assertExists($purchase->invoice_image_path);
+    Storage::disk('local')->assertExists($purchase->invoice_image_path);
     Storage::disk('public')->assertMissing("purchases/{$tenant->id}/original.jpg");
 });
 
@@ -161,4 +165,67 @@ test('editar una compra sin adjuntar archivo conserva el comprobante existente',
     $purchase->refresh();
     expect($purchase->invoice_image_path)->toBe("purchases/{$tenant->id}/original.jpg");
     Storage::disk('public')->assertExists("purchases/{$tenant->id}/original.jpg");
+});
+
+// --- Facturas duplicadas ---
+
+test('no se puede crear una compra con número de factura duplicado para el mismo proveedor', function () {
+    [$user, $tenant] = ownerForPurchaseCrud();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-07-10',
+        'invoice_number' => '0001-0099',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('purchases.store'), [
+            'supplier_id' => $supplier->id,
+            'invoice_date' => '2026-07-13',
+            'invoice_number' => '0001-0099',
+        ])
+        ->assertSessionHasErrors('invoice_number');
+
+    expect($tenant->purchases()->count())->toBe(1);
+});
+
+test('el mismo número de factura es válido para otro proveedor u otro tenant', function () {
+    [$user, $tenant] = ownerForPurchaseCrud();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $otherSupplier = Supplier::factory()->for($tenant)->create();
+    $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-07-10',
+        'invoice_number' => '0001-0099',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('purchases.store'), [
+            'supplier_id' => $otherSupplier->id,
+            'invoice_date' => '2026-07-13',
+            'invoice_number' => '0001-0099',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($tenant->purchases()->count())->toBe(2);
+});
+
+test('editar una compra sin cambiar el número de factura no dispara el error de duplicado', function () {
+    [$user, $tenant] = ownerForPurchaseCrud();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-07-10',
+        'invoice_number' => '0001-0099',
+    ]);
+
+    $this->actingAs($user)
+        ->patch(route('purchases.update', $purchase), [
+            'supplier_id' => $supplier->id,
+            'invoice_date' => '2026-07-11',
+            'invoice_number' => '0001-0099',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
 });

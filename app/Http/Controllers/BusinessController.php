@@ -16,10 +16,8 @@ class BusinessController extends Controller
     public function edit(): View
     {
         $tenant = app(Tenant::class);
-        $totalFixedCosts = $tenant->fixedCosts()->where('active', true)->sum('monthly_amount');
-        $overheadPerHour = $tenant->productive_hours_month > 0
-            ? (float) $totalFixedCosts / $tenant->productive_hours_month
-            : null;
+        $totalFixedCosts = $tenant->totalFixedCosts();
+        $overheadPerHour = $tenant->overheadPerHour();
 
         $invitationMessage = $tenant->getSetting('invitation_message', '');
         $purchasePriceIncludesIva = filter_var(
