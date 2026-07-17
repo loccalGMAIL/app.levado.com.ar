@@ -7,9 +7,16 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Stores scanned receipts on the public disk, normalising oversized photos on
- * the way in. Files are served through the app rather than the /storage
- * symlink, so nothing here depends on that symlink existing.
+ * Stores scanned receipts on the private disk (`storage/app/private`),
+ * normalising oversized photos on the way in.
+ *
+ * Privado y no público: un comprobante es un dato fiscal (CUIT, precios de
+ * proveedores) y el symlink `/storage` lo dejaría accesible sin login a
+ * cualquiera que conociera la URL. Se sirven por una ruta autenticada.
+ *
+ * A diferencia de los comprobantes de compras, acá no hay fallback al disco
+ * público: gastos nace en el disco privado, así que no existen archivos
+ * anteriores que relocalizar.
  */
 class ReceiptStorer
 {
@@ -25,7 +32,7 @@ class ReceiptStorer
         [$contents, $mime] = $this->preparer->prepare($contents, $file->getMimeType() ?? 'image/jpeg');
 
         $path = $this->pathFor($folder, $mime);
-        Storage::disk('public')->put($path, $contents);
+        Storage::disk('local')->put($path, $contents);
 
         return $path;
     }
@@ -41,7 +48,7 @@ class ReceiptStorer
         [$contents, $mime] = $this->preparer->prepare($contents, $mime);
 
         $path = $this->pathFor($folder, $mime);
-        Storage::disk('public')->put($path, $contents);
+        Storage::disk('local')->put($path, $contents);
 
         return [$path, $contents, $mime];
     }
@@ -49,7 +56,7 @@ class ReceiptStorer
     public function delete(?string $path): void
     {
         if (filled($path)) {
-            Storage::disk('public')->delete($path);
+            Storage::disk('local')->delete($path);
         }
     }
 
@@ -64,7 +71,7 @@ class ReceiptStorer
             return null;
         }
 
-        return Storage::disk('public')->exists($path) ? $path : null;
+        return Storage::disk('local')->exists($path) ? $path : null;
     }
 
     private function pathFor(string $folder, string $mime): string

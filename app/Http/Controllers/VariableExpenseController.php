@@ -140,12 +140,13 @@ class VariableExpenseController extends Controller
 
         abort_if(
             blank($variableExpense->receipt_image_path)
-                || ! Storage::disk('public')->exists($variableExpense->receipt_image_path),
+                || ! Storage::disk('local')->exists($variableExpense->receipt_image_path),
             404,
         );
 
-        // Served through the app (not the /storage symlink) so it works on any host.
-        return Storage::disk('public')->response($variableExpense->receipt_image_path);
+        // Única vía de acceso: el archivo vive en el disco privado, así que no
+        // hay URL que sirva sin pasar por la autorización de arriba.
+        return Storage::disk('local')->response($variableExpense->receipt_image_path);
     }
 
     private function folderFor(Tenant $tenant): string

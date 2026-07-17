@@ -8,7 +8,28 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
+    Storage::fake('local');
     Storage::fake('public');
+});
+
+test('el comprobante va al disco privado y nunca al público', function () {
+    // Un comprobante es un dato fiscal: en el disco público el symlink
+    // /storage lo dejaría accesible sin login a quien supiera la URL.
+    [$user, $tenant, $category] = ownerForVariableExpense();
+
+    $this->actingAs($user)->post(route('variable-expenses.store'), [
+        'name' => 'Flete',
+        'variable_expense_category_id' => $category->id,
+        'amount' => '5000',
+        'expense_date' => '2026-05-01',
+        'receipt' => UploadedFile::fake()->image('ticket.jpg', 400, 300),
+    ]);
+
+    $path = $tenant->variableExpenses()->first()->receipt_image_path;
+
+    Storage::disk('local')->assertExists($path);
+    Storage::disk('public')->assertMissing($path);
+    expect(Storage::disk('public')->allFiles())->toBeEmpty();
 });
 
 test('el alta ofrece adjuntar el comprobante y leerlo con IA', function () {
@@ -64,7 +85,7 @@ test('crear un gasto con comprobante lo guarda en la carpeta del negocio', funct
     $expense = $tenant->variableExpenses()->first();
 
     expect($expense->receipt_image_path)->toStartWith("variable-expenses/{$tenant->id}/");
-    Storage::disk('public')->assertExists($expense->receipt_image_path);
+    Storage::disk('local')->assertExists($expense->receipt_image_path);
 });
 
 test('un comprobante con un tipo de archivo no permitido se rechaza', function () {
@@ -96,7 +117,7 @@ test('una foto grande se achica antes de guardarse', function () {
         ]);
 
     $path = $tenant->variableExpenses()->first()->receipt_image_path;
-    [$width, $height] = getimagesizefromstring(Storage::disk('public')->get($path));
+    [$width, $height] = getimagesizefromstring(Storage::disk('local')->get($path));
 
     expect(max($width, $height))->toBeLessThanOrEqual(1600);
 });
@@ -126,8 +147,8 @@ test('editar adjuntando un comprobante nuevo borra el anterior', function () {
     $newPath = $expense->fresh()->receipt_image_path;
 
     expect($newPath)->not->toBe($oldPath);
-    Storage::disk('public')->assertExists($newPath);
-    Storage::disk('public')->assertMissing($oldPath);
+    Storage::disk('local')->assertExists($newPath);
+    Storage::disk('local')->assertMissing($oldPath);
 });
 
 test('editar sin adjuntar archivo conserva el comprobante', function () {
@@ -152,7 +173,7 @@ test('editar sin adjuntar archivo conserva el comprobante', function () {
     ])->assertRedirect(route('variable-expenses.index'));
 
     expect($expense->fresh()->receipt_image_path)->toBe($path);
-    Storage::disk('public')->assertExists($path);
+    Storage::disk('local')->assertExists($path);
 });
 
 test('eliminar un gasto borra su comprobante', function () {
@@ -173,7 +194,7 @@ test('eliminar un gasto borra su comprobante', function () {
         ->delete(route('variable-expenses.destroy', $expense))
         ->assertRedirect(route('variable-expenses.index'));
 
-    Storage::disk('public')->assertMissing($path);
+    Storage::disk('local')->assertMissing($path);
 });
 
 test('el comprobante se sirve a través de la app', function () {

@@ -103,8 +103,12 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('fixed-costs/{fixedCost}/toggle-active', [FixedCostController::class, 'toggleActive'])->name('fixed-costs.toggle-active');
 
     // Antes de variable-expenses/{variableExpense} para que "scan" no se
-    // interprete como un id de gasto (route-model binding).
-    Route::post('variable-expenses/scan', [VariableExpenseScanController::class, 'scan'])->name('variable-expenses.scan');
+    // interprete como un id de gasto (route-model binding). Mismo throttle que
+    // el escaneo de facturas y por lo mismo: cada lectura es una llamada paga a
+    // la API de Anthropic que además bloquea un worker hasta 60 s.
+    Route::post('variable-expenses/scan', [VariableExpenseScanController::class, 'scan'])
+        ->middleware('throttle:10,1')
+        ->name('variable-expenses.scan');
     Route::post('variable-expenses', [VariableExpenseController::class, 'store'])->name('variable-expenses.store');
     Route::put('variable-expenses/{variableExpense}', [VariableExpenseController::class, 'update'])->name('variable-expenses.update');
     Route::delete('variable-expenses/{variableExpense}', [VariableExpenseController::class, 'destroy'])->name('variable-expenses.destroy');

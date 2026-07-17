@@ -20,7 +20,28 @@ function fakeReceiptRead(array $draft): void
 }
 
 beforeEach(function () {
+    Storage::fake('local');
     Storage::fake('public');
+});
+
+test('el comprobante escaneado va al disco privado y nunca al público', function () {
+    [$user, $tenant, $category] = ownerForVariableExpense();
+
+    fakeReceiptRead([
+        'name' => 'Flete',
+        'amount' => 5000,
+        'expense_date' => '2026-05-14',
+        'supplier_name' => null,
+        'category_id' => $category->id,
+    ]);
+
+    $path = $this->actingAs($user)
+        ->post(route('variable-expenses.scan'), ['receipt' => UploadedFile::fake()->image('t.jpg', 400, 300)])
+        ->assertOk()
+        ->json('path');
+
+    Storage::disk('local')->assertExists($path);
+    expect(Storage::disk('public')->allFiles())->toBeEmpty();
 });
 
 test('escanear un comprobante devuelve los campos leídos', function () {
@@ -50,7 +71,7 @@ test('escanear un comprobante devuelve los campos leídos', function () {
     ]);
 
     expect($response->json('path'))->toStartWith("variable-expenses/{$tenant->id}/");
-    Storage::disk('public')->assertExists($response->json('path'));
+    Storage::disk('local')->assertExists($response->json('path'));
 });
 
 test('un comprobante de varios ítems queda resumido en una sola descripción', function () {
@@ -156,7 +177,7 @@ test('si la lectura falla, el comprobante no queda huérfano en el disco', funct
         ->assertStatus(422)
         ->assertJsonStructure(['message']);
 
-    expect(Storage::disk('public')->allFiles())->toBeEmpty();
+    expect(Storage::disk('local')->allFiles())->toBeEmpty();
 });
 
 test('sin API key configurada el scan avisa en vez de romper', function () {
@@ -168,7 +189,7 @@ test('sin API key configurada el scan avisa en vez de romper', function () {
         ->post(route('variable-expenses.scan'), ['receipt' => UploadedFile::fake()->image('t.jpg', 400, 300)])
         ->assertStatus(422);
 
-    expect(Storage::disk('public')->allFiles())->toBeEmpty();
+    expect(Storage::disk('local')->allFiles())->toBeEmpty();
 });
 
 test('una foto grande se achica antes de mandarse a la IA', function () {
@@ -187,7 +208,7 @@ test('una foto grande se achica antes de mandarse a la IA', function () {
         ->assertOk()
         ->json('path');
 
-    [$width, $height] = getimagesizefromstring(Storage::disk('public')->get($path));
+    [$width, $height] = getimagesizefromstring(Storage::disk('local')->get($path));
 
     expect(max($width, $height))->toBeLessThanOrEqual(1600);
 });
@@ -224,7 +245,7 @@ test('el archivo escaneado se referencia por path, sin volver a subirlo', functi
     ])->assertRedirect(route('variable-expenses.index'));
 
     expect($tenant->variableExpenses()->first()->receipt_image_path)->toBe($path)
-        ->and(Storage::disk('public')->allFiles())->toHaveCount(1);
+        ->and(Storage::disk('local')->allFiles())->toHaveCount(1);
 });
 
 test('no se puede referenciar el comprobante de otro negocio con un path armado a mano', function () {
