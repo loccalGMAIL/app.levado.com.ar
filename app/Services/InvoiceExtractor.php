@@ -114,7 +114,14 @@ class InvoiceExtractor
             - Fijate en la columna y en los totales para no confundir el separador. Devolvé siempre el número con punto decimal.
 
             invoice_number: combiná Punto de Venta + N° de comprobante con guion (ej. "0012-00017065").
-            invoice_date en formato YYYY-MM-DD. total: el TOTAL final de la factura, tal como figura.
+
+            invoice_date: devolvela en formato YYYY-MM-DD.
+            ¡OJO! En Argentina las fechas se escriben DÍA/MES/AÑO. "02/06/2026" es el 2 de JUNIO de 2026 → "2026-06-02".
+            NUNCA interpretes el primer número como si fuera el mes (eso sería formato de EE.UU.).
+            Este error ya pasó con facturas reales: "02/06/2026" leída como 6 de febrero y "01/07/2026" como 7 de enero.
+
+            total: el TOTAL final de la factura, tal como figura. Copiá todos sus dígitos: un cero de menos
+            convierte 38.000 en 3.800. Control: el total tiene que ser coherente con la suma de los renglones.
 
             Ejemplos de transcripción fiel (sin cálculos):
             - "HARINA 3/0 X 25 Kg" · Cantidad 200 · Unitario 13.891,40
