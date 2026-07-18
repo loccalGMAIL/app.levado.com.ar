@@ -73,13 +73,6 @@
             @php
                 $sort = request('sort', 'name');
                 $dir  = request('dir', 'asc');
-                $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
-                    array_merge(request()->except(['sort', 'dir', 'page']), [
-                        'sort' => $col,
-                        'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
-                    ])
-                );
-                $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
             @endphp
 
             @if($ingredients->isEmpty())
@@ -91,8 +84,8 @@
                     @endif
                 </x-empty-state>
             @else
-                {{-- Cards (mobile) --}}
-                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                                <x-responsive-table>
+                    <x-slot:cards>
                     @foreach($ingredients as $ingredient)
                         @php
                             $stockLevel = $stockLevels->get($ingredient->id);
@@ -153,37 +146,16 @@
                             @endcan
                         </div>
                     @endforeach
-                    <button type="button" @click="mobileExpanded = true"
-                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
-                        Ver tabla completa ↓
-                    </button>
-                </div>
+                    </x-slot:cards>
 
-                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
-                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
-                    <div class="md:hidden px-4 py-2 border-b border-miga">
-                        <button type="button" @click="mobileExpanded = false"
-                            class="text-sm text-masa-madre hover:text-corteza">
-                            ← Volver a cards
-                        </button>
-                    </div>
-                    <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
-                                <th class="px-4 py-3 font-medium">
-                                    <a href="{{ $sortUrl('name') }}" class="hover:text-corteza inline-flex items-center gap-1">
-                                        Nombre <span class="text-xs">{{ $sortIcon('name') }}</span>
-                                    </a>
-                                </th>
+                                <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
                                 <th class="px-4 py-3 font-medium">Marca</th>
                                 <th class="px-4 py-3 font-medium">Proveedor</th>
                                 <th class="px-4 py-3 font-medium">Unidad</th>
                                 <th class="px-4 py-3 font-medium text-right">Por envase</th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('cost_per_unit') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Costo / sub-unidad <span class="text-xs">{{ $sortIcon('cost_per_unit') }}</span>
-                                    </a>
-                                </th>
+                                <x-sortable-th column="cost_per_unit" :sort="$sort" :dir="$dir" align="right">Costo / sub-unidad</x-sortable-th>
                                 <th class="px-4 py-3 font-medium text-right">Stock</th>
                                 <th class="px-4 py-3 font-medium">Estado</th>
                                 @can('manage-costs')
@@ -358,14 +330,15 @@
                                 </tr>
                             @endforeach
                         </tbody>
-                    </table>
 
-                    @if($ingredients->hasPages())
+                    <x-slot:footer>
+                        @if($ingredients->hasPages())
                         <div class="px-4 py-3 border-t border-miga">
                             {{ $ingredients->links() }}
                         </div>
                     @endif
-                </div>
+                    </x-slot:footer>
+                </x-responsive-table>
 
                 <p class="text-xs text-masa-madre">{{ $ingredients->total() }} ingrediente(s) en total.</p>
             @endif

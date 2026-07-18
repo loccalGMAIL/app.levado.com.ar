@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Recipe;
+use App\Services\RecipeCostPropagator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -47,4 +49,15 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Refresca los caches unit_cost/labor_hours de una receta sembrada a mano.
+ * En producción los mantiene RecipeCostPropagator vía los controllers; los
+ * tests que crean líneas directo con ::create() deben llamarlo antes de
+ * asertar sobre vistas que leen los caches (dashboard, matriz, precios).
+ */
+function propagateRecipeCosts(Recipe $recipe): void
+{
+    app(RecipeCostPropagator::class)->propagateFrom($recipe);
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CatalogItemType;
 use App\Enums\Unit;
 use App\Http\Requests\StorePurchaseLineRequest;
 use App\Http\Requests\StorePurchaseRequest;
@@ -171,15 +172,13 @@ class PurchaseController extends Controller
 
         $purchase->load(['supplier', 'lines']);
 
-        $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
-        $packagings = $tenant->packagings()->active()->orderBy('name')->get();
         // Todos, no sólo los activos: el select de edición es `required`, así que si el
         // proveedor de la compra fue dado de baja su opción no existiría, el select caería
         // en la opción vacía y el navegador bloquearía el guardado de cualquier otro campo.
         $suppliers = $tenant->suppliers()->orderBy('name')->get();
         $units = Unit::cases();
 
-        return view('purchases.show', compact('purchase', 'ingredients', 'packagings', 'suppliers', 'units'));
+        return view('purchases.show', compact('purchase', 'suppliers', 'units'));
     }
 
     public function destroy(Purchase $purchase): RedirectResponse
@@ -375,8 +374,12 @@ class PurchaseController extends Controller
 
         $purchase->load(['supplier', 'lines']);
 
-        $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
-        $packagings = $tenant->packagings()->active()->orderBy('name')->get();
+        // Todos, no sólo los activos (regla del proveedor inactivo, v0.10.0): un
+        // renglón ya asociado a un ítem dado de baja debe seguir mostrando su
+        // opción — si el select solo listara activos, caería en "— sin asociar —"
+        // y guardar ese renglón revertiría stock y costo en silencio.
+        $ingredients = $tenant->ingredients()->orderBy('name')->get();
+        $packagings = $tenant->packagings()->orderBy('name')->get();
 
         // Catalog keyed by id for fast Alpine.js lookup.
         $ingredientCatalog = $ingredients->keyBy('id')->map(fn ($i) => [
@@ -422,11 +425,13 @@ class PurchaseController extends Controller
             return back()->with('status', 'Renglón marcado como pendiente.');
         }
 
-        [$type, $id] = array_pad(explode(':', $match, 2), 2, null);
-        abort_unless(in_array($type, ['ingredient', 'packaging'], true) && is_numeric($id), 422);
+        [$rawType, $id] = array_pad(explode(':', $match, 2), 2, null);
+        $itemType = CatalogItemType::tryFrom((string) $rawType);
+        abort_unless($itemType !== null && is_numeric($id), 422);
+        $type = $itemType->value;
 
         $tenant = app(Tenant::class);
-        $belongs = $type === 'ingredient'
+        $belongs = $itemType === CatalogItemType::Ingredient
             ? $tenant->ingredients()->whereKey($id)->exists()
             : $tenant->packagings()->whereKey($id)->exists();
         abort_unless($belongs, 422);

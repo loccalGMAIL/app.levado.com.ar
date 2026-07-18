@@ -96,8 +96,8 @@
                     @endif
                 </div>
             @else
-                {{-- Cards (mobile) --}}
-                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                                <x-responsive-table>
+                    <x-slot:cards>
                     @foreach($purchases as $purchase)
                         @php
                             $cardTotal = $includeIva
@@ -146,21 +146,8 @@
                             </div>
                         </div>
                     @endforeach
-                    <button type="button" @click="mobileExpanded = true"
-                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
-                        Ver tabla completa ↓
-                    </button>
-                </div>
+                    </x-slot:cards>
 
-                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
-                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
-                    <div class="md:hidden px-4 py-2 border-b border-miga">
-                        <button type="button" @click="mobileExpanded = false"
-                            class="text-sm text-masa-madre hover:text-corteza">
-                            ← Volver a cards
-                        </button>
-                    </div>
-                    <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
                                 <th class="px-4 py-3 font-medium">
@@ -251,14 +238,15 @@
                                 </tr>
                             @endforeach
                         </tbody>
-                    </table>
 
-                    @if($purchases->hasPages())
+                    <x-slot:footer>
+                        @if($purchases->hasPages())
                         <div class="px-4 py-3 border-t border-miga">
                             {{ $purchases->links() }}
                         </div>
                     @endif
-                </div>
+                    </x-slot:footer>
+                </x-responsive-table>
 
                 <p class="text-xs text-masa-madre">{{ $purchases->total() }} compra(s) en total.</p>
             @endif

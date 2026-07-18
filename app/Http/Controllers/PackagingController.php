@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CatalogItemType;
 use App\Http\Requests\StorePackagingRequest;
 use App\Http\Requests\UpdatePackagingRequest;
 use App\Models\Packaging;
@@ -46,7 +47,7 @@ class PackagingController extends Controller
         $stockLevels = StockLevel::query()
             ->where('tenant_id', $tenant->id)
             ->where('location_id', $tenant->defaultLocation()->id)
-            ->where('stockable_type', 'packaging')
+            ->where('stockable_type', CatalogItemType::Packaging->value)
             ->whereIn('stockable_id', $packagings->pluck('id'))
             ->get()
             ->keyBy('stockable_id');

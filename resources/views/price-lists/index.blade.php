@@ -76,20 +76,13 @@
             @php
                 $sort = request('sort', 'name');
                 $dir  = request('dir', 'asc');
-                $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
-                    array_merge(request()->except(['sort', 'dir', 'page']), [
-                        'sort' => $col,
-                        'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
-                    ])
-                );
-                $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
             @endphp
 
             @if($priceLists->isEmpty())
                 <x-empty-state>No se encontraron listas con esos filtros.</x-empty-state>
             @else
-                {{-- Cards (mobile) --}}
-                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                                <x-responsive-table>
+                    <x-slot:cards>
                     @foreach($priceLists as $priceList)
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $priceList->active ? '' : 'opacity-50' }}">
                             <div class="flex items-start justify-between">
@@ -148,33 +141,12 @@
                             @endcan
                         </div>
                     @endforeach
-                    <button type="button" @click="mobileExpanded = true"
-                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
-                        Ver tabla completa ↓
-                    </button>
-                </div>
+                    </x-slot:cards>
 
-                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
-                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
-                    <div class="md:hidden px-4 py-2 border-b border-miga">
-                        <button type="button" @click="mobileExpanded = false"
-                            class="text-sm text-masa-madre hover:text-corteza">
-                            ← Volver a cards
-                        </button>
-                    </div>
-                    <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
-                                <th class="px-4 py-3 font-medium">
-                                    <a href="{{ $sortUrl('name') }}" class="hover:text-corteza inline-flex items-center gap-1">
-                                        Nombre <span class="text-xs">{{ $sortIcon('name') }}</span>
-                                    </a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('adjustment_pct') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        % ajuste <span class="text-xs">{{ $sortIcon('adjustment_pct') }}</span>
-                                    </a>
-                                </th>
+                                <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
+                                <x-sortable-th column="adjustment_pct" :sort="$sort" :dir="$dir" align="right">% ajuste</x-sortable-th>
                                 <th class="px-4 py-3 font-medium text-right">Precios cargados</th>
                                 <th class="px-4 py-3 font-medium">Estado</th>
                                 @can('manage-costs')
@@ -275,14 +247,15 @@
                                 </tr>
                             @endforeach
                         </tbody>
-                    </table>
 
-                    @if($priceLists->hasPages())
+                    <x-slot:footer>
+                        @if($priceLists->hasPages())
                         <div class="px-4 py-3 border-t border-miga">
                             {{ $priceLists->links() }}
                         </div>
                     @endif
-                </div>
+                    </x-slot:footer>
+                </x-responsive-table>
 
                 <p class="text-xs text-masa-madre">{{ $priceLists->total() }} lista(s) en total.</p>
             @endif

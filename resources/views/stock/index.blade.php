@@ -31,13 +31,6 @@
 
         $sort = request('sort', 'name');
         $dir  = request('dir', 'asc');
-        $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
-            array_merge(request()->except(['sort', 'dir', 'page']), [
-                'sort' => $col,
-                'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
-            ])
-        );
-        $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
     @endphp
 
     <div class="py-8 px-6 lg:px-8"
@@ -97,8 +90,8 @@
                     @endif
                 </x-empty-state>
             @else
-                {{-- Cards (mobile) --}}
-                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                                <x-responsive-table>
+                    <x-slot:cards>
                     @foreach($items as $item)
                         @php
                             $level = $levels->get($item->id);
@@ -141,38 +134,13 @@
                             @endcan
                         </div>
                     @endforeach
-                    <button type="button" @click="mobileExpanded = true"
-                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
-                        Ver tabla completa ↓
-                    </button>
-                </div>
+                    </x-slot:cards>
 
-                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
-                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
-                    <div class="md:hidden px-4 py-2 border-b border-miga">
-                        <button type="button" @click="mobileExpanded = false"
-                            class="text-sm text-masa-madre hover:text-corteza">
-                            ← Volver a cards
-                        </button>
-                    </div>
-                    <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
-                                <th class="px-4 py-3 font-medium">
-                                    <a href="{{ $sortUrl('name') }}" class="hover:text-corteza inline-flex items-center gap-1">
-                                        Nombre <span class="text-xs">{{ $sortIcon('name') }}</span>
-                                    </a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('quantity') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Stock actual <span class="text-xs">{{ $sortIcon('quantity') }}</span>
-                                    </a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('min_quantity') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Mínimo <span class="text-xs">{{ $sortIcon('min_quantity') }}</span>
-                                    </a>
-                                </th>
+                                <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
+                                <x-sortable-th column="quantity" :sort="$sort" :dir="$dir" align="right">Stock actual</x-sortable-th>
+                                <x-sortable-th column="min_quantity" :sort="$sort" :dir="$dir" align="right">Mínimo</x-sortable-th>
                                 <th class="px-4 py-3 font-medium text-right">Valuación</th>
                                 <th class="px-4 py-3 font-medium">Alerta</th>
                                 @can('manage-costs')
@@ -233,14 +201,15 @@
                                 </tr>
                             @endforeach
                         </tbody>
-                    </table>
 
-                    @if($items->hasPages())
+                    <x-slot:footer>
+                        @if($items->hasPages())
                         <div class="px-4 py-3 border-t border-miga">
                             {{ $items->links() }}
                         </div>
                     @endif
-                </div>
+                    </x-slot:footer>
+                </x-responsive-table>
 
                 <p class="text-xs text-masa-madre">{{ $items->total() }} ítem(s) en total. La valuación usa el último costo de cada ítem.</p>
             @endif

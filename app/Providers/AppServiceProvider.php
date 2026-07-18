@@ -46,12 +46,6 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        Gate::define('super-admin', function (User $user) {
-            $tenant = $this->resolveTenant();
-
-            return $tenant && $user->hasRoleInTenant($tenant, TenantUserRole::SuperAdmin);
-        });
-
         Gate::define('manage-team', function (User $user) {
             $tenant = $this->resolveTenant();
 

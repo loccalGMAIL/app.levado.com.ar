@@ -2,12 +2,18 @@
 
 namespace App\Models;
 
+use App\Enums\CatalogItemType;
 use App\Enums\Unit;
+use Database\Factories\PurchaseLineFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PurchaseLine extends Model
 {
+    /** @use HasFactory<PurchaseLineFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'purchase_id',
         'raw_name',
@@ -52,12 +58,12 @@ class PurchaseLine extends Model
 
     public function isIngredient(): bool
     {
-        return $this->purchaseable_type === 'ingredient';
+        return $this->purchaseable_type === CatalogItemType::Ingredient->value;
     }
 
     public function isPackaging(): bool
     {
-        return $this->purchaseable_type === 'packaging';
+        return $this->purchaseable_type === CatalogItemType::Packaging->value;
     }
 
     public function isMatched(): bool

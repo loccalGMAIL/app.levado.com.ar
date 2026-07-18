@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CatalogItemType;
 use App\Http\Requests\StoreIngredientRequest;
 use App\Http\Requests\UpdateIngredientRequest;
 use App\Models\Ingredient;
@@ -46,7 +47,7 @@ class IngredientController extends Controller
         $stockLevels = StockLevel::query()
             ->where('tenant_id', $tenant->id)
             ->where('location_id', $tenant->defaultLocation()->id)
-            ->where('stockable_type', 'ingredient')
+            ->where('stockable_type', CatalogItemType::Ingredient->value)
             ->whereIn('stockable_id', $ingredients->pluck('id'))
             ->get()
             ->keyBy('stockable_id');

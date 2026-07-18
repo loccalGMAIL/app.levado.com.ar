@@ -8,9 +8,7 @@ use App\Models\PriceList;
 use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
-use App\Services\RecipeCostCalculator;
 use App\Services\RecipePriceWriter;
-use App\Services\UnitConverter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -62,12 +60,6 @@ class PriceListController extends Controller
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
         $recipes = $tenant->recipes()
-            ->with([
-                'ingredientLines.ingredient',
-                'packagingLines.packaging',
-                'laborLines.laborType',
-                'subrecipeLines.childRecipe',
-            ])
             ->active()
             ->where('is_semi_elaborate', false)
             ->when(request('search'), function ($q, $search) {
@@ -79,9 +71,12 @@ class PriceListController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $calculator = new RecipeCostCalculator(new UnitConverter);
+        // unit_cost cacheado (mantenido por RecipeCostPropagator) — mismo valor
+        // que devolvía el calculator, sin recalcular ni cargar líneas.
         $costsPerUnit = collect($recipes->items())
-            ->mapWithKeys(fn ($recipe) => [$recipe->id => $calculator->calculate($recipe)['cost_per_unit']]);
+            ->mapWithKeys(fn ($recipe) => [
+                $recipe->id => $recipe->unit_cost !== null ? (float) $recipe->unit_cost : null,
+            ]);
 
         /** @var array<int, array<int, string>> $prices [recipe_id][price_list_id] => price */
         $prices = RecipePrice::whereIn('price_list_id', $priceLists->pluck('id'))

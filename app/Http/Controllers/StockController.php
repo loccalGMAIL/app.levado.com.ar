@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CatalogItemType;
 use App\Http\Requests\StoreStockAdjustmentRequest;
 use App\Http\Requests\StoreStockCountRequest;
 use App\Http\Requests\UpdateStockMinRequest;
@@ -28,10 +29,11 @@ class StockController extends Controller
     {
         $tenant = app(Tenant::class);
         $location = $this->resolveLocation($tenant);
-        $type = request('type') === 'packaging' ? 'packaging' : 'ingredient';
-        $table = $type === 'ingredient' ? 'ingredients' : 'packagings';
+        $itemType = CatalogItemType::tryFrom((string) request('type')) ?? CatalogItemType::Ingredient;
+        $type = $itemType->value;
+        $table = $itemType === CatalogItemType::Ingredient ? 'ingredients' : 'packagings';
 
-        $itemsQuery = $type === 'ingredient'
+        $itemsQuery = $itemType === CatalogItemType::Ingredient
             ? $tenant->ingredients()->active()
             : $tenant->packagings()->active();
 
@@ -204,7 +206,7 @@ class StockController extends Controller
     {
         $tenant = app(Tenant::class);
 
-        return $type === 'ingredient'
+        return CatalogItemType::from($type) === CatalogItemType::Ingredient
             ? $tenant->ingredients()->findOrFail($id)
             : $tenant->packagings()->findOrFail($id);
     }

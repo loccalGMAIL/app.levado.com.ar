@@ -23,6 +23,15 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 
 ## Todo lo que está hecho
 
+### v0.12.0 — Mediano plazo de la auditoría, 1er lote (rama `claude/technical-debt-audit-obzekw`, pendiente de merge)
+- **Dashboard sobre caches:** `unit_cost` + nueva columna `recipes.labor_hours` (propagador la mantiene); orden y paginación en SQL con margen/margen % y NULLs al final. Matriz de precios y edición inline de precio también leen el cache. Comando **`recipes:refresh-costs`** para backfill — **correrlo tras el deploy, junto con `migrate`**.
+- **DD2 cerrada:** el select del match de compras lista ítems inactivos marcados `(inactivo)` (antes un renglón con ítem dado de baja caía en «sin asociar» y guardarlo revertía stock). En recetas la trampa no existía (catálogos solo de alta).
+- **Enum `CatalogItemType`** dueño de `'ingredient'`/`'packaging'` (purchase_lines/stock_*/URLs de stock). Valores en BD sin cambios.
+- **Factories nuevas:** Purchase (proveedor hereda tenant), PurchaseLine (+`matchedTo*`), Invitation (+`expired`/`accepted`), MailTemplate. StockMovement sin factory a propósito (ledger = solo StockService).
+- Menores: DI de calculator/converter, gate `super-admin` muerto eliminado.
+- Tests: helper global `propagateRecipeCosts()` para seeds manuales (los caches no se llenan solos al crear líneas con `::create()`). **465 tests, todos verdes.**
+- **2º lote (misma versión):** `RecipeController` 565→236 L (`RecipeLineController` + `RecipeShowViewModel`, sin cambio de contrato); componentes `x-sortable-th` y `x-responsive-table` adoptados en las 9 vistas de índice con markup uniforme. **Pendiente:** `purchases/index` y `price-lists/matrix` (variantes propias, migrarlas a mano), y `recipes/show` (902 L) sigue siendo la vista más grande — partirla en parciales cuando se la vuelva a tocar. **467 tests, todos verdes.**
+
 ### v0.11.2 — Páginas de error con branding (rama `claude/technical-debt-audit-obzekw`, pendiente de merge)
 - Páginas 404/403/419/500/503 propias en castellano (`resources/views/errors/`), sobre un layout `minimal.blade.php` **autónomo** (sin Vite/componentes/fuentes externas: una página de error no puede depender de nada rompible). El 404 explica el caso cross-tenant de v0.11.1; el 403 filtra el default en inglés de Laravel y muestra los mensajes propios de `abort()`. 3 tests nuevos. **457 tests, todos verdes.**
 
@@ -37,7 +46,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - **`AUDITORIA_DEUDA_TECNICA.md`** en la raíz del repo: auditoría externa completa (seguridad, arquitectura, BD, rendimiento, frontend, SaaS) con plan priorizado en 3 etapas. La etapa de **corto plazo** se implementó completa en esta versión.
 - Implementado (quick wins): comprobantes de compras al **disco privado** (+ comando `invoices:relocate` y fallback legacy al público), `throttle:10,1` en el escaneo IA, resolución de tenant determinista (`orderBy('tenant_id')`), **unique** `(tenant_id, supplier_id, invoice_number)` en purchases + validación con mensaje amable en los 3 requests, `Tenant::totalFixedCosts()`/`overheadPerHour()` como único dueño de la fórmula (cierra la deuda DD3 en los 4 controllers), **scoped bindings** en rutas anidadas de líneas (404 en vez de 403 para línea ajena; params renombrados `{line}` → `{ingredientLine}`/`{packagingLine}`/`{laborLine}`/`{subrecipeLine}`, URLs sin cambios), `getSetting()` memoizado por instancia, transacción en `RecipeController::copy()`, checklist de producción en `.env.example`, sin logs de debug en invitaciones.
 - **Pendiente del plan — mediano plazo:** trait `BelongsToTenant` con global scope (prioridad #1), dashboard sobre `unit_cost` cacheado, componente `x-data-table`, partir `RecipeController` + ViewModel, morph map para polimorfismos, factories faltantes (Purchase/PurchaseLine/StockMovement/Invitation/MailTemplate), DD2 (selects con ítems inactivos en recetas y líneas de compra).
-- **Pendiente del plan — largo plazo:** colas al migrar de hosting, cuotas por tenant antes de la apertura pública, selector de tenant, cache por tenant, flujo de baja/exportación de datos.
+- **Pendiente del plan — largo plazo:** documentado en detalle en `.claude/memory/plan-largo-plazo.md` (panel administrativo nuevo con impersonación acotada y cuotas, colas al migrar de hosting, selector de tenant, cache por tenant, baja/exportación).
 - **Decisión (17/07/2026):** el hallazgo S3 de la auditoría (impersonación de super admin sin acotar al tenant impersonado, sin auditoría de accesos cruzados) **no se parchea sobre el backoffice actual**: el plan es construir un **panel administrativo completo nuevo y retirar el backoffice actual**. S3 se resuelve como requisito de diseño de ese panel (impersonación acotada + auditoría desde el día uno).
 - **Al deployar:** correr `php artisan migrate` (la migración del unique aborta con detalle si hay facturas duplicadas preexistentes) y `php artisan invoices:relocate`.
 - **400 tests, todos verdes** (4 nuevos)

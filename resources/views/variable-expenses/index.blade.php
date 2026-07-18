@@ -97,13 +97,6 @@
             @php
                 $sort = request('sort', 'expense_date');
                 $dir  = request('dir', 'asc');
-                $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
-                    array_merge(request()->except(['sort', 'dir', 'page']), [
-                        'sort' => $col,
-                        'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
-                    ])
-                );
-                $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
             @endphp
 
             @if($variableExpenses->isEmpty())
@@ -115,8 +108,8 @@
                     @endif
                 </x-empty-state>
             @else
-                {{-- Cards (mobile) --}}
-                <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="space-y-3">
+                                <x-responsive-table>
+                    <x-slot:cards>
                     @foreach($variableExpenses as $variableExpense)
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
                             <div class="flex items-start justify-between">
@@ -165,40 +158,15 @@
                     <div class="bg-miga/50 rounded-lg px-4 py-3 text-right text-sm font-semibold text-corteza">
                         Total del período: <span class="font-mono ml-1">$ {{ number_format($totalPeriod, 2, ',', '.') }}</span>
                     </div>
-                    <button type="button" @click="mobileExpanded = true"
-                        class="w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
-                        Ver tabla completa ↓
-                    </button>
-                </div>
+                    </x-slot:cards>
 
-                {{-- Tabla (desktop siempre, mobile si está expandida) --}}
-                <div :class="mobileExpanded ? '' : 'hidden md:block'" class="bg-white rounded-lg shadow overflow-x-auto">
-                    <div class="md:hidden px-4 py-2 border-b border-miga">
-                        <button type="button" @click="mobileExpanded = false"
-                            class="text-sm text-masa-madre hover:text-corteza">
-                            ← Volver a cards
-                        </button>
-                    </div>
-                    <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
-                                <th class="px-4 py-3 font-medium">
-                                    <a href="{{ $sortUrl('name') }}" class="hover:text-corteza inline-flex items-center gap-1">
-                                        Nombre <span class="text-xs">{{ $sortIcon('name') }}</span>
-                                    </a>
-                                </th>
+                                <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
                                 <th class="px-4 py-3 font-medium">Categoría</th>
                                 <th class="px-4 py-3 font-medium">Proveedor</th>
-                                <th class="px-4 py-3 font-medium">
-                                    <a href="{{ $sortUrl('expense_date') }}" class="hover:text-corteza inline-flex items-center gap-1">
-                                        Fecha <span class="text-xs">{{ $sortIcon('expense_date') }}</span>
-                                    </a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('amount') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Monto <span class="text-xs">{{ $sortIcon('amount') }}</span>
-                                    </a>
-                                </th>
+                                <x-sortable-th column="expense_date" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
+                                <x-sortable-th column="amount" :sort="$sort" :dir="$dir" align="right">Monto</x-sortable-th>
                                 @can('manage-costs')
                                     <th class="px-4 py-3"></th>
                                 @endcan
@@ -283,14 +251,15 @@
                                 </td>
                             </tr>
                         </tfoot>
-                    </table>
 
-                    @if($variableExpenses->hasPages())
+                    <x-slot:footer>
+                        @if($variableExpenses->hasPages())
                         <div class="px-4 py-3 border-t border-miga">
                             {{ $variableExpenses->links() }}
                         </div>
                     @endif
-                </div>
+                    </x-slot:footer>
+                </x-responsive-table>
 
                 <p class="text-xs text-masa-madre">{{ $variableExpenses->total() }} gasto(s) en total.</p>
             @endif

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CatalogItemType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
@@ -188,14 +189,12 @@ class InvoiceExtractor
         $lines = collect($data['lines'] ?? [])
             ->filter(fn ($line) => is_array($line))
             ->map(function (array $line) use ($ingredientIds, $packagingIds) {
-                $type = in_array($line['matched_type'] ?? null, ['ingredient', 'packaging'], true)
-                    ? $line['matched_type']
-                    : null;
+                $type = CatalogItemType::tryFrom((string) ($line['matched_type'] ?? ''))?->value;
                 $id = is_numeric($line['matched_id'] ?? null) ? (int) $line['matched_id'] : null;
 
                 // Drop the suggestion if it doesn't belong to the tenant's catalog.
-                $valid = ($type === 'ingredient' && in_array($id, $ingredientIds, true))
-                    || ($type === 'packaging' && in_array($id, $packagingIds, true));
+                $valid = ($type === CatalogItemType::Ingredient->value && in_array($id, $ingredientIds, true))
+                    || ($type === CatalogItemType::Packaging->value && in_array($id, $packagingIds, true));
 
                 if (! $valid) {
                     $type = null;

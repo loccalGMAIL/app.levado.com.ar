@@ -21,6 +21,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeController;
+use App\Http\Controllers\RecipeLineController;
 use App\Http\Controllers\RecipePriceController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
@@ -132,21 +133,21 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     // Los parámetros de línea ({ingredientLine}, {line}, etc.) usan scoped bindings:
     // Laravel resuelve la línea DENTRO de la relación del padre (404 si no pertenece),
     // sin necesidad de chequeos manuales de recipe_id/purchase_id en el controller.
-    Route::post('recipes/{recipe}/ingredient-lines', [RecipeController::class, 'storeIngredientLine'])->name('recipes.ingredient-lines.store');
-    Route::patch('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeController::class, 'updateIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.update');
-    Route::delete('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeController::class, 'destroyIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.destroy');
+    Route::post('recipes/{recipe}/ingredient-lines', [RecipeLineController::class, 'storeIngredientLine'])->name('recipes.ingredient-lines.store');
+    Route::patch('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeLineController::class, 'updateIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.update');
+    Route::delete('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeLineController::class, 'destroyIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.destroy');
 
-    Route::post('recipes/{recipe}/packaging-lines', [RecipeController::class, 'storePackagingLine'])->name('recipes.packaging-lines.store');
-    Route::patch('recipes/{recipe}/packaging-lines/{packagingLine}', [RecipeController::class, 'updatePackagingLine'])->scopeBindings()->name('recipes.packaging-lines.update');
-    Route::delete('recipes/{recipe}/packaging-lines/{packagingLine}', [RecipeController::class, 'destroyPackagingLine'])->scopeBindings()->name('recipes.packaging-lines.destroy');
+    Route::post('recipes/{recipe}/packaging-lines', [RecipeLineController::class, 'storePackagingLine'])->name('recipes.packaging-lines.store');
+    Route::patch('recipes/{recipe}/packaging-lines/{packagingLine}', [RecipeLineController::class, 'updatePackagingLine'])->scopeBindings()->name('recipes.packaging-lines.update');
+    Route::delete('recipes/{recipe}/packaging-lines/{packagingLine}', [RecipeLineController::class, 'destroyPackagingLine'])->scopeBindings()->name('recipes.packaging-lines.destroy');
 
-    Route::post('recipes/{recipe}/labor-lines', [RecipeController::class, 'storeLaborLine'])->name('recipes.labor-lines.store');
-    Route::patch('recipes/{recipe}/labor-lines/{laborLine}', [RecipeController::class, 'updateLaborLine'])->scopeBindings()->name('recipes.labor-lines.update');
-    Route::delete('recipes/{recipe}/labor-lines/{laborLine}', [RecipeController::class, 'destroyLaborLine'])->scopeBindings()->name('recipes.labor-lines.destroy');
+    Route::post('recipes/{recipe}/labor-lines', [RecipeLineController::class, 'storeLaborLine'])->name('recipes.labor-lines.store');
+    Route::patch('recipes/{recipe}/labor-lines/{laborLine}', [RecipeLineController::class, 'updateLaborLine'])->scopeBindings()->name('recipes.labor-lines.update');
+    Route::delete('recipes/{recipe}/labor-lines/{laborLine}', [RecipeLineController::class, 'destroyLaborLine'])->scopeBindings()->name('recipes.labor-lines.destroy');
 
-    Route::post('recipes/{recipe}/subrecipe-lines', [RecipeController::class, 'storeSubrecipeLine'])->name('recipes.subrecipe-lines.store');
-    Route::patch('recipes/{recipe}/subrecipe-lines/{subrecipeLine}', [RecipeController::class, 'updateSubrecipeLine'])->scopeBindings()->name('recipes.subrecipe-lines.update');
-    Route::delete('recipes/{recipe}/subrecipe-lines/{subrecipeLine}', [RecipeController::class, 'destroySubrecipeLine'])->scopeBindings()->name('recipes.subrecipe-lines.destroy');
+    Route::post('recipes/{recipe}/subrecipe-lines', [RecipeLineController::class, 'storeSubrecipeLine'])->name('recipes.subrecipe-lines.store');
+    Route::patch('recipes/{recipe}/subrecipe-lines/{subrecipeLine}', [RecipeLineController::class, 'updateSubrecipeLine'])->scopeBindings()->name('recipes.subrecipe-lines.update');
+    Route::delete('recipes/{recipe}/subrecipe-lines/{subrecipeLine}', [RecipeLineController::class, 'destroySubrecipeLine'])->scopeBindings()->name('recipes.subrecipe-lines.destroy');
 
     Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
     Route::patch('purchases/{purchase}', [PurchaseController::class, 'update'])->name('purchases.update');

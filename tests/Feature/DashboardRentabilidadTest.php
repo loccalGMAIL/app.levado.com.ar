@@ -56,6 +56,7 @@ test('dashboard muestra las recetas activas con su costo', function () {
         'quantity' => 500,
         'unit' => Unit::Gramo->value,
     ]);
+    propagateRecipeCosts($recipe);
 
     $this->actingAs($user)
         ->get(route('dashboard'))
@@ -106,6 +107,7 @@ test('dashboard muestra el margen cuando hay precio de venta', function () {
         'quantity' => 10,
         'unit' => Unit::Unidad->value,
     ]);
+    propagateRecipeCosts($recipe);
 
     // total cost = 500, cost/u = 50, selling = 100, margin = 50, margin% = 50%
     $this->actingAs($user)
@@ -182,6 +184,7 @@ test('los gastos variables no afectan el overhead ni el margen', function () {
         'quantity' => 10,
         'unit' => Unit::Unidad->value,
     ]);
+    propagateRecipeCosts($recipe);
 
     $before = $this->actingAs($user)->get(route('dashboard'))->assertOk();
     $overheadBefore = $before->viewData('overheadPerHour');
@@ -218,6 +221,7 @@ test('el selector de lista muestra los márgenes de la lista elegida', function 
         'quantity' => 10,
         'unit' => Unit::Unidad->value,
     ]);
+    propagateRecipeCosts($recipe);
 
     $mayorista = PriceList::factory()->for($tenant)->create(['name' => 'Mayorista']);
     RecipePrice::factory()->for($tenant)->create([

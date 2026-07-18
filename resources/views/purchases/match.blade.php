@@ -189,7 +189,7 @@
                                                                 @foreach($ingredients as $ing)
                                                                     <option value="ingredient:{{ $ing->id }}"
                                                                         @selected($currentValue === "ingredient:{$ing->id}")>
-                                                                        {{ $ing->name }}
+                                                                        {{ $ing->name }}@if(! $ing->active) (inactivo)@endif
                                                                         @if($ing->subdivisions)
                                                                             ({{ $ing->subdivisions }} {{ $ing->subdivision_label ?? 'u' }} / envase)
                                                                         @else
@@ -204,7 +204,7 @@
                                                                 @foreach($packagings as $pkg)
                                                                     <option value="packaging:{{ $pkg->id }}"
                                                                         @selected($currentValue === "packaging:{$pkg->id}")>
-                                                                        {{ $pkg->name }}
+                                                                        {{ $pkg->name }}@if(! $pkg->active) (inactivo)@endif
                                                                     </option>
                                                                 @endforeach
                                                             </optgroup>

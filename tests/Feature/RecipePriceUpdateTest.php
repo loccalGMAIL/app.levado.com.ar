@@ -41,6 +41,7 @@ function recipeWithUnitCost(Tenant $tenant, float $costPerUnit): Recipe
         'quantity' => 10,
         'unit' => Unit::Unidad->value,
     ]);
+    propagateRecipeCosts($recipe);
 
     return $recipe;
 }

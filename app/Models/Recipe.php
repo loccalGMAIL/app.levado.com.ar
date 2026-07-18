@@ -25,6 +25,7 @@ class Recipe extends Model
         'active',
         'is_semi_elaborate',
         'unit_cost',
+        'labor_hours',
     ];
 
     protected function casts(): array
@@ -35,6 +36,7 @@ class Recipe extends Model
             'active' => 'boolean',
             'is_semi_elaborate' => 'boolean',
             'unit_cost' => 'decimal:4',
+            'labor_hours' => 'decimal:2',
         ];
     }
 

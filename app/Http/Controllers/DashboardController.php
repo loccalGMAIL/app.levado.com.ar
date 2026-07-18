@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RecipePrice;
 use App\Models\Tenant;
-use App\Services\RecipeCostCalculator;
-use App\Services\UnitConverter;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    /**
+     * El dashboard trabaja EXCLUSIVAMENTE sobre los caches unit_cost y
+     * labor_hours que mantiene RecipeCostPropagator: no carga líneas ni
+     * recalcula recetas en PHP, y ordena y pagina en SQL. Costo final por
+     * unidad = unit_cost + labor_hours × overhead ÷ rendimiento.
+     */
     public function index(): View
     {
         $tenant = app(Tenant::class);
-        $calculator = new RecipeCostCalculator(new UnitConverter);
 
         $tenant->defaultPriceList();
         $priceLists = $tenant->priceLists()
@@ -25,100 +26,84 @@ class DashboardController extends Controller
         $priceList = $priceLists->firstWhere('id', (int) request('price_list'))
             ?? $priceLists->firstWhere('is_default', true);
 
-        $sortable = ['name', 'selling_price', 'yield_quantity', 'cost_per_unit', 'margin', 'margin_pct'];
-        $sort = in_array(request('sort'), $sortable) ? request('sort') : 'name';
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+        $totalFixedCosts = $tenant->totalFixedCosts();
+        $productiveHours = $tenant->productive_hours_month ?? 0;
+        $overheadPerHour = $tenant->overheadPerHour();
+        $overhead = $overheadPerHour ?? 0.0;
 
-        $recipes = $tenant->recipes()
-            ->with([
-                'ingredientLines.ingredient',
-                'packagingLines.packaging',
-                'laborLines.laborType',
-            ])
+        // Expresiones SQL sobre los caches. Se repiten inline en los ORDER BY
+        // (con sus bindings) porque MySQL no permite reusar alias del SELECT
+        // dentro de expresiones nuevas del SELECT.
+        $priceSql = '(select rp.price from recipe_prices rp where rp.recipe_id = recipes.id and rp.price_list_id = ?)';
+        $costSql = '(case when recipes.unit_cost is null or recipes.yield_quantity <= 0 then null '
+            .'else recipes.unit_cost + (coalesce(recipes.labor_hours, 0) * ? / recipes.yield_quantity) end)';
+        $marginSql = "(case when {$priceSql} is null or {$costSql} is null then null else {$priceSql} - {$costSql} end)";
+        $marginPctSql = "(case when {$priceSql} is null or {$costSql} is null or {$priceSql} <= 0 then null "
+            ."else ({$priceSql} - {$costSql}) / {$priceSql} * 100 end)";
+
+        $priceBindings = [$priceList->id];
+        $costBindings = [$overhead];
+        // Un binding por cada "?" en el orden en que aparece en cada expresión:
+        // margin    = P C | P C          → [p, o, p, o]
+        // marginPct = P C P | P C P      → [p, o, p, p, o, p]
+        $marginBindings = [$priceList->id, $overhead, $priceList->id, $overhead];
+        $marginPctBindings = [$priceList->id, $overhead, $priceList->id, $priceList->id, $overhead, $priceList->id];
+
+        $sortExpressions = [
+            'name' => ['recipes.name', []],
+            'yield_quantity' => ['recipes.yield_quantity', []],
+            'selling_price' => [$priceSql, $priceBindings],
+            'cost_per_unit' => [$costSql, $costBindings],
+            'margin' => [$marginSql, $marginBindings],
+            'margin_pct' => [$marginPctSql, $marginPctBindings],
+        ];
+
+        $sort = array_key_exists(request('sort', ''), $sortExpressions) ? request('sort') : 'name';
+        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+        [$sortExpr, $sortBindings] = $sortExpressions[$sort];
+
+        $recipeRows = $tenant->recipes()
             ->active()
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
-                return $q->where('name', 'like', "%{$escaped}%");
+                return $q->where('recipes.name', 'like', "%{$escaped}%");
             })
-            ->get();
+            ->select('recipes.*')
+            ->selectRaw("{$priceSql} as dashboard_selling_price", $priceBindings)
+            ->orderByRaw("({$sortExpr}) is null", $sortBindings)
+            ->orderByRaw("({$sortExpr}) {$dir}", $sortBindings)
+            ->orderBy('recipes.name')
+            ->paginate(20)
+            ->withQueryString()
+            ->through(function ($recipe) use ($overheadPerHour) {
+                $sellingPrice = $recipe->dashboard_selling_price !== null
+                    ? (float) $recipe->dashboard_selling_price
+                    : null;
+                $yieldQty = (float) $recipe->yield_quantity;
+                $laborHours = (float) ($recipe->labor_hours ?? 0);
+                $fixedCost = $overheadPerHour !== null ? $laborHours * $overheadPerHour : 0.0;
+                $totalCost = ((float) ($recipe->unit_cost ?? 0)) * $yieldQty + $fixedCost;
+                $costPerUnit = ($recipe->unit_cost !== null && $yieldQty > 0)
+                    ? (float) $recipe->unit_cost + $fixedCost / $yieldQty
+                    : null;
 
-        $prices = RecipePrice::where('price_list_id', $priceList->id)
-            ->whereIn('recipe_id', $recipes->pluck('id'))
-            ->pluck('price', 'recipe_id');
+                $margin = null;
+                $marginPct = null;
+                if ($sellingPrice !== null && $costPerUnit !== null && $sellingPrice > 0) {
+                    $margin = $sellingPrice - $costPerUnit;
+                    $marginPct = ($margin / $sellingPrice) * 100;
+                }
 
-        $totalFixedCosts = $tenant->totalFixedCosts();
-        $productiveHours = $tenant->productive_hours_month ?? 0;
-        $overheadPerHour = $tenant->overheadPerHour();
-
-        $allRows = $recipes->map(function ($recipe) use ($calculator, $prices, $overheadPerHour) {
-            $costs = $calculator->calculate($recipe);
-            $fixedCost = $overheadPerHour !== null ? $costs['total_labor_hours'] * $overheadPerHour : 0.0;
-            $totalCost = $costs['total_cost'] + $fixedCost;
-            $yieldQty = (float) $recipe->yield_quantity;
-            $costPerUnit = $yieldQty > 0 ? $totalCost / $yieldQty : null;
-            $sellingPrice = isset($prices[$recipe->id]) ? (float) $prices[$recipe->id] : null;
-
-            $margin = null;
-            $marginPct = null;
-            if ($sellingPrice !== null && $costPerUnit !== null && $sellingPrice > 0) {
-                $margin = $sellingPrice - $costPerUnit;
-                $marginPct = ($margin / $sellingPrice) * 100;
-            }
-
-            return [
-                'recipe' => $recipe,
-                'total_cost' => $totalCost,
-                'cost_per_unit' => $costPerUnit,
-                'selling_price' => $sellingPrice,
-                'margin' => $margin,
-                'margin_pct' => $marginPct,
-            ];
-        });
-
-        $sortValue = function (array $row) use ($sort): mixed {
-            return match ($sort) {
-                'name' => $row['recipe']->name,
-                'yield_quantity' => (float) $row['recipe']->yield_quantity,
-                'selling_price' => $row['selling_price'],
-                'cost_per_unit' => $row['cost_per_unit'],
-                'margin' => $row['margin'],
-                'margin_pct' => $row['margin_pct'],
-                default => $row['recipe']->name,
-            };
-        };
-
-        $sortedRows = $allRows->sort(function (array $a, array $b) use ($sortValue, $dir): int {
-            $aVal = $sortValue($a);
-            $bVal = $sortValue($b);
-
-            if ($aVal === null && $bVal === null) {
-                return 0;
-            }
-            if ($aVal === null) {
-                return 1;
-            }
-            if ($bVal === null) {
-                return -1;
-            }
-
-            $cmp = $aVal <=> $bVal;
-
-            return $dir === 'desc' ? -$cmp : $cmp;
-        });
-
-        $perPage = 20;
-        $page = max(1, (int) request('page', 1));
-        $total = $sortedRows->count();
-        $items = $sortedRows->slice(($page - 1) * $perPage, $perPage)->values();
-
-        $recipeRows = new LengthAwarePaginator(
-            $items,
-            $total,
-            $perPage,
-            $page,
-            ['path' => request()->url(), 'query' => request()->except('page')],
-        );
+                return [
+                    'recipe' => $recipe,
+                    'total_cost' => $totalCost,
+                    'cost_per_unit' => $costPerUnit,
+                    'selling_price' => $sellingPrice,
+                    'margin' => $margin,
+                    'margin_pct' => $marginPct,
+                ];
+            });
 
         $activeRecipeCount = $tenant->recipes()->active()->count();
         $packagingCount = $tenant->packagings()->active()->count();

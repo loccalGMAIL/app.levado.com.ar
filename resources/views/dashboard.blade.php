@@ -77,13 +77,6 @@
             @php
                 $sort = request('sort', 'name');
                 $dir  = request('dir', 'asc');
-                $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
-                    array_merge(request()->except(['sort', 'dir', 'page']), [
-                        'sort' => $col,
-                        'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
-                    ])
-                );
-                $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
             @endphp
 
             @if($recipeRows->total() === 0)
@@ -102,37 +95,13 @@
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
-                                <th class="px-4 py-3 font-medium">
-                                    <a href="{{ $sortUrl('name') }}" class="hover:text-corteza inline-flex items-center gap-1">
-                                        Receta <span class="text-xs">{{ $sortIcon('name') }}</span>
-                                    </a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('yield_quantity') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Rinde <span class="text-xs">{{ $sortIcon('yield_quantity') }}</span>
-                                    </a>
-                                </th>
+                                <x-sortable-th column="name" :sort="$sort" :dir="$dir">Receta</x-sortable-th>
+                                <x-sortable-th column="yield_quantity" :sort="$sort" :dir="$dir" align="right">Rinde</x-sortable-th>
                                 <th class="px-4 py-3 font-medium text-right">Costo total</th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('cost_per_unit') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Costo / u <span class="text-xs">{{ $sortIcon('cost_per_unit') }}</span>
-                                    </a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('selling_price') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Precio ({{ $priceList->name }}) / u <span class="text-xs">{{ $sortIcon('selling_price') }}</span>
-                                    </a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('margin') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Margen <span class="text-xs">{{ $sortIcon('margin') }}</span>
-                                    </a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('margin_pct') }}" class="hover:text-corteza inline-flex items-center justify-end gap-1">
-                                        Margen % <span class="text-xs">{{ $sortIcon('margin_pct') }}</span>
-                                    </a>
-                                </th>
+                                <x-sortable-th column="cost_per_unit" :sort="$sort" :dir="$dir" align="right">Costo / u</x-sortable-th>
+                                <x-sortable-th column="selling_price" :sort="$sort" :dir="$dir" align="right">Precio ({{ $priceList->name }}) / u</x-sortable-th>
+                                <x-sortable-th column="margin" :sort="$sort" :dir="$dir" align="right">Margen</x-sortable-th>
+                                <x-sortable-th column="margin_pct" :sort="$sort" :dir="$dir" align="right">Margen %</x-sortable-th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-miga">

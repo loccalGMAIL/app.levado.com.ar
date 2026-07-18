@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CatalogItemType;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\PackagingFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -58,11 +59,11 @@ class Packaging extends Model
 
     public function stockLevels(): HasMany
     {
-        return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', 'packaging');
+        return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', CatalogItemType::Packaging->value);
     }
 
     public function stockMovements(): HasMany
     {
-        return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', 'packaging');
+        return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', CatalogItemType::Packaging->value);
     }
 }
