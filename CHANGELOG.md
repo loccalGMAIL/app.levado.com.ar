@@ -5,6 +5,29 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.0] — 2026-07-18
+
+### Mediano plazo de la auditoría — 1er lote: rendimiento y dominio
+
+#### Rendimiento
+
+- **El dashboard de rentabilidad dejó de recalcular todas las recetas en cada carga.** Antes cargaba todas las recetas activas con sus líneas, calculaba costos en PHP, ordenaba en memoria y paginaba a mano; ahora lee los caches `unit_cost` y la nueva columna `labor_hours` (mantenida por `RecipeCostPropagator`), y ordena y pagina en SQL — incluidos margen y margen % con los sin-precio al final. Con cientos de recetas el dashboard pasa de O(recetas × líneas) a una única query paginada.
+- La actualización inline de precio y la matriz de listas de precios también leen los caches en vez de recalcular.
+- **Nuevo comando `recipes:refresh-costs`**: rellena/repara los caches de todas las recetas (pasadas sucesivas hasta converger sub-recetas anidadas). **Correrlo una vez tras el deploy.**
+
+#### Dominio y calidad
+
+- **Fix de compras (deuda DD2, regla del proveedor inactivo):** el select de asociación de `purchases/match` ahora lista todos los ingredientes y descartables marcando `(inactivo)` — antes, un renglón asociado a un ítem dado de baja caía en «— sin asociar —» y guardarlo revertía stock y costo en silencio. En recetas la trampa no existe (sus catálogos solo alimentan modales de alta). Se eliminaron además dos queries muertas en `purchases/show`.
+- **Nuevo enum `CatalogItemType`** (hallazgo D2): dueño único de los discriminadores `'ingredient'`/`'packaging'` que viajan en `purchase_lines.purchaseable_type`, `stock_*.stockable_type` y las URLs de `/stock` — estaban repetidos como strings en 10 archivos y un typo creaba filas huérfanas silenciosas. Valores persistidos sin cambios.
+- **Factories faltantes** (hallazgo D3): `Purchase` (proveedor hereda el tenant de la compra), `PurchaseLine` (pendiente por defecto, estados `matchedTo*`), `Invitation` (`expired()`/`accepted()`) y `MailTemplate`. `StockMovement` queda sin factory a propósito: el ledger solo se escribe vía `StockService`.
+- `RecipeCostCalculator` y `UnitConverter` pasan a inyección por constructor (hallazgo A3); eliminado el `Gate::define('super-admin')` sin consumidores.
+- Tests: helper `propagateRecipeCosts()` en Pest para seeds manuales; 8 tests nuevos (cache del dashboard, orden SQL por margen, backfill, match con ítem inactivo, humo de factories). **465 tests, todos verdes.**
+
+#### Al deployar
+
+1. `php artisan migrate` (columna `recipes.labor_hours`)
+2. `php artisan recipes:refresh-costs` (backfill de los caches)
+
 ## [0.11.2] — 2026-07-17
 
 ### Páginas de error con branding

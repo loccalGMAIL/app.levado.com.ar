@@ -23,6 +23,15 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 
 ## Todo lo que está hecho
 
+### v0.12.0 — Mediano plazo de la auditoría, 1er lote (rama `claude/technical-debt-audit-obzekw`, pendiente de merge)
+- **Dashboard sobre caches:** `unit_cost` + nueva columna `recipes.labor_hours` (propagador la mantiene); orden y paginación en SQL con margen/margen % y NULLs al final. Matriz de precios y edición inline de precio también leen el cache. Comando **`recipes:refresh-costs`** para backfill — **correrlo tras el deploy, junto con `migrate`**.
+- **DD2 cerrada:** el select del match de compras lista ítems inactivos marcados `(inactivo)` (antes un renglón con ítem dado de baja caía en «sin asociar» y guardarlo revertía stock). En recetas la trampa no existía (catálogos solo de alta).
+- **Enum `CatalogItemType`** dueño de `'ingredient'`/`'packaging'` (purchase_lines/stock_*/URLs de stock). Valores en BD sin cambios.
+- **Factories nuevas:** Purchase (proveedor hereda tenant), PurchaseLine (+`matchedTo*`), Invitation (+`expired`/`accepted`), MailTemplate. StockMovement sin factory a propósito (ledger = solo StockService).
+- Menores: DI de calculator/converter, gate `super-admin` muerto eliminado.
+- Tests: helper global `propagateRecipeCosts()` para seeds manuales (los caches no se llenan solos al crear líneas con `::create()`). **465 tests, todos verdes.**
+- **Pendiente del mediano plazo (2º lote):** componente `x-data-table` para las ~15 vistas index, y partir `RecipeController` (569 L) + ViewModel de `recipes/show` (902 L).
+
 ### v0.11.2 — Páginas de error con branding (rama `claude/technical-debt-audit-obzekw`, pendiente de merge)
 - Páginas 404/403/419/500/503 propias en castellano (`resources/views/errors/`), sobre un layout `minimal.blade.php` **autónomo** (sin Vite/componentes/fuentes externas: una página de error no puede depender de nada rompible). El 404 explica el caso cross-tenant de v0.11.1; el 403 filtra el default en inglés de Laravel y muestra los mensajes propios de `abort()`. 3 tests nuevos. **457 tests, todos verdes.**
 
