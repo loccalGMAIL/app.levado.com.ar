@@ -23,7 +23,10 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 
 ## Todo lo que está hecho
 
-### v0.11.1 — Aislamiento estructural entre tenants (rama `claude/technical-debt-audit-obzekw`, pendiente de merge)
+### v0.11.2 — Páginas de error con branding (rama `claude/technical-debt-audit-obzekw`, pendiente de merge)
+- Páginas 404/403/419/500/503 propias en castellano (`resources/views/errors/`), sobre un layout `minimal.blade.php` **autónomo** (sin Vite/componentes/fuentes externas: una página de error no puede depender de nada rompible). El 404 explica el caso cross-tenant de v0.11.1; el 403 filtra el default en inglés de Laravel y muestra los mensajes propios de `abort()`. 3 tests nuevos. **457 tests, todos verdes.**
+
+### v0.11.1 — Aislamiento estructural entre tenants (PR #44, mergeada a master)
 - **Trait `BelongsToTenant`** (prioridad #1 del mediano plazo de la auditoría) en los 15 modelos de dominio con `tenant_id`: global scope + auto-fill de `tenant_id` cuando hay tenant resuelto. Sin tenant resuelto (admin, artisan, tests) no aplica — esos contextos scopean explícito. **Excluidos a propósito:** `TenantUser` (se consulta antes de resolver el tenant; `isSuperAdmin()` debe ver Levado HQ al impersonar), `TenantSetting`, `AdminAuditLog`.
 - `SetTenantContext` adelantado en la prioridad de middleware (antes de `SubstituteBindings`, en `bootstrap/app.php`): el scope aplica también al route-model binding → **recurso de otro tenant = 404 directo** (antes 403 vía policy). Policies y reglas `exists` scopeadas quedan como segunda capa; la convención `$tenant->relación()` sigue vigente.
 - **Mitiga S3:** impersonando al tenant A, los recursos del tenant B dan 404 incluso para super admin (`Gate::before` saltea policies pero no el scope). Anclado con test.

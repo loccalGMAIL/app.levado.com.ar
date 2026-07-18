@@ -20,7 +20,9 @@
       "Bash(find app *)",
       "Bash(find app/Livewire -type f)",
       "Bash(timeout 60 bash -c 'while true; do sleep 5; done')",
-      "PowerShell(herd sites 2>&1)"
+      "PowerShell(herd sites 2>&1)",
+      "Bash(sed -i 's|### v0.11.1 — Aislamiento estructural entre tenants \\(rama `claude/technical-debt-audit-obzekw`, pendiente de merge\\)|### v0.11.1 — Aislamiento estructural entre tenants \\(PR #44, mergeada a master\\)|' .claude/memory/project_status.md)",
+      "Bash(git commit -m 'feat\\(ux\\): páginas de error 404/403/419/500/503 con branding \\(v0.11.2\\) *)"
     ]
   },
   "enableAllProjectMcpServers": true,
