@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CatalogItemType;
 use App\Enums\Unit;
 use App\Http\Requests\StoreScannedPurchaseRequest;
 use App\Models\Purchase;
@@ -175,13 +176,13 @@ class PurchaseScanController extends Controller
      */
     private function validSuggestion(array $row, array $ingredientIds, array $packagingIds): array
     {
-        $type = in_array($row['matched_type'] ?? null, ['ingredient', 'packaging'], true) ? $row['matched_type'] : null;
+        $type = CatalogItemType::tryFrom((string) ($row['matched_type'] ?? ''));
         $id = is_numeric($row['matched_id'] ?? null) ? (int) $row['matched_id'] : null;
 
-        $valid = ($type === 'ingredient' && in_array($id, $ingredientIds, true))
-            || ($type === 'packaging' && in_array($id, $packagingIds, true));
+        $valid = ($type === CatalogItemType::Ingredient && in_array($id, $ingredientIds, true))
+            || ($type === CatalogItemType::Packaging && in_array($id, $packagingIds, true));
 
-        return $valid ? [$type, $id] : [null, null];
+        return $valid ? [$type->value, $id] : [null, null];
     }
 
     /**

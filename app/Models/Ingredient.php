@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CatalogItemType;
 use App\Enums\Unit;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\IngredientFactory;
@@ -62,11 +63,11 @@ class Ingredient extends Model
 
     public function stockLevels(): HasMany
     {
-        return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', 'ingredient');
+        return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', CatalogItemType::Ingredient->value);
     }
 
     public function stockMovements(): HasMany
     {
-        return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', 'ingredient');
+        return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', CatalogItemType::Ingredient->value);
     }
 }

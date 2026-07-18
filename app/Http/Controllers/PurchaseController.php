@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CatalogItemType;
 use App\Enums\Unit;
 use App\Http\Requests\StorePurchaseLineRequest;
 use App\Http\Requests\StorePurchaseRequest;
@@ -424,11 +425,13 @@ class PurchaseController extends Controller
             return back()->with('status', 'Renglón marcado como pendiente.');
         }
 
-        [$type, $id] = array_pad(explode(':', $match, 2), 2, null);
-        abort_unless(in_array($type, ['ingredient', 'packaging'], true) && is_numeric($id), 422);
+        [$rawType, $id] = array_pad(explode(':', $match, 2), 2, null);
+        $itemType = CatalogItemType::tryFrom((string) $rawType);
+        abort_unless($itemType !== null && is_numeric($id), 422);
+        $type = $itemType->value;
 
         $tenant = app(Tenant::class);
-        $belongs = $type === 'ingredient'
+        $belongs = $itemType === CatalogItemType::Ingredient
             ? $tenant->ingredients()->whereKey($id)->exists()
             : $tenant->packagings()->whereKey($id)->exists();
         abort_unless($belongs, 422);

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CatalogItemType;
 use App\Enums\StockMovementType;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -85,20 +86,20 @@ class StockMovement extends Model
     public function stockable(): Ingredient|Packaging|null
     {
         return match ($this->stockable_type) {
-            'ingredient' => $this->ingredient,
-            'packaging' => $this->packaging,
+            CatalogItemType::Ingredient->value => $this->ingredient,
+            CatalogItemType::Packaging->value => $this->packaging,
             default => null,
         };
     }
 
     public function isIngredient(): bool
     {
-        return $this->stockable_type === 'ingredient';
+        return $this->stockable_type === CatalogItemType::Ingredient->value;
     }
 
     public function isPackaging(): bool
     {
-        return $this->stockable_type === 'packaging';
+        return $this->stockable_type === CatalogItemType::Packaging->value;
     }
 
     public function isReversal(): bool

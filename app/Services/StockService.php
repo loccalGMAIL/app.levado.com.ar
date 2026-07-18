@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CatalogItemType;
 use App\Enums\StockMovementType;
 use App\Models\Ingredient;
 use App\Models\Location;
@@ -255,6 +256,6 @@ class StockService
 
     private function typeFor(Ingredient|Packaging $item): string
     {
-        return $item instanceof Ingredient ? 'ingredient' : 'packaging';
+        return CatalogItemType::for($item)->value;
     }
 }
