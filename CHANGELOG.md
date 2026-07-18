@@ -5,6 +5,19 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.11.2] — 2026-07-17
+
+### Páginas de error con branding
+
+#### Agregado
+
+- **Páginas de error propias** (404, 403, 419, 500 y 503) con el branding de Levado, en castellano, reemplazando las páginas por defecto de Laravel. El 404 aclara que la página "no existe o el registro no pertenece a tu negocio" (es la respuesta que ahora dan los accesos cross-tenant tras v0.11.1); el 403 muestra el mensaje del `abort()` cuando es propio (ej. "Tenant inactivo.") y un texto genérico sobre roles cuando es el default en inglés de Laravel; el 419 explica que expiró la sesión con botón de reintento; el 500 da el mail de soporte; el 503 avisa mantenimiento.
+
+#### Técnico
+
+- Layout `errors/minimal.blade.php` **autónomo a propósito**: sin `@vite`, sin componentes Blade, sin fuentes externas — si el error es un 500, la página de error no puede depender de nada que pueda estar roto. Paleta y tipografías inline.
+- 3 tests nuevos (`ErrorPagesTest`): 404 amigable, mismo 404 para recursos de otro tenant, 403 en español sin filtrar el default en inglés. **457 tests, todos verdes.**
+
 ## [0.11.1] — 2026-07-17
 
 ### Aislamiento estructural entre tenants (mediano plazo de la auditoría, prioridad #1)
