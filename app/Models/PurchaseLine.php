@@ -4,11 +4,16 @@ namespace App\Models;
 
 use App\Enums\CatalogItemType;
 use App\Enums\Unit;
+use Database\Factories\PurchaseLineFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PurchaseLine extends Model
 {
+    /** @use HasFactory<PurchaseLineFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'purchase_id',
         'raw_name',
