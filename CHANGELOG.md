@@ -23,6 +23,12 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 - `RecipeCostCalculator` y `UnitConverter` pasan a inyección por constructor (hallazgo A3); eliminado el `Gate::define('super-admin')` sin consumidores.
 - Tests: helper `propagateRecipeCosts()` en Pest para seeds manuales; 8 tests nuevos (cache del dashboard, orden SQL por margen, backfill, match con ítem inactivo, humo de factories). **465 tests, todos verdes.**
 
+#### Mantenibilidad (2º lote)
+
+- **`RecipeController` partido** (hallazgo A2): pasa de 565 a 236 líneas. El CRUD de los 4 tipos de líneas (12 acciones) se mudó a `RecipeLineController` y el armado de los datos de `/recipes/{id}` (~120 líneas de transformación para Alpine) a `RecipeShowViewModel`. Mismas rutas, nombres y contratos — la suite pasó sin tocar un test.
+- **Nuevos componentes de tablas** (hallazgo F2): `x-sortable-th` (encabezado ordenable: arma la URL preservando filtros, alterna asc/desc, muestra la flecha) y `x-responsive-table` (el patrón cards-mobile/tabla-desktop con el toggle «Ver tabla completa ↓ / ← Volver a cards» y slot de paginación). **Migradas las 9 vistas de índice cuyo markup coincidía exactamente** (dashboard, recetas, ingredientes, descartables, gastos fijos, gastos variables, mano de obra, listas de precios y stock): se eliminaron 9 copias del bloque `$sortUrl`/`$sortIcon` (25 encabezados) y 9 copias del wrapper cards/tabla. `purchases/index` y `price-lists/matrix` tienen variantes propias y quedan para una migración manual posterior.
+- 2 tests ancla de los componentes (dirección alternada preservando filtros; cards + tabla + toggle presentes). **467 tests, todos verdes.**
+
 #### Al deployar
 
 1. `php artisan migrate` (columna `recipes.labor_hours`)

@@ -30,7 +30,7 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - **Factories nuevas:** Purchase (proveedor hereda tenant), PurchaseLine (+`matchedTo*`), Invitation (+`expired`/`accepted`), MailTemplate. StockMovement sin factory a propósito (ledger = solo StockService).
 - Menores: DI de calculator/converter, gate `super-admin` muerto eliminado.
 - Tests: helper global `propagateRecipeCosts()` para seeds manuales (los caches no se llenan solos al crear líneas con `::create()`). **465 tests, todos verdes.**
-- **Pendiente del mediano plazo (2º lote):** componente `x-data-table` para las ~15 vistas index, y partir `RecipeController` (569 L) + ViewModel de `recipes/show` (902 L).
+- **2º lote (misma versión):** `RecipeController` 565→236 L (`RecipeLineController` + `RecipeShowViewModel`, sin cambio de contrato); componentes `x-sortable-th` y `x-responsive-table` adoptados en las 9 vistas de índice con markup uniforme. **Pendiente:** `purchases/index` y `price-lists/matrix` (variantes propias, migrarlas a mano), y `recipes/show` (902 L) sigue siendo la vista más grande — partirla en parciales cuando se la vuelva a tocar. **467 tests, todos verdes.**
 
 ### v0.11.2 — Páginas de error con branding (rama `claude/technical-debt-audit-obzekw`, pendiente de merge)
 - Páginas 404/403/419/500/503 propias en castellano (`resources/views/errors/`), sobre un layout `minimal.blade.php` **autónomo** (sin Vite/componentes/fuentes externas: una página de error no puede depender de nada rompible). El 404 explica el caso cross-tenant de v0.11.1; el 403 filtra el default en inglés de Laravel y muestra los mensajes propios de `abort()`. 3 tests nuevos. **457 tests, todos verdes.**
