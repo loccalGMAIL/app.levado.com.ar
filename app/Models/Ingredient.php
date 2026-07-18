@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Unit;
+use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\IngredientFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Ingredient extends Model
 {
     /** @use HasFactory<IngredientFactory> */
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     protected $fillable = [
         'tenant_id',

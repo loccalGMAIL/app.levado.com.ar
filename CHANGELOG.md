@@ -5,6 +5,25 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.11.1] — 2026-07-17
+
+### Aislamiento estructural entre tenants (mediano plazo de la auditoría, prioridad #1)
+
+Hasta ahora el aislamiento entre negocios dependía de que cada controller se acordara de scopear (`$tenant->relación()`, policies, reglas `exists` por tenant) — y ya había fallado una vez (el `supplier_id` corregido en v0.10.0). Esta versión lo vuelve **estructural**: aunque un controller futuro se olvide de scopear, los datos de otro tenant son invisibles.
+
+#### Técnico
+
+- **Nuevo trait `App\Models\Concerns\BelongsToTenant`**, aplicado a los 15 modelos de dominio con `tenant_id` (Ingredient, Supplier, Packaging, FixedCost, FixedCostCategory, VariableExpense, VariableExpenseCategory, LaborType, Recipe, PriceList, Purchase, Location, StockMovement, StockLevel, Invitation). Cuando hay un tenant resuelto en el container: **global scope** que acota toda query Eloquent al tenant, y **auto-fill de `tenant_id`** en los creates que no lo traen. Sin tenant resuelto (backoffice `/admin`, artisan, tests sin request) el scope no aplica: esos contextos son cross-tenant por diseño.
+- **Quedan fuera a propósito** (documentado en el trait): `TenantUser` (el middleware lo consulta *antes* de resolver el tenant, y `isSuperAdmin()` debe ver la membresía en Levado HQ durante la impersonación), `TenantSetting` (siempre accedido vía la relación del tenant) y `AdminAuditLog` (registro del backoffice, cross-tenant).
+- **`SetTenantContext` se adelantó en la prioridad de middleware** (antes de `SubstituteBindings`, en `bootstrap/app.php`): el tenant queda resuelto antes del route-model binding, así el scope aplica también al binding y **un recurso de otro tenant responde 404 directo** — ya no revela ni su existencia. Antes respondía 403 vía policy.
+- Las policies y las reglas `exists` scopeadas se mantienen como segunda capa. La convención de escribir queries con `$tenant->relación()` sigue vigente: el trait es la red, no el reemplazo.
+- **Efecto lateral que mitiga el hallazgo S3 de la auditoría:** `Gate::before` saltea las policies para super admins, pero el scope estructural aplica igual — impersonando al tenant A, los recursos del tenant B dan 404 también para el super admin. Anclado con test.
+- **Cambio de contrato:** los accesos cross-tenant pasan de 403 a **404** en todos los recursos con binding. Los 16 tests de aislamiento existentes se actualizaron; el test "viewer no puede eliminar gastos variables" ahora crea el gasto en el tenant del viewer (probaba rol y aislamiento a la vez; el 404 del binding enmascaraba el 403 del rol).
+- 6 tests ancla nuevos (`BelongsToTenantTest`): scope activo con tenant resuelto, sin scope en contexto admin/consola, auto-fill en create, el auto-fill no pisa un `tenant_id` explícito, binding acotado sin scopear a mano, e impersonación sin acceso cruzado.
+- **454 tests, todos verdes.**
+
+---
+
 ## [0.11.0] — 2026-07-17
 
 > **Al deployar:** `php artisan migrate`. Los comprobantes de gastos nacen en el disco privado, así que `invoices:relocate` no los necesita (es sólo para las facturas de compras anteriores a 0.10.1).

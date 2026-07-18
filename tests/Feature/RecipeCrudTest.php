@@ -152,7 +152,7 @@ test('aislamiento: no se puede editar receta de otro tenant', function () {
             'yield_quantity' => '1',
             'yield_unit' => 'u',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('aislamiento: no se puede ver receta de otro tenant', function () {
@@ -163,7 +163,7 @@ test('aislamiento: no se puede ver receta de otro tenant', function () {
 
     $this->actingAs($user)
         ->get(route('recipes.show', $other))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('aislamiento: una línea de otra receta no es alcanzable (scoped binding)', function () {

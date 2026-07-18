@@ -141,10 +141,10 @@ test('owner puede eliminar un gasto variable', function () {
 });
 
 test('viewer no puede eliminar gastos variables', function () {
-    [$user] = userForVariableExpense(TenantUserRole::Viewer);
+    // El gasto es del PROPIO tenant del viewer: lo que se prueba acá es el rol
+    // (403), no el aislamiento entre tenants (que ahora responde 404).
+    [$user, $tenant, $category] = userForVariableExpense(TenantUserRole::Viewer);
 
-    $tenant = Tenant::factory()->create();
-    $category = $tenant->variableExpenseCategories()->create(['name' => 'X']);
     $expense = VariableExpense::factory()->for($tenant)->create([
         'variable_expense_category_id' => $category->id,
     ]);
@@ -513,7 +513,7 @@ test('aislamiento: no se puede editar gasto variable de otro tenant', function (
             'amount' => '1',
             'expense_date' => date('Y-m-d'),
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('aislamiento: no se puede eliminar gasto variable de otro tenant', function () {
@@ -527,9 +527,11 @@ test('aislamiento: no se puede eliminar gasto variable de otro tenant', function
 
     $this->actingAs($user)
         ->delete(route('variable-expenses.destroy', $other))
-        ->assertForbidden();
+        ->assertNotFound();
 
-    expect(VariableExpense::find($other->id))->not->toBeNull();
+    // Sin el scope: el request dejó bound el tenant del atacante y el gasto
+    // ajeno es invisible para find(); acá queremos verificar que sigue en BD.
+    expect(VariableExpense::withoutGlobalScope('tenant')->find($other->id))->not->toBeNull();
 });
 
 test('aislamiento: no se puede asignar una categoría de otro tenant', function () {
@@ -556,5 +558,5 @@ test('aislamiento: no se puede eliminar categoría de gasto variable de otro ten
 
     $this->actingAs($user)
         ->delete(route('variable-expense-categories.destroy', $otherCategory))
-        ->assertForbidden();
+        ->assertNotFound();
 });

@@ -23,6 +23,13 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 
 ## Todo lo que está hecho
 
+### v0.11.1 — Aislamiento estructural entre tenants (rama `claude/technical-debt-audit-obzekw`, pendiente de merge)
+- **Trait `BelongsToTenant`** (prioridad #1 del mediano plazo de la auditoría) en los 15 modelos de dominio con `tenant_id`: global scope + auto-fill de `tenant_id` cuando hay tenant resuelto. Sin tenant resuelto (admin, artisan, tests) no aplica — esos contextos scopean explícito. **Excluidos a propósito:** `TenantUser` (se consulta antes de resolver el tenant; `isSuperAdmin()` debe ver Levado HQ al impersonar), `TenantSetting`, `AdminAuditLog`.
+- `SetTenantContext` adelantado en la prioridad de middleware (antes de `SubstituteBindings`, en `bootstrap/app.php`): el scope aplica también al route-model binding → **recurso de otro tenant = 404 directo** (antes 403 vía policy). Policies y reglas `exists` scopeadas quedan como segunda capa; la convención `$tenant->relación()` sigue vigente.
+- **Mitiga S3:** impersonando al tenant A, los recursos del tenant B dan 404 incluso para super admin (`Gate::before` saltea policies pero no el scope). Anclado con test.
+- 16 tests de aislamiento actualizados (403→404), 6 anclas nuevas en `BelongsToTenantTest`. **454 tests, todos verdes.**
+- Al escribir tests: tras un request, el tenant queda bound y `Model::find()` sobre datos de otro tenant devuelve null — usar `withoutGlobalScope('tenant')` para asertar sobre registros ajenos.
+
 ### v0.10.1 — Auditoría técnica + quick wins de seguridad
 - **`AUDITORIA_DEUDA_TECNICA.md`** en la raíz del repo: auditoría externa completa (seguridad, arquitectura, BD, rendimiento, frontend, SaaS) con plan priorizado en 3 etapas. La etapa de **corto plazo** se implementó completa en esta versión.
 - Implementado (quick wins): comprobantes de compras al **disco privado** (+ comando `invoices:relocate` y fallback legacy al público), `throttle:10,1` en el escaneo IA, resolución de tenant determinista (`orderBy('tenant_id')`), **unique** `(tenant_id, supplier_id, invoice_number)` en purchases + validación con mensaje amable en los 3 requests, `Tenant::totalFixedCosts()`/`overheadPerHour()` como único dueño de la fórmula (cierra la deuda DD3 en los 4 controllers), **scoped bindings** en rutas anidadas de líneas (404 en vez de 403 para línea ajena; params renombrados `{line}` → `{ingredientLine}`/`{packagingLine}`/`{laborLine}`/`{subrecipeLine}`, URLs sin cambios), `getSetting()` memoizado por instancia, transacción en `RecipeController::copy()`, checklist de producción en `.env.example`, sin logs de debug en invitaciones.

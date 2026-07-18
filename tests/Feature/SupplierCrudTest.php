@@ -135,5 +135,5 @@ test('aislamiento: no se puede editar proveedor de otro tenant', function () {
 
     $this->actingAs($user)
         ->put(route('suppliers.update', $other), ['name' => 'Hack'])
-        ->assertForbidden();
+        ->assertNotFound();
 });

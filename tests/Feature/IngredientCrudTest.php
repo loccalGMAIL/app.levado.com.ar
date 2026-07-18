@@ -267,7 +267,7 @@ test('aislamiento: no se puede editar ingrediente de otro tenant', function () {
             'unit' => Unit::Gramo->value,
             'cost_per_unit' => '1',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 // --- Subdivisiones ---

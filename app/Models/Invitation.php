@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use App\Enums\TenantUserRole;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Invitation extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
         'tenant_id',
         'email',
