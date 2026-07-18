@@ -3,15 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tenant;
+use App\Services\RecipeCostCalculator;
+use App\Services\UnitConverter;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     /**
-     * El dashboard trabaja EXCLUSIVAMENTE sobre los caches unit_cost y
+     * La tabla paginada trabaja EXCLUSIVAMENTE sobre los caches unit_cost y
      * labor_hours que mantiene RecipeCostPropagator: no carga líneas ni
      * recalcula recetas en PHP, y ordena y pagina en SQL. Costo final por
      * unidad = unit_cost + labor_hours × overhead ÷ rendimiento.
+     *
+     * Los gráficos (gauge, barras, dona) necesitan el desglose por componente,
+     * que el cache no guarda, así que se calculan aparte con RecipeCostCalculator
+     * sobre las recetas activas.
      */
     public function index(): View
     {
@@ -62,6 +68,8 @@ class DashboardController extends Controller
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
         [$sortExpr, $sortBindings] = $sortExpressions[$sort];
 
+        $marginFilter = request('margin_filter');
+
         $recipeRows = $tenant->recipes()
             ->active()
             ->when(request('search'), function ($q, $search) {
@@ -69,6 +77,8 @@ class DashboardController extends Controller
 
                 return $q->where('recipes.name', 'like', "%{$escaped}%");
             })
+            ->when($marginFilter === 'high', fn ($q) => $q->whereRaw("({$marginPctSql}) >= 60", $marginPctBindings))
+            ->when($marginFilter === 'low', fn ($q) => $q->whereRaw("({$marginPctSql}) < 20", $marginPctBindings))
             ->select('recipes.*')
             ->selectRaw("{$priceSql} as dashboard_selling_price", $priceBindings)
             ->orderByRaw("({$sortExpr}) is null", $sortBindings)
@@ -108,6 +118,79 @@ class DashboardController extends Controller
         $activeRecipeCount = $tenant->recipes()->active()->count();
         $packagingCount = $tenant->packagings()->active()->count();
 
+        // ── Estadísticas y datos para los gráficos ──────────────────────────
+        // Se recorren las recetas activas una vez con sus líneas para obtener el
+        // desglose por componente (ingredientes / mano de obra / descartables)
+        // que la dona necesita y que el cache no almacena.
+        $calculator = new RecipeCostCalculator(new UnitConverter);
+        $prices = $tenant->recipes()
+            ->join('recipe_prices', 'recipe_prices.recipe_id', '=', 'recipes.id')
+            ->where('recipe_prices.price_list_id', $priceList->id)
+            ->pluck('recipe_prices.price', 'recipes.id');
+
+        $statRows = $tenant->recipes()
+            ->active()
+            ->with([
+                'ingredientLines.ingredient',
+                'packagingLines.packaging',
+                'laborLines.laborType',
+                'subrecipeLines.childRecipe',
+            ])
+            ->get()
+            ->map(function ($recipe) use ($calculator, $prices, $overheadPerHour) {
+                $costs = $calculator->calculate($recipe);
+                $fixedCost = $overheadPerHour !== null ? $costs['total_labor_hours'] * $overheadPerHour : 0.0;
+                $totalCost = $costs['total_cost'] + $fixedCost;
+                $yieldQty = (float) $recipe->yield_quantity;
+                $costPerUnit = $yieldQty > 0 ? $totalCost / $yieldQty : null;
+                $sellingPrice = isset($prices[$recipe->id]) ? (float) $prices[$recipe->id] : null;
+
+                $marginPct = null;
+                if ($sellingPrice !== null && $costPerUnit !== null && $sellingPrice > 0) {
+                    $marginPct = ($sellingPrice - $costPerUnit) / $sellingPrice * 100;
+                }
+
+                return [
+                    'recipe' => $recipe,
+                    'ingredient_cost' => $costs['ingredient_cost'],
+                    'packaging_cost' => $costs['packaging_cost'],
+                    'labor_cost' => $costs['labor_cost'],
+                    'fixed_cost' => $fixedCost,
+                    'total_cost' => $totalCost,
+                    'margin_pct' => $marginPct,
+                ];
+            });
+
+        $rowsWithMargin = $statRows->filter(fn ($r) => $r['margin_pct'] !== null);
+        $avgMarginPct = $rowsWithMargin->count() > 0 ? $rowsWithMargin->avg('margin_pct') : null;
+        $bestRecipeRow = $rowsWithMargin->sortByDesc('margin_pct')->first();
+        $lowMarginCount = $rowsWithMargin->filter(fn ($r) => $r['margin_pct'] < 20)->count();
+
+        // Distribución de costos para la dona: [ingredientes, mano de obra,
+        // gastos fijos, descartables]. Los descartables absorben el resto para
+        // que la suma cierre en 100%.
+        $grandTotalCost = $statRows->sum('total_cost');
+        if ($grandTotalCost > 0) {
+            $ingredientPct = (int) round($statRows->sum('ingredient_cost') / $grandTotalCost * 100);
+            $laborPct = (int) round($statRows->sum('labor_cost') / $grandTotalCost * 100);
+            $fixedAllocPct = (int) round($statRows->sum('fixed_cost') / $grandTotalCost * 100);
+            $packagingPct = max(0, 100 - $ingredientPct - $laborPct - $fixedAllocPct);
+        } else {
+            $ingredientPct = $laborPct = $fixedAllocPct = $packagingPct = 0;
+        }
+        $costDistributionForChart = [$ingredientPct, $laborPct, $fixedAllocPct, $packagingPct];
+
+        // Top 8 recetas por margen para el bar chart.
+        $topRecipesForChart = $rowsWithMargin
+            ->sortByDesc('margin_pct')
+            ->take(8)
+            ->values()
+            ->map(fn ($r) => [
+                'name' => mb_strimwidth($r['recipe']->name, 0, 24, '…'),
+                'margin_pct' => (float) number_format((float) $r['margin_pct'], 1, '.', ''),
+            ])
+            ->toArray();
+
         return view('dashboard', compact(
             'recipeRows',
             'priceList',
@@ -117,6 +200,11 @@ class DashboardController extends Controller
             'overheadPerHour',
             'activeRecipeCount',
             'packagingCount',
+            'avgMarginPct',
+            'bestRecipeRow',
+            'lowMarginCount',
+            'costDistributionForChart',
+            'topRecipesForChart',
         ));
     }
 }
