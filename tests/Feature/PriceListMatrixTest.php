@@ -43,6 +43,7 @@ test('la matriz muestra una columna por lista activa y el costo por unidad', fun
         'quantity' => 10,
         'unit' => Unit::Unidad->value,
     ]);
+    propagateRecipeCosts($recipe);
 
     PriceList::factory()->for($tenant)->create(['name' => 'Mayorista']);
     PriceList::factory()->for($tenant)->create(['name' => 'ListaInactiva', 'active' => false]);

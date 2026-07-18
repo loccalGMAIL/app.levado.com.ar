@@ -33,6 +33,8 @@ class RecipeController extends Controller
         private readonly AdminActivityRecorder $recorder,
         private readonly RecipeCostPropagator $propagator,
         private readonly RecipePriceWriter $priceWriter,
+        private readonly RecipeCostCalculator $calculator,
+        private readonly UnitConverter $converter,
     ) {}
 
     public function index(): View
@@ -176,7 +178,7 @@ class RecipeController extends Controller
             'subrecipeLines.childRecipe',
         ]);
 
-        $costs = (new RecipeCostCalculator(new UnitConverter))->calculate($recipe);
+        $costs = $this->calculator->calculate($recipe);
 
         $tenant = app(Tenant::class);
         $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
@@ -185,7 +187,7 @@ class RecipeController extends Controller
 
         $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
 
-        $converter = new UnitConverter;
+        $converter = $this->converter;
 
         $ingredientLinesData = $recipe->ingredientLines->map(function ($line) use ($converter) {
             $ingredient = $line->ingredient;
@@ -362,7 +364,7 @@ class RecipeController extends Controller
         ]);
 
         $ingredient = Ingredient::find($data['ingredient_id']);
-        $converter = new UnitConverter;
+        $converter = $this->converter;
 
         if (! $converter->compatible(Unit::from($data['unit']), $ingredient->unit)) {
             throw ValidationException::withMessages([
@@ -448,7 +450,7 @@ class RecipeController extends Controller
             'unit' => ['required', Rule::enum(Unit::class)],
         ]);
 
-        $converter = new UnitConverter;
+        $converter = $this->converter;
         $ingredient = $ingredientLine->ingredient;
 
         if (! $converter->compatible(Unit::from($data['unit']), $ingredient->unit)) {
@@ -509,7 +511,7 @@ class RecipeController extends Controller
         ]);
 
         $child = Recipe::find($data['child_recipe_id']);
-        $converter = new UnitConverter;
+        $converter = $this->converter;
 
         if (! $converter->compatible(Unit::from($data['unit']), $child->yield_unit)) {
             throw ValidationException::withMessages([

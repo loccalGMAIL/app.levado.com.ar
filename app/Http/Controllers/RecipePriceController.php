@@ -6,9 +6,7 @@ use App\Models\PriceList;
 use App\Models\Recipe;
 use App\Models\RecipePrice;
 use App\Models\Tenant;
-use App\Services\RecipeCostCalculator;
 use App\Services\RecipePriceWriter;
-use App\Services\UnitConverter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -32,19 +30,15 @@ class RecipePriceController extends Controller
         $price = $validated['price'] !== null ? (float) $validated['price'] : null;
         $this->writer->set($recipe, $priceList, $price);
 
-        $recipe->load([
-            'ingredientLines.ingredient',
-            'packagingLines.packaging',
-            'laborLines.laborType',
-            'subrecipeLines.childRecipe',
-        ]);
-        $costs = (new RecipeCostCalculator(new UnitConverter))->calculate($recipe);
-
+        // Cambiar el precio no altera el costo: alcanza con los caches
+        // unit_cost/labor_hours que mantiene RecipeCostPropagator.
         $overheadPerHour = $tenant->overheadPerHour();
-        $fixedCost = $overheadPerHour !== null ? $costs['total_labor_hours'] * $overheadPerHour : 0.0;
-        $totalCost = $costs['total_cost'] + $fixedCost;
         $yieldQty = (float) $recipe->yield_quantity;
-        $costPerUnit = $yieldQty > 0 ? $totalCost / $yieldQty : null;
+        $laborHours = (float) ($recipe->labor_hours ?? 0);
+        $fixedCost = $overheadPerHour !== null ? $laborHours * $overheadPerHour : 0.0;
+        $costPerUnit = ($recipe->unit_cost !== null && $yieldQty > 0)
+            ? (float) $recipe->unit_cost + $fixedCost / $yieldQty
+            : null;
 
         $sellingPrice = RecipePrice::where('price_list_id', $priceList->id)
             ->where('recipe_id', $recipe->id)

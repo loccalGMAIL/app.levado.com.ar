@@ -40,7 +40,10 @@ class RecipeCostPropagator
             }
 
             $costs = $this->calculator->calculate($node);
-            $node->update(['unit_cost' => $costs['cost_per_unit']]);
+            $node->update([
+                'unit_cost' => $costs['cost_per_unit'],
+                'labor_hours' => $costs['total_labor_hours'],
+            ]);
 
             $parentIds = $node->parentSubrecipeLines()->pluck('recipe_id')->toArray();
 
