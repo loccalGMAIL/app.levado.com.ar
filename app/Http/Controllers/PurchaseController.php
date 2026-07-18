@@ -171,15 +171,13 @@ class PurchaseController extends Controller
 
         $purchase->load(['supplier', 'lines']);
 
-        $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
-        $packagings = $tenant->packagings()->active()->orderBy('name')->get();
         // Todos, no sólo los activos: el select de edición es `required`, así que si el
         // proveedor de la compra fue dado de baja su opción no existiría, el select caería
         // en la opción vacía y el navegador bloquearía el guardado de cualquier otro campo.
         $suppliers = $tenant->suppliers()->orderBy('name')->get();
         $units = Unit::cases();
 
-        return view('purchases.show', compact('purchase', 'ingredients', 'packagings', 'suppliers', 'units'));
+        return view('purchases.show', compact('purchase', 'suppliers', 'units'));
     }
 
     public function destroy(Purchase $purchase): RedirectResponse
@@ -375,8 +373,12 @@ class PurchaseController extends Controller
 
         $purchase->load(['supplier', 'lines']);
 
-        $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
-        $packagings = $tenant->packagings()->active()->orderBy('name')->get();
+        // Todos, no sólo los activos (regla del proveedor inactivo, v0.10.0): un
+        // renglón ya asociado a un ítem dado de baja debe seguir mostrando su
+        // opción — si el select solo listara activos, caería en "— sin asociar —"
+        // y guardar ese renglón revertiría stock y costo en silencio.
+        $ingredients = $tenant->ingredients()->orderBy('name')->get();
+        $packagings = $tenant->packagings()->orderBy('name')->get();
 
         // Catalog keyed by id for fast Alpine.js lookup.
         $ingredientCatalog = $ingredients->keyBy('id')->map(fn ($i) => [

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\TenantUserRole;
+use App\Models\Ingredient;
 use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Models\TenantUser;
@@ -228,4 +229,36 @@ test('editar una compra sin cambiar el número de factura no dispara el error de
         ])
         ->assertRedirect()
         ->assertSessionHasNoErrors();
+});
+
+test('el match de una compra con ítem dado de baja ofrece su opción marcada', function () {
+    // Si el select de asociación listara sólo activos, el renglón asociado a un
+    // ingrediente dado de baja caería en "— sin asociar —" y guardarlo
+    // revertiría stock y costo en silencio (regla del proveedor inactivo, v0.10.0).
+    [$user, $tenant] = ownerForPurchaseCrud();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $ingredient = Ingredient::factory()->for($tenant)->create([
+        'name' => 'Harina Baja',
+        'unit' => 'kg',
+        'active' => false,
+    ]);
+    $purchase = $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-07-13',
+    ]);
+    $purchase->lines()->create([
+        'raw_name' => 'HARINA X 25KG',
+        'purchaseable_type' => 'ingredient',
+        'purchaseable_id' => $ingredient->id,
+        'quantity_purchased' => 1,
+        'purchase_unit' => 'kg',
+        'unit_price' => 100,
+        'subtotal' => 100,
+    ]);
+
+    $html = $this->actingAs($user)->get(route('purchases.match', $purchase))->assertOk()->getContent();
+
+    expect($html)->toContain('Harina Baja')
+        ->and($html)->toContain('(inactivo)')
+        ->and($html)->toContain('value="ingredient:'.$ingredient->id.'"');
 });
