@@ -25,6 +25,7 @@ class PurchaseLineRecorder
         private readonly RecipeCostPropagator $propagator,
         private readonly UnitConverter $converter,
         private readonly StockService $stock,
+        private readonly NotificationService $notifications,
     ) {}
 
     /**
@@ -103,7 +104,7 @@ class PurchaseLineRecorder
                 $item->cost_per_package = null;
             }
 
-            $this->applyIngredientCost($item, $costPerUnit);
+            $this->applyIngredientCost($item, $costPerUnit, $line);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
@@ -120,7 +121,7 @@ class PurchaseLineRecorder
                 $stockQuantity = (float) $line->quantity_purchased;
             }
 
-            $this->applyPackagingCost($item, $costPerUnit);
+            $this->applyPackagingCost($item, $costPerUnit, $line);
         }
 
         if ($stockQuantity !== null && $stockQuantity > 0) {
@@ -172,11 +173,11 @@ class PurchaseLineRecorder
         if ($line->isIngredient()) {
             $item = Ingredient::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Ingrediente no válido.');
-            $this->applyIngredientCost($item, $unitCost);
+            $this->applyIngredientCost($item, $unitCost, $line);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
-            $this->applyPackagingCost($item, $unitCost);
+            $this->applyPackagingCost($item, $unitCost, $line);
         }
 
         $this->syncStockFromExplicitCost($line, $item, $unitCost);
@@ -207,18 +208,22 @@ class PurchaseLineRecorder
         $this->stock->syncPurchaseLineEntry($line, $item, $stockQuantity, $unitCost, auth()->user());
     }
 
-    private function applyIngredientCost(Ingredient $item, float $costPerUnit): void
+    private function applyIngredientCost(Ingredient $item, float $costPerUnit, PurchaseLine $line): void
     {
+        $oldCost = (float) $item->cost_per_unit;
         $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
         $item->update(['cost_per_unit' => $costPerUnit, 'cost_per_package' => $item->cost_per_package]);
         $this->propagator->propagateFromIngredient($item->id);
+        $this->notifications->raiseCostSpike($line, $item, $oldCost, $costPerUnit);
     }
 
-    private function applyPackagingCost(Packaging $item, float $costPerUnit): void
+    private function applyPackagingCost(Packaging $item, float $costPerUnit, PurchaseLine $line): void
     {
+        $oldCost = (float) $item->cost_per_unit;
         $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
         $item->update(['cost_per_unit' => $costPerUnit, 'cost_per_package' => $item->cost_per_package]);
         $this->propagator->propagateFromPackaging($item->id);
+        $this->notifications->raiseCostSpike($line, $item, $oldCost, $costPerUnit);
     }
 
     /**

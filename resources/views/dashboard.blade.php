@@ -12,7 +12,7 @@
                 'sort' => $col,
                 'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
             ])
-        );
+        ) . '#tabla-recetas';
         $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
 
         $donutHasData = array_sum($costDistributionForChart) > 0;
@@ -49,70 +49,37 @@
                     </svg>
                     Compra
                 </a>
-                <a href="{{ route('ingredients.index') }}"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-corteza rounded-lg hover:bg-horno transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Ingrediente
-                </a>
-                <a href="{{ route('price-lists.index') }}"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                    </svg>
-                    Lista de precios
-                </a>
             </div>
         </div>
 
         {{-- ═══════════════════════════════════════════════
-             ALERT STRIP (inteligente)
+             ALERTAS (feed persistido — NotificationService)
         ════════════════════════════════════════════════ --}}
+        @if($alerts->isNotEmpty())
         @php
-            $alertItems = [];
-            if ($lowMarginCount > 0) {
-                $alertItems[] = ['type' => 'red', 'text' => "⚠ {$lowMarginCount} " . ($lowMarginCount === 1 ? 'receta tiene' : 'recetas tienen') . " margen menor al 20%"];
-            }
-            if ($productiveHours === 0) {
-                $alertItems[] = ['type' => 'yellow', 'text' => '⚙ Sin horas productivas configuradas'];
-            }
-            if ($packagingCount === 0 && $activeRecipeCount > 0) {
-                $alertItems[] = ['type' => 'blue', 'text' => '📦 Sin descartables cargados'];
-            }
-            if ($avgMarginPct !== null && $avgMarginPct < 38) {
-                $alertItems[] = ['type' => 'orange', 'text' => '📉 Utilidad promedio por debajo del objetivo (38%)'];
-            }
-            if ($bestRecipeRow) {
-                $bestPct = number_format((float) $bestRecipeRow['margin_pct'], 0, ',', '.');
-                $alertItems[] = ['type' => 'green', 'text' => "🥇 Más rentable: {$bestRecipeRow['recipe']->name} ({$bestPct}%)"];
-            }
-            if ($avgMarginPct !== null && $avgMarginPct >= 38) {
-                $avgFmt = number_format((float) $avgMarginPct, 1, ',', '.');
-                $alertItems[] = ['type' => 'green', 'text' => "💰 Utilidad promedio {$avgFmt}% — sobre el objetivo"];
-            }
+            $alertPill = fn (string $s) => match ($s) {
+                'red'   => 'bg-red-50 text-red-700 border-red-200',
+                'amber' => 'bg-amber-50 text-amber-700 border-amber-200',
+                'blue'  => 'bg-blue-50 text-blue-700 border-blue-200',
+                default => 'bg-miga text-masa-madre border-miga',
+            };
         @endphp
-
-        @if(count($alertItems) > 0)
         <div class="bg-white border border-miga rounded-xl p-4 shadow-[0_1px_4px_rgba(61,43,31,.06)]">
-            <div class="text-[9.5px] font-semibold uppercase tracking-widest text-masa-madre/60 mb-2.5">
-                Resumen operativo
+            <div class="flex items-center justify-between mb-2.5">
+                <div class="text-[9.5px] font-semibold uppercase tracking-widest text-masa-madre/60">
+                    Alertas
+                </div>
+                <a href="{{ route('notifications.index') }}" class="text-[11.5px] text-brown-500 hover:text-corteza transition-colors">
+                    Ver todas{{ $alertCount > $alerts->count() ? " ({$alertCount})" : '' }} →
+                </a>
             </div>
             <div class="flex flex-wrap gap-2">
-                @foreach($alertItems as $alert)
-                    @php
-                        $pillClass = match($alert['type']) {
-                            'red'    => 'bg-red-50 text-red-700 border-red-200',
-                            'yellow' => 'bg-amber-50 text-amber-700 border-amber-200',
-                            'orange' => 'bg-orange-50 text-orange-700 border-orange-200',
-                            'green'  => 'bg-green-50 text-green-700 border-green-200',
-                            'blue'   => 'bg-blue-50 text-blue-700 border-blue-200',
-                            default  => 'bg-miga text-masa-madre border-miga',
-                        };
-                    @endphp
-                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-[12.5px] font-medium border {{ $pillClass }}">
-                        {{ $alert['text'] }}
-                    </span>
+                @foreach($alerts as $alert)
+                    <a href="{{ $alert->action_url ?? route('notifications.index') }}"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-medium border transition-colors hover:opacity-80 {{ $alertPill($alert->severity) }}">
+                        <span>{{ $alert->type->icon() }}</span>
+                        <span>{{ $alert->title }}</span>
+                    </a>
                 @endforeach
             </div>
         </div>
@@ -131,7 +98,7 @@
                         ↑ activas
                     </span>
                 </div>
-                <div class="text-3xl font-bold text-corteza leading-none mb-1.5">
+                <div class="text-2xl font-bold text-corteza leading-none mb-1.5 font-mono">
                     {{ $activeRecipeCount }}
                 </div>
                 <div class="text-sm text-masa-madre">Recetas activas</div>
@@ -161,11 +128,11 @@
                     </span>
                 </div>
                 @if($overheadPerHour !== null)
-                    <div class="text-3xl font-bold text-corteza leading-none mb-1.5 font-mono">
+                    <div class="text-2xl font-bold text-corteza leading-none mb-1.5 font-mono">
                         $&nbsp;{{ number_format($overheadPerHour, 2, ',', '.') }}
                     </div>
                 @else
-                    <div class="text-xl font-bold text-masa-madre/50 leading-none mb-1.5">—</div>
+                    <div class="text-2xl font-bold text-masa-madre/50 leading-none mb-1.5">—</div>
                 @endif
                 <div class="text-sm text-masa-madre">Overhead por hora</div>
                 @if($productiveHours === 0)
@@ -189,11 +156,11 @@
                     @endif
                 </div>
                 @if($avgMarginPct !== null)
-                    <div class="text-3xl font-bold text-corteza leading-none mb-1.5">
+                    <div class="text-2xl font-bold text-corteza leading-none mb-1.5 font-mono">
                         {{ number_format((float) $avgMarginPct, 1, ',', '.') }}%
                     </div>
                 @else
-                    <div class="text-xl font-bold text-masa-madre/50 leading-none mb-1.5">Sin datos</div>
+                    <div class="text-2xl font-bold text-masa-madre/50 leading-none mb-1.5">Sin datos</div>
                 @endif
                 <div class="text-sm text-masa-madre">Utilidad promedio</div>
                 <div class="text-[11.5px] text-masa-madre/60 mt-0.5">Margen sobre precio de venta</div>
@@ -206,11 +173,11 @@
         ════════════════════════════════════════════════ --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-            {{-- Resumen del negocio --}}
+            {{-- Resumen operativo --}}
             <div class="lg:col-span-2 bg-white border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)] overflow-hidden">
                 <div class="flex items-center justify-between px-5 pt-5 pb-1">
                     <div>
-                        <div class="font-semibold text-sm text-corteza">Resumen del negocio</div>
+                        <div class="font-semibold text-sm text-corteza">Resumen operativo</div>
                         <div class="text-[12px] text-masa-madre mt-0.5">Detectado automáticamente</div>
                     </div>
                     @if($lowMarginCount > 0)
@@ -379,11 +346,13 @@
         {{-- ═══════════════════════════════════════════════
              TABLA DE RECETAS
         ════════════════════════════════════════════════ --}}
-        <div class="bg-white border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)] overflow-hidden">
+        <div id="tabla-recetas" style="scroll-margin-top:1.5rem" class="bg-white border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)] overflow-hidden">
 
             {{-- Toolbar --}}
             <div class="px-5 py-4 border-b border-miga flex items-center gap-3 flex-wrap">
-                <form method="GET" class="contents" id="searchForm">
+                {{-- El fragmento #tabla-recetas hace que, al buscar/ordenar/filtrar/paginar, el
+                     navegador recargue directo en esta sección en vez de arriba de todo. --}}
+                <form method="GET" action="{{ route('dashboard') }}#tabla-recetas" class="contents" id="searchForm">
                     <input type="hidden" name="sort" value="{{ $sort }}">
                     <input type="hidden" name="dir" value="{{ request('dir', 'asc') }}">
 
@@ -438,7 +407,7 @@
                     </button>
 
                     @if(request('search') || request('margin_filter'))
-                    <a href="{{ route('dashboard') }}"
+                    <a href="{{ route('dashboard') }}#tabla-recetas"
                         class="text-[12.5px] text-masa-madre hover:text-corteza hover:underline transition-colors">
                         Limpiar
                     </a>
@@ -694,7 +663,7 @@
                     </span>
                     @if($recipeRows->hasPages())
                         <div class="text-sm">
-                            {{ $recipeRows->links() }}
+                            {{ $recipeRows->fragment('tabla-recetas')->links() }}
                         </div>
                     @endif
                 </div>

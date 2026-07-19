@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Notification;
 use App\Models\Tenant;
+use App\Services\NotificationService;
 use App\Services\RecipeCostCalculator;
 use App\Services\UnitConverter;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly NotificationService $notifications) {}
+
     /**
      * La tabla paginada trabaja EXCLUSIVAMENTE sobre los caches unit_cost y
      * labor_hours que mantiene RecipeCostPropagator: no carga líneas ni
@@ -22,6 +26,16 @@ class DashboardController extends Controller
     public function index(): View
     {
         $tenant = app(Tenant::class);
+
+        // Reconcilia las alertas de estado (stock, costos, compras) antes de mostrar el feed.
+        $this->notifications->syncStateAlerts($tenant);
+        $alerts = Notification::where('tenant_id', $tenant->id)
+            ->active()
+            ->unread()
+            ->orderByDesc('created_at')
+            ->take(6)
+            ->get();
+        $alertCount = Notification::where('tenant_id', $tenant->id)->active()->unread()->count();
 
         $tenant->defaultPriceList();
         $priceLists = $tenant->priceLists()
@@ -195,6 +209,8 @@ class DashboardController extends Controller
             ->toArray();
 
         return view('dashboard', compact(
+            'alerts',
+            'alertCount',
             'recipeRows',
             'priceList',
             'priceLists',
