@@ -91,6 +91,63 @@ test('ordenar por margen resuelve en SQL con el orden correcto', function () {
         ->assertSeeInOrder(['Margen bajo', 'Margen alto', 'Sin precio']);
 });
 
+// Nota: margin_filter sólo filtra la TABLA; los gráficos reflejan el catálogo
+// completo (los nombres viven en el JSON del bar chart), así que se asserta
+// sobre el total paginado del footer, no sobre todo el HTML.
+
+test('margin_filter=high deja en la tabla solo recetas con margen >= 60%', function () {
+    [$user, $tenant] = ownerForCachedDashboard();
+    recipeWithCost($tenant, 'Muy rentable', 10, 100);   // margen 90%
+    recipeWithCost($tenant, 'Poco rentable', 90, 100);  // margen 10%
+
+    $this->actingAs($user)
+        ->get(route('dashboard', ['margin_filter' => 'high']))
+        ->assertOk()
+        ->assertSee('Muy rentable')
+        ->assertSee('de 1 recetas');   // footer: solo 1 fila tras el filtro
+});
+
+test('margin_filter=low deja en la tabla solo recetas con margen < 20% y dispara la alerta', function () {
+    [$user, $tenant] = ownerForCachedDashboard();
+    recipeWithCost($tenant, 'Muy rentable', 10, 100);   // margen 90%
+    recipeWithCost($tenant, 'Poco rentable', 90, 100);  // margen 10%
+
+    $this->actingAs($user)
+        ->get(route('dashboard', ['margin_filter' => 'low']))
+        ->assertOk()
+        ->assertSee('Poco rentable')
+        ->assertSee('de 1 recetas')     // footer: solo 1 fila tras el filtro
+        ->assertSee('margen menor al 20%');
+});
+
+test('el dashboard renderiza los datos de los graficos cuando hay recetas con margen', function () {
+    [$user, $tenant] = ownerForCachedDashboard();
+    recipeWithCost($tenant, 'Pan dulce', 10, 100);   // margen 90%
+    recipeWithCost($tenant, 'Factura', 30, 100);     // margen 70%
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Top recetas por rentabilidad')
+        ->assertSee('Distribución de costos')
+        ->assertSee('Rentabilidad promedio')
+        // La dona resume la distribución de costos; con solo ingredientes cierra en 100%.
+        ->assertSee('100%');
+});
+
+test('sin recetas con margen los bloques de graficos no se renderizan', function () {
+    [$user, $tenant] = ownerForCachedDashboard();
+    recipeWithCost($tenant, 'Sin precio', 50);   // margen null (sin precio de venta)
+
+    // El bloque de barras + dona está gateado por $topRecipesForChart, que sin
+    // margen queda vacío: no se renderiza ninguno de los dos títulos.
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertDontSee('Top recetas por rentabilidad')
+        ->assertDontSee('Distribución de costos');
+});
+
 test('recipes:refresh-costs rellena los caches de recetas sembradas sin propagar', function () {
     [, $tenant] = ownerForCachedDashboard();
 

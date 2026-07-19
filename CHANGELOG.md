@@ -5,6 +5,44 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.2] — 2026-07-19
+
+### Centro de Alertas + limpieza del dashboard
+
+#### Agregado
+
+- **Centro de alertas del negocio**: feed persistido de avisos accionables con 4 tipos — 📦 **stock bajo o negativo** (insumo/descartable bajo su mínimo), 📈 **salto de costo en compra** (una compra sube el costo de un ítem por encima de un umbral configurable), 🕒 **costo desactualizado** (un insumo activo no actualiza su costo hace más de N días) y 🧾 **compra sin imputar** (renglones pendientes de asociar o imputar). Aparecen en el panel de inicio (franja "Alertas") y en una página propia con filtro leídas/todas y acciones de marcar leída, descartar y marcar todas.
+- **Configuración en Administración → Alertas** (solo owner): prender/apagar cada tipo y ajustar el umbral de aumento (%) y los días para costo desactualizado. Apagar un tipo resuelve sus alertas vivas.
+- **Dashboard**: se quitaron los botones "Ingrediente" y "Lista de precios" de las acciones rápidas (quedan "Nueva receta" y "Compra"); "RESUMEN OPERATIVO" pasó a llamarse "Alertas" y la card inferior de insights se renombró "Resumen operativo".
+- **Tipografía de las KPI cards unificada**: las cuatro cifras grandes (recetas activas, gastos fijos, overhead/hora, utilidad promedio) usan el mismo tamaño (`text-2xl`) y la misma fuente (JetBrains Mono), en lugar de mezclar tamaños y sans/mono.
+- **La tabla de recetas conserva la posición al buscar/ordenar/filtrar/paginar**: el formulario, los encabezados ordenables y la paginación anclan a `#tabla-recetas`, así el navegador recarga directo en la sección de la tabla en vez de arriba de todo (sin JS extra).
+
+#### Técnico
+
+- **Tabla `notifications`** (tenant-scoped, único escritor `NotificationService`) con `dedupe_key` para idempotencia. **Dos naturalezas de alerta:** las de evento (salto de costo) se capturan en el instante de la compra vía un hook en `PurchaseLineRecorder` (compara costo viejo vs nuevo; el primer costo no dispara); las de estado (stock, costo desactualizado, compras sin imputar) se **reconcilian al leer** el dashboard/feed (se crean y se auto-resuelven), sin depender de un worker de colas o cron que producción no tiene garantizado.
+- Config guardada en `tenant_settings` (`alerts.*`), reutilizando `getSetting`/`setSetting`. El feed es accesible a todos los roles con tenant; la config queda acotada a owner (`edit-settings`).
+- **`NotificationAlertsTest` (14 tests)**: umbrales, idempotencia y resolución de las de estado, toggles, permisos (viewer sin config pero con feed) y aislamiento entre tenants. **485 tests, todos verdes.**
+
+#### Al deployar
+
+1. `php artisan migrate` (tabla `notifications`)
+2. `php artisan optimize:clear` (vistas Blade)
+
+## [0.12.1] — 2026-07-19
+
+### Rediseño gráfico del dashboard
+
+#### Agregado
+
+- **Nuevo dashboard visual** con KPIs (recetas activas, gastos fijos, overhead/hora, utilidad promedio), un gauge de rentabilidad promedio, un bar chart de las top recetas por margen y una dona de distribución de costos (ingredientes / mano de obra / gastos fijos / descartables), sobre **ApexCharts**. Tipografía Inter, escala de color `brown`, filtro rápido de margen alta/baja en la tabla.
+
+#### Técnico
+
+- **ApexCharts self-hosted** vía npm/Vite (`resources/js/dashboard-charts.js`) en lugar del CDN, coherente con la PWA offline; los datos viajan por un `<script type="application/json">` y no queda JS inline.
+- **Fix del filtro de margen**: `marginPctSql` hacía división entera en SQLite (margen 0 para todas las recetas → el filtro no filtraba); se fuerza aritmética real con `* 100.0` antes de dividir (idéntico en MySQL). Mejora también el orden por margen %.
+- **Fix de compilación Blade**: `@json([...])` con array literal multilínea se mal-parseaba (500 en toda la pantalla); se arma el array en `@php` y se pasa la variable a `@json`.
+- 4 tests nuevos (filtro de margen alta/baja, datos de los gráficos, estado vacío). **471 tests, todos verdes.**
+
 ## [0.12.0] — 2026-07-18
 
 ### Mediano plazo de la auditoría — 1er lote: rendimiento y dominio

@@ -19,6 +19,7 @@
         "vite": "^8.0.0"
     },
     "dependencies": {
+        "apexcharts": "^3.54.1",
         "shepherd.js": "^15.2.2",
         "tom-select": "^2.6.1"
     }

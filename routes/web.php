@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\MailPreviewController;
 use App\Http\Controllers\Admin\TenantController as AdminTenantController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\AlertSettingsController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FixedCostCategoryController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LaborTypeController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\PackagingCostController;
 use App\Http\Controllers\PriceListController;
@@ -82,6 +84,12 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         ->whereIn('type', ['ingredient', 'packaging'])
         ->whereNumber('id')
         ->name('stock.show');
+
+    // Centro de alertas (feed) — visible y accionable para todos los roles con tenant.
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::patch('notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::delete('notifications/{notification}', [NotificationController::class, 'dismiss'])->name('notifications.dismiss');
 });
 
 // Costos — escritura (owner y admin)
@@ -187,6 +195,9 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
 Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner'])->group(function () {
     Route::get('/business', [BusinessController::class, 'edit'])->name('business.edit');
     Route::patch('/business', [BusinessController::class, 'update'])->name('business.update');
+
+    Route::get('/alerts', [AlertSettingsController::class, 'edit'])->name('alerts.edit');
+    Route::patch('/alerts', [AlertSettingsController::class, 'update'])->name('alerts.update');
 
     Route::get('locations', [LocationController::class, 'index'])->name('locations.index');
     Route::post('locations', [LocationController::class, 'store'])->name('locations.store');

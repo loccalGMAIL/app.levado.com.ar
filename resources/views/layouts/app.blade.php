@@ -73,5 +73,7 @@
 
         <x-pwa-install-banner />
 
+        @stack('scripts')
+
     </body>
 </html>

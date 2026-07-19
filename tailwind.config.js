@@ -18,6 +18,16 @@ export default {
                 'miga':       '#F2EAD8',
                 'horno':      '#C8622A',
                 'membrillo':  '#E8A820',
+                'brown': {
+                    50:  '#FAF6F1',
+                    100: '#EFE3D5',
+                    200: '#DEC4A8',
+                    300: '#C49272',
+                    400: '#B8794F',
+                    500: '#9B6240',
+                    700: '#6B3D1E',
+                    900: '#1A110A',
+                },
             },
             fontFamily: {
                 sans:  ['Inter', ...defaultTheme.fontFamily.sans],

@@ -82,6 +82,11 @@
                 } elseif (request()->routeIs('locations.*')) {
                     $crumbs[] = ['label' => 'Administración', 'href' => null];
                     $crumbs[] = ['label' => 'Sucursales', 'href' => null];
+                } elseif (request()->routeIs('alerts.*')) {
+                    $crumbs[] = ['label' => 'Administración', 'href' => null];
+                    $crumbs[] = ['label' => 'Alertas', 'href' => null];
+                } elseif (request()->routeIs('notifications.*')) {
+                    $crumbs[] = ['label' => 'Alertas', 'href' => null];
                 } elseif (request()->routeIs('price-lists.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Listas de Precios', 'href' => null];
