@@ -44,8 +44,11 @@ class DashboardController extends Controller
         $costSql = '(case when recipes.unit_cost is null or recipes.yield_quantity <= 0 then null '
             .'else recipes.unit_cost + (coalesce(recipes.labor_hours, 0) * ? / recipes.yield_quantity) end)';
         $marginSql = "(case when {$priceSql} is null or {$costSql} is null then null else {$priceSql} - {$costSql} end)";
+        // Se multiplica por 100.0 (literal real) ANTES de dividir: SQLite hace
+        // división entera si ambos operandos son enteros ((price-cost)/price → 0),
+        // y el 100.0 fuerza aritmética real. En MySQL es idéntico.
         $marginPctSql = "(case when {$priceSql} is null or {$costSql} is null or {$priceSql} <= 0 then null "
-            ."else ({$priceSql} - {$costSql}) / {$priceSql} * 100 end)";
+            ."else ({$priceSql} - {$costSql}) * 100.0 / {$priceSql} end)";
 
         $priceBindings = [$priceList->id];
         $costBindings = [$overhead];

@@ -13,6 +13,7 @@ import './purchases/match';
 import './expenses/receipt-scan';
 import './image-compress';
 import './scroll-restore';
+import './dashboard-charts';
 
 // Capturar el prompt de instalación de la PWA (Android/Chrome) antes de que
 // Alpine monte el banner; el componente escucha el evento 'pwa-installable'.
