@@ -1,41 +1,29 @@
 <x-app-layout>
-    <x-slot name="title">Matriz de precios</x-slot>
+    <x-slot name="title">Precios de reventa</x-slot>
 
     <div class="py-8 px-6 lg:px-8">
         <div class="space-y-6">
 
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-base font-semibold text-corteza">Matriz de precios</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Todos los precios de tus recetas, lista por lista. Hacé clic en una celda para editar.</p>
+                    <h2 class="text-base font-semibold text-corteza">Precios de reventa</h2>
+                    <p class="text-sm text-masa-madre mt-0.5">Precios de tus productos de reventa, lista por lista. Hacé clic en una celda para editar.</p>
                 </div>
-                <div class="flex items-center gap-3 shrink-0">
-                    @can('manage-costs')
-                        <form method="POST" action="{{ route('price-lists.apply-all-suggestions') }}"
-                            onsubmit="return confirm('¿Aplicar todas las sugerencias pendientes? Solo se completarán las celdas vacías.')">
-                            @csrf
-                            <button type="submit"
-                                class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
-                                Aplicar sugerencias
-                            </button>
-                        </form>
-                    @endcan
-                    <a href="{{ route('price-lists.index') }}"
-                        class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
-                        ← Listas de precios
-                    </a>
-                </div>
+                <a href="{{ route('price-lists.index') }}"
+                    class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors shrink-0">
+                    ← Listas de precios
+                </a>
             </div>
 
             {{-- Solapas: elaborados (recetas) vs. reventa (productos) --}}
             <div class="flex gap-1 border-b border-miga text-sm">
-                <span class="px-4 py-2 -mb-px border-b-2 border-corteza font-medium text-corteza">
-                    Elaborados (recetas)
-                </span>
-                <a href="{{ route('products.prices.matrix') }}"
+                <a href="{{ route('price-lists.matrix') }}"
                     class="px-4 py-2 -mb-px border-b-2 border-transparent text-masa-madre hover:text-corteza">
-                    Reventa
+                    Elaborados (recetas)
                 </a>
+                <span class="px-4 py-2 -mb-px border-b-2 border-corteza font-medium text-corteza">
+                    Reventa
+                </span>
             </div>
 
             @if(session('status'))
@@ -48,23 +36,23 @@
                 <input type="hidden" name="dir" value="{{ request('dir') }}">
                 <div class="flex-1 min-w-48">
                     <input type="text" name="search" value="{{ request('search') }}"
-                        placeholder="Buscar receta por nombre..."
+                        placeholder="Buscar producto por nombre..."
                         class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
                 <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Buscar
                 </button>
                 @if(request('search'))
-                    <a href="{{ route('price-lists.matrix') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
+                    <a href="{{ route('products.prices.matrix') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
                 @endif
             </form>
 
-            @if($recipes->isEmpty())
+            @if($products->isEmpty())
                 <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
                     @if(request('search'))
-                        No se encontraron recetas con ese nombre.
+                        No se encontraron productos de reventa con ese nombre.
                     @else
-                        Todavía no hay recetas activas para mostrar.
+                        Todavía no hay productos de reventa activos. Cargá uno en <a href="{{ route('products.index') }}" class="text-corteza hover:underline">Artículos</a>.
                     @endif
                 </div>
             @else
@@ -80,7 +68,7 @@
                             <tr>
                                 <th class="px-4 py-3 font-medium">
                                     <a href="{{ $sortUrl }}" class="hover:text-corteza inline-flex items-center gap-1">
-                                        Receta <span class="text-xs">{{ request('dir') === 'desc' ? '↓' : '↑' }}</span>
+                                        Producto <span class="text-xs">{{ request('dir') === 'desc' ? '↓' : '↑' }}</span>
                                     </a>
                                 </th>
                                 <th class="px-4 py-3 font-medium text-right">Costo / u</th>
@@ -99,17 +87,15 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-miga">
-                            @foreach($recipes as $recipe)
+                            @foreach($products as $product)
                                 @php
-                                    $costPerUnit = $costsPerUnit[$recipe->id] ?? null;
-                                    $recipePrices = $prices[$recipe->id] ?? collect();
-                                    $basePrice = isset($recipePrices[$defaultList->id]) ? (float) $recipePrices[$defaultList->id] : null;
+                                    $costPerUnit = $costsPerUnit[$product->id] ?? null;
+                                    $productPrices = $prices[$product->id] ?? collect();
+                                    $basePrice = isset($productPrices[$defaultList->id]) ? (float) $productPrices[$defaultList->id] : null;
                                 @endphp
                                 <tr>
                                     <td class="px-4 py-3 font-medium text-corteza whitespace-nowrap">
-                                        <a href="{{ route('recipes.show', $recipe) }}" class="hover:underline">
-                                            {{ $recipe->name }}
-                                        </a>
+                                        {{ $product->name }}
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono text-corteza whitespace-nowrap">
                                         @if($costPerUnit !== null)
@@ -120,7 +106,7 @@
                                     </td>
                                     @foreach($priceLists as $list)
                                         @php
-                                            $cellPrice = isset($recipePrices[$list->id]) ? (float) $recipePrices[$list->id] : null;
+                                            $cellPrice = isset($productPrices[$list->id]) ? (float) $productPrices[$list->id] : null;
 
                                             $suggested = null;
                                             if ($cellPrice === null && ! $list->is_default && $list->adjustment_pct !== null && $basePrice !== null) {
@@ -164,7 +150,7 @@
                                                             this.saving = true;
                                                             this.editing = false;
                                                             try {
-                                                                const res = await fetch('{{ route('recipes.prices.update', [$recipe, $list]) }}', {
+                                                                const res = await fetch('{{ route('products.prices.update', [$product, $list]) }}', {
                                                                     method: 'PATCH',
                                                                     headers: {
                                                                         'Content-Type': 'application/json',
@@ -233,15 +219,15 @@
                         </tbody>
                     </table>
 
-                    @if($recipes->hasPages())
+                    @if($products->hasPages())
                         <div class="px-4 py-3 border-t border-miga">
-                            {{ $recipes->links() }}
+                            {{ $products->links() }}
                         </div>
                     @endif
                 </div>
 
                 <p class="text-xs text-masa-madre">
-                    {{ $recipes->total() }} receta(s). Margen: verde ≥ 30 % · amarillo 15–29 % · rojo &lt; 15 %.
+                    {{ $products->total() }} producto(s) de reventa. Margen: verde ≥ 30 % · amarillo 15–29 % · rojo &lt; 15 %.
                     Las celdas vacías muestran en gris el precio que surge del % de ajuste de cada lista sobre la base; al hacer clic podés confirmarlo o cambiarlo.
                 </p>
             @endif

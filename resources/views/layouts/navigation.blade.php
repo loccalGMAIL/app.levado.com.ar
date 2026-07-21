@@ -67,6 +67,9 @@
                 } elseif (request()->routeIs('purchases.*')) {
                     $crumbs[] = ['label' => 'Existencias', 'href' => null];
                     $crumbs[] = ['label' => 'Compras', 'href' => null];
+                } elseif (request()->routeIs('products.*')) {
+                    $crumbs[] = ['label' => 'Existencias', 'href' => null];
+                    $crumbs[] = ['label' => 'Artículos', 'href' => null];
                 } elseif (request()->routeIs('stock.show')) {
                     $crumbs[] = ['label' => 'Stock', 'href' => route('stock.index')];
                     $crumbs[] = ['label' => 'Kardex', 'href' => null];

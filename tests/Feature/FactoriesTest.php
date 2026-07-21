@@ -1,8 +1,10 @@
 <?php
 
+use App\Enums\ProductType;
 use App\Models\Ingredient;
 use App\Models\Invitation;
 use App\Models\MailTemplate;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Tenant;
@@ -50,4 +52,29 @@ test('MailTemplateFactory crea una plantilla utilizable', function () {
 
     expect($template->mail_type)->toBe('team-invitation')
         ->and($template->subject)->not->toBeEmpty();
+});
+
+test('ProductFactory crea un producto de reventa con costo propio y sin receta', function () {
+    $tenant = Tenant::factory()->create();
+
+    $product = Product::factory()->for($tenant)->resale()->create();
+
+    expect($product->tenant_id)->toBe($tenant->id)
+        ->and($product->type)->toBe(ProductType::Resale)
+        ->and($product->isResale())->toBeTrue()
+        ->and($product->recipe_id)->toBeNull()
+        ->and($product->cost_per_unit)->not->toBeNull();
+});
+
+test('ProductFactory crea un producto elaborado con receta del mismo tenant y sin costo propio', function () {
+    $tenant = Tenant::factory()->create();
+
+    $product = Product::factory()->for($tenant)->manufactured()->create();
+
+    expect($product->tenant_id)->toBe($tenant->id)
+        ->and($product->type)->toBe(ProductType::Manufactured)
+        ->and($product->isManufactured())->toBeTrue()
+        ->and($product->cost_per_unit)->toBeNull()
+        ->and($product->recipe)->not->toBeNull()
+        ->and($product->recipe->tenant_id)->toBe($tenant->id);
 });

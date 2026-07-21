@@ -19,6 +19,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\PackagingCostController;
 use App\Http\Controllers\PriceListController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
@@ -78,6 +80,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::get('purchases/{purchase}/match', [PurchaseController::class, 'match'])->name('purchases.match');
     Route::get('purchases/{purchase}/invoice', [PurchaseController::class, 'invoiceImage'])->name('purchases.invoice');
+
+    Route::get('products', [ProductController::class, 'index'])->name('products.index');
+    // Antes de cualquier products/{product} para que "prices" no se interprete como binding.
+    Route::get('products/prices', [ProductPriceController::class, 'matrix'])->name('products.prices.matrix');
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::get('stock/{type}/{id}', [StockController::class, 'show'])
@@ -172,6 +178,11 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->scopeBindings()->name('purchases.lines.destroy');
     Route::post('purchases/{purchase}/lines/{line}/match', [PurchaseController::class, 'matchLine'])->scopeBindings()->name('purchases.lines.match');
     Route::post('purchases/{purchase}/apply-suggestions', [PurchaseController::class, 'applyLineSuggestions'])->name('purchases.apply-suggestions');
+
+    Route::post('products', [ProductController::class, 'store'])->name('products.store');
+    Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::patch('products/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('products.toggle-active');
+    Route::patch('products/{product}/prices/{priceList}', [ProductPriceController::class, 'update'])->name('products.prices.update');
 
     Route::post('stock/{type}/{id}/adjustments', [StockController::class, 'storeAdjustment'])
         ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.adjustments.store');

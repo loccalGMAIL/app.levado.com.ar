@@ -33,6 +33,15 @@
         <div class="px-4 py-3">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Existencias</p>
 
+            <a href="{{ route('products.index') }}" @click="open = false"
+                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
+                    {{ request()->routeIs('products.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                Artículos
+            </a>
+
             <a href="{{ route('suppliers.index') }}" @click="open = false"
                 class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
                     {{ request()->routeIs('suppliers.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
@@ -228,7 +237,7 @@
         {{-- Más --}}
         <button @click="open = !open"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs(['price-lists.*', 'fixed-costs.*', 'variable-expenses.*', 'packaging.*', 'labor-types.*', 'suppliers.*', 'business.*', 'team.*', 'locations.*', 'profile.*', 'admin.*']) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs(['products.*', 'price-lists.*', 'fixed-costs.*', 'variable-expenses.*', 'packaging.*', 'labor-types.*', 'suppliers.*', 'stock.*', 'business.*', 'team.*', 'locations.*', 'profile.*', 'admin.*']) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
