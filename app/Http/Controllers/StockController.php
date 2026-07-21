@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateStockMinRequest;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Packaging;
+use App\Models\Product;
 use App\Models\StockLevel;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
@@ -31,11 +32,17 @@ class StockController extends Controller
         $location = $this->resolveLocation($tenant);
         $itemType = CatalogItemType::tryFrom((string) request('type')) ?? CatalogItemType::Ingredient;
         $type = $itemType->value;
-        $table = $itemType === CatalogItemType::Ingredient ? 'ingredients' : 'packagings';
+        $table = match ($itemType) {
+            CatalogItemType::Ingredient => 'ingredients',
+            CatalogItemType::Packaging => 'packagings',
+            CatalogItemType::Product => 'products',
+        };
 
-        $itemsQuery = $itemType === CatalogItemType::Ingredient
-            ? $tenant->ingredients()->active()
-            : $tenant->packagings()->active();
+        $itemsQuery = match ($itemType) {
+            CatalogItemType::Ingredient => $tenant->ingredients()->active(),
+            CatalogItemType::Packaging => $tenant->packagings()->active(),
+            CatalogItemType::Product => $tenant->products()->active(),
+        };
 
         $sortable = [
             'name' => "{$table}.name",
@@ -202,13 +209,15 @@ class StockController extends Controller
         return back(fallback: route('stock.index'))->with('status', 'Stock mínimo actualizado.');
     }
 
-    private function resolveStockable(string $type, int $id): Ingredient|Packaging
+    private function resolveStockable(string $type, int $id): Ingredient|Packaging|Product
     {
         $tenant = app(Tenant::class);
 
-        return CatalogItemType::from($type) === CatalogItemType::Ingredient
-            ? $tenant->ingredients()->findOrFail($id)
-            : $tenant->packagings()->findOrFail($id);
+        return match (CatalogItemType::from($type)) {
+            CatalogItemType::Ingredient => $tenant->ingredients()->findOrFail($id),
+            CatalogItemType::Packaging => $tenant->packagings()->findOrFail($id),
+            CatalogItemType::Product => $tenant->products()->findOrFail($id),
+        };
     }
 
     /**
@@ -228,7 +237,7 @@ class StockController extends Controller
         return $tenant->defaultLocation();
     }
 
-    private function recordActivity($actor, string $type, Ingredient|Packaging $item, string $action, array $payload): void
+    private function recordActivity($actor, string $type, Ingredient|Packaging|Product $item, string $action, array $payload): void
     {
         $this->recorder->record(
             actor: $actor,

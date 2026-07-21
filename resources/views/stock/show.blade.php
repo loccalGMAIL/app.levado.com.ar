@@ -4,7 +4,7 @@
     @php
         $displayUnit = $item->subdivisions && $item->subdivision_label
             ? $item->subdivision_label
-            : ($type === 'ingredient' ? $item->unit->short() : 'u');
+            : (in_array($type, ['ingredient', 'product'], true) ? $item->unit->short() : 'u');
 
         $qty = $level !== null ? (float) $level->quantity : 0.0;
 

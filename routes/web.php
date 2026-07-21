@@ -87,7 +87,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::get('stock/{type}/{id}', [StockController::class, 'show'])
-        ->whereIn('type', ['ingredient', 'packaging'])
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])
         ->whereNumber('id')
         ->name('stock.show');
 
@@ -185,13 +185,13 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('products/{product}/prices/{priceList}', [ProductPriceController::class, 'update'])->name('products.prices.update');
 
     Route::post('stock/{type}/{id}/adjustments', [StockController::class, 'storeAdjustment'])
-        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.adjustments.store');
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.adjustments.store');
     Route::post('stock/{type}/{id}/counts', [StockController::class, 'storeCount'])
-        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.counts.store');
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.counts.store');
     Route::patch('stock/{type}/{id}/min', [StockController::class, 'updateMin'])
-        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.min.update');
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.min.update');
     Route::patch('stock/{type}/{id}/level', [StockController::class, 'updateLevel'])
-        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.level.update');
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.level.update');
 
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
     Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');

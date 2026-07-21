@@ -47,9 +47,15 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   Matriz de reventa `products/prices` (`products.prices.matrix`), copia adaptada de la de recetas (solo reventa,
   paginación propia → sin conflicto). **Solapas** Elaborados/Reventa en ambas matrices; link desde el catálogo.
   La matriz de recetas quedó intacta salvo la solapa.
-- **2 🔲** Stock de productos + compra de reventa: extender `CatalogItemType` con `Product` (aditivo) → ramificar
-  `StockService`/`StockLevel`/`StockMovement` (firmas `Ingredient|Packaging` → +Product), pestaña en `/stock`,
-  match de Compras a `product`.
+- **2A ✅** Producto stockeable (ops manuales): `CatalogItemType` +Product (aditivo); `StockService`/`StockLevel`/
+  `StockMovement`/`Product` con firmas `Ingredient|Packaging|Product` y relaciones; pestaña **Productos** en `/stock`
+  (index + kardex + ajuste/recuento/mínimo; rutas `whereIn` +product). `displayUnit` usa `unit->short()` para product.
+  El tab muestra todos los productos activos; valuación por `cost_per_unit` (manufactured=null→0 hasta Producción).
+  `ProductStockTest` (8). **520 tests verdes.**
+- **2B 🔲** Compra de reventa: `PurchaseLine::isProduct()`, ramificar `PurchaseLineRecorder::apply()/applyWithCost()`
+  (producto = ingrediente sin subdivisiones ni propagación; solo `isResale()`), `matchLine` `$belongs` +product,
+  `match()` pasa productos de reventa, y optgroup "Productos" en `purchases/match.blade.php` (+catálogo Alpine).
+  DELICADO: `PurchaseLineRecorder` es el servicio de imputación de facturas; testear con cuidado.
 - **3 🔲** Producción: `RecipeExploder` (BOM completo, phantom), generalizar referencia de `StockService::registerMovement`
   + `reverseMovementsFor()`, tabla `productions` + `ProductionService::produce()/cancel()`, UI grupo Producción con preview.
   Ojo: bloquear las filas de `stock_levels` en orden determinista (deadlocks).

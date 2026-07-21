@@ -73,6 +73,11 @@ class StockMovement extends Model
         return $this->belongsTo(Packaging::class, 'stockable_id');
     }
 
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'stockable_id');
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -83,11 +88,12 @@ class StockMovement extends Model
         return $this->belongsTo(self::class, 'reverses_movement_id');
     }
 
-    public function stockable(): Ingredient|Packaging|null
+    public function stockable(): Ingredient|Packaging|Product|null
     {
         return match ($this->stockable_type) {
             CatalogItemType::Ingredient->value => $this->ingredient,
             CatalogItemType::Packaging->value => $this->packaging,
+            CatalogItemType::Product->value => $this->product,
             default => null,
         };
     }
@@ -100,6 +106,11 @@ class StockMovement extends Model
     public function isPackaging(): bool
     {
         return $this->stockable_type === CatalogItemType::Packaging->value;
+    }
+
+    public function isProduct(): bool
+    {
+        return $this->stockable_type === CatalogItemType::Product->value;
     }
 
     public function isReversal(): bool

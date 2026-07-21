@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CatalogItemType;
 use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Models\Concerns\BelongsToTenant;
@@ -72,5 +73,15 @@ class Product extends Model
     public function priceLogs(): HasMany
     {
         return $this->hasMany(ProductPriceLog::class);
+    }
+
+    public function stockLevels(): HasMany
+    {
+        return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', CatalogItemType::Product->value);
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', CatalogItemType::Product->value);
     }
 }

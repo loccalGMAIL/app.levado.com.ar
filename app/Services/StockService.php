@@ -7,6 +7,7 @@ use App\Enums\StockMovementType;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Packaging;
+use App\Models\Product;
 use App\Models\PurchaseLine;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
@@ -36,7 +37,7 @@ class StockService
      * concurrentes del mismo ítem/sucursal.
      */
     public function registerMovement(
-        Ingredient|Packaging $item,
+        Ingredient|Packaging|Product $item,
         Location $location,
         StockMovementType $type,
         float $quantity,
@@ -85,7 +86,7 @@ class StockService
      * Recuento físico: registra la diferencia entre lo contado y el cache.
      * Devuelve null si no hay diferencia.
      */
-    public function applyCount(Ingredient|Packaging $item, Location $location, float $countedQuantity, User $user): ?StockMovement
+    public function applyCount(Ingredient|Packaging|Product $item, Location $location, float $countedQuantity, User $user): ?StockMovement
     {
         $current = (float) ($this->levelFor($item, $location)?->quantity ?? 0);
         $delta = $countedQuantity - $current;
@@ -108,7 +109,7 @@ class StockService
     /**
      * Ajuste manual con signo (+ entrada / − salida), valuado al costo actual del ítem.
      */
-    public function registerAdjustment(Ingredient|Packaging $item, Location $location, float $signedQuantity, string $reason, User $user): StockMovement
+    public function registerAdjustment(Ingredient|Packaging|Product $item, Location $location, float $signedQuantity, string $reason, User $user): StockMovement
     {
         return $this->registerMovement(
             item: $item,
@@ -128,7 +129,7 @@ class StockService
      * cantidad y costo) no hace nada. Si difiere (cambió cantidad/precio o se
      * re-asoció a otro ítem), revierte la entrada anterior y registra la nueva.
      */
-    public function syncPurchaseLineEntry(PurchaseLine $line, Ingredient|Packaging $item, float $quantityInItemUnits, float $unitCost, ?User $user = null): ?StockMovement
+    public function syncPurchaseLineEntry(PurchaseLine $line, Ingredient|Packaging|Product $item, float $quantityInItemUnits, float $unitCost, ?User $user = null): ?StockMovement
     {
         $active = $this->activePurchaseEntryFor($line);
 
@@ -170,14 +171,14 @@ class StockService
         return $this->reverseMovement($active, $user);
     }
 
-    public function setMinQuantity(Ingredient|Packaging $item, Location $location, ?float $minQuantity): void
+    public function setMinQuantity(Ingredient|Packaging|Product $item, Location $location, ?float $minQuantity): void
     {
         DB::transaction(function () use ($item, $location, $minQuantity) {
             $this->lockedLevelRow($item, $location)->update(['min_quantity' => $minQuantity]);
         });
     }
 
-    public function levelFor(Ingredient|Packaging $item, Location $location): ?StockLevel
+    public function levelFor(Ingredient|Packaging|Product $item, Location $location): ?StockLevel
     {
         return StockLevel::query()
             ->where('tenant_id', $item->tenant_id)
@@ -232,7 +233,7 @@ class StockService
      * Fila del cache con lock pesimista, creándola en cero si no existe.
      * Ante una carrera en la creación (violación del unique), reintenta el lock.
      */
-    private function lockedLevelRow(Ingredient|Packaging $item, Location $location): StockLevel
+    private function lockedLevelRow(Ingredient|Packaging|Product $item, Location $location): StockLevel
     {
         $attributes = [
             'tenant_id' => $item->tenant_id,
@@ -254,7 +255,7 @@ class StockService
         }
     }
 
-    private function typeFor(Ingredient|Packaging $item): string
+    private function typeFor(Ingredient|Packaging|Product $item): string
     {
         return CatalogItemType::for($item)->value;
     }

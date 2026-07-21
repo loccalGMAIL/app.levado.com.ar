@@ -4,6 +4,7 @@ namespace App\Enums;
 
 use App\Models\Ingredient;
 use App\Models\Packaging;
+use App\Models\Product;
 
 /**
  * Dueño único de los discriminadores polimórficos manuales que viajan en
@@ -16,18 +17,24 @@ enum CatalogItemType: string
 {
     case Ingredient = 'ingredient';
     case Packaging = 'packaging';
+    case Product = 'product';
 
-    /** @return class-string<Ingredient|Packaging> */
+    /** @return class-string<Ingredient|Packaging|Product> */
     public function modelClass(): string
     {
         return match ($this) {
             self::Ingredient => Ingredient::class,
             self::Packaging => Packaging::class,
+            self::Product => Product::class,
         };
     }
 
-    public static function for(Ingredient|Packaging $item): self
+    public static function for(Ingredient|Packaging|Product $item): self
     {
-        return $item instanceof Ingredient ? self::Ingredient : self::Packaging;
+        return match (true) {
+            $item instanceof Ingredient => self::Ingredient,
+            $item instanceof Packaging => self::Packaging,
+            $item instanceof Product => self::Product,
+        };
     }
 }
