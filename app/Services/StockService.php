@@ -44,13 +44,14 @@ class StockService
         float $unitCost,
         ?string $reason = null,
         ?User $user = null,
-        ?PurchaseLine $reference = null,
+        ?string $referenceType = null,
+        ?int $referenceId = null,
         ?StockMovement $reverses = null,
     ): StockMovement {
         abort_unless(! $type->requiresReason() || filled($reason), 422, 'El motivo es obligatorio para ajustes.');
         abort_unless($location->tenant_id === $item->tenant_id, 422, 'La sucursal no pertenece al tenant del ítem.');
 
-        return DB::transaction(function () use ($item, $location, $type, $quantity, $unitCost, $reason, $user, $reference, $reverses) {
+        return DB::transaction(function () use ($item, $location, $type, $quantity, $unitCost, $reason, $user, $referenceType, $referenceId, $reverses) {
             $level = $this->lockedLevelRow($item, $location);
 
             $movement = StockMovement::create([
@@ -62,8 +63,8 @@ class StockService
                 'quantity' => $quantity,
                 'unit_cost' => $unitCost,
                 'reason' => $reason,
-                'reference_type' => $reference ? 'purchase_line' : null,
-                'reference_id' => $reference?->id,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
                 'reverses_movement_id' => $reverses?->id,
                 'user_id' => $user?->id,
             ]);
@@ -152,7 +153,8 @@ class StockService
             quantity: $quantityInItemUnits,
             unitCost: $unitCost,
             user: $user,
-            reference: $line,
+            referenceType: 'purchase_line',
+            referenceId: $line->id,
         );
     }
 
@@ -169,6 +171,34 @@ class StockService
         }
 
         return $this->reverseMovement($active, $user);
+    }
+
+    /**
+     * Revierte todos los movimientos activos asociados a una referencia (por
+     * ejemplo, todos los del alta de una producción: consumos + entrada del
+     * elaborado), con un contramovimiento exacto por cada uno. Ignora los que
+     * ya fueron revertidos. Devuelve cuántos contramovimientos generó.
+     */
+    public function reverseMovementsFor(string $referenceType, int $referenceId, ?User $user = null): int
+    {
+        $active = StockMovement::query()
+            ->with(['location', 'ingredient', 'packaging', 'product']) // reverseMovement() las lee; evita lazy load
+            ->where('reference_type', $referenceType)
+            ->where('reference_id', $referenceId)
+            ->whereNull('reverses_movement_id')
+            ->whereNotExists(function ($query) {
+                $query->selectRaw('1')
+                    ->from('stock_movements as reversals')
+                    ->whereColumn('reversals.reverses_movement_id', 'stock_movements.id');
+            })
+            ->orderBy('id')
+            ->get();
+
+        foreach ($active as $movement) {
+            $this->reverseMovement($movement, $user);
+        }
+
+        return $active->count();
     }
 
     public function setMinQuantity(Ingredient|Packaging|Product $item, Location $location, ?float $minQuantity): void
