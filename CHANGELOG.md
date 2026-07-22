@@ -219,6 +219,7 @@ Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Product
 - **Vista previa en vivo**: al elegir el producto y la cantidad, la pantalla muestra los insumos que se van a consumir, cuáles no alcanzan (aviso de faltante) y el costo total, antes de confirmar.
 - Las **sub-recetas** se explotan al vuelo (phantom): se descuentan sus ingredientes y descartables reales, recursivamente, y no la sub-receta como ítem.
 - Una producción se puede **anular**: revierte exactamente los movimientos de stock que generó (insumos e ingreso del elaborado).
+- **Comando `products:from-recipes`**: crea de una vez un producto elaborado por cada receta vendible con precio que todavía no lo tenga, para poder producirla. Muestra una tabla de lo que va a crear y pide confirmación; admite `--all` (incluir recetas sin precio), `--tenant=`, `--dry-run` y `--force`.
 
 #### Técnico
 
@@ -226,12 +227,14 @@ Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Product
 - **`StockService` generalizó la referencia** de `registerMovement` (de `PurchaseLine` a `referenceType`/`referenceId` escalares) y sumó `reverseMovementsFor(type, id)`, base de la anulación. La valuación no cambió: **el elaborado no toma costo de inventario por ahora** (solo las compras pisan el último costo).
 - Tabla `productions` (cabezal/snapshot) + enum `ProductionStatus`; modelo `Production` (movimientos atados por `reference_type='production'`). **`ProductionService`**: `preview()` (marca faltantes, sin escribir), `produce()` (emite los movimientos **ordenados por `(stockable_type, stockable_id)`** para evitar deadlocks, en una transacción) y `cancel()`.
 - `ProductionController` (index/create/preview JSON/store/show/cancel) + `ProductionPolicy` + `StoreProductionRequest`; producir requiere rol owner/admin. Preview con Alpine.js (fetch al endpoint, sin JS de build nuevo).
-- **`ProductionTest` (12) + `ProductionControllerTest` (8)**: explosión phantom, conversión de unidades, anulación e idempotencia, guards, stock negativo permitido, capa HTTP y aislamiento entre tenants. **548 tests, todos verdes.**
+- `CreateProductsFromRecipes` (`products:from-recipes`): filtra recetas no-semi activas con precio (`recipe_prices`) y sin producto elaborado asociado; el producto hereda `unit = yield_unit`, `cost_per_unit = null`. No migra precios (siguen en la receta).
+- **`ProductionTest` (12) + `ProductionControllerTest` (8) + `CreateProductsFromRecipesTest` (8)**: explosión phantom, conversión de unidades, anulación e idempotencia, guards, stock negativo permitido, capa HTTP, aislamiento entre tenants y la conversión receta→producto. **556 tests, todos verdes.**
 
 #### Al deployar
 
 1. `php artisan migrate` (tabla `productions`)
 2. `npm run build` (assets del menú y la pantalla de producción)
+3. `php artisan products:from-recipes` (crea los productos elaborados de las recetas vendibles existentes; pide confirmación)
 
 ---
 

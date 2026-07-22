@@ -82,6 +82,12 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   (resumen + insumos consumidos desde `movements()`, botón Anular con confirm). Componente `x-production-status-badge`.
   Ítem "Producción" en el grupo Producción del sidebar + sección Producción en el drawer mobile + breadcrumbs en
   `layouts/navigation`. `ProductionControllerTest` (8). **548 tests verdes.** Requiere `npm run build`.
+- **Migración receta→producto** (`products:from-recipes`, `CreateProductsFromRecipes`): crea un producto elaborado
+  por cada receta no-semi activa **con precio** (`recipe_prices`) que aún no tenga producto (`whereNotExists` por
+  `recipe_id`+manufactured). Producto hereda `name`, `unit = yield_unit`, `cost_per_unit = null`, activo; **no migra
+  precios** (siguen en la receta). Idempotente; flags `--all` (incluir sin precio), `--tenant=`, `--dry-run`, `--force`.
+  Preview con Laravel Prompts + confirmación. Sin scope de tenant en CLI → itera todos los tenants salvo `--tenant`.
+  `CreateProductsFromRecipesTest` (8). Correr una vez tras el deploy de v0.13.0 (dry-run: 141 recetas en la base real).
 
 ## Convenciones nuevas del módulo
 - `barcode` unique por tenant, nullable (varios NULL conviven; el mismo código puede repetirse en otro tenant).
