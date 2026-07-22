@@ -42,11 +42,13 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   `ProductPolicy`, vistas index + modales create/edit (radios de tipo togglean receta vs. costo con Alpine),
   componente `x-product-type-badge`, ítem "Artículos" en grupo Existencias (sidebar + breadcrumb + drawer mobile).
   El controller **nulea** el campo que no corresponde al tipo (`normalizeByType`).
-- **1c ✅** Precio/margen de reventa: `ProductPrice`/`ProductPriceLog`, `ProductPriceWriter` (espejo de RecipePriceWriter),
-  `ProductPriceController` (`update` JSON espejo del de recetas con costo=cost_per_unit; `matrix`).
-  Matriz de reventa `products/prices` (`products.prices.matrix`), copia adaptada de la de recetas (solo reventa,
-  paginación propia → sin conflicto). **Solapas** Elaborados/Reventa en ambas matrices; link desde el catálogo.
-  La matriz de recetas quedó intacta salvo la solapa.
+- **1c ✅ (⚠️ UI retirada en v0.13.0)** Precio/margen de reventa: `ProductPrice`/`ProductPriceLog`, `ProductPriceWriter`
+  (espejo de RecipePriceWriter). **La matriz de reventa se ELIMINÓ** (decisión del usuario, jul 2026): se borraron
+  `ProductPriceController`, la vista `products/prices.blade.php`, las rutas `products.prices.matrix|update`, `ProductPriceTest`,
+  la solapa Elaborados/Reventa de `price-lists/matrix` y el botón "Precios de reventa" del catálogo. Los artículos se
+  organizan por **categoría**; los de reventa mantienen su costo (de Compras) sin pantalla de precio de venta.
+  **Capa de datos latente (no borrada):** tablas `product_prices`/`product_price_logs`, modelos, `ProductPriceWriter`
+  (aún lo usa `DemoCatalogSeeder`) y las relaciones `Product::prices()/priceLogs()` siguen existiendo por si se retoma.
 - **2A ✅** Producto stockeable (ops manuales): `CatalogItemType` +Product (aditivo); `StockService`/`StockLevel`/
   `StockMovement`/`Product` con firmas `Ingredient|Packaging|Product` y relaciones; pestaña **Productos** en `/stock`
   (index + kardex + ajuste/recuento/mínimo; rutas `whereIn` +product). `displayUnit` usa `unit->short()` para product.

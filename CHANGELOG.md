@@ -202,13 +202,12 @@ Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Product
 #### Agregado
 
 - **Catálogo de Productos**: artículos **elaborados** (ligados a una receta) y de **reventa** (comprados para revender), con SKU, código de barras (único por negocio) y estado activo. CRUD con modales; el tipo togglea receta vs. costo.
-- **Precio y margen de reventa**: matriz de precios de reventa (espejo de la de recetas), con solapas Elaborados/Reventa. El precio del elaborado sigue viviendo en la receta; el de reventa, en el producto.
 - **Producto como ítem stockeable**: pestaña **Productos** en `/stock` (stock, mínimo, kardex, ajuste/recuento).
 - **Compra de productos de reventa**: el match de compras permite asociar renglones a productos de reventa, actualizando su stock y su costo.
 
 #### Técnico
 
-- Tabla `products` (+ `product_prices`/`product_price_logs`), enum `ProductType` (manufactured/resale), `CatalogItemType` +Product. `StockService` y `PurchaseLineRecorder` ampliados a `Ingredient|Packaging|Product`.
+- Tabla `products`, enum `ProductType` (manufactured/resale), `CatalogItemType` +Product. `StockService` y `PurchaseLineRecorder` ampliados a `Ingredient|Packaging|Product`. (Las tablas `product_prices`/`product_price_logs` quedaron sin uso al retirar la matriz de reventa — ver más abajo.)
 
 ### Producción — fabricación de elaborados
 
@@ -244,6 +243,7 @@ Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Product
 - **El select de Producción muestra solo los elaborados de una categoría marcada "se produce"**: los de una categoría no-producible (o sin categoría) quedan fuera. Sirve para costear áreas que todavía no se fabrican desde el sistema (ej. cafetería) sin que aparezcan al producir.
 - Los modales de alta/edición de artículo tienen un `<select>` de categoría (con "+ nueva categoría" al vuelo); el índice suma columna y filtro por categoría.
 - `products:from-recipes` acepta `--category=NOMBRE` para clasificar los productos creados en la misma corrida.
+- **Se quitó la matriz/solapa de «Reventa»** de las listas de precios (vista, rutas, controller y botón «Precios de reventa»): los artículos se organizan por categoría y los de reventa mantienen su costo (de Compras) sin una pantalla de precio de venta dedicada. Las tablas `product_prices`/`product_price_logs` quedan latentes (sin borrar datos) por si se retoma.
 
 #### Técnico
 

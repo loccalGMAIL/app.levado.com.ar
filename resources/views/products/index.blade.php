@@ -36,10 +36,6 @@
                     <p class="text-sm text-masa-madre mt-0.5">Productos que vendés: elaborados (desde una receta) y de reventa.</p>
                 </div>
                 <div class="flex items-center gap-3 shrink-0">
-                    <a href="{{ route('products.prices.matrix') }}"
-                        class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
-                        Precios de reventa
-                    </a>
                     @can('manage-costs')
                         <button type="button"
                             @click="$dispatch('open-modal', 'product-categories')"

@@ -27,17 +27,6 @@
                 </div>
             </div>
 
-            {{-- Solapas: elaborados (recetas) vs. reventa (productos) --}}
-            <div class="flex gap-1 border-b border-miga text-sm">
-                <span class="px-4 py-2 -mb-px border-b-2 border-corteza font-medium text-corteza">
-                    Elaborados (recetas)
-                </span>
-                <a href="{{ route('products.prices.matrix') }}"
-                    class="px-4 py-2 -mb-px border-b-2 border-transparent text-masa-madre hover:text-corteza">
-                    Reventa
-                </a>
-            </div>
-
             @if(session('status'))
                 <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
                     {{ session('status') }}

@@ -22,7 +22,6 @@ use App\Http\Controllers\PriceListController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionController;
-use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
@@ -84,8 +83,6 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('purchases/{purchase}/invoice', [PurchaseController::class, 'invoiceImage'])->name('purchases.invoice');
 
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
-    // Antes de cualquier products/{product} para que "prices" no se interprete como binding.
-    Route::get('products/prices', [ProductPriceController::class, 'matrix'])->name('products.prices.matrix');
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::get('stock/{type}/{id}', [StockController::class, 'show'])
@@ -191,7 +188,6 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('products', [ProductController::class, 'store'])->name('products.store');
     Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::patch('products/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('products.toggle-active');
-    Route::patch('products/{product}/prices/{priceList}', [ProductPriceController::class, 'update'])->name('products.prices.update');
 
     Route::post('product-categories', [ProductCategoryController::class, 'store'])->name('product-categories.store');
     Route::put('product-categories/{productCategory}', [ProductCategoryController::class, 'update'])->name('product-categories.update');
