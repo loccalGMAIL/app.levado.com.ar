@@ -41,7 +41,8 @@ class StockController extends Controller
         $itemsQuery = match ($itemType) {
             CatalogItemType::Ingredient => $tenant->ingredients()->active(),
             CatalogItemType::Packaging => $tenant->packagings()->active(),
-            CatalogItemType::Product => $tenant->products()->active(),
+            // El elaborado deriva su costo de la receta (Product::currentCost()): eager-load para valuar sin N+1.
+            CatalogItemType::Product => $tenant->products()->active()->with('recipe'),
         };
 
         $sortable = [
@@ -91,6 +92,11 @@ class StockController extends Controller
         $tenant = app(Tenant::class);
         $item = $this->resolveStockable($type, $id);
         $this->authorize('view', $item);
+
+        // El elaborado valúa con Product::currentCost() (deriva de la receta): eager-load para no lazy-loadear.
+        if ($item instanceof Product) {
+            $item->loadMissing('recipe');
+        }
 
         $location = $this->resolveLocation($tenant);
 

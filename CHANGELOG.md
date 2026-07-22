@@ -245,6 +245,17 @@ Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Product
 - `products:from-recipes` acepta `--category=NOMBRE` para clasificar los productos creados en la misma corrida.
 - **Se quitó la matriz/solapa de «Reventa»** de las listas de precios (vista, rutas, controller y botón «Precios de reventa»): los artículos se organizan por categoría y los de reventa mantienen su costo (de Compras) sin una pantalla de precio de venta dedicada. Las tablas `product_prices`/`product_price_logs` quedan latentes (sin borrar datos) por si se retoma.
 
+### Modelo de dominio: costo del Artículo (Fase 1)
+
+#### Agregado
+
+- **Costo vigente unificado del artículo** (`Product::currentCost()`): un solo lugar responde el costo por unidad según origen — elaborado desde su receta, reventa desde su último costo de compra.
+- **Los productos elaborados ahora se valúan en Stock** (antes figuraban en $0): la valuación del tab Productos de `/stock` y su kardex usan el costo derivado de la receta.
+
+#### Técnico
+
+- Ratificación del modelo Insumos/Artículos (ADR en memoria): el **Artículo es el dueño único de costo y precio**; la Receta queda como BOM; el precio del elaborado migrará de `recipe_prices` al Artículo en una fase posterior. `Product::currentCost()`/`currentCostSource()` extraen la regla que estaba inline; `StockController` eager-loada `recipe` para valuar sin N+1. Valuación a nivel de lectura (no toca el ledger). **`ProductCostTest` (5). 566 tests, todos verdes.**
+
 #### Técnico
 
 - Tabla `product_categories` (tenant_id, name, `producible` bool, unique tenant+name) + `products.product_category_id` (nullable, `nullOnDelete`). `ProductCategory` modelo + `Tenant::productCategories()` + `Product::category()`.

@@ -18,6 +18,11 @@
             ? $item->subdivision_label
             : (in_array($type, ['ingredient', 'product'], true) ? $item->unit->short() : 'u');
 
+        // El elaborado deriva su costo de la receta (Product::currentCost()); insumos/descartables usan su cost_per_unit.
+        $unitCost = fn ($item) => $type === 'product'
+            ? ($item->currentCost() ?? 0)
+            : (float) $item->cost_per_unit;
+
         $rowPayload = fn ($item, $level) => [
             'type' => $type,
             'id'   => $item->id,
@@ -126,7 +131,7 @@
                                         </svg>
                                     </a>
                                 </span>
-                                <span class="text-xs text-masa-madre font-mono text-right [overflow-wrap:anywhere]">$ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}</span>
+                                <span class="text-xs text-masa-madre font-mono text-right [overflow-wrap:anywhere]">$ {{ number_format($qty * $unitCost($item), 2, ',', '.') }}</span>
                             </div>
                             @can('manage-costs')
                                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga text-sm">
@@ -179,7 +184,7 @@
                                         {{ $level?->min_quantity !== null ? number_format($level->min_quantity, 2, ',', '.') : '—' }}
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono text-corteza">
-                                        $ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}
+                                        $ {{ number_format($qty * $unitCost($item), 2, ',', '.') }}
                                     </td>
                                     <td class="px-4 py-3">
                                         @if($qty < 0)

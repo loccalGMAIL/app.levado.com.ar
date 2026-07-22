@@ -106,7 +106,7 @@
                     <x-slot:cards>
                     @foreach($products as $product)
                         @php
-                            $baseCost = $product->isManufactured() ? $product->recipe?->unit_cost : $product->cost_per_unit;
+                            $baseCost = $product->currentCost();
                         @endphp
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $product->active ? '' : 'opacity-50' }}">
                             <div class="flex items-start justify-between">
@@ -186,7 +186,7 @@
                     <tbody class="divide-y divide-miga">
                         @foreach($products as $product)
                             @php
-                                $baseCost = $product->isManufactured() ? $product->recipe?->unit_cost : $product->cost_per_unit;
+                                $baseCost = $product->currentCost();
                             @endphp
                             <tr class="{{ $product->active ? '' : 'opacity-50' }}">
                                 <td class="px-4 py-3 font-medium text-corteza">

@@ -69,7 +69,7 @@
                      sea de dos columnas toma las dos para que entre completo. --}}
                 <div class="col-span-2 lg:col-span-1 kpi-card bg-white border border-miga rounded-lg p-4 shadow-sm">
                     <p class="text-xs text-masa-madre">Valuación</p>
-                    <p class="mt-1 font-mono kpi-figure [--kpi-figure-min:0.75rem] [--kpi-figure-max:1.125rem] text-corteza">$ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}</p>
+                    <p class="mt-1 font-mono kpi-figure [--kpi-figure-min:0.75rem] [--kpi-figure-max:1.125rem] text-corteza">$ {{ number_format($qty * ($type === 'product' ? ($item->currentCost() ?? 0) : (float) $item->cost_per_unit), 2, ',', '.') }}</p>
                 </div>
                 <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
                     <p class="text-xs text-masa-madre">Estado</p>

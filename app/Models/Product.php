@@ -56,6 +56,28 @@ class Product extends Model
         return $this->type === ProductType::Resale;
     }
 
+    /**
+     * Costo directo de producción por unidad del artículo (única fuente de verdad).
+     * Elaborado: cache unit_cost de la receta (insumos + mano de obra + sub-recetas,
+     * mantenido por RecipeCostPropagator; sin overhead de gastos fijos).
+     * Reventa: cost_per_unit (último costo, alimentado por Compras).
+     * Devuelve null si todavía no hay costo determinable.
+     */
+    public function currentCost(): ?float
+    {
+        $cost = $this->isManufactured()
+            ? $this->recipe?->unit_cost
+            : $this->cost_per_unit;
+
+        return $cost !== null ? (float) $cost : null;
+    }
+
+    /** Origen del costo vigente, para etiquetar en la UI. */
+    public function currentCostSource(): string
+    {
+        return $this->isManufactured() ? 'receta' : 'compra';
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
