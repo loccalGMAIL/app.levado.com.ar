@@ -6,6 +6,8 @@ use App\Enums\ProductType;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
+use App\Models\ProductPrice;
+use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use Illuminate\Http\RedirectResponse;
@@ -48,7 +50,27 @@ class ProductController extends Controller
         $categories = $tenant->productCategories()->orderBy('name')->get();
         $showCategories = session('reopen_categories', false);
 
-        return view('products.index', compact('products', 'recipes', 'categories', 'showCategories'));
+        // Costo/precio/margen por artículo (consistente con el Dashboard y Recetas):
+        // costo total con overhead (fullCost) y precio en la lista elegida. El precio
+        // se lee de la MISMA fuente viva que edita el Dashboard/Recetas: recipe_prices
+        // para el elaborado (vía su receta) y product_prices para la reventa.
+        $tenant->defaultPriceList();
+        $priceLists = $tenant->priceLists()->active()->orderByDesc('is_default')->orderBy('name')->get();
+        $priceList = $priceLists->firstWhere('id', (int) request('price_list')) ?? $priceLists->firstWhere('is_default', true);
+        $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
+
+        $items = collect($products->items());
+        $recipePrices = RecipePrice::where('price_list_id', $priceList->id)
+            ->whereIn('recipe_id', $items->filter->isManufactured()->pluck('recipe_id')->filter()->all())
+            ->pluck('price', 'recipe_id');
+        $resalePrices = ProductPrice::where('price_list_id', $priceList->id)
+            ->whereIn('product_id', $items->reject->isManufactured()->pluck('id')->all())
+            ->pluck('price', 'product_id');
+        $priceMap = $items->mapWithKeys(fn ($p) => [
+            $p->id => $p->isManufactured() ? ($recipePrices[$p->recipe_id] ?? null) : ($resalePrices[$p->id] ?? null),
+        ]);
+
+        return view('products.index', compact('products', 'recipes', 'categories', 'showCategories', 'priceLists', 'priceList', 'overheadPerHour', 'priceMap'));
     }
 
     public function store(StoreProductRequest $request): RedirectResponse

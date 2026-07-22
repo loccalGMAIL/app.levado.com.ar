@@ -80,6 +80,15 @@
                     <option value="active"   @selected(request('status') === 'active')>Activos</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactivos</option>
                 </select>
+                @if($priceLists->count() > 1)
+                    <select name="price_list" onchange="this.form.submit()"
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno"
+                        title="Lista de precios">
+                        @foreach($priceLists as $list)
+                            <option value="{{ $list->id }}" @selected($priceList->id === $list->id)>{{ $list->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
                 <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
@@ -106,7 +115,10 @@
                     <x-slot:cards>
                     @foreach($products as $product)
                         @php
-                            $baseCost = $product->currentCost();
+                            $cost = $product->fullCost($overheadPerHour);
+                            $price = isset($priceMap[$product->id]) ? (float) $priceMap[$product->id] : null;
+                            $marginPct = ($price !== null && $cost !== null && $price > 0) ? ($price - $cost) / $price * 100 : null;
+                            $marginColor = $marginPct === null ? 'text-masa-madre' : ($marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500'));
                         @endphp
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $product->active ? '' : 'opacity-50' }}">
                             <div class="flex items-start justify-between">
@@ -125,12 +137,21 @@
                                 </div>
                                 <x-status-badge :active="$product->active" />
                             </div>
-                            <div class="mt-2 text-sm">
-                                <span class="text-masa-madre text-xs">Costo base:</span>
-                                <span class="font-mono text-corteza">
-                                    {{ $baseCost !== null ? '$ '.number_format($baseCost, 2, ',', '.') : '—' }}
-                                </span>
+                            <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
+                                <div>
+                                    <div class="text-masa-madre text-[11px]">Costo/u</div>
+                                    <div class="font-mono text-corteza">{{ $cost !== null ? '$ '.number_format($cost, 2, ',', '.') : '—' }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-masa-madre text-[11px]">Precio</div>
+                                    <div class="font-mono text-corteza">{{ $price !== null ? '$ '.number_format($price, 2, ',', '.') : '—' }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-masa-madre text-[11px]">Margen</div>
+                                    <div class="font-mono {{ $marginColor }}">{{ $marginPct !== null ? number_format($marginPct, 1, ',', '.').'%' : '—' }}</div>
+                                </div>
                             </div>
+                            <div class="mt-1 text-[11px] text-masa-madre">Precios: {{ $priceList->name }}</div>
                             @if($product->sku || $product->barcode)
                                 <div class="mt-1 text-xs text-masa-madre">
                                     {{ $product->sku ? 'SKU '.$product->sku : '' }}
@@ -175,7 +196,9 @@
                             <th class="px-4 py-3 font-medium">Categoría</th>
                             <th class="px-4 py-3 font-medium">Origen</th>
                             <th class="px-4 py-3 font-medium">Unidad</th>
-                            <th class="px-4 py-3 font-medium text-right">Costo base</th>
+                            <th class="px-4 py-3 font-medium text-right">Costo/u</th>
+                            <th class="px-4 py-3 font-medium text-right">Precio ({{ $priceList->name }})/u</th>
+                            <th class="px-4 py-3 font-medium text-right">Margen</th>
                             <th class="px-4 py-3 font-medium">Código</th>
                             <th class="px-4 py-3 font-medium">Estado</th>
                             @can('manage-costs')
@@ -186,7 +209,10 @@
                     <tbody class="divide-y divide-miga">
                         @foreach($products as $product)
                             @php
-                                $baseCost = $product->currentCost();
+                                $cost = $product->fullCost($overheadPerHour);
+                                $price = isset($priceMap[$product->id]) ? (float) $priceMap[$product->id] : null;
+                                $marginPct = ($price !== null && $cost !== null && $price > 0) ? ($price - $cost) / $price * 100 : null;
+                                $marginColor = $marginPct === null ? 'text-masa-madre' : ($marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500'));
                             @endphp
                             <tr class="{{ $product->active ? '' : 'opacity-50' }}">
                                 <td class="px-4 py-3 font-medium text-corteza">
@@ -232,7 +258,13 @@
                                     {{ $product->unit->short() }}
                                 </td>
                                 <td class="px-4 py-3 text-right text-corteza font-mono">
-                                    {{ $baseCost !== null ? number_format($baseCost, 2, ',', '.') : '—' }}
+                                    {{ $cost !== null ? number_format($cost, 2, ',', '.') : '—' }}
+                                </td>
+                                <td class="px-4 py-3 text-right text-corteza font-mono">
+                                    {{ $price !== null ? number_format($price, 2, ',', '.') : '—' }}
+                                </td>
+                                <td class="px-4 py-3 text-right font-mono {{ $marginColor }}">
+                                    {{ $marginPct !== null ? number_format($marginPct, 1, ',', '.').'%' : '—' }}
                                 </td>
                                 <td class="px-4 py-3 text-masa-madre text-xs font-mono">
                                     {{ $product->barcode ?? ($product->sku ?? '—') }}

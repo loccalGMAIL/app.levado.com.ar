@@ -31,8 +31,14 @@ información sin duplicar reglas.
 - **P1 ✅ (hecho)**: `Product::currentCost()` + `currentCostSource()` (extrae la regla que estaba inline en
   `products/index`); se usa para **valuar elaborados** en `/stock` (index + kardex; antes valuaban 0) a nivel de
   **lectura** (sin tocar el ledger). `StockController` eager-loada `recipe` para no lazy-loadear. `ProductCostTest` (5). 566 tests.
-- **P2 🔲**: mover pricing Receta→Artículo (migrar `recipe_prices`; repuntar Dashboard rentabilidad + matriz; retirar
-  split `recipe_prices`/`product_prices` — las de reventa ya están latentes). Es el próximo hito grande.
+- **P2 🔶 (en curso)**: mover pricing Receta→Artículo. Decisiones: margen contra **costo total** (`Product::fullCost()` =
+  currentCost + prorrateo de overhead; reventa sin overhead); **quitar el campo precio del *form* de receta**; **mantener
+  la edición inline** de precio (Dashboard/`/recipes`/detalle) pero repuntada al artículo. Hecho hasta ahora:
+  (1) `Product::currentPrice()`/`fullCost()` + migración backfill `recipe_prices`→`product_prices` (318 precios);
+  (2) el **catálogo `/products` muestra costo/precio/margen** (solo lectura), leyendo el precio de la **fuente viva**
+  (recipe_prices para elaborado vía su receta, product_prices para reventa) para ser consistente con el Dashboard sin
+  split-brain. **Falta el switch coordinado**: superficie de edición unificada en el Artículo + repuntar Dashboard/recipes
+  a `product_prices` + retirar escritura de `recipe_prices`/`RecipePriceController` + quitar el campo del form de receta.
 - **P3 🔲**: políticas de precio (manual/margen/recargo) + métodos de costeo de reventa (promedio ponderado) configurables.
 - **P4 🔲**: reestructuración del Módulo de Producción sobre este modelo. Luego Ventas.
 

@@ -6,6 +6,7 @@ use App\Enums\Unit;
 use App\Models\Product;
 use App\Models\Recipe;
 use App\Services\ProductPriceWriter;
+use App\Services\RecipePriceWriter;
 
 // tenantUserAs() es un helper global de la suite (definido en IngredientCrudTest).
 
@@ -58,4 +59,25 @@ test('fullCost es null si el elaborado todavía no tiene costo de receta', funct
     ]);
 
     expect($product->fullCost(30))->toBeNull();
+});
+
+test('el catálogo de Artículos muestra costo, precio y margen del elaborado (precio de la receta)', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $recipe = Recipe::factory()->for($tenant)->create(['unit_cost' => 10, 'labor_hours' => 0, 'yield_quantity' => 12, 'yield_unit' => Unit::Unidad->value]);
+    $product = Product::factory()->for($tenant)->create([
+        'name' => 'FacturasTest',
+        'type' => ProductType::Manufactured->value,
+        'recipe_id' => $recipe->id,
+        'cost_per_unit' => null,
+        'unit' => Unit::Unidad->value,
+    ]);
+    // El elaborado lee su precio de la receta (misma fuente que el Dashboard).
+    app(RecipePriceWriter::class)->set($recipe, $tenant->defaultPriceList(), 25);
+
+    $this->actingAs($user)
+        ->get(route('products.index'))
+        ->assertOk()
+        ->assertSee('FacturasTest')
+        ->assertSee('25,00')   // precio (de la receta)
+        ->assertSee('60,0%');  // margen (25 - 10) / 25
 });

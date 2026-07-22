@@ -251,6 +251,7 @@ Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Product
 
 - **Costo vigente unificado del artículo** (`Product::currentCost()`): un solo lugar responde el costo por unidad según origen — elaborado desde su receta, reventa desde su último costo de compra.
 - **Los productos elaborados ahora se valúan en Stock** (antes figuraban en $0): la valuación del tab Productos de `/stock` y su kardex usan el costo derivado de la receta.
+- **El catálogo de Artículos muestra costo, precio y margen** por artículo (con selector de lista de precios), consistente con el Dashboard y Recetas: costo total con overhead, precio leído de la fuente viva (la receta para elaborados, el producto para reventa) y margen con semáforo. Por ahora es de solo lectura; la edición inline unificada llega con el switch de pricing al Artículo.
 
 #### Técnico
 
