@@ -78,6 +78,34 @@ class Product extends Model
         return $this->isManufactured() ? 'receta' : 'compra';
     }
 
+    /**
+     * Costo totalmente cargado por unidad (base del margen/pricing): costo directo
+     * (currentCost) + prorrateo del overhead de gastos fijos (horas de MO de la receta
+     * × overhead/hora ÷ rendimiento). La reventa no lleva overhead de producción.
+     */
+    public function fullCost(float $overheadPerHour): ?float
+    {
+        $direct = $this->currentCost();
+
+        if ($direct === null || ! $this->isManufactured()) {
+            return $direct;
+        }
+
+        $yield = (float) ($this->recipe?->yield_quantity ?? 0);
+        $laborHours = (float) ($this->recipe?->labor_hours ?? 0);
+        $overheadPerUnit = $yield > 0 ? $laborHours * $overheadPerHour / $yield : 0.0;
+
+        return $direct + $overheadPerUnit;
+    }
+
+    /** Precio de venta del artículo en una lista (única fuente de verdad). Null si no tiene. */
+    public function currentPrice(PriceList $priceList): ?float
+    {
+        $price = $this->prices()->where('price_list_id', $priceList->id)->value('price');
+
+        return $price !== null ? (float) $price : null;
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
