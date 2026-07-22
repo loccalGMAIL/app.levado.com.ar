@@ -31,6 +31,19 @@
         </div>
 
         <div class="px-4 py-3">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Producción</p>
+
+            <a href="{{ route('production.index') }}" @click="open = false"
+                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
+                    {{ request()->routeIs('production.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
+                </svg>
+                Producción
+            </a>
+        </div>
+
+        <div class="px-4 pb-3">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Existencias</p>
 
             <a href="{{ route('products.index') }}" @click="open = false"
@@ -237,7 +250,7 @@
         {{-- Más --}}
         <button @click="open = !open"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs(['products.*', 'price-lists.*', 'fixed-costs.*', 'variable-expenses.*', 'packaging.*', 'labor-types.*', 'suppliers.*', 'stock.*', 'business.*', 'team.*', 'locations.*', 'profile.*', 'admin.*']) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs(['production.*', 'products.*', 'price-lists.*', 'fixed-costs.*', 'variable-expenses.*', 'packaging.*', 'labor-types.*', 'suppliers.*', 'stock.*', 'business.*', 'team.*', 'locations.*', 'profile.*', 'admin.*']) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>

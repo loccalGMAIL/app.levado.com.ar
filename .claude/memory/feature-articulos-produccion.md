@@ -59,9 +59,29 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   con match de 3 tipos. Vista: optgroup "Productos (reventa)" + `window.MATCH_PRODUCT_CATALOG` **aparte** del de
   ingredientes (los ids colisionan); `match.js` elige catálogo por tipo. `ProductPurchaseTest` (8). **528 tests verdes.**
   Requiere `npm run build` para reflejar `match.js`.
-- **3 🔲** Producción: `RecipeExploder` (BOM completo, phantom), generalizar referencia de `StockService::registerMovement`
-  + `reverseMovementsFor()`, tabla `productions` + `ProductionService::produce()/cancel()`, UI grupo Producción con preview.
-  Ojo: bloquear las filas de `stock_levels` en orden determinista (deadlocks).
+- **3A ✅** Producción (backend): `RecipeExploder::explode(Recipe, factor)` aplana el BOM a insumos base
+  (ingredientes + descartables), explotando sub-recetas phantom recursivamente (`childFactor =
+  factor × convert(quantity_used, unit, child.yield_unit) / child.yield_quantity`), agrega por ítem, ignora
+  mano de obra. `StockService::registerMovement` **generalizó la referencia**: `?PurchaseLine $reference`
+  → escalares `?string $referenceType, ?int $referenceId` (compras pasan `'purchase_line'`); nuevo
+  `reverseMovementsFor(type, id, user)` (eager-loada `location`+stockables para no violar preventLazyLoading).
+  Tabla `productions` (cabezal/snapshot: product/recipe/quantity/unit/unit_cost/total_cost/status/produced_at/
+  cancelled_at), enum `ProductionStatus` (Confirmed/Cancelled), `Production` modelo (`movements()` por
+  `reference_type='production'`), `Tenant::productions()`, `ProductionFactory`. `ProductionService`:
+  `preview()` (puro, marca faltantes), `produce()` (**cantidad en unidades del producto**;
+  `factor = convert(qty, product.unit, recipe.yield_unit)/yield_quantity`; emite movimientos **ordenados por
+  `(stockable_type, stockable_id)`** para evitar deadlocks; consumos − y elaborado +, todos referenciados a la
+  producción), `cancel()` (reverseMovementsFor + status). **Decisión: sin valuación del elaborado por ahora** —
+  producir no toca la regla de `unit_cost` de `StockService` (solo `Purchase` pisa `stock_levels.unit_cost`);
+  el elaborado sigue valuado a `cost_per_unit` (null→0) en `/stock`. `ProductionTest` (12). **540 tests verdes.**
+- **3B ✅** Producción (UI): `ProductionController` (index/create/`preview` JSON/store→produce/show leyendo el
+  ledger por referencia/`cancel` PATCH→anula), rutas lectura (index/show + create con `role:`) y escritura
+  (preview/store/cancel), `ProductionPolicy`, `StoreProductionRequest` (product_id `exists` manufactured + qty `gt:0`).
+  Vistas `production/index` (tabla + card mobile), `production/create` (**preview en vivo con Alpine inline + fetch
+  al endpoint** — sin módulo JS de build nuevo; avisa faltantes, permite stock negativo), `production/show`
+  (resumen + insumos consumidos desde `movements()`, botón Anular con confirm). Componente `x-production-status-badge`.
+  Ítem "Producción" en el grupo Producción del sidebar + sección Producción en el drawer mobile + breadcrumbs en
+  `layouts/navigation`. `ProductionControllerTest` (8). **548 tests verdes.** Requiere `npm run build`.
 
 ## Convenciones nuevas del módulo
 - `barcode` unique por tenant, nullable (varios NULL conviven; el mismo código puede repetirse en otro tenant).

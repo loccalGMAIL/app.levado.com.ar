@@ -44,6 +44,15 @@
                 } elseif (request()->routeIs('recipes.*')) {
                     $crumbs[] = ['label' => 'Producción', 'href' => null];
                     $crumbs[] = ['label' => 'Recetas', 'href' => null];
+                } elseif (request()->routeIs('production.show')) {
+                    $crumbs[] = ['label' => 'Producción', 'href' => route('production.index')];
+                    $production = request()->route('production');
+                    if ($production) { $crumbs[] = ['label' => $production->product?->name ?? ('Producción #'.$production->id), 'href' => null]; }
+                } elseif (request()->routeIs('production.create')) {
+                    $crumbs[] = ['label' => 'Producción', 'href' => route('production.index')];
+                    $crumbs[] = ['label' => 'Producir', 'href' => null];
+                } elseif (request()->routeIs('production.*')) {
+                    $crumbs[] = ['label' => 'Producción', 'href' => null];
                 } elseif (request()->routeIs('ingredients.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Ingredientes', 'href' => null];

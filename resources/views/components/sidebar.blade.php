@@ -24,13 +24,21 @@
         ])
 
         {{-- Producción --}}
-        <x-sidebar-group title="Producción" slug="produccion" :active="request()->routeIs('recipes.*')">
+        <x-sidebar-group title="Producción" slug="produccion" :active="request()->routeIs('recipes.*', 'production.*')">
             @include('components.sidebar-item', [
                 'href'   => route('recipes.index'),
                 'label'  => 'Recetas',
                 'active' => request()->routeIs('recipes.*'),
                 'id'     => 'sidebar-recetas',
                 'icon'   => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />',
+            ])
+
+            @include('components.sidebar-item', [
+                'href'   => route('production.index'),
+                'label'  => 'Producción',
+                'active' => request()->routeIs('production.*'),
+                'id'     => 'sidebar-produccion',
+                'icon'   => '<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />',
             ])
         </x-sidebar-group>
 

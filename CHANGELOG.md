@@ -193,6 +193,48 @@ Las dos migraciones son columnas nullable aditivas: sin migración de datos, sin
 
 ---
 
+## [Unreleased] — Artículos y Producción (v0.13.0)
+
+Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Producto** es el SKU vendible/stockeable y la **Receta** es su fórmula (BOM). En curso.
+
+### Catálogo de Artículos, pricing y stock (etapas 1–2B)
+
+#### Agregado
+
+- **Catálogo de Productos**: artículos **elaborados** (ligados a una receta) y de **reventa** (comprados para revender), con SKU, código de barras (único por negocio) y estado activo. CRUD con modales; el tipo togglea receta vs. costo.
+- **Precio y margen de reventa**: matriz de precios de reventa (espejo de la de recetas), con solapas Elaborados/Reventa. El precio del elaborado sigue viviendo en la receta; el de reventa, en el producto.
+- **Producto como ítem stockeable**: pestaña **Productos** en `/stock` (stock, mínimo, kardex, ajuste/recuento).
+- **Compra de productos de reventa**: el match de compras permite asociar renglones a productos de reventa, actualizando su stock y su costo.
+
+#### Técnico
+
+- Tabla `products` (+ `product_prices`/`product_price_logs`), enum `ProductType` (manufactured/resale), `CatalogItemType` +Product. `StockService` y `PurchaseLineRecorder` ampliados a `Ingredient|Packaging|Product`.
+
+### Producción — fabricación de elaborados
+
+#### Agregado
+
+- **Nueva sección Producción** (grupo Producción del menú): registrá la fabricación de un elaborado y mirá el historial de producciones con su estado y costo.
+- **Producir un elaborado** descuenta del stock los **insumos** de su receta y suma **unidades del producto** terminado. La cantidad se ingresa en unidades del producto; el sistema escala el consumo contra el rendimiento de la receta.
+- **Vista previa en vivo**: al elegir el producto y la cantidad, la pantalla muestra los insumos que se van a consumir, cuáles no alcanzan (aviso de faltante) y el costo total, antes de confirmar.
+- Las **sub-recetas** se explotan al vuelo (phantom): se descuentan sus ingredientes y descartables reales, recursivamente, y no la sub-receta como ítem.
+- Una producción se puede **anular**: revierte exactamente los movimientos de stock que generó (insumos e ingreso del elaborado).
+
+#### Técnico
+
+- **`RecipeExploder`**: aplana el BOM a insumos base escalados por un factor, explotando sub-recetas recursivamente (`childFactor = factor × convert(quantity_used, unit, child.yield_unit) / child.yield_quantity`) y agregando por ítem; ignora la mano de obra.
+- **`StockService` generalizó la referencia** de `registerMovement` (de `PurchaseLine` a `referenceType`/`referenceId` escalares) y sumó `reverseMovementsFor(type, id)`, base de la anulación. La valuación no cambió: **el elaborado no toma costo de inventario por ahora** (solo las compras pisan el último costo).
+- Tabla `productions` (cabezal/snapshot) + enum `ProductionStatus`; modelo `Production` (movimientos atados por `reference_type='production'`). **`ProductionService`**: `preview()` (marca faltantes, sin escribir), `produce()` (emite los movimientos **ordenados por `(stockable_type, stockable_id)`** para evitar deadlocks, en una transacción) y `cancel()`.
+- `ProductionController` (index/create/preview JSON/store/show/cancel) + `ProductionPolicy` + `StoreProductionRequest`; producir requiere rol owner/admin. Preview con Alpine.js (fetch al endpoint, sin JS de build nuevo).
+- **`ProductionTest` (12) + `ProductionControllerTest` (8)**: explosión phantom, conversión de unidades, anulación e idempotencia, guards, stock negativo permitido, capa HTTP y aislamiento entre tenants. **548 tests, todos verdes.**
+
+#### Al deployar
+
+1. `php artisan migrate` (tabla `productions`)
+2. `npm run build` (assets del menú y la pantalla de producción)
+
+---
+
 ## [0.12.2] — 2026-07-19
 
 ### Centro de Alertas + limpieza del dashboard
