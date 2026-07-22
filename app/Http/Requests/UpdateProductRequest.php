@@ -30,6 +30,11 @@ class UpdateProductRequest extends FormRequest
                 'integer',
                 Rule::exists('recipes', 'id')->where('tenant_id', $tenantId),
             ],
+            'product_category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('product_categories', 'id')->where('tenant_id', $tenantId),
+            ],
             'unit' => ['required', Rule::enum(Unit::class)],
             'cost_per_unit' => [
                 Rule::requiredIf(fn () => $this->input('type') === ProductType::Resale->value),

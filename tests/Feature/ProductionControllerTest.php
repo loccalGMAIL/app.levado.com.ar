@@ -12,7 +12,7 @@ use App\Services\StockService;
 
 // tenantUserAs() es global (IngredientCrudTest); manufacturedProduct() y seedStock() son globales (ProductionTest).
 
-/** Arma un elaborado con receta (1 ingrediente) para un tenant nuevo con el rol dado. */
+/** Arma un elaborado con receta (1 ingrediente) en una categoría producible, para un tenant nuevo. */
 function productionSetup(TenantUserRole $role = TenantUserRole::Owner): array
 {
     [$user, $tenant] = tenantUserAs($role);
@@ -20,6 +20,8 @@ function productionSetup(TenantUserRole $role = TenantUserRole::Owner): array
     $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 12, 'yield_unit' => Unit::Unidad->value]);
     $recipe->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 500, 'unit' => Unit::Gramo->value]);
     $product = manufacturedProduct($tenant, $recipe);
+    $category = $tenant->productCategories()->create(['name' => 'Producción', 'producible' => true]);
+    $product->update(['product_category_id' => $category->id]);
 
     return [$user, $tenant, $product, $harina];
 }
@@ -98,4 +100,31 @@ test('no se puede ver la producción de otro tenant', function () {
     $production = app(ProductionService::class)->produce($otherProduct, 12, null, $other);
 
     $this->actingAs($user)->get(route('production.show', $production))->assertNotFound();
+});
+
+// --- Filtro por categoría "se produce" en el select de producir ---
+
+test('el select de producir muestra el elaborado de una categoría que se produce', function () {
+    [$user, $tenant, $product] = productionSetup(); // ya viene en categoría producible
+
+    $this->actingAs($user)->get(route('production.create'))->assertOk()->assertSee($product->name);
+});
+
+test('el select de producir oculta un elaborado sin categoría', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 12, 'yield_unit' => Unit::Unidad->value]);
+    $product = manufacturedProduct($tenant, $recipe);
+    $product->update(['name' => 'ElaboradoSinCategoriaZZ']); // sin categoría
+
+    $this->actingAs($user)->get(route('production.create'))->assertOk()->assertDontSee('ElaboradoSinCategoriaZZ');
+});
+
+test('el select de producir oculta un elaborado de una categoría que no se produce', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 12, 'yield_unit' => Unit::Unidad->value]);
+    $product = manufacturedProduct($tenant, $recipe);
+    $cafeteria = $tenant->productCategories()->create(['name' => 'Cafetería', 'producible' => false]);
+    $product->update(['name' => 'ElaboradoCafeteriaZZ', 'product_category_id' => $cafeteria->id]);
+
+    $this->actingAs($user)->get(route('production.create'))->assertOk()->assertDontSee('ElaboradoCafeteriaZZ');
 });

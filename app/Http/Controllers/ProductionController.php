@@ -37,11 +37,13 @@ class ProductionController extends Controller
     {
         $tenant = app(Tenant::class);
 
-        // Solo elaborados activos con receta: son los únicos que se pueden producir.
+        // Solo elaborados activos con receta y en una categoría marcada "se produce":
+        // los sin categoría o en categorías no-producibles quedan fuera de Producción.
         $products = $tenant->products()
             ->active()
             ->where('type', ProductType::Manufactured->value)
             ->whereNotNull('recipe_id')
+            ->whereHas('category', fn ($query) => $query->where('producible', true))
             ->with('recipe')
             ->orderBy('name')
             ->get();

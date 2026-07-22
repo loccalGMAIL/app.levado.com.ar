@@ -3,6 +3,7 @@
 use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Models\Recipe;
 use App\Models\Tenant;
 
@@ -105,4 +106,19 @@ test('saltea las recetas inactivas', function () {
     $this->artisan('products:from-recipes', ['--force' => true])->assertExitCode(0);
 
     expect(Product::where('recipe_id', $recipe->id)->exists())->toBeFalse();
+});
+
+test('con --category asigna la categoría (producible) a los productos creados', function () {
+    $tenant = Tenant::factory()->create();
+    $recipe = pricedRecipe($tenant);
+
+    $this->artisan('products:from-recipes', ['--category' => 'Panadería', '--force' => true])->assertExitCode(0);
+
+    $product = Product::where('recipe_id', $recipe->id)->first();
+    $category = ProductCategory::find($product->product_category_id);
+
+    expect($category)->not->toBeNull()
+        ->and($category->name)->toBe('Panadería')
+        ->and($category->tenant_id)->toBe($tenant->id)
+        ->and($category->producible)->toBeTrue();
 });

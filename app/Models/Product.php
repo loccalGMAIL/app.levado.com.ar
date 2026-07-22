@@ -23,6 +23,7 @@ class Product extends Model
         'name',
         'type',
         'recipe_id',
+        'product_category_id',
         'unit',
         'cost_per_unit',
         'sku',
@@ -63,6 +64,11 @@ class Product extends Model
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(ProductCategory::class, 'product_category_id');
     }
 
     public function prices(): HasMany

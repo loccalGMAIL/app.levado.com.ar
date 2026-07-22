@@ -31,6 +31,11 @@ class StoreProductRequest extends FormRequest
                 'integer',
                 Rule::exists('recipes', 'id')->where('tenant_id', $tenantId),
             ],
+            'product_category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('product_categories', 'id')->where('tenant_id', $tenantId),
+            ],
             'unit' => ['required', Rule::enum(Unit::class)],
             // El costo lo carga el usuario solo en reventa; en elaborado se deriva de la receta.
             'cost_per_unit' => [

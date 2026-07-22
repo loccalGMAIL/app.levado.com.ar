@@ -1,6 +1,40 @@
 <x-crud-modal name="product-create" title="Nuevo artículo" :show="$errorsInCreate">
     <form method="POST" action="{{ route('products.store') }}" class="space-y-4"
-          x-data="{ type: '{{ old('type') }}' }">
+          x-data="{
+              type: '{{ old('type') }}',
+              showNewCat: false,
+              newCatName: '',
+              newCatLoading: false,
+              newCatError: '',
+              async createCategory() {
+                  this.newCatLoading = true;
+                  this.newCatError = '';
+                  try {
+                      const res = await fetch('{{ route('product-categories.store') }}', {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Accept': 'application/json',
+                              'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                          },
+                          body: JSON.stringify({ name: this.newCatName }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) {
+                          this.newCatError = data?.errors?.name?.[0] ?? 'Error al crear la categoría.';
+                          return;
+                      }
+                      const sel = document.getElementById('create_product_category');
+                      sel.add(new Option(data.name, data.id, true, true));
+                      this.showNewCat = false;
+                      this.newCatName = '';
+                  } catch {
+                      this.newCatError = 'Error al crear la categoría.';
+                  } finally {
+                      this.newCatLoading = false;
+                  }
+              }
+          }">
         @csrf
         <input type="hidden" name="_form" value="create">
 
@@ -44,6 +78,41 @@
             </select>
             <p class="mt-1 text-xs text-masa-madre">El costo del elaborado se toma de la receta.</p>
             <x-input-error :messages="$errors->get('recipe_id')" class="mt-2" />
+        </div>
+
+        <div>
+            <div class="flex items-center justify-between mb-1">
+                <x-input-label for="create_product_category" value="Categoría (opcional)" />
+                <button type="button" @click="showNewCat = !showNewCat"
+                    class="text-xs text-masa-madre hover:text-corteza hover:underline">
+                    <span x-text="showNewCat ? 'Cancelar' : '+ Nueva categoría'"></span>
+                </button>
+            </div>
+
+            <div x-show="showNewCat" x-cloak class="mb-2">
+                <div class="flex items-center gap-2">
+                    <input type="text" x-model="newCatName"
+                        placeholder="Nombre de la categoría"
+                        @keydown.enter.prevent="createCategory()"
+                        class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm" />
+                    <button type="button" @click="createCategory()"
+                        :disabled="newCatLoading || !newCatName.trim()"
+                        class="px-3 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
+                        <span x-text="newCatLoading ? 'Creando…' : 'Crear'"></span>
+                    </button>
+                </div>
+                <p x-show="newCatError" x-text="newCatError" class="mt-1 text-xs text-red-500"></p>
+                <p class="mt-1 text-xs text-masa-madre">La categoría nueva se crea con «se produce» activado; ajustalo en Categorías.</p>
+            </div>
+
+            <select id="create_product_category" name="product_category_id"
+                class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
+                <option value="">— Sin categoría —</option>
+                @foreach($categories as $cat)
+                    <option value="{{ $cat->id }}" @selected(old('product_category_id') == $cat->id)>{{ $cat->name }}</option>
+                @endforeach
+            </select>
+            <x-input-error :messages="$errors->get('product_category_id')" class="mt-2" />
         </div>
 
         <div class="grid grid-cols-2 gap-4">

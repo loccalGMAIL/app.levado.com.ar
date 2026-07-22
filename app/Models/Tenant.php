@@ -107,6 +107,11 @@ class Tenant extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function productCategories(): HasMany
+    {
+        return $this->hasMany(ProductCategory::class);
+    }
+
     public function productions(): HasMany
     {
         return $this->hasMany(Production::class);

@@ -236,6 +236,25 @@ Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Product
 2. `npm run build` (assets del menú y la pantalla de producción)
 3. `php artisan products:from-recipes` (crea los productos elaborados de las recetas vendibles existentes; pide confirmación)
 
+### Categorías de artículos + visibilidad en Producción
+
+#### Agregado
+
+- **Categorías de artículos** por negocio (Panadería, Cafetería, Pastelería…), gestionables desde un botón "Categorías" en Artículos. Cada categoría tiene un flag **"Se produce"**.
+- **El select de Producción muestra solo los elaborados de una categoría marcada "se produce"**: los de una categoría no-producible (o sin categoría) quedan fuera. Sirve para costear áreas que todavía no se fabrican desde el sistema (ej. cafetería) sin que aparezcan al producir.
+- Los modales de alta/edición de artículo tienen un `<select>` de categoría (con "+ nueva categoría" al vuelo); el índice suma columna y filtro por categoría.
+- `products:from-recipes` acepta `--category=NOMBRE` para clasificar los productos creados en la misma corrida.
+
+#### Técnico
+
+- Tabla `product_categories` (tenant_id, name, `producible` bool, unique tenant+name) + `products.product_category_id` (nullable, `nullOnDelete`). `ProductCategory` modelo + `Tenant::productCategories()` + `Product::category()`.
+- `ProductCategoryController` (store/update/destroy) espejo del de categorías de gastos: guard de borrado si tiene artículos, `wantsJson` para el alta rápida, unicidad `Rule::unique` scoped. Componente `product-categories-modal` (con toggle "se produce"; sin tocar el de gastos). Filtro en `ProductionController::create` con `whereHas('category', producible=true)`.
+- **`ProductCategoryTest` (10) + filtro en `ProductionControllerTest` (3) + `--category` en `CreateProductsFromRecipesTest` (1)**. **570 tests, todos verdes.**
+
+#### Al deployar
+
+- `php artisan migrate` (tablas `product_categories` + columna en `products`). Luego, para producir: clasificar los elaborados con una categoría marcada "se produce" (o correr `products:from-recipes --category=…`).
+
 ---
 
 ## [0.12.2] — 2026-07-19

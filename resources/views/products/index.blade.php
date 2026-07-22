@@ -2,19 +2,20 @@
     <x-slot name="title">Artículos</x-slot>
 
     @php
-        $errorFields = ['name', 'type', 'recipe_id', 'unit', 'cost_per_unit', 'sku', 'barcode'];
+        $errorFields = ['name', 'type', 'recipe_id', 'product_category_id', 'unit', 'cost_per_unit', 'sku', 'barcode'];
         $errorsInCreate = $errors->hasAny($errorFields) && old('_form') === 'create';
         $errorsInEdit   = $errors->hasAny($errorFields) && old('_form') === 'edit';
-        $editingDefault = ['id' => null, 'name' => '', 'type' => '', 'recipe_id' => '', 'unit' => '', 'cost_per_unit' => '', 'sku' => '', 'barcode' => ''];
+        $editingDefault = ['id' => null, 'name' => '', 'type' => '', 'recipe_id' => '', 'product_category_id' => '', 'unit' => '', 'cost_per_unit' => '', 'sku' => '', 'barcode' => ''];
         $editingOnError = $errorsInEdit ? [
-            'id'            => old('product_id'),
-            'name'          => old('name'),
-            'type'          => old('type'),
-            'recipe_id'     => old('recipe_id'),
-            'unit'          => old('unit'),
-            'cost_per_unit' => old('cost_per_unit'),
-            'sku'           => old('sku'),
-            'barcode'       => old('barcode'),
+            'id'                  => old('product_id'),
+            'name'                => old('name'),
+            'type'                => old('type'),
+            'recipe_id'           => old('recipe_id'),
+            'product_category_id' => old('product_category_id'),
+            'unit'                => old('unit'),
+            'cost_per_unit'       => old('cost_per_unit'),
+            'sku'                 => old('sku'),
+            'barcode'             => old('barcode'),
         ] : $editingDefault;
     @endphp
 
@@ -40,6 +41,11 @@
                         Precios de reventa
                     </a>
                     @can('manage-costs')
+                        <button type="button"
+                            @click="$dispatch('open-modal', 'product-categories')"
+                            class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                            Categorías
+                        </button>
                         <button type="button" id="btn-nuevo-producto"
                             @click="$dispatch('open-modal', 'product-create')"
                             class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
@@ -63,6 +69,15 @@
                     <option value="manufactured" @selected(request('type') === 'manufactured')>Elaborados</option>
                     <option value="resale"       @selected(request('type') === 'resale')>Reventa</option>
                 </select>
+                @if($categories->isNotEmpty())
+                    <select name="category"
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                        <option value="">Todas las categorías</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}" @selected((string) request('category') === (string) $cat->id)>{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
                 <select name="status"
                     class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                     <option value="">Todos</option>
@@ -72,7 +87,7 @@
                 <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
-                @if(request('search') || request('status') || request('type'))
+                @if(request('search') || request('status') || request('type') || request('category'))
                     <a href="{{ route('products.index') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
                 @endif
             </form>
@@ -84,7 +99,7 @@
 
             @if($products->isEmpty())
                 <x-empty-state>
-                    @if(request('search') || request('status') || request('type'))
+                    @if(request('search') || request('status') || request('type') || request('category'))
                         No se encontraron artículos con esos filtros.
                     @else
                         Todavía no hay artículos. Agregá el primero.
@@ -104,6 +119,9 @@
                                     <div class="text-xs text-masa-madre mt-0.5">
                                         <x-product-type-badge :type="$product->type" />
                                         · {{ $product->unit->short() }}
+                                        @if($product->category)
+                                            · {{ $product->category->name }}
+                                        @endif
                                         @if($product->isManufactured() && $product->recipe)
                                             · {{ $product->recipe->name }}
                                         @endif
@@ -131,6 +149,7 @@
                                             'name'          => $product->name,
                                             'type'          => $product->type->value,
                                             'recipe_id'     => $product->recipe_id ?? '',
+                                            'product_category_id' => $product->product_category_id ?? '',
                                             'unit'          => $product->unit->value,
                                             'cost_per_unit' => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
                                             'sku'           => $product->sku ?? '',
@@ -157,6 +176,7 @@
                         <tr>
                             <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
                             <th class="px-4 py-3 font-medium">Tipo</th>
+                            <th class="px-4 py-3 font-medium">Categoría</th>
                             <th class="px-4 py-3 font-medium">Origen</th>
                             <th class="px-4 py-3 font-medium">Unidad</th>
                             <th class="px-4 py-3 font-medium text-right">Costo base</th>
@@ -181,6 +201,7 @@
                                                 'name'          => $product->name,
                                                 'type'          => $product->type->value,
                                                 'recipe_id'     => $product->recipe_id ?? '',
+                                                'product_category_id' => $product->product_category_id ?? '',
                                                 'unit'          => $product->unit->value,
                                                 'cost_per_unit' => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
                                                 'sku'           => $product->sku ?? '',
@@ -195,6 +216,18 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <x-product-type-badge :type="$product->type" />
+                                </td>
+                                <td class="px-4 py-3 text-masa-madre text-xs">
+                                    @if($product->category)
+                                        <span class="inline-flex items-center gap-1">
+                                            {{ $product->category->name }}
+                                            @unless($product->category->producible)
+                                                <span class="text-[10px] text-gray-400" title="No se produce">·</span>
+                                            @endunless
+                                        </span>
+                                    @else
+                                        —
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3 text-masa-madre text-xs">
                                     {{ $product->isManufactured() ? ($product->recipe?->name ?? '—') : 'Reventa' }}
@@ -273,6 +306,15 @@
         @can('manage-costs')
             @include('products.modals.create')
             @include('products.modals.edit')
+
+            <x-product-categories-modal
+                name="product-categories"
+                title="Categorías de artículos"
+                :categories="$categories"
+                :show="$showCategories"
+                store-route="product-categories.store"
+                update-route="product-categories.update"
+                destroy-route="product-categories.destroy" />
         @endcan
 
     </div>

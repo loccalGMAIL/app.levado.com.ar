@@ -88,6 +88,18 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   precios** (siguen en la receta). Idempotente; flags `--all` (incluir sin precio), `--tenant=`, `--dry-run`, `--force`.
   Preview con Laravel Prompts + confirmación. Sin scope de tenant en CLI → itera todos los tenants salvo `--tenant`.
   `CreateProductsFromRecipesTest` (8). Correr una vez tras el deploy de v0.13.0 (dry-run: 141 recetas en la base real).
+  Acepta `--category=NOMBRE` (crea/reusa la categoría por negocio y la asigna a los productos creados).
+- **Categorías de artículos + visibilidad en Producción**: tabla `product_categories` (tenant_id, name,
+  `producible` bool, unique tenant+name) + `products.product_category_id` nullable nullOnDelete. Espejo del patrón
+  de categorías de gastos: `ProductCategory` modelo, `ProductCategoryController` (store/update/destroy, guard de
+  borrado si tiene artículos, `wantsJson` para alta rápida, unicidad scoped), rutas `product-categories.*`, componente
+  **propio** `product-categories-modal` (toggle "se produce"; **no** se tocó el de gastos). Modales de producto con
+  `<select>` de categoría + "+ nueva" al vuelo; índice con columna y filtro. **El objetivo**: `ProductionController::create`
+  filtra `whereHas('category', producible=true)` → **solo aparecen elaborados de una categoría marcada "se produce"**;
+  sin categoría o categoría no-producible → ocultos (decisión del usuario: cafetería se costea pero no se produce hasta
+  el módulo de ventas). El filtro es solo del select; `produce()` no lo revalida (no es un guard duro). `ProductCategoryTest`
+  (10) + filtro en `ProductionControllerTest` (3). **570 tests verdes.** Los 131 productos de Orfano quedaron sin categoría
+  → hay que clasificarlos para producirlos.
 
 ## Convenciones nuevas del módulo
 - `barcode` unique por tenant, nullable (varios NULL conviven; el mismo código puede repetirse en otro tenant).

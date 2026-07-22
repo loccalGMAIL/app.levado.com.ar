@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Enums\ProductType;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Models\Recipe;
 use Illuminate\Console\Command;
 
@@ -28,6 +29,7 @@ class CreateProductsFromRecipes extends Command
     protected $signature = 'products:from-recipes
                             {--all : Incluir también recetas finales activas sin precio de venta}
                             {--tenant= : Limitar a un tenant por id}
+                            {--category= : Asignar los productos creados a esta categoría (se crea por negocio si no existe)}
                             {--dry-run : Mostrar qué se crearía sin escribir nada}
                             {--force : Crear sin pedir confirmación}';
 
@@ -37,6 +39,7 @@ class CreateProductsFromRecipes extends Command
     {
         $includeUnpriced = (bool) $this->option('all');
         $tenantId = $this->option('tenant');
+        $categoryName = $this->option('category');
 
         $recipes = Recipe::query()
             ->with('tenant')
@@ -78,6 +81,9 @@ class CreateProductsFromRecipes extends Command
         table(['Negocio', 'Receta', 'Rinde', 'Costo/u'], $rows);
         $this->newLine();
         info('Cada producto se enlaza a su receta (unidad = rendimiento, costo derivado). El precio de venta sigue en la receta.');
+        if ($categoryName) {
+            info("Se asignarán a la categoría «{$categoryName}» (se crea por negocio si no existe).");
+        }
 
         if ($this->option('dry-run')) {
             info('Dry-run: no se creó nada.');
@@ -91,13 +97,24 @@ class CreateProductsFromRecipes extends Command
             return self::SUCCESS;
         }
 
+        $categoryByTenant = []; // cache tenant_id → category_id (la categoría es por negocio)
+
         $created = 0;
         foreach ($recipes as $recipe) {
+            $categoryId = null;
+            if ($categoryName) {
+                $categoryId = $categoryByTenant[$recipe->tenant_id] ??= ProductCategory::firstOrCreate(
+                    ['tenant_id' => $recipe->tenant_id, 'name' => $categoryName],
+                    ['producible' => true],
+                )->id;
+            }
+
             Product::create([
                 'tenant_id' => $recipe->tenant_id,
                 'name' => $recipe->name,
                 'type' => ProductType::Manufactured->value,
                 'recipe_id' => $recipe->id,
+                'product_category_id' => $categoryId,
                 'unit' => $recipe->yield_unit->value,
                 'cost_per_unit' => null,
                 'active' => true,

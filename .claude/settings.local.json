@@ -22,7 +22,22 @@
       "Bash(timeout 60 bash -c 'while true; do sleep 5; done')",
       "PowerShell(herd sites 2>&1)",
       "Bash(sed -i 's|### v0.11.1 — Aislamiento estructural entre tenants \\(rama `claude/technical-debt-audit-obzekw`, pendiente de merge\\)|### v0.11.1 — Aislamiento estructural entre tenants \\(PR #44, mergeada a master\\)|' .claude/memory/project_status.md)",
-      "Bash(git commit -m 'feat\\(ux\\): páginas de error 404/403/419/500/503 con branding \\(v0.11.2\\) *)"
+      "Bash(git commit -m 'feat\\(ux\\): páginas de error 404/403/419/500/503 con branding \\(v0.11.2\\) *)",
+      "Bash(git rm *)",
+      "Bash(GIT_EDITOR=true git rebase --continue)",
+      "Bash(git rebase *)",
+      "Bash(git --version)",
+      "Bash(git status *)",
+      "Bash(git commit *)",
+      "Bash(GIT_TRACE=1 git rebase --continue)",
+      "Bash(awk '{print $3}')",
+      "Bash(GIT_TRACE2=1 GIT_TRACE2_EVENT=1 git rebase --continue)",
+      "Bash(GIT_TRACE=2 git rebase --continue)",
+      "Bash(env)",
+      "Bash(unset GIT_EDITOR)",
+      "Bash(echo \"EXIT:$?\")",
+      "PowerShell(git rebase *)",
+      "Bash(git cherry-pick *)"
     ]
   },
   "enableAllProjectMcpServers": true,

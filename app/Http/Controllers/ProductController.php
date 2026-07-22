@@ -23,7 +23,7 @@ class ProductController extends Controller
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
         $products = $tenant->products()
-            ->with('recipe')
+            ->with(['recipe', 'category'])
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
@@ -35,6 +35,7 @@ class ProductController extends Controller
             })
             ->when(request('type') === ProductType::Manufactured->value, fn ($q) => $q->where('type', ProductType::Manufactured->value))
             ->when(request('type') === ProductType::Resale->value, fn ($q) => $q->where('type', ProductType::Resale->value))
+            ->when(request('category'), fn ($q, $category) => $q->where('product_category_id', $category))
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
@@ -44,8 +45,10 @@ class ProductController extends Controller
         // Todas, no sólo las activas: el modal de edición debe poder mostrar una receta
         // ya dada de baja o el select caería en vacío y guardar la perdería en silencio.
         $recipes = $tenant->recipes()->orderBy('name')->get();
+        $categories = $tenant->productCategories()->orderBy('name')->get();
+        $showCategories = session('reopen_categories', false);
 
-        return view('products.index', compact('products', 'recipes'));
+        return view('products.index', compact('products', 'recipes', 'categories', 'showCategories'));
     }
 
     public function store(StoreProductRequest $request): RedirectResponse

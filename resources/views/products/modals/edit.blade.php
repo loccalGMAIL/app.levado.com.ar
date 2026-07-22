@@ -51,6 +51,20 @@
             <x-input-error :messages="$errors->get('recipe_id')" class="mt-2" />
         </div>
 
+        <div>
+            <x-input-label for="edit_product_category" value="Categoría (opcional)" />
+            <select id="edit_product_category" name="product_category_id"
+                x-model="editing.product_category_id"
+                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
+                <option value="">— Sin categoría —</option>
+                @foreach($categories as $cat)
+                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                @endforeach
+            </select>
+            <p class="mt-1 text-xs text-masa-madre">Gestioná las categorías y su flag «se produce» con el botón Categorías.</p>
+            <x-input-error :messages="$errors->get('product_category_id')" class="mt-2" />
+        </div>
+
         <div class="grid grid-cols-2 gap-4">
             <div>
                 <x-input-label for="edit_product_unit" value="Unidad de venta" />
