@@ -29,6 +29,7 @@ class PurchaseLineRecorder
         private readonly StockService $stock,
         private readonly NotificationService $notifications,
         private readonly ProductLinkMemory $linkMemory,
+        private readonly ArticlePriceRecalculator $priceRecalculator,
     ) {}
 
     /**
@@ -297,6 +298,9 @@ class PurchaseLineRecorder
         }
 
         $item->update(['cost_per_unit' => round($newCost, 4)]);
+
+        // Cambió el costo → recomputar los precios del artículo que tengan política.
+        $this->priceRecalculator->recompute($item);
     }
 
     /**

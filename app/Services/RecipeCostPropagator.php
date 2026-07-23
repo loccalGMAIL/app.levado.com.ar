@@ -10,7 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class RecipeCostPropagator
 {
-    public function __construct(private RecipeCostCalculator $calculator) {}
+    public function __construct(
+        private RecipeCostCalculator $calculator,
+        private ArticlePriceRecalculator $priceRecalculator,
+    ) {}
 
     /**
      * Recalculate unit_cost for $recipe, then BFS upward through all parent recipes.
@@ -33,6 +36,7 @@ class RecipeCostPropagator
                 'packagingLines.packaging',
                 'laborLines.laborType',
                 'subrecipeLines.childRecipe',
+                'manufacturedProduct',
             ])->find($id);
 
             if (! $node) {
@@ -44,6 +48,11 @@ class RecipeCostPropagator
                 'unit_cost' => $costs['cost_per_unit'],
                 'labor_hours' => $costs['total_labor_hours'],
             ]);
+
+            // Cambió el costo del elaborado → recomputar los precios con política de su artículo.
+            if ($node->manufacturedProduct !== null) {
+                $this->priceRecalculator->recompute($node->manufacturedProduct);
+            }
 
             $parentIds = $node->parentSubrecipeLines()->pluck('recipe_id')->toArray();
 

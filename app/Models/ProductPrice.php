@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PricingPolicy;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,12 +16,16 @@ class ProductPrice extends Model
         'price_list_id',
         'product_id',
         'price',
+        'policy_type',
+        'policy_value',
     ];
 
     protected function casts(): array
     {
         return [
             'price' => 'decimal:2',
+            'policy_type' => PricingPolicy::class,
+            'policy_value' => 'decimal:2',
         ];
     }
 

@@ -6,13 +6,17 @@ use App\Enums\CostingMethod;
 use App\Http\Requests\UpdateBusinessRequest;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\ArticlePriceRecalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class BusinessController extends Controller
 {
-    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+    public function __construct(
+        private readonly AdminActivityRecorder $recorder,
+        private readonly ArticlePriceRecalculator $priceRecalculator,
+    ) {}
 
     public function edit(): View
     {
@@ -58,6 +62,9 @@ class BusinessController extends Controller
             action: 'business.updated',
             tenantId: $tenant->id,
         );
+
+        // Las horas productivas afectan el overhead → recomputar precios con política.
+        $this->priceRecalculator->recomputeForTenant($tenant);
 
         return back()->with('status', 'business-updated');
     }

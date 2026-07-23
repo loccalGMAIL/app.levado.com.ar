@@ -2,21 +2,15 @@
 
 use App\Enums\Unit;
 use App\Models\Ingredient;
-use App\Models\LaborType;
-use App\Models\Packaging;
 use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
-use App\Models\RecipeLaborLine;
-use App\Models\RecipePackagingLine;
 use App\Models\RecipeSubrecipeLine;
 use App\Models\Tenant;
-use App\Services\RecipeCostCalculator;
 use App\Services\RecipeCostPropagator;
-use App\Services\UnitConverter;
 
 function makePropagator(): RecipeCostPropagator
 {
-    return new RecipeCostPropagator(new RecipeCostCalculator(new UnitConverter));
+    return app(RecipeCostPropagator::class);
 }
 
 test('isAncestor returns false when no relationship exists', function () {
