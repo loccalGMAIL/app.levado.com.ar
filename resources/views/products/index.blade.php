@@ -21,6 +21,7 @@
 
     <div class="py-8 px-6 lg:px-8"
         x-data="{
+            mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
                 this.editing = record;
