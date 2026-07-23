@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProductType;
 use App\Http\Requests\StorePriceListRequest;
 use App\Http\Requests\UpdatePriceListRequest;
 use App\Models\PriceList;
-use App\Models\RecipePrice;
+use App\Models\Product;
+use App\Models\ProductPrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
-use App\Services\RecipePriceWriter;
+use App\Services\ProductPriceWriter;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -17,7 +20,7 @@ class PriceListController extends Controller
 {
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
-        private readonly RecipePriceWriter $writer,
+        private readonly ProductPriceWriter $writer,
     ) {}
 
     public function index(): View
@@ -62,6 +65,7 @@ class PriceListController extends Controller
         $recipes = $tenant->recipes()
             ->active()
             ->where('is_semi_elaborate', false)
+            ->with('manufacturedProduct')
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
@@ -71,17 +75,26 @@ class PriceListController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        // unit_cost cacheado (mantenido por RecipeCostPropagator) — mismo valor
-        // que devolvía el calculator, sin recalcular ni cargar líneas.
+        // Costo total por unidad (con overhead), consistente con el margen del artículo.
+        $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
         $costsPerUnit = collect($recipes->items())
-            ->mapWithKeys(fn ($recipe) => [
-                $recipe->id => $recipe->unit_cost !== null ? (float) $recipe->unit_cost : null,
-            ]);
+            ->mapWithKeys(function ($recipe) use ($overheadPerHour) {
+                if ($recipe->unit_cost === null || (float) $recipe->yield_quantity <= 0) {
+                    return [$recipe->id => null];
+                }
+                $overheadPerUnit = (float) ($recipe->labor_hours ?? 0) * $overheadPerHour / (float) $recipe->yield_quantity;
 
-        /** @var array<int, array<int, string>> $prices [recipe_id][price_list_id] => price */
-        $prices = RecipePrice::whereIn('price_list_id', $priceLists->pluck('id'))
-            ->whereIn('recipe_id', collect($recipes->items())->pluck('id'))
-            ->get()
+                return [$recipe->id => (float) $recipe->unit_cost + $overheadPerUnit];
+            });
+
+        // El precio vive en el artículo elaborado (product_prices); se indexa por recipe_id para la vista.
+        /** @var array<int, Collection<int, string>> $prices [recipe_id][price_list_id] => price */
+        $prices = ProductPrice::query()
+            ->join('products', 'products.id', '=', 'product_prices.product_id')
+            ->where('products.type', ProductType::Manufactured->value)
+            ->whereIn('products.recipe_id', collect($recipes->items())->pluck('id'))
+            ->whereIn('product_prices.price_list_id', $priceLists->pluck('id'))
+            ->get(['products.recipe_id', 'product_prices.price_list_id', 'product_prices.price'])
             ->groupBy('recipe_id')
             ->map(fn ($group) => $group->pluck('price', 'price_list_id'));
 
@@ -161,19 +174,19 @@ class PriceListController extends Controller
         abort_if($priceList->is_default || $priceList->adjustment_pct === null, 422, 'Esta lista no admite sugerencias.');
 
         $defaultList = $tenant->defaultPriceList();
-        $recipes = $tenant->recipes()->active()->where('is_semi_elaborate', false)->get();
-        $recipeIds = $recipes->pluck('id');
-        $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
-        $existing = RecipePrice::where('price_list_id', $priceList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
+        $products = $this->sellableManufacturedProducts($tenant);
+        $productIds = $products->pluck('id');
+        $basePrices = ProductPrice::where('price_list_id', $defaultList->id)->whereIn('product_id', $productIds)->pluck('price', 'product_id');
+        $existing = ProductPrice::where('price_list_id', $priceList->id)->whereIn('product_id', $productIds)->pluck('price', 'product_id');
 
-        $applied = DB::transaction(function () use ($recipes, $existing, $basePrices, $priceList): int {
+        $applied = DB::transaction(function () use ($products, $existing, $basePrices, $priceList): int {
             $count = 0;
-            foreach ($recipes as $recipe) {
-                if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
+            foreach ($products as $product) {
+                if ($existing->has($product->id) || ! $basePrices->has($product->id)) {
                     continue;
                 }
-                $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $priceList->adjustment_pct / 100), 2);
-                $this->writer->set($recipe, $priceList, $suggested);
+                $suggested = round((float) $basePrices->get($product->id) * (1 + (float) $priceList->adjustment_pct / 100), 2);
+                $this->writer->set($product, $priceList, $suggested);
                 $count++;
             }
 
@@ -189,20 +202,20 @@ class PriceListController extends Controller
         $tenant = app(Tenant::class);
         $lists = $tenant->priceLists()->active()->where('is_default', false)->whereNotNull('adjustment_pct')->get();
         $defaultList = $tenant->defaultPriceList();
-        $recipes = $tenant->recipes()->active()->where('is_semi_elaborate', false)->get();
-        $recipeIds = $recipes->pluck('id');
-        $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
+        $products = $this->sellableManufacturedProducts($tenant);
+        $productIds = $products->pluck('id');
+        $basePrices = ProductPrice::where('price_list_id', $defaultList->id)->whereIn('product_id', $productIds)->pluck('price', 'product_id');
 
-        $applied = DB::transaction(function () use ($lists, $recipes, $recipeIds, $basePrices): int {
+        $applied = DB::transaction(function () use ($lists, $products, $productIds, $basePrices): int {
             $count = 0;
             foreach ($lists as $list) {
-                $existing = RecipePrice::where('price_list_id', $list->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
-                foreach ($recipes as $recipe) {
-                    if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
+                $existing = ProductPrice::where('price_list_id', $list->id)->whereIn('product_id', $productIds)->pluck('price', 'product_id');
+                foreach ($products as $product) {
+                    if ($existing->has($product->id) || ! $basePrices->has($product->id)) {
                         continue;
                     }
-                    $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $list->adjustment_pct / 100), 2);
-                    $this->writer->set($recipe, $list, $suggested);
+                    $suggested = round((float) $basePrices->get($product->id) * (1 + (float) $list->adjustment_pct / 100), 2);
+                    $this->writer->set($product, $list, $suggested);
                     $count++;
                 }
             }
@@ -212,5 +225,19 @@ class PriceListController extends Controller
 
         return back(fallback: route('price-lists.matrix'))
             ->with('status', "Se aplicaron {$applied} sugerencia(s) en todas las listas.");
+    }
+
+    /**
+     * Artículos elaborados vendibles (de recetas finales activas). El precio de
+     * venta y las sugerencias por % operan sobre estos productos.
+     *
+     * @return Collection<int, Product>
+     */
+    private function sellableManufacturedProducts(Tenant $tenant): Collection
+    {
+        return $tenant->products()
+            ->where('type', ProductType::Manufactured->value)
+            ->whereHas('recipe', fn ($q) => $q->where('active', true)->where('is_semi_elaborate', false))
+            ->get();
     }
 }

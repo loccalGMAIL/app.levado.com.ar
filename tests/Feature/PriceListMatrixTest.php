@@ -6,7 +6,6 @@ use App\Models\Ingredient;
 use App\Models\PriceList;
 use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
-use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
@@ -62,11 +61,7 @@ test('una celda vacía muestra la sugerencia calculada con el % de la lista', fu
     [$user, $tenant] = userForMatrix();
 
     $recipe = Recipe::factory()->for($tenant)->create();
-    RecipePrice::factory()->for($tenant)->create([
-        'price_list_id' => $tenant->defaultPriceList()->id,
-        'recipe_id' => $recipe->id,
-        'price' => 1000,
-    ]);
+    articlePrice($recipe, $tenant->defaultPriceList(), 1000);
     PriceList::factory()->for($tenant)->create(['name' => 'Mayorista', 'adjustment_pct' => -15]);
 
     $this->actingAs($user)
@@ -119,11 +114,7 @@ test('viewer accede a la matriz en solo lectura', function () {
     [$user, $tenant] = userForMatrix(TenantUserRole::Viewer->value);
 
     $recipe = Recipe::factory()->for($tenant)->create(['name' => 'Pan lactal']);
-    RecipePrice::factory()->for($tenant)->create([
-        'price_list_id' => $tenant->defaultPriceList()->id,
-        'recipe_id' => $recipe->id,
-        'price' => 700,
-    ]);
+    articlePrice($recipe, $tenant->defaultPriceList(), 700);
 
     $this->actingAs($user)
         ->get(route('price-lists.matrix'))

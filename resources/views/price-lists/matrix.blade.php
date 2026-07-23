@@ -125,6 +125,7 @@
                                         @endphp
                                         <td class="px-4 py-3 text-right font-mono text-corteza whitespace-nowrap align-top">
                                             @can('manage-costs')
+                                                @if($recipe->manufacturedProduct)
                                                 <div
                                                     x-data="{
                                                         editing: false,
@@ -153,7 +154,7 @@
                                                             this.saving = true;
                                                             this.editing = false;
                                                             try {
-                                                                const res = await fetch('{{ route('recipes.prices.update', [$recipe, $list]) }}', {
+                                                                const res = await fetch('{{ $recipe->manufacturedProduct ? route('products.prices.update', [$recipe->manufacturedProduct, $list]) : '' }}', {
                                                                     method: 'PATCH',
                                                                     headers: {
                                                                         'Content-Type': 'application/json',
@@ -203,6 +204,9 @@
                                                         class="block text-[11px] font-medium"
                                                         x-text="marginPct !== null ? marginPctFormatted + ' %' : ''"></span>
                                                 </div>
+                                                @else
+                                                    <span class="text-masa-madre" title="Creá el artículo elaborado para ponerle precio">—</span>
+                                                @endif
                                             @else
                                                 @if($cellPrice !== null)
                                                     $ {{ number_format($cellPrice, 2, ',', '.') }}
