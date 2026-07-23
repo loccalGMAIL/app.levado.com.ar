@@ -531,7 +531,7 @@
                                             this.saving = true;
                                             this.editing = false;
                                             try {
-                                                const res = await fetch('{{ route('recipes.prices.update', [$recipe, $priceList]) }}', {
+                                                const res = await fetch('{{ $row['product'] ? route('products.prices.update', [$row['product'], $priceList]) : '' }}', {
                                                     method: 'PATCH',
                                                     headers: {
                                                         'Content-Type': 'application/json',
@@ -587,30 +587,35 @@
                                         @endif
                                     </td>
 
-                                    {{-- Precio de venta (editable) --}}
+                                    {{-- Precio de venta (editable si la receta tiene artículo elaborado) --}}
                                     <td class="px-4 py-3.5 text-right font-mono text-[13px]">
                                         @can('manage-costs')
-                                            <div x-show="!editing && !saving"
-                                                @click="startEdit()"
-                                                class="cursor-pointer text-corteza hover:text-horno transition-colors select-none">
-                                                <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
-                                                <span x-show="price === null"
-                                                    class="text-[12px] text-masa-madre/50 hover:text-masa-madre">
-                                                    Agregar →
-                                                </span>
-                                            </div>
-                                            <input
-                                                x-show="editing"
-                                                x-ref="priceInput"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                @input="isDirty = true"
-                                                @keydown.enter.prevent="savePrice()"
-                                                @keydown.escape="editing = false; isDirty = false"
-                                                @blur="savePrice()"
-                                                class="w-28 text-right text-sm border border-brown-300 rounded-lg px-2 py-1 focus:border-brown-400 focus:ring-1 focus:ring-brown-200 outline-none font-mono bg-harina">
-                                            <span x-show="saving" class="text-[11.5px] text-masa-madre/60">guardando…</span>
+                                            @if($row['product'])
+                                                <div x-show="!editing && !saving"
+                                                    @click="startEdit()"
+                                                    class="cursor-pointer text-corteza hover:text-horno transition-colors select-none">
+                                                    <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
+                                                    <span x-show="price === null"
+                                                        class="text-[12px] text-masa-madre/50 hover:text-masa-madre">
+                                                        Agregar →
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    x-show="editing"
+                                                    x-ref="priceInput"
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    @input="isDirty = true"
+                                                    @keydown.enter.prevent="savePrice()"
+                                                    @keydown.escape="editing = false; isDirty = false"
+                                                    @blur="savePrice()"
+                                                    class="w-28 text-right text-sm border border-brown-300 rounded-lg px-2 py-1 focus:border-brown-400 focus:ring-1 focus:ring-brown-200 outline-none font-mono bg-harina">
+                                                <span x-show="saving" class="text-[11.5px] text-masa-madre/60">guardando…</span>
+                                            @else
+                                                {{-- Sin artículo elaborado: el precio se carga en Artículos --}}
+                                                <span class="text-[11px] text-masa-madre/50" title="Creá el artículo elaborado para ponerle precio">—</span>
+                                            @endif
                                         @else
                                             @if($row['selling_price'] !== null)
                                                 <span class="text-corteza">$&nbsp;{{ $initPriceFormatted }}</span>

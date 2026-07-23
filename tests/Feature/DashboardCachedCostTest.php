@@ -1,14 +1,16 @@
 <?php
 
+use App\Enums\ProductType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
+use App\Models\Product;
 use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
-use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
+use App\Services\ProductPriceWriter;
 
 // Anclas del dashboard sobre caches: lee unit_cost/labor_hours (no recalcula
 // por request) y ordena/pagina en SQL.
@@ -48,12 +50,15 @@ function recipeWithCost(Tenant $tenant, string $name, float $ingredientCost, ?fl
     propagateRecipeCosts($recipe);
 
     if ($price !== null) {
-        RecipePrice::create([
+        // El precio vive en el artículo elaborado (product_prices), no en la receta.
+        $product = Product::factory()->create([
             'tenant_id' => $tenant->id,
+            'type' => ProductType::Manufactured->value,
             'recipe_id' => $recipe->id,
-            'price_list_id' => $tenant->defaultPriceList()->id,
-            'price' => $price,
+            'cost_per_unit' => null,
+            'unit' => $recipe->yield_unit->value,
         ]);
+        app(ProductPriceWriter::class)->set($product, $tenant->defaultPriceList(), $price);
     }
 
     return $recipe;

@@ -54,7 +54,10 @@ class DashboardController extends Controller
         // Expresiones SQL sobre los caches. Se repiten inline en los ORDER BY
         // (con sus bindings) porque MySQL no permite reusar alias del SELECT
         // dentro de expresiones nuevas del SELECT.
-        $priceSql = '(select rp.price from recipe_prices rp where rp.recipe_id = recipes.id and rp.price_list_id = ?)';
+        // El precio de venta vive en el artículo elaborado (product_prices), no en la receta.
+        $priceSql = '(select pp.price from product_prices pp '
+            ."inner join products p on p.id = pp.product_id and p.type = 'manufactured' "
+            .'where p.recipe_id = recipes.id and pp.price_list_id = ? limit 1)';
         $costSql = '(case when recipes.unit_cost is null or recipes.yield_quantity <= 0 then null '
             .'else recipes.unit_cost + (coalesce(recipes.labor_hours, 0) * ? / recipes.yield_quantity) end)';
         $marginSql = "(case when {$priceSql} is null or {$costSql} is null then null else {$priceSql} - {$costSql} end)";
@@ -89,6 +92,7 @@ class DashboardController extends Controller
 
         $recipeRows = $tenant->recipes()
             ->active()
+            ->with('manufacturedProduct')
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
@@ -124,6 +128,7 @@ class DashboardController extends Controller
 
                 return [
                     'recipe' => $recipe,
+                    'product' => $recipe->manufacturedProduct,
                     'total_cost' => $totalCost,
                     'cost_per_unit' => $costPerUnit,
                     'selling_price' => $sellingPrice,
@@ -141,9 +146,13 @@ class DashboardController extends Controller
         // que la dona necesita y que el cache no almacena.
         $calculator = new RecipeCostCalculator(new UnitConverter);
         $prices = $tenant->recipes()
-            ->join('recipe_prices', 'recipe_prices.recipe_id', '=', 'recipes.id')
-            ->where('recipe_prices.price_list_id', $priceList->id)
-            ->pluck('recipe_prices.price', 'recipes.id');
+            ->join('products', function ($join) {
+                $join->on('products.recipe_id', '=', 'recipes.id')->where('products.type', 'manufactured');
+            })
+            ->join('product_prices', function ($join) use ($priceList) {
+                $join->on('product_prices.product_id', '=', 'products.id')->where('product_prices.price_list_id', $priceList->id);
+            })
+            ->pluck('product_prices.price', 'recipes.id');
 
         $statRows = $tenant->recipes()
             ->active()

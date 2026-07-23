@@ -1,18 +1,34 @@
 <?php
 
+use App\Enums\ProductType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\FixedCost;
 use App\Models\FixedCostCategory;
 use App\Models\Ingredient;
 use App\Models\PriceList;
+use App\Models\Product;
 use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
-use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
 use App\Models\VariableExpense;
+use App\Services\ProductPriceWriter;
+
+/** Precio de venta del elaborado de una receta (vive en product_prices). */
+function articlePrice(Recipe $recipe, PriceList $list, float $price): void
+{
+    $product = Product::where('recipe_id', $recipe->id)->where('type', ProductType::Manufactured->value)->first()
+        ?? Product::factory()->create([
+            'tenant_id' => $recipe->tenant_id,
+            'type' => ProductType::Manufactured->value,
+            'recipe_id' => $recipe->id,
+            'cost_per_unit' => null,
+            'unit' => $recipe->yield_unit->value,
+        ]);
+    app(ProductPriceWriter::class)->set($product, $list, $price);
+}
 
 function ownerForDashboard(): array
 {
@@ -91,11 +107,7 @@ test('dashboard muestra el margen cuando hay precio de venta', function () {
         'yield_quantity' => 10,
         'yield_unit' => Unit::Unidad->value,
     ]);
-    RecipePrice::factory()->for($tenant)->create([
-        'price_list_id' => $tenant->defaultPriceList()->id,
-        'recipe_id' => $recipe->id,
-        'price' => 100,
-    ]);
+    articlePrice($recipe, $tenant->defaultPriceList(), 100);
 
     $ingredient = Ingredient::factory()->for($tenant)->create([
         'unit' => Unit::Unidad->value,
@@ -169,11 +181,7 @@ test('los gastos variables no afectan el overhead ni el margen', function () {
         'yield_quantity' => 10,
         'yield_unit' => Unit::Unidad->value,
     ]);
-    RecipePrice::factory()->for($tenant)->create([
-        'price_list_id' => $tenant->defaultPriceList()->id,
-        'recipe_id' => $recipe->id,
-        'price' => 100,
-    ]);
+    articlePrice($recipe, $tenant->defaultPriceList(), 100);
     $ingredient = Ingredient::factory()->for($tenant)->create([
         'unit' => Unit::Unidad->value,
         'cost_per_unit' => 50,
@@ -224,16 +232,8 @@ test('el selector de lista muestra los márgenes de la lista elegida', function 
     propagateRecipeCosts($recipe);
 
     $mayorista = PriceList::factory()->for($tenant)->create(['name' => 'Mayorista']);
-    RecipePrice::factory()->for($tenant)->create([
-        'price_list_id' => $tenant->defaultPriceList()->id,
-        'recipe_id' => $recipe->id,
-        'price' => 100,
-    ]);
-    RecipePrice::factory()->for($tenant)->create([
-        'price_list_id' => $mayorista->id,
-        'recipe_id' => $recipe->id,
-        'price' => 80,
-    ]);
+    articlePrice($recipe, $tenant->defaultPriceList(), 100);
+    articlePrice($recipe, $mayorista, 80);
 
     // costo/u = 50; en Mayorista: margen 30, margen% 37,5
     $this->actingAs($user)
