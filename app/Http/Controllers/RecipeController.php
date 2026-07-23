@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProductType;
 use App\Http\Requests\StoreRecipeRequest;
 use App\Http\Requests\UpdateRecipeRequest;
+use App\Models\ProductPrice;
 use App\Models\Recipe;
-use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
@@ -42,7 +43,16 @@ class RecipeController extends Controller
             ?? $priceLists->first()
             ?? $tenant->defaultPriceList();
 
+        // El precio de venta vive en el artículo elaborado (product_prices) vinculado a la receta.
+        $priceSubquery = ProductPrice::select('product_prices.price')
+            ->join('products', 'products.id', '=', 'product_prices.product_id')
+            ->whereColumn('products.recipe_id', 'recipes.id')
+            ->where('products.type', ProductType::Manufactured->value)
+            ->where('product_prices.price_list_id', $priceList->id)
+            ->limit(1);
+
         $recipes = $tenant->recipes()
+            ->with('manufacturedProduct')
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
@@ -50,20 +60,19 @@ class RecipeController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($sort === 'selling_price', fn ($q) => $q->orderBy(
-                RecipePrice::select('price')
-                    ->whereColumn('recipe_id', 'recipes.id')
-                    ->where('price_list_id', $priceList->id),
-                $dir,
-            ))
+            ->when($sort === 'selling_price', fn ($q) => $q->orderBy($priceSubquery, $dir))
             ->when($sort && $sort !== 'selling_price', fn ($q) => $q->orderBy($sort, $dir))
             ->when(! $sort, fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
 
-        $prices = RecipePrice::where('price_list_id', $priceList->id)
-            ->whereIn('recipe_id', $recipes->pluck('id'))
-            ->pluck('price', 'recipe_id');
+        // Mapa recipe_id → precio del artículo en la lista elegida.
+        $prices = ProductPrice::query()
+            ->join('products', 'products.id', '=', 'product_prices.product_id')
+            ->where('products.type', ProductType::Manufactured->value)
+            ->where('product_prices.price_list_id', $priceList->id)
+            ->whereIn('products.recipe_id', $recipes->pluck('id'))
+            ->pluck('product_prices.price', 'products.recipe_id');
 
         return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices'));
     }

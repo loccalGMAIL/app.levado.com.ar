@@ -98,7 +98,7 @@
                                     this.saving = true;
                                     this.editing = false;
                                     try {
-                                        const res = await fetch('{{ route('recipes.prices.update', [$recipe, $priceList]) }}', {
+                                        const res = await fetch('{{ $recipe->manufacturedProduct ? route('products.prices.update', [$recipe->manufacturedProduct, $priceList]) : '' }}', {
                                             method: 'PATCH',
                                             headers: {
                                                 'Content-Type': 'application/json',
@@ -131,21 +131,25 @@
                                 <span class="text-xs text-masa-madre shrink-0">{{ $priceList->name }}:</span>
                                 <div class="font-mono text-sm text-corteza">
                                     @can('manage-costs')
-                                        <div x-show="!editing && !saving"
-                                            @click="startEdit()"
-                                            class="cursor-pointer hover:text-horno select-none inline-flex items-center gap-1">
-                                            <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
-                                            <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
-                                            <svg class="w-3 h-3 text-masa-madre" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
-                                        </div>
-                                        <input x-show="editing" x-ref="priceInputCard"
-                                            type="number" step="0.01" min="0"
-                                            @input="isDirty = true"
-                                            @keydown.enter.prevent="savePrice()"
-                                            @keydown.escape="editing = false; isDirty = false"
-                                            @blur="savePrice()"
-                                            class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
-                                        <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                        @if($recipe->manufacturedProduct)
+                                            <div x-show="!editing && !saving"
+                                                @click="startEdit()"
+                                                class="cursor-pointer hover:text-horno select-none inline-flex items-center gap-1">
+                                                <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
+                                                <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
+                                                <svg class="w-3 h-3 text-masa-madre" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
+                                            </div>
+                                            <input x-show="editing" x-ref="priceInputCard"
+                                                type="number" step="0.01" min="0"
+                                                @input="isDirty = true"
+                                                @keydown.enter.prevent="savePrice()"
+                                                @keydown.escape="editing = false; isDirty = false"
+                                                @blur="savePrice()"
+                                                class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                            <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                        @else
+                                            <span class="text-xs text-masa-madre" title="Creá el artículo elaborado para ponerle precio">—</span>
+                                        @endif
                                     @else
                                         @if($price !== null)
                                             $ {{ $initPriceFormatted }}
@@ -229,7 +233,7 @@
                                                 this.saving = true;
                                                 this.editing = false;
                                                 try {
-                                                    const res = await fetch('{{ route('recipes.prices.update', [$recipe, $priceList]) }}', {
+                                                    const res = await fetch('{{ $recipe->manufacturedProduct ? route('products.prices.update', [$recipe->manufacturedProduct, $priceList]) : '' }}', {
                                                         method: 'PATCH',
                                                         headers: {
                                                             'Content-Type': 'application/json',
@@ -247,28 +251,32 @@
                                             }
                                         }">
                                         @can('manage-costs')
-                                            <div x-show="!editing && !saving"
-                                                @click="startEdit()"
-                                                class="cursor-pointer hover:text-horno select-none">
-                                                <span x-show="price !== null"
-                                                    x-text="'$ ' + priceFormatted"></span>
-                                                <span x-show="price === null"
-                                                    class="text-xs text-masa-madre hover:text-corteza">
-                                                    Agregar →
-                                                </span>
-                                            </div>
-                                            <input
-                                                x-show="editing"
-                                                x-ref="priceInput"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                @input="isDirty = true"
-                                                @keydown.enter.prevent="savePrice()"
-                                                @keydown.escape="editing = false; isDirty = false"
-                                                @blur="savePrice()"
-                                                class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
-                                            <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                            @if($recipe->manufacturedProduct)
+                                                <div x-show="!editing && !saving"
+                                                    @click="startEdit()"
+                                                    class="cursor-pointer hover:text-horno select-none">
+                                                    <span x-show="price !== null"
+                                                        x-text="'$ ' + priceFormatted"></span>
+                                                    <span x-show="price === null"
+                                                        class="text-xs text-masa-madre hover:text-corteza">
+                                                        Agregar →
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    x-show="editing"
+                                                    x-ref="priceInput"
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    @input="isDirty = true"
+                                                    @keydown.enter.prevent="savePrice()"
+                                                    @keydown.escape="editing = false; isDirty = false"
+                                                    @blur="savePrice()"
+                                                    class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                                <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                            @else
+                                                <span class="text-xs text-masa-madre" title="Creá el artículo elaborado para ponerle precio">—</span>
+                                            @endif
                                         @else
                                             @if($price !== null)
                                                 $ {{ $initPriceFormatted }}
