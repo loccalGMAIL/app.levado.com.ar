@@ -42,7 +42,23 @@ información sin duplicar reglas.
   `selling_price` de forms/requests, y la escritura de precio en `RecipeController` store/update/copy. `recipe_prices`
   (tabla + modelo + factory) queda **latente** (dato preservado). `ProductPriceTest` reemplaza `RecipePriceUpdateTest`.
   Commits: catálogo → dashboard → /recipes → detalle → matriz → limpieza. **561 tests verdes.**
-- **P3 🔲**: políticas de precio (manual/margen/recargo) + métodos de costeo de reventa (promedio ponderado) configurables.
+- **P3 🔶 (en curso, 2 de 4 pasos hechos)**: políticas de precio (manual/margen/recargo) + métodos de costeo de
+  reventa (último/promedio) configurables. **Decisiones**: ambos features juntos; política de precio **por
+  artículo × lista**; método de costeo **default por negocio (tenant_settings) + override por artículo**;
+  promedio ponderado **al momento de comprar** (MVP; editar/revertir compras viejas no recalcula histórico).
+  - **Paso 1 ✅ (commit `d338c8d`)** costeo de reventa: enum `CostingMethod` (last|average), `products.costing_method`
+    (override, null→default), `Product::effectiveCostingMethod(default)`, setting `resale.costing_method` (Mi negocio),
+    `PurchaseLineRecorder::applyProductCost` promedia contra el stock existente antes del alta. `ProductCostingTest` (9).
+  - **Paso 2 ✅ (commit `8a4d4d1`)** modelo de política de precio: enum `PricingPolicy` (manual|margin|markup) con
+    `priceFor(cost,value)` (margen=costo/(1-%), recargo=costo×(1+%)); columnas `product_prices.policy_type`+`policy_value`
+    (y `price` ahora NULLABLE = precio computado cacheado); `ProductPriceWriter::setPolicy` computa+cachea; servicio
+    `ArticlePriceRecalculator` (`recompute(product)` / `recomputeForTenant(tenant)`) mantiene el `price` al día con
+    **triggers**: compra reventa (`PurchaseLineRecorder`), costo de receta (`RecipeCostPropagator::propagateFrom`),
+    overhead (`FixedCostController` + `BusinessController`); comando `products:refresh-prices`; `ProductPriceController::update`
+    acepta `policy_type`+`policy_value` (retrocompat: sin policy → manual) y devuelve `policy_type`/`policy_value`+precio+margen.
+    `ProductPricingPolicyTest` (7). **575 tests verdes.** Migraciones aplicadas.
+  - **Paso 3 🔲 (UI, NO empezado)**: exponer la edición de política en las celdas de precio. Ver [[p3-ui-pendiente]].
+  - **Paso 4 🔲**: correr `products:refresh-prices` sobre la base, cerrar memoria + CHANGELOG.
 - **P4 🔲**: reestructuración del Módulo de Producción sobre este modelo. Luego Ventas.
 
 ## Notas de diseño
