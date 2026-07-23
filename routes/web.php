@@ -28,7 +28,6 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeLineController;
-use App\Http\Controllers\RecipePriceController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
@@ -148,7 +147,6 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('recipes', [RecipeController::class, 'store'])->name('recipes.store');
     Route::post('recipes/{recipe}/copy', [RecipeController::class, 'copy'])->name('recipes.copy');
     Route::put('recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
-    Route::patch('recipes/{recipe}/prices/{priceList}', [RecipePriceController::class, 'update'])->name('recipes.prices.update');
     Route::patch('recipes/{recipe}/toggle-active', [RecipeController::class, 'toggleActive'])->name('recipes.toggle-active');
 
     // Los parámetros de línea ({ingredientLine}, {line}, etc.) usan scoped bindings:

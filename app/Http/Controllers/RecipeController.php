@@ -10,7 +10,6 @@ use App\Models\Recipe;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
-use App\Services\RecipePriceWriter;
 use App\Services\RecipeShowViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +25,6 @@ class RecipeController extends Controller
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly RecipeCostPropagator $propagator,
-        private readonly RecipePriceWriter $priceWriter,
         private readonly RecipeShowViewModel $showViewModel,
     ) {}
 
@@ -88,15 +86,7 @@ class RecipeController extends Controller
     {
         $tenant = app(Tenant::class);
 
-        $data = $request->validated();
-        $sellingPrice = $data['selling_price'] ?? null;
-        unset($data['selling_price']);
-
-        $recipe = $tenant->recipes()->create($data);
-
-        if ($sellingPrice !== null) {
-            $this->priceWriter->set($recipe, $tenant->defaultPriceList(), (float) $sellingPrice);
-        }
+        $recipe = $tenant->recipes()->create($request->validated());
 
         if ($tenant->onboarding_completed_at === null) {
             $tenant->update(['onboarding_completed_at' => now()]);
@@ -118,20 +108,7 @@ class RecipeController extends Controller
     {
         $this->authorize('update', $recipe);
 
-        $data = $request->validated();
-        $sellingPrice = $data['selling_price'] ?? null;
-        $sellingPriceSent = array_key_exists('selling_price', $data);
-        unset($data['selling_price']);
-
-        $recipe->update($data);
-
-        if ($sellingPriceSent) {
-            $this->priceWriter->set(
-                $recipe,
-                app(Tenant::class)->defaultPriceList(),
-                $sellingPrice !== null ? (float) $sellingPrice : null,
-            );
-        }
+        $recipe->update($request->validated());
 
         $this->recorder->record(
             actor: $request->user(),
@@ -183,9 +160,6 @@ class RecipeController extends Controller
                     'quantity_used' => $line->quantity_used,
                     'unit' => $line->unit,
                 ]);
-            }
-            foreach ($recipe->prices()->with('priceList')->get() as $recipePrice) {
-                $this->priceWriter->set($newRecipe, $recipePrice->priceList, (float) $recipePrice->price);
             }
 
             $this->propagator->propagateFrom($newRecipe);
