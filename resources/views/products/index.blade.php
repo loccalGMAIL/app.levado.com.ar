@@ -195,7 +195,6 @@
                             <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
                             <th class="px-4 py-3 font-medium">Tipo</th>
                             <th class="px-4 py-3 font-medium">Categoría</th>
-                            <th class="px-4 py-3 font-medium">Origen</th>
                             <th class="px-4 py-3 font-medium">Unidad</th>
                             <th class="px-4 py-3 font-medium text-right">Costo/u</th>
                             <th class="px-4 py-3 font-medium text-right">Precio ({{ $priceList->name }})/u</th>
@@ -251,9 +250,6 @@
                                     @else
                                         —
                                     @endif
-                                </td>
-                                <td class="px-4 py-3 text-masa-madre text-xs">
-                                    {{ $product->isManufactured() ? ($product->recipe?->name ?? '—') : 'Reventa' }}
                                 </td>
                                 <td class="px-4 py-3 text-masa-madre">
                                     {{ $product->unit->short() }}
