@@ -23,6 +23,7 @@
             priceLists:      @js($priceLists->map(fn($l) => ['id' => $l->id, 'name' => $l->name])),
             allPrices:       @js($allPrices),
             selectedListId:  @js($defaultPriceList->id),
+            productId:       @js($manufacturedProduct?->id),
             savingPrice:     false,
             ingSort: { by: 'name', dir: 1 },
             labSort: { by: 'name', dir: 1 },
@@ -138,10 +139,10 @@
                 this.sellingPrice = this.allPrices[id] ?? 0;
             },
             async savePrice() {
-                if (this.savingPrice) return;
+                if (this.savingPrice || !this.productId) return;
                 this.savingPrice = true;
                 try {
-                    const res = await fetch('/recipes/{{ $recipe->id }}/prices/' + this.selectedListId, {
+                    const res = await fetch('/products/' + this.productId + '/prices/' + this.selectedListId, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
                         body: JSON.stringify({ price: this.sellingPrice > 0 ? this.sellingPrice : null }),
@@ -835,14 +836,20 @@
                         @endif
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-masa-madre shrink-0">$</span>
-                        <input type="number"
-                            x-model.number="sellingPrice"
-                            step="0.01" min="0"
-                            placeholder="0,00"
-                            class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono text-right" />
-                    </div>
+                    @if($manufacturedProduct)
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-masa-madre shrink-0">$</span>
+                            <input type="number"
+                                x-model.number="sellingPrice"
+                                step="0.01" min="0"
+                                placeholder="0,00"
+                                class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono text-right" />
+                        </div>
+                    @else
+                        <p class="text-xs text-masa-madre">
+                            El precio se carga en el <a href="{{ route('products.index') }}" class="text-horno hover:underline">artículo elaborado</a> de esta receta.
+                        </p>
+                    @endif
 
                     {{-- Margin bar --}}
                     <template x-if="sellingPrice > 0 && costPerUnit !== null">
