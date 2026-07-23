@@ -2,10 +2,10 @@
     <x-slot name="title">Artículos</x-slot>
 
     @php
-        $errorFields = ['name', 'type', 'recipe_id', 'product_category_id', 'unit', 'cost_per_unit', 'sku', 'barcode'];
+        $errorFields = ['name', 'type', 'recipe_id', 'product_category_id', 'unit', 'cost_per_unit', 'costing_method', 'sku', 'barcode'];
         $errorsInCreate = $errors->hasAny($errorFields) && old('_form') === 'create';
         $errorsInEdit   = $errors->hasAny($errorFields) && old('_form') === 'edit';
-        $editingDefault = ['id' => null, 'name' => '', 'type' => '', 'recipe_id' => '', 'product_category_id' => '', 'unit' => '', 'cost_per_unit' => '', 'sku' => '', 'barcode' => ''];
+        $editingDefault = ['id' => null, 'name' => '', 'type' => '', 'recipe_id' => '', 'product_category_id' => '', 'unit' => '', 'cost_per_unit' => '', 'costing_method' => '', 'sku' => '', 'barcode' => ''];
         $editingOnError = $errorsInEdit ? [
             'id'                  => old('product_id'),
             'name'                => old('name'),
@@ -14,6 +14,7 @@
             'product_category_id' => old('product_category_id'),
             'unit'                => old('unit'),
             'cost_per_unit'       => old('cost_per_unit'),
+            'costing_method'      => old('costing_method'),
             'sku'                 => old('sku'),
             'barcode'             => old('barcode'),
         ] : $editingDefault;
@@ -170,6 +171,7 @@
                                             'product_category_id' => $product->product_category_id ?? '',
                                             'unit'          => $product->unit->value,
                                             'cost_per_unit' => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
+                                            'costing_method' => $product->costing_method?->value ?? '',
                                             'sku'           => $product->sku ?? '',
                                             'barcode'       => $product->barcode ?? '',
                                         ]) }})"
@@ -268,6 +270,7 @@
                                                 'product_category_id' => $product->product_category_id ?? '',
                                                 'unit'          => $product->unit->value,
                                                 'cost_per_unit' => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
+                                                'costing_method' => $product->costing_method?->value ?? '',
                                                 'sku'           => $product->sku ?? '',
                                                 'barcode'       => $product->barcode ?? '',
                                             ]) }})"

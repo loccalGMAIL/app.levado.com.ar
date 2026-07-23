@@ -141,6 +141,18 @@
             </div>
         </div>
 
+        <div x-show="type === 'resale'" x-cloak>
+            <x-input-label for="create_product_costing" value="Método de costeo (opcional)" />
+            <select id="create_product_costing" name="costing_method"
+                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
+                <option value="">— Usar el del negocio —</option>
+                @foreach(\App\Enums\CostingMethod::cases() as $method)
+                    <option value="{{ $method->value }}" @selected(old('costing_method') === $method->value)>{{ $method->label() }}</option>
+                @endforeach
+            </select>
+            <x-input-error :messages="$errors->get('costing_method')" class="mt-2" />
+        </div>
+
         <div class="grid grid-cols-2 gap-4">
             <div>
                 <x-input-label for="create_product_sku" value="SKU (opcional)" />

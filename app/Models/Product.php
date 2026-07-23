@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CatalogItemType;
+use App\Enums\CostingMethod;
 use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Models\Concerns\BelongsToTenant;
@@ -26,6 +27,7 @@ class Product extends Model
         'product_category_id',
         'unit',
         'cost_per_unit',
+        'costing_method',
         'sku',
         'barcode',
         'active',
@@ -37,8 +39,18 @@ class Product extends Model
             'type' => ProductType::class,
             'unit' => Unit::class,
             'cost_per_unit' => 'decimal:4',
+            'costing_method' => CostingMethod::class,
             'active' => 'boolean',
         ];
+    }
+
+    /**
+     * Método de costeo efectivo del producto de reventa: su override o, si es null,
+     * el default del negocio que se pasa.
+     */
+    public function effectiveCostingMethod(CostingMethod $tenantDefault): CostingMethod
+    {
+        return $this->costing_method ?? $tenantDefault;
     }
 
     public function scopeActive(Builder $query): void

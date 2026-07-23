@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CostingMethod;
 use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Models\Tenant;
@@ -43,6 +44,7 @@ class UpdateProductRequest extends FormRequest
                 'min:0',
                 'max:99999999',
             ],
+            'costing_method' => ['nullable', Rule::enum(CostingMethod::class)],
             'sku' => ['nullable', 'string', 'max:100'],
             'barcode' => [
                 'nullable',

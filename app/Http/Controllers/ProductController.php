@@ -132,6 +132,7 @@ class ProductController extends Controller
     {
         if (($data['type'] ?? null) === ProductType::Manufactured->value) {
             $data['cost_per_unit'] = null;
+            $data['costing_method'] = null;
         } else {
             $data['recipe_id'] = null;
         }

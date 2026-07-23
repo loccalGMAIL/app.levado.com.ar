@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CostingMethod;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
@@ -128,7 +129,7 @@ class PurchaseLineRecorder
                 $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
             }
 
-            $this->applyProductCost($item, $costPerUnit);
+            $this->applyProductCost($item, $costPerUnit, (float) $stockQuantity);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
@@ -202,7 +203,9 @@ class PurchaseLineRecorder
         } elseif ($line->isProduct()) {
             $item = Product::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id && $item->isResale(), 422, 'Producto de reventa no válido.');
-            $this->applyProductCost($item, $unitCost);
+            // Cantidad comprada en unidades del producto (mismo divisor que syncStockFromExplicitCost).
+            $purchasedQty = $unitCost > 0 ? (float) $line->quantity_purchased * ((float) $line->unit_price / $unitCost) : 0.0;
+            $this->applyProductCost($item, $unitCost, $purchasedQty);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
@@ -271,12 +274,29 @@ class PurchaseLineRecorder
 
     /**
      * Un producto de reventa no interviene en el costo de ninguna receta, así que
-     * comprarlo solo actualiza su cost_per_unit: sin price log propio, sin
-     * propagación de costos y sin alerta de salto de costo.
+     * comprarlo solo actualiza su cost_per_unit (sin price log ni propagación ni alerta).
+     * Según el método de costeo efectivo: último costo, o promedio ponderado entre el
+     * stock existente (a su costo vigente) y lo comprado. El promedio se calcula ANTES
+     * del alta de stock de esta compra (que ocurre después).
      */
-    private function applyProductCost(Product $item, float $costPerUnit): void
+    private function applyProductCost(Product $item, float $costPerUnit, float $purchasedQty): void
     {
-        $item->update(['cost_per_unit' => $costPerUnit]);
+        $item->loadMissing('tenant');
+        $tenant = $item->tenant;
+        $default = CostingMethod::tryFrom((string) $tenant->getSetting('resale.costing_method', CostingMethod::LastCost->value))
+            ?? CostingMethod::LastCost;
+
+        $newCost = $costPerUnit;
+
+        if ($item->effectiveCostingMethod($default) === CostingMethod::WeightedAverage && $purchasedQty > 0) {
+            $qty = (float) ($this->stock->levelFor($item, $tenant->defaultLocation())?->quantity ?? 0);
+            if ($qty > 0) {
+                $oldCost = (float) $item->cost_per_unit;
+                $newCost = ($qty * $oldCost + $purchasedQty * $costPerUnit) / ($qty + $purchasedQty);
+            }
+        }
+
+        $item->update(['cost_per_unit' => round($newCost, 4)]);
     }
 
     /**

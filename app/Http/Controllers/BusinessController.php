@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CostingMethod;
 use App\Http\Requests\UpdateBusinessRequest;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
@@ -24,8 +25,10 @@ class BusinessController extends Controller
             $tenant->getSetting('purchase_price_includes_iva', '1'),
             FILTER_VALIDATE_BOOLEAN,
         );
+        $resaleCostingMethod = CostingMethod::tryFrom((string) $tenant->getSetting('resale.costing_method', CostingMethod::LastCost->value))
+            ?? CostingMethod::LastCost;
 
-        return view('business.edit', compact('tenant', 'totalFixedCosts', 'overheadPerHour', 'invitationMessage', 'purchasePriceIncludesIva'));
+        return view('business.edit', compact('tenant', 'totalFixedCosts', 'overheadPerHour', 'invitationMessage', 'purchasePriceIncludesIva', 'resaleCostingMethod'));
     }
 
     public function update(UpdateBusinessRequest $request): RedirectResponse
@@ -46,6 +49,7 @@ class BusinessController extends Controller
 
         $tenant->setSetting('invitation_message', $request->validated('invitation_message') ?? '');
         $tenant->setSetting('purchase_price_includes_iva', $request->boolean('purchase_price_includes_iva') ? '1' : '0');
+        $tenant->setSetting('resale.costing_method', $request->validated('resale_costing_method') ?? CostingMethod::LastCost->value);
 
         $this->recorder->record(
             actor: $request->user(),

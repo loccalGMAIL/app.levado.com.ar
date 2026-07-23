@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\CondicionIva;
+use App\Enums\CostingMethod;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,7 @@ class UpdateBusinessRequest extends FormRequest
             'logo' => ['nullable', 'image', 'max:2048'],
             'invitation_message' => ['nullable', 'string', 'max:1000'],
             'purchase_price_includes_iva' => ['required', 'in:0,1'],
+            'resale_costing_method' => ['nullable', Rule::enum(CostingMethod::class)],
         ];
     }
 }
