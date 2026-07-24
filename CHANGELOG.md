@@ -5,6 +5,21 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.3] — 2026-07-24
+
+### Compras: número de factura inventado por la IA
+
+#### Corregido
+
+- **El lector de facturas inventaba el punto de venta cuando no lo leía con nitidez.** Detectado en producción con una factura real de Del Campo Distribuidora (`FACTURA 0006-00008298`): se escaneó dos veces y las dos veces el modelo devolvió `0001` en vez de `0006` — la primera vez además con el total mal leído (`$150.724,70` en vez de `$159.724,70`), la segunda con un dígito de más en el número de comprobante. Como el número de factura salió distinto en cada intento, el índice único `(tenant_id, supplier_id, invoice_number)` no detectó el duplicado y quedaron dos compras cargadas para el mismo papel.
+
+#### Técnico
+
+- **El prompt ahora pide transcribir el Punto de Venta dígito por dígito y devolver `null` en vez de adivinar** cuando no se lee con certeza, con el caso real como ejemplo — mismo patrón que ya se usó para el bug de fechas en v0.10.1. Es una red de seguridad de prompt, no una garantía: no hay forma de confirmarla contra el modelo real sin volver a mandarle esa foto, y el mismo tipo de error ("inventar un valor típico" en vez de leer) puede repetirse con otro campo.
+- El total mal leído en el primer intento y la limpieza de las dos compras duplicadas quedan fuera de este fix — es dato a corregir a mano en producción.
+
+---
+
 ## [0.12.2] — 2026-07-19
 
 ### Centro de Alertas + limpieza del dashboard
