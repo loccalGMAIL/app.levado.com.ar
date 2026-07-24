@@ -5,6 +5,83 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [Unreleased] — Artículos y Producción (v0.13.0)
+
+Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Producto** es el SKU vendible/stockeable y la **Receta** es su fórmula (BOM). En curso.
+
+### Catálogo de Artículos, pricing y stock (etapas 1–2B)
+
+#### Agregado
+
+- **Catálogo de Productos**: artículos **elaborados** (ligados a una receta) y de **reventa** (comprados para revender), con SKU, código de barras (único por negocio) y estado activo. CRUD con modales; el tipo togglea receta vs. costo.
+- **Producto como ítem stockeable**: pestaña **Productos** en `/stock` (stock, mínimo, kardex, ajuste/recuento).
+- **Compra de productos de reventa**: el match de compras permite asociar renglones a productos de reventa, actualizando su stock y su costo.
+
+#### Técnico
+
+- Tabla `products`, enum `ProductType` (manufactured/resale), `CatalogItemType` +Product. `StockService` y `PurchaseLineRecorder` ampliados a `Ingredient|Packaging|Product`. (Las tablas `product_prices`/`product_price_logs` quedaron sin uso al retirar la matriz de reventa — ver más abajo.)
+
+### Producción — fabricación de elaborados
+
+#### Agregado
+
+- **Nueva sección Producción** (grupo Producción del menú): registrá la fabricación de un elaborado y mirá el historial de producciones con su estado y costo.
+- **Producir un elaborado** descuenta del stock los **insumos** de su receta y suma **unidades del producto** terminado. La cantidad se ingresa en unidades del producto; el sistema escala el consumo contra el rendimiento de la receta.
+- **Vista previa en vivo**: al elegir el producto y la cantidad, la pantalla muestra los insumos que se van a consumir, cuáles no alcanzan (aviso de faltante) y el costo total, antes de confirmar.
+- Las **sub-recetas** se explotan al vuelo (phantom): se descuentan sus ingredientes y descartables reales, recursivamente, y no la sub-receta como ítem.
+- Una producción se puede **anular**: revierte exactamente los movimientos de stock que generó (insumos e ingreso del elaborado).
+- **Comando `products:from-recipes`**: crea de una vez un producto elaborado por cada receta vendible con precio que todavía no lo tenga, para poder producirla. Muestra una tabla de lo que va a crear y pide confirmación; admite `--all` (incluir recetas sin precio), `--tenant=`, `--dry-run` y `--force`.
+
+#### Técnico
+
+- **`RecipeExploder`**: aplana el BOM a insumos base escalados por un factor, explotando sub-recetas recursivamente (`childFactor = factor × convert(quantity_used, unit, child.yield_unit) / child.yield_quantity`) y agregando por ítem; ignora la mano de obra.
+- **`StockService` generalizó la referencia** de `registerMovement` (de `PurchaseLine` a `referenceType`/`referenceId` escalares) y sumó `reverseMovementsFor(type, id)`, base de la anulación. La valuación no cambió: **el elaborado no toma costo de inventario por ahora** (solo las compras pisan el último costo).
+- Tabla `productions` (cabezal/snapshot) + enum `ProductionStatus`; modelo `Production` (movimientos atados por `reference_type='production'`). **`ProductionService`**: `preview()` (marca faltantes, sin escribir), `produce()` (emite los movimientos **ordenados por `(stockable_type, stockable_id)`** para evitar deadlocks, en una transacción) y `cancel()`.
+- `ProductionController` (index/create/preview JSON/store/show/cancel) + `ProductionPolicy` + `StoreProductionRequest`; producir requiere rol owner/admin. Preview con Alpine.js (fetch al endpoint, sin JS de build nuevo).
+- `CreateProductsFromRecipes` (`products:from-recipes`): filtra recetas no-semi activas con precio (`recipe_prices`) y sin producto elaborado asociado; el producto hereda `unit = yield_unit`, `cost_per_unit = null`. No migra precios (siguen en la receta).
+- **`ProductionTest` (12) + `ProductionControllerTest` (8) + `CreateProductsFromRecipesTest` (8)**: explosión phantom, conversión de unidades, anulación e idempotencia, guards, stock negativo permitido, capa HTTP, aislamiento entre tenants y la conversión receta→producto. **556 tests, todos verdes.**
+
+#### Al deployar
+
+1. `php artisan migrate` (tabla `productions`)
+2. `npm run build` (assets del menú y la pantalla de producción)
+3. `php artisan products:from-recipes` (crea los productos elaborados de las recetas vendibles existentes; pide confirmación)
+
+### Categorías de artículos + visibilidad en Producción
+
+#### Agregado
+
+- **Categorías de artículos** por negocio (Panadería, Cafetería, Pastelería…), gestionables desde un botón "Categorías" en Artículos. Cada categoría tiene un flag **"Se produce"**.
+- **El select de Producción muestra solo los elaborados de una categoría marcada "se produce"**: los de una categoría no-producible (o sin categoría) quedan fuera. Sirve para costear áreas que todavía no se fabrican desde el sistema (ej. cafetería) sin que aparezcan al producir.
+- Los modales de alta/edición de artículo tienen un `<select>` de categoría (con "+ nueva categoría" al vuelo); el índice suma columna y filtro por categoría.
+- `products:from-recipes` acepta `--category=NOMBRE` para clasificar los productos creados en la misma corrida.
+- **Se quitó la matriz/solapa de «Reventa»** de las listas de precios (vista, rutas, controller y botón «Precios de reventa»): los artículos se organizan por categoría y los de reventa mantienen su costo (de Compras) sin una pantalla de precio de venta dedicada. Las tablas `product_prices`/`product_price_logs` quedan latentes (sin borrar datos) por si se retoma.
+
+### Modelo de dominio: costo del Artículo (Fase 1)
+
+#### Agregado
+
+- **Costo vigente unificado del artículo** (`Product::currentCost()`): un solo lugar responde el costo por unidad según origen — elaborado desde su receta, reventa desde su último costo de compra.
+- **Los productos elaborados ahora se valúan en Stock** (antes figuraban en $0): la valuación del tab Productos de `/stock` y su kardex usan el costo derivado de la receta.
+- **El catálogo de Artículos muestra costo, precio y margen** por artículo (con selector de lista de precios), consistente con el Dashboard y Recetas: costo total con overhead, precio y margen con semáforo, editable inline.
+- **El precio de venta pasó a vivir en el Artículo** (`product_prices`), como fuente única. Se edita inline desde el catálogo, el Dashboard, `/recipes`, el detalle de receta y la matriz de precios — todas escribiendo el mismo lugar (vía el artículo elaborado vinculado). La **Receta quedó como fórmula/BOM**: se le quitó el campo "precio de venta". Las recetas sin artículo elaborado no tienen precio editable (hay que crear el artículo primero). Migración: se copiaron los precios de receta existentes al artículo. Se retiró el endpoint/servicio de precio de receta; `recipe_prices` queda latente (dato preservado).
+
+#### Técnico
+
+- Ratificación del modelo Insumos/Artículos (ADR en memoria): el **Artículo es el dueño único de costo y precio**; la Receta queda como BOM; el precio del elaborado migrará de `recipe_prices` al Artículo en una fase posterior. `Product::currentCost()`/`currentCostSource()` extraen la regla que estaba inline; `StockController` eager-loada `recipe` para valuar sin N+1. Valuación a nivel de lectura (no toca el ledger). **`ProductCostTest` (5). 566 tests, todos verdes.**
+
+#### Técnico
+
+- Tabla `product_categories` (tenant_id, name, `producible` bool, unique tenant+name) + `products.product_category_id` (nullable, `nullOnDelete`). `ProductCategory` modelo + `Tenant::productCategories()` + `Product::category()`.
+- `ProductCategoryController` (store/update/destroy) espejo del de categorías de gastos: guard de borrado si tiene artículos, `wantsJson` para el alta rápida, unicidad `Rule::unique` scoped. Componente `product-categories-modal` (con toggle "se produce"; sin tocar el de gastos). Filtro en `ProductionController::create` con `whereHas('category', producible=true)`.
+- **`ProductCategoryTest` (10) + filtro en `ProductionControllerTest` (3) + `--category` en `CreateProductsFromRecipesTest` (1)**. **570 tests, todos verdes.**
+
+#### Al deployar
+
+- `php artisan migrate` (tablas `product_categories` + columna en `products`). Luego, para producir: clasificar los elaborados con una categoría marcada "se produce" (o correr `products:from-recipes --category=…`).
+
+---
+
 ## [0.12.7] — 2026-07-30
 
 ### La vinculación de productos se recuerda para las próximas facturas
@@ -190,83 +267,6 @@ Las dos migraciones son columnas nullable aditivas: sin migración de datos, sin
 
 - **El prompt ahora pide transcribir el Punto de Venta dígito por dígito y devolver `null` en vez de adivinar** cuando no se lee con certeza, con el caso real como ejemplo — mismo patrón que ya se usó para el bug de fechas en v0.10.1. Es una red de seguridad de prompt, no una garantía: no hay forma de confirmarla contra el modelo real sin volver a mandarle esa foto, y el mismo tipo de error ("inventar un valor típico" en vez de leer) puede repetirse con otro campo.
 - El total mal leído en el primer intento y la limpieza de las dos compras duplicadas quedan fuera de este fix — es dato a corregir a mano en producción.
-
----
-
-## [Unreleased] — Artículos y Producción (v0.13.0)
-
-Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Producto** es el SKU vendible/stockeable y la **Receta** es su fórmula (BOM). En curso.
-
-### Catálogo de Artículos, pricing y stock (etapas 1–2B)
-
-#### Agregado
-
-- **Catálogo de Productos**: artículos **elaborados** (ligados a una receta) y de **reventa** (comprados para revender), con SKU, código de barras (único por negocio) y estado activo. CRUD con modales; el tipo togglea receta vs. costo.
-- **Producto como ítem stockeable**: pestaña **Productos** en `/stock` (stock, mínimo, kardex, ajuste/recuento).
-- **Compra de productos de reventa**: el match de compras permite asociar renglones a productos de reventa, actualizando su stock y su costo.
-
-#### Técnico
-
-- Tabla `products`, enum `ProductType` (manufactured/resale), `CatalogItemType` +Product. `StockService` y `PurchaseLineRecorder` ampliados a `Ingredient|Packaging|Product`. (Las tablas `product_prices`/`product_price_logs` quedaron sin uso al retirar la matriz de reventa — ver más abajo.)
-
-### Producción — fabricación de elaborados
-
-#### Agregado
-
-- **Nueva sección Producción** (grupo Producción del menú): registrá la fabricación de un elaborado y mirá el historial de producciones con su estado y costo.
-- **Producir un elaborado** descuenta del stock los **insumos** de su receta y suma **unidades del producto** terminado. La cantidad se ingresa en unidades del producto; el sistema escala el consumo contra el rendimiento de la receta.
-- **Vista previa en vivo**: al elegir el producto y la cantidad, la pantalla muestra los insumos que se van a consumir, cuáles no alcanzan (aviso de faltante) y el costo total, antes de confirmar.
-- Las **sub-recetas** se explotan al vuelo (phantom): se descuentan sus ingredientes y descartables reales, recursivamente, y no la sub-receta como ítem.
-- Una producción se puede **anular**: revierte exactamente los movimientos de stock que generó (insumos e ingreso del elaborado).
-- **Comando `products:from-recipes`**: crea de una vez un producto elaborado por cada receta vendible con precio que todavía no lo tenga, para poder producirla. Muestra una tabla de lo que va a crear y pide confirmación; admite `--all` (incluir recetas sin precio), `--tenant=`, `--dry-run` y `--force`.
-
-#### Técnico
-
-- **`RecipeExploder`**: aplana el BOM a insumos base escalados por un factor, explotando sub-recetas recursivamente (`childFactor = factor × convert(quantity_used, unit, child.yield_unit) / child.yield_quantity`) y agregando por ítem; ignora la mano de obra.
-- **`StockService` generalizó la referencia** de `registerMovement` (de `PurchaseLine` a `referenceType`/`referenceId` escalares) y sumó `reverseMovementsFor(type, id)`, base de la anulación. La valuación no cambió: **el elaborado no toma costo de inventario por ahora** (solo las compras pisan el último costo).
-- Tabla `productions` (cabezal/snapshot) + enum `ProductionStatus`; modelo `Production` (movimientos atados por `reference_type='production'`). **`ProductionService`**: `preview()` (marca faltantes, sin escribir), `produce()` (emite los movimientos **ordenados por `(stockable_type, stockable_id)`** para evitar deadlocks, en una transacción) y `cancel()`.
-- `ProductionController` (index/create/preview JSON/store/show/cancel) + `ProductionPolicy` + `StoreProductionRequest`; producir requiere rol owner/admin. Preview con Alpine.js (fetch al endpoint, sin JS de build nuevo).
-- `CreateProductsFromRecipes` (`products:from-recipes`): filtra recetas no-semi activas con precio (`recipe_prices`) y sin producto elaborado asociado; el producto hereda `unit = yield_unit`, `cost_per_unit = null`. No migra precios (siguen en la receta).
-- **`ProductionTest` (12) + `ProductionControllerTest` (8) + `CreateProductsFromRecipesTest` (8)**: explosión phantom, conversión de unidades, anulación e idempotencia, guards, stock negativo permitido, capa HTTP, aislamiento entre tenants y la conversión receta→producto. **556 tests, todos verdes.**
-
-#### Al deployar
-
-1. `php artisan migrate` (tabla `productions`)
-2. `npm run build` (assets del menú y la pantalla de producción)
-3. `php artisan products:from-recipes` (crea los productos elaborados de las recetas vendibles existentes; pide confirmación)
-
-### Categorías de artículos + visibilidad en Producción
-
-#### Agregado
-
-- **Categorías de artículos** por negocio (Panadería, Cafetería, Pastelería…), gestionables desde un botón "Categorías" en Artículos. Cada categoría tiene un flag **"Se produce"**.
-- **El select de Producción muestra solo los elaborados de una categoría marcada "se produce"**: los de una categoría no-producible (o sin categoría) quedan fuera. Sirve para costear áreas que todavía no se fabrican desde el sistema (ej. cafetería) sin que aparezcan al producir.
-- Los modales de alta/edición de artículo tienen un `<select>` de categoría (con "+ nueva categoría" al vuelo); el índice suma columna y filtro por categoría.
-- `products:from-recipes` acepta `--category=NOMBRE` para clasificar los productos creados en la misma corrida.
-- **Se quitó la matriz/solapa de «Reventa»** de las listas de precios (vista, rutas, controller y botón «Precios de reventa»): los artículos se organizan por categoría y los de reventa mantienen su costo (de Compras) sin una pantalla de precio de venta dedicada. Las tablas `product_prices`/`product_price_logs` quedan latentes (sin borrar datos) por si se retoma.
-
-### Modelo de dominio: costo del Artículo (Fase 1)
-
-#### Agregado
-
-- **Costo vigente unificado del artículo** (`Product::currentCost()`): un solo lugar responde el costo por unidad según origen — elaborado desde su receta, reventa desde su último costo de compra.
-- **Los productos elaborados ahora se valúan en Stock** (antes figuraban en $0): la valuación del tab Productos de `/stock` y su kardex usan el costo derivado de la receta.
-- **El catálogo de Artículos muestra costo, precio y margen** por artículo (con selector de lista de precios), consistente con el Dashboard y Recetas: costo total con overhead, precio y margen con semáforo, editable inline.
-- **El precio de venta pasó a vivir en el Artículo** (`product_prices`), como fuente única. Se edita inline desde el catálogo, el Dashboard, `/recipes`, el detalle de receta y la matriz de precios — todas escribiendo el mismo lugar (vía el artículo elaborado vinculado). La **Receta quedó como fórmula/BOM**: se le quitó el campo "precio de venta". Las recetas sin artículo elaborado no tienen precio editable (hay que crear el artículo primero). Migración: se copiaron los precios de receta existentes al artículo. Se retiró el endpoint/servicio de precio de receta; `recipe_prices` queda latente (dato preservado).
-
-#### Técnico
-
-- Ratificación del modelo Insumos/Artículos (ADR en memoria): el **Artículo es el dueño único de costo y precio**; la Receta queda como BOM; el precio del elaborado migrará de `recipe_prices` al Artículo en una fase posterior. `Product::currentCost()`/`currentCostSource()` extraen la regla que estaba inline; `StockController` eager-loada `recipe` para valuar sin N+1. Valuación a nivel de lectura (no toca el ledger). **`ProductCostTest` (5). 566 tests, todos verdes.**
-
-#### Técnico
-
-- Tabla `product_categories` (tenant_id, name, `producible` bool, unique tenant+name) + `products.product_category_id` (nullable, `nullOnDelete`). `ProductCategory` modelo + `Tenant::productCategories()` + `Product::category()`.
-- `ProductCategoryController` (store/update/destroy) espejo del de categorías de gastos: guard de borrado si tiene artículos, `wantsJson` para el alta rápida, unicidad `Rule::unique` scoped. Componente `product-categories-modal` (con toggle "se produce"; sin tocar el de gastos). Filtro en `ProductionController::create` con `whereHas('category', producible=true)`.
-- **`ProductCategoryTest` (10) + filtro en `ProductionControllerTest` (3) + `--category` en `CreateProductsFromRecipesTest` (1)**. **570 tests, todos verdes.**
-
-#### Al deployar
-
-- `php artisan migrate` (tablas `product_categories` + columna en `products`). Luego, para producir: clasificar los elaborados con una categoría marcada "se produce" (o correr `products:from-recipes --category=…`).
 
 ---
 
