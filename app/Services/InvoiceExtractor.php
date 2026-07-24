@@ -115,6 +115,10 @@ class InvoiceExtractor
             - Fijate en la columna y en los totales para no confundir el separador. Devolvé siempre el número con punto decimal.
 
             invoice_number: combiná Punto de Venta + N° de comprobante con guion (ej. "0012-00017065").
+            ¡OJO! Transcribí los 4 dígitos del Punto de Venta uno por uno, tal como se ven. NO asumas "0001"
+            ni ningún otro valor típico cuando la letra no sea perfectamente nítida.
+            Este error ya pasó con facturas reales: "0006-00008298" fue leído como "0001-00008298".
+            Si no podés leer con certeza alguno de los dígitos, devolvé invoice_number como null en vez de adivinar.
 
             invoice_date: devolvela en formato YYYY-MM-DD.
             ¡OJO! En Argentina las fechas se escriben DÍA/MES/AÑO. "02/06/2026" es el 2 de JUNIO de 2026 → "2026-06-02".
