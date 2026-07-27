@@ -201,7 +201,7 @@
                                                         {{-- Aparte del catálogo para que no se mezcle con los ingredientes. --}}
                                                         <optgroup label="Otros destinos">
                                                             <option value="excluded" @selected($currentValue === 'excluded')>
-                                                                Consumo personal — no es del negocio
+                                                                Consumo personal
                                                             </option>
                                                         </optgroup>
                                                         @if($ingredients->isNotEmpty())
@@ -289,8 +289,8 @@
                                                         <input type="text" name="exclusion_note"
                                                             value="{{ $line->exclusion_note }}"
                                                             maxlength="255"
-                                                            placeholder="Ej: compra personal"
-                                                            class="w-56 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1">
+                                                            placeholder="Ej: asado del domingo (no obligatorio)"
+                                                            class="w-72 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1">
                                                         <button type="submit"
                                                             class="px-3 py-1.5 bg-corteza text-white text-sm rounded hover:bg-horno transition-colors whitespace-nowrap">
                                                             Marcar como personal
