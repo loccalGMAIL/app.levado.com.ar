@@ -26,6 +26,8 @@ class PurchaseLine extends Model
         'percepcion_rate',
         'subtotal',
         'cost_applied_at',
+        'excluded_at',
+        'exclusion_note',
     ];
 
     protected function casts(): array
@@ -38,6 +40,7 @@ class PurchaseLine extends Model
             'subtotal' => 'decimal:4',
             'purchase_unit' => Unit::class,
             'cost_applied_at' => 'datetime',
+            'excluded_at' => 'datetime',
         ];
     }
 
@@ -74,5 +77,33 @@ class PurchaseLine extends Model
     public function isApplied(): bool
     {
         return $this->cost_applied_at !== null;
+    }
+
+    /**
+     * Renglón que no es del negocio (consumo personal del titular metido en la
+     * misma factura del proveedor). Está resuelto, pero no imputa costo ni stock.
+     *
+     * Los tres estados son mutuamente excluyentes: un renglón excluido nunca tiene
+     * purchaseable_id ni cost_applied_at. Lo garantiza PurchaseController::matchLine(),
+     * que escribe los tres campos juntos en un único update().
+     */
+    public function isExcluded(): bool
+    {
+        return $this->excluded_at !== null;
+    }
+
+    /**
+     * Ya no hay nada que decidir sobre este renglón: o se imputó su costo, o se
+     * marcó como consumo personal. Es lo que cuenta el indicador de completitud
+     * de la factura (antes contaba sólo los aplicados).
+     */
+    public function isResolved(): bool
+    {
+        return $this->isApplied() || $this->isExcluded();
+    }
+
+    public function isPending(): bool
+    {
+        return ! $this->isResolved();
     }
 }

@@ -103,7 +103,7 @@
                             $cardTotal = $includeIva
                                 ? ($purchase->invoice_total ?? $purchase->net_total ?? 0)
                                 : ($purchase->net_total ?? 0);
-                            $cardAllApplied = $purchase->lines_count > 0 && $purchase->applied_count >= $purchase->lines_count;
+                            $cardAllResolved = $purchase->lines_count > 0 && $purchase->resolved_count >= $purchase->lines_count;
                         @endphp
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
                             <div class="flex items-start justify-between">
@@ -129,8 +129,8 @@
                                 @can('manage-costs')
                                     @if($purchase->lines_count > 0)
                                         <a href="{{ route('purchases.match', $purchase) }}"
-                                            class="flex-1 py-1.5 px-3 text-sm border rounded text-center transition-colors {{ $cardAllApplied ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-amber-300 text-amber-700 hover:bg-amber-50' }}">
-                                            {{ $cardAllApplied ? 'Vinculada' : 'Vincular' }}
+                                            class="flex-1 py-1.5 px-3 text-sm border rounded text-center transition-colors {{ $cardAllResolved ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-amber-300 text-amber-700 hover:bg-amber-50' }}">
+                                            {{ $cardAllResolved ? 'Vinculada' : 'Vincular' }}
                                         </a>
                                     @endif
                                     <form method="POST" action="{{ route('purchases.destroy', $purchase) }}"
@@ -210,11 +210,11 @@
                                             @can('manage-costs')
                                                 @if($purchase->lines_count > 0)
                                                     @php
-                                                        $allApplied = $purchase->applied_count >= $purchase->lines_count;
+                                                        $allResolved = $purchase->resolved_count >= $purchase->lines_count;
                                                     @endphp
                                                     <a href="{{ route('purchases.match', $purchase) }}"
-                                                        class="inline-flex p-1 transition-colors {{ $allApplied ? 'text-green-500 hover:text-green-700' : 'text-amber-500 hover:text-amber-700' }}"
-                                                        title="{{ $allApplied ? 'Todos los renglones vinculados' : ($purchase->lines_count - $purchase->applied_count) . ' renglón(es) sin vincular' }}">
+                                                        class="inline-flex p-1 transition-colors {{ $allResolved ? 'text-green-500 hover:text-green-700' : 'text-amber-500 hover:text-amber-700' }}"
+                                                        title="{{ $allResolved ? 'No queda ningún renglón por resolver' : ($purchase->lines_count - $purchase->resolved_count) . ' renglón(es) sin resolver' }}">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                                                         </svg>

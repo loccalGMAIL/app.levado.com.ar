@@ -142,9 +142,13 @@ class NotificationService
             return;
         }
 
+        // Los renglones marcados como consumo personal están resueltos: no imputan
+        // costo, pero tampoco quedan pendientes, así que no deben mantener viva la alerta.
+        $unresolved = fn ($q) => $q->whereNull('cost_applied_at')->whereNull('excluded_at');
+
         $purchases = Purchase::where('tenant_id', $tenant->id)
-            ->whereHas('lines', fn ($q) => $q->whereNull('cost_applied_at'))
-            ->withCount(['lines as pending_lines_count' => fn ($q) => $q->whereNull('cost_applied_at')])
+            ->whereHas('lines', $unresolved)
+            ->withCount(['lines as pending_lines_count' => $unresolved])
             ->with('supplier')
             ->get();
 

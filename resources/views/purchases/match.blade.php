@@ -4,7 +4,8 @@
     </x-slot>
 
     @php
-        $appliedCount   = $purchase->lines->filter(fn ($l) => $l->isApplied())->count();
+        $resolvedCount  = $purchase->lines->filter(fn ($l) => $l->isResolved())->count();
+        $excludedCount  = $purchase->lines->filter(fn ($l) => $l->isExcluded())->count();
         $suggestedCount = $purchase->lines->filter(fn ($l) => $l->isMatched() && ! $l->isApplied())->count();
         $total          = $purchase->lines->count();
     @endphp
@@ -45,10 +46,10 @@
 
                     <div class="flex items-center gap-4 shrink-0">
                         <div class="text-right">
-                            <p class="text-2xl font-mono font-semibold {{ $appliedCount === $total ? 'text-green-600' : 'text-corteza' }}">
-                                {{ $appliedCount }}<span class="text-masa-madre font-normal text-base">/{{ $total }}</span>
+                            <p class="text-2xl font-mono font-semibold {{ $resolvedCount === $total ? 'text-green-600' : 'text-corteza' }}">
+                                {{ $resolvedCount }}<span class="text-masa-madre font-normal text-base">/{{ $total }}</span>
                             </p>
-                            <p class="text-xs text-masa-madre">con costo aplicado</p>
+                            <p class="text-xs text-masa-madre">renglones resueltos</p>
                         </div>
                         @if($suggestedCount > 0)
                             <form method="POST" action="{{ route('purchases.apply-suggestions', $purchase) }}">
@@ -62,12 +63,15 @@
                     </div>
                 </div>
 
-                @if($appliedCount === $total && $total > 0)
+                @if($resolvedCount === $total && $total > 0)
                     <p class="mt-4 flex items-center gap-1.5 text-green-700 text-sm">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                         </svg>
-                        Todos los renglones tienen costo aplicado.
+                        No queda ningún renglón por resolver.
+                        @if($excludedCount > 0)
+                            <span class="text-masa-madre">({{ $excludedCount }} de consumo personal)</span>
+                        @endif
                     </p>
                 @endif
             </div>
@@ -93,9 +97,11 @@
                         <tbody class="divide-y divide-miga">
                             @foreach($purchase->lines as $line)
                                 @php
-                                    $currentValue = $line->isMatched()
-                                        ? "{$line->purchaseable_type}:{$line->purchaseable_id}"
-                                        : '';
+                                    $currentValue = match (true) {
+                                        $line->isExcluded() => 'excluded',
+                                        $line->isMatched()  => "{$line->purchaseable_type}:{$line->purchaseable_id}",
+                                        default             => '',
+                                    };
                                     $matchedName = null;
                                     if ($line->purchaseable_type === 'ingredient') {
                                         $matchedName = $ingredients->firstWhere('id', $line->purchaseable_id)?->name;
@@ -160,7 +166,15 @@
                                             <span class="text-xs text-corteza" title="{{ $line->raw_name }}">
                                                 {{ \Illuminate\Support\Str::limit($line->raw_name ?? '—', 65) }}
                                             </span>
-                                            @if($line->isMatched())
+                                            @if($line->isExcluded())
+                                                {{-- Neutro a propósito: el ámbar significa "pendiente" y este renglón ya está resuelto. --}}
+                                                <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-miga text-masa-madre">
+                                                    Consumo personal
+                                                </span>
+                                                @if($line->exclusion_note)
+                                                    <span class="block text-xs text-masa-madre/60 mt-0.5">{{ $line->exclusion_note }}</span>
+                                                @endif
+                                            @elseif($line->isMatched())
                                                 <span class="block text-xs text-amber-600 mt-0.5">Sugerido por IA</span>
                                             @endif
                                         </td>
@@ -184,6 +198,12 @@
                                                         x-init="$nextTick(() => { new TomSelect($el, { maxOptions: null, dropdownParent: 'body' }); })"
                                                         class="text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1.5 min-w-[220px]">
                                                         <option value="">— sin asociar —</option>
+                                                        {{-- Aparte del catálogo para que no se mezcle con los ingredientes. --}}
+                                                        <optgroup label="Otros destinos">
+                                                            <option value="excluded" @selected($currentValue === 'excluded')>
+                                                                Consumo personal — no es del negocio
+                                                            </option>
+                                                        </optgroup>
                                                         @if($ingredients->isNotEmpty())
                                                             <optgroup label="Insumos">
                                                                 @foreach($ingredients as $ing)
@@ -264,8 +284,21 @@
                                                         </button>
                                                     </div>
 
+                                                    {{-- Consumo personal: sin cálculo de costo, sólo una nota opcional --}}
+                                                    <div x-show="isExcluded" x-cloak class="flex items-center gap-2 flex-wrap">
+                                                        <input type="text" name="exclusion_note"
+                                                            value="{{ $line->exclusion_note }}"
+                                                            maxlength="255"
+                                                            placeholder="Ej: compra personal"
+                                                            class="w-56 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1">
+                                                        <button type="submit"
+                                                            class="px-3 py-1.5 bg-corteza text-white text-sm rounded hover:bg-horno transition-colors whitespace-nowrap">
+                                                            Marcar como personal
+                                                        </button>
+                                                    </div>
+
                                                     {{-- Botón cuando aún no hay catálogUnit (selección recién elegida sin calcular) --}}
-                                                    <div x-show="selected && !catalogUnit && !incompatiblePkg" x-cloak>
+                                                    <div x-show="selected && !catalogUnit && !incompatiblePkg && !isExcluded" x-cloak>
                                                         <button type="submit"
                                                             class="px-3 py-1.5 bg-corteza text-white text-sm rounded hover:bg-horno transition-colors">
                                                             Asociar
@@ -281,7 +314,7 @@
                     </table>
                 </div>
 
-                @if($appliedCount < $total)
+                @if($resolvedCount < $total)
                     <p class="text-xs text-masa-madre">
                         ✦ cantidad detectada en la descripción del producto — verificá antes de aplicar.
                         Los renglones pendientes no actualizan ningún costo hasta asociarlos.

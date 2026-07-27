@@ -28,6 +28,12 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class PurchaseController extends Controller
 {
+    /**
+     * Valor centinela del select de match: marca el renglón como consumo personal
+     * en vez de asociarlo al catálogo. Ver matchLine().
+     */
+    public const EXCLUDED_MATCH = 'excluded';
+
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly PurchaseLineRecorder $lineRecorder,
@@ -44,7 +50,11 @@ class PurchaseController extends Controller
         $query = $tenant->purchases()
             ->with('supplier')
             ->withCount('lines')
-            ->withCount(['lines as applied_count' => fn ($q) => $q->whereNotNull('cost_applied_at')])
+            // Resueltos = imputados + consumo personal. El indicador ámbar/verde mide
+            // "no queda nada por decidir", no "todo tiene costo aplicado".
+            ->withCount(['lines as resolved_count' => fn ($q) => $q->where(
+                fn ($q2) => $q2->whereNotNull('cost_applied_at')->orWhereNotNull('excluded_at')
+            )])
             ->withSum('lines as net_total', 'subtotal')
             ->when(request('search'), function ($q, $s) {
                 $q->where(function ($q2) use ($s) {
@@ -404,6 +414,7 @@ class PurchaseController extends Controller
         $validated = $request->validate([
             'match' => ['nullable', 'string'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'exclusion_note' => ['nullable', 'string', 'max:255'],
         ]);
 
         $match = $validated['match'] ?? null;
@@ -419,10 +430,46 @@ class PurchaseController extends Controller
                     $this->stock->reversePurchaseLineEntry($line, request()->user());
                 }
 
-                $line->update(['purchaseable_type' => null, 'purchaseable_id' => null, 'cost_applied_at' => null]);
+                $line->update([
+                    'purchaseable_type' => null,
+                    'purchaseable_id' => null,
+                    'cost_applied_at' => null,
+                    'excluded_at' => null,
+                    'exclusion_note' => null,
+                ]);
             });
 
             return back()->with('status', 'Renglón marcado como pendiente.');
+        }
+
+        // Centinela del select: el renglón no es del negocio (consumo personal del
+        // titular en la factura del proveedor). No colisiona con un match real, que
+        // siempre viaja como "tipo:id".
+        if ($match === self::EXCLUDED_MATCH) {
+            DB::transaction(function () use ($line, $request, $validated) {
+                if ($line->isApplied()) {
+                    $this->stock->reversePurchaseLineEntry($line, $request->user());
+                }
+
+                $line->update([
+                    'purchaseable_type' => null,
+                    'purchaseable_id' => null,
+                    'cost_applied_at' => null,
+                    'excluded_at' => now(),
+                    'exclusion_note' => $validated['exclusion_note'] ?? null,
+                ]);
+            });
+
+            $this->recorder->record(
+                actor: $request->user(),
+                targetType: 'purchase_line',
+                targetId: $line->id,
+                action: 'purchase_line.excluded',
+                payload: ['note' => $line->exclusion_note],
+                tenantId: $purchase->tenant_id,
+            );
+
+            return back()->with('status', 'Renglón marcado como consumo personal.');
         }
 
         [$rawType, $id] = array_pad(explode(':', $match, 2), 2, null);
@@ -438,7 +485,13 @@ class PurchaseController extends Controller
 
         try {
             DB::transaction(function () use ($line, $type, $id, $unitCost) {
-                $line->update(['purchaseable_type' => $type, 'purchaseable_id' => (int) $id]);
+                // Asociar saca al renglón del estado "consumo personal", si venía de ahí.
+                $line->update([
+                    'purchaseable_type' => $type,
+                    'purchaseable_id' => (int) $id,
+                    'excluded_at' => null,
+                    'exclusion_note' => null,
+                ]);
                 if ($unitCost !== null) {
                     $this->lineRecorder->applyWithCost($line, $unitCost);
                 } else {
@@ -475,6 +528,7 @@ class PurchaseController extends Controller
         $pending = $purchase->lines()
             ->whereNotNull('purchaseable_id')
             ->whereNull('cost_applied_at')
+            ->whereNull('excluded_at')
             ->get();
 
         foreach ($pending as $line) {
