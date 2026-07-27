@@ -58,6 +58,7 @@ class VariableExpenseScanController extends Controller
         return response()->json([
             'path' => $path,
             'name' => $draft['name'],
+            'description' => $draft['description'],
             'amount' => $draft['amount'],
             'expense_date' => $draft['expense_date'],
             'category_id' => $draft['category_id'],

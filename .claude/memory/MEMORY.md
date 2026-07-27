@@ -2,7 +2,7 @@
 
 - [Roadmap MVP v2.1](project-roadmap.md) — Estado de etapas, versioning, rama activa, prioridades
 - [Estado del proyecto](project_status.md) — Versión actual, lo que está hecho y próximos pasos
-- [Módulo de Compras](feature-compras.md) — Tablas, flujos, servicios, vistas y estado de fases del módulo de compras (act. v0.9.1)
+- [Módulo de Compras](feature-compras.md) — Tablas, flujos, servicios, vistas y estado de fases del módulo de compras. Incluye los tres estados del renglón y el cambio de semántica del contador a *resueltos* (act. v0.12.4)
 - [Módulo de Existencias](feature-existencias.md) — Ledger inmutable, StockService, integración con compras, edición inline y orden por columnas (act. v0.9.2, sin Merma)
 - [Dashboard nuevo](feature-dashboard.md) — Rediseño gráfico v0.12.1: tabla sobre caches en SQL + gauge/barras/dona con ApexCharts self-hosted; trampas de división entera en SQLite y `@json` multilínea
 - [Centro de Alertas](feature-alertas.md) — Feed persistido `notifications` (stock bajo, salto de costo, costo desactualizado, compras sin imputar); reconcile-on-read, config en Administración → Alertas
