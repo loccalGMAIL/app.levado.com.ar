@@ -31,7 +31,12 @@ class VariableExpenseController extends Controller
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
-                return $q->where('name', 'like', "%{$escaped}%");
+                // El closure agrupa el OR: suelto, se mezclaría con los filtros de
+                // categoría, proveedor y fechas y la búsqueda los ignoraría.
+                return $q->where(function ($q2) use ($escaped) {
+                    $q2->where('name', 'like', "%{$escaped}%")
+                        ->orWhere('description', 'like', "%{$escaped}%");
+                });
             })
             ->when(request('category'), fn ($q, $categoryId) => $q->where('variable_expense_category_id', $categoryId))
             ->when(request('supplier'), fn ($q, $supplierId) => $q->where('supplier_id', $supplierId))

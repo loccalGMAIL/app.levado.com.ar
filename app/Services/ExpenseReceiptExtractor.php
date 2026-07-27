@@ -19,7 +19,7 @@ class ExpenseReceiptExtractor
 {
     /**
      * @param  Collection<int, VariableExpenseCategory>  $categories
-     * @return array{name: ?string, supplier_name: ?string, expense_date: ?string, amount: ?float, category_id: ?int}
+     * @return array{name: ?string, description: ?string, supplier_name: ?string, expense_date: ?string, amount: ?float, category_id: ?int}
      */
     public function extract(string $base64, string $mimeType, Collection $categories): array
     {
@@ -82,13 +82,17 @@ class ExpenseReceiptExtractor
             {$catalog}
 
             Devolvé:
-            - name: una descripción CORTA (máximo 60 caracteres) de QUÉ SE COMPRÓ o qué servicio se pagó.
-              NO uses el nombre del proveedor como descripción: el proveedor va en supplier_name.
+            - name: una etiqueta CORTA (máximo 60 caracteres) de QUÉ SE COMPRÓ o qué servicio se pagó.
+              Es el título del gasto en el listado, no el detalle: el detalle va en description.
+              NO uses el nombre del proveedor como etiqueta: el proveedor va en supplier_name.
               Si el comprobante tiene UN SOLO concepto, usá ese concepto (ej. "Cambio de cubierta trasera").
-              Si tiene VARIOS ÍTEMS, resumilos en una sola frase, del rubro general a los ítems principales,
-              nombrando ítems que estén REALMENTE en el comprobante (ej. "Ferretería: tornillos, cinta y silicona").
-              NO devuelvas una lista ni un renglón por ítem, y NO agregues ítems que no figuran.
+              Si tiene VARIOS ÍTEMS, usá el rubro general en una frase corta (ej. "Compra de ferretería").
               Si no se entiende qué se pagó, devolvé null. NO inventes.
+            - description: el DETALLE de lo que figura en el comprobante — los ítems comprados o el
+              trabajo realizado, en una sola frase corrida (ej. "Tornillos, cinta aisladora y silicona").
+              Nombrá SÓLO ítems que estén REALMENTE en el comprobante, y NO agregues ninguno que no figure.
+              NO devuelvas una lista ni un renglón por ítem, y no repitas textual el name.
+              Si el comprobante no detalla nada más allá del concepto, devolvé null. NO inventes.
             - amount: el TOTAL FINAL del comprobante: la plata que efectivamente se pagó, con IVA incluido si lo tiene.
               ¡MUY IMPORTANTE! Si el comprobante muestra SUBTOTAL, IVA y TOTAL, devolvé SIEMPRE el que dice TOTAL.
               NUNCA devuelvas el SUBTOTAL ni el importe de un renglón suelto: el TOTAL es el importe MÁS GRANDE
@@ -113,6 +117,7 @@ class ExpenseReceiptExtractor
             Devolvé ÚNICAMENTE este objeto JSON, sin texto adicional ni markdown:
             {
               "name": string|null,
+              "description": string|null,
               "amount": number|null,
               "expense_date": "YYYY-MM-DD"|null,
               "supplier_name": string|null,
@@ -149,7 +154,7 @@ class ExpenseReceiptExtractor
     /**
      * @param  array<string, mixed>  $data
      * @param  Collection<int, VariableExpenseCategory>  $categories
-     * @return array{name: ?string, supplier_name: ?string, expense_date: ?string, amount: ?float, category_id: ?int}
+     * @return array{name: ?string, description: ?string, supplier_name: ?string, expense_date: ?string, amount: ?float, category_id: ?int}
      */
     private function normalize(array $data, Collection $categories): array
     {
@@ -162,6 +167,7 @@ class ExpenseReceiptExtractor
 
         return [
             'name' => $this->toTrimmedString($data['name'] ?? null),
+            'description' => $this->toTrimmedString($data['description'] ?? null),
             'supplier_name' => $this->toTrimmedString($data['supplier_name'] ?? null),
             'expense_date' => $this->normalizeDate($data['expense_date'] ?? null),
             'amount' => $this->toFloat($data['amount'] ?? null),

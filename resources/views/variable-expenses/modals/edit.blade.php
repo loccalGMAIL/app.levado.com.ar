@@ -117,6 +117,15 @@
             <x-input-error :messages="$errors->get('name')" class="mt-2" />
         </div>
 
+        <div>
+            <x-input-label for="edit_ve_description" value="Descripción" />
+            <textarea id="edit_ve_description" name="description" rows="2"
+                x-model="editing.description"
+                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm"></textarea>
+            <p class="mt-1 text-xs text-masa-madre">Para acordarte de qué se trató. Opcional.</p>
+            <x-input-error :messages="$errors->get('description')" class="mt-2" />
+        </div>
+
         <div class="grid grid-cols-3 gap-4">
             <div class="col-span-2">
                 <div class="flex items-center justify-between mb-1">

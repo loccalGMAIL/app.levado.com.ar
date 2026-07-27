@@ -560,3 +560,112 @@ test('aislamiento: no se puede eliminar categoría de gasto variable de otro ten
         ->delete(route('variable-expense-categories.destroy', $otherCategory))
         ->assertNotFound();
 });
+
+// --- Descripción ---
+
+test('owner puede crear un gasto variable con descripción', function () {
+    [$user, $tenant, $category] = ownerForVariableExpense();
+
+    $this->actingAs($user)
+        ->post(route('variable-expenses.store'), [
+            'name' => 'Compra de ferretería',
+            'description' => 'Tornillos, cinta aisladora y silicona para arreglar la puerta del depósito',
+            'variable_expense_category_id' => $category->id,
+            'amount' => '24500.75',
+            'expense_date' => '2026-05-14',
+        ])
+        ->assertRedirect(route('variable-expenses.index'));
+
+    expect($tenant->variableExpenses()->first()->description)
+        ->toBe('Tornillos, cinta aisladora y silicona para arreglar la puerta del depósito');
+});
+
+test('la descripción es opcional y queda en null', function () {
+    [$user, $tenant, $category] = ownerForVariableExpense();
+
+    $this->actingAs($user)
+        ->post(route('variable-expenses.store'), [
+            'name' => 'Flete',
+            'variable_expense_category_id' => $category->id,
+            'amount' => '5000',
+            'expense_date' => '2026-05-14',
+        ])
+        ->assertRedirect(route('variable-expenses.index'));
+
+    expect($tenant->variableExpenses()->first()->description)->toBeNull();
+});
+
+test('una descripción de más de 1000 caracteres se rechaza', function () {
+    [$user, , $category] = ownerForVariableExpense();
+
+    $this->actingAs($user)
+        ->post(route('variable-expenses.store'), [
+            'name' => 'Larga',
+            'description' => str_repeat('a', 1001),
+            'variable_expense_category_id' => $category->id,
+            'amount' => '5000',
+            'expense_date' => '2026-05-14',
+        ])
+        ->assertSessionHasErrors('description');
+});
+
+// --- Búsqueda ---
+
+test('la búsqueda encuentra un gasto por su descripción', function () {
+    [$user, $tenant, $category] = ownerForVariableExpense();
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'Compra de ferretería',
+        'description' => 'Tornillos, cinta aisladora y silicona',
+        'variable_expense_category_id' => $category->id,
+    ]);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'Flete',
+        'description' => null,
+        'variable_expense_category_id' => $category->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('variable-expenses.index', ['search' => 'silicona']))
+        ->assertOk()
+        ->assertSee('Compra de ferretería')
+        ->assertDontSee('Flete');
+});
+
+test('la búsqueda por texto respeta el filtro de categoría', function () {
+    // Ancla del agrupamiento: sin el closure alrededor del OR de name/description,
+    // el orWhere se mezcla con el filtro de categoría y la búsqueda lo ignora.
+    [$user, $tenant, $category] = ownerForVariableExpense();
+    $otherCategory = $tenant->variableExpenseCategories()->create(['name' => 'Mantenimiento']);
+
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'Arreglo eléctrico',
+        'description' => 'Cambio de cables y silicona en el tablero',
+        'variable_expense_category_id' => $otherCategory->id,
+    ]);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'Compra de ferretería',
+        'description' => 'Tornillos y silicona',
+        'variable_expense_category_id' => $category->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('variable-expenses.index', ['search' => 'silicona', 'category' => $category->id]))
+        ->assertOk()
+        ->assertSee('Compra de ferretería')
+        ->assertDontSee('Arreglo eléctrico');
+});
+
+test('la búsqueda por descripción no cruza tenants', function () {
+    [$user] = ownerForVariableExpense();
+    [, $otherTenant, $otherCategory] = ownerForVariableExpense();
+    VariableExpense::factory()->for($otherTenant)->create([
+        'name' => 'Gasto ajeno',
+        'description' => 'Tornillos y silicona del otro negocio',
+        'variable_expense_category_id' => $otherCategory->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('variable-expenses.index', ['search' => 'silicona']))
+        ->assertOk()
+        ->assertDontSee('Gasto ajeno');
+});

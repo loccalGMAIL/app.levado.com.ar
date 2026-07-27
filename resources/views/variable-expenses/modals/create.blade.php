@@ -88,6 +88,7 @@
                       const draft = await window.scanExpenseReceipt(file, '{{ route('variable-expenses.scan') }}');
 
                       if (draft.name) { document.getElementById('create_ve_name').value = draft.name; }
+                      if (draft.description) { document.getElementById('create_ve_description').value = draft.description; }
                       if (draft.amount !== null) { document.getElementById('create_ve_amount').value = draft.amount; }
                       if (draft.expense_date) { document.getElementById('create_ve_date').value = draft.expense_date; }
                       if (draft.category_id) { document.getElementById('create_ve_category').value = String(draft.category_id); }
@@ -147,6 +148,14 @@
                 :value="old('name')"
                 required autofocus />
             <x-input-error :messages="$errors->get('name')" class="mt-2" />
+        </div>
+
+        <div>
+            <x-input-label for="create_ve_description" value="Descripción" />
+            <textarea id="create_ve_description" name="description" rows="2"
+                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">{{ old('description') }}</textarea>
+            <p class="mt-1 text-xs text-masa-madre">Para acordarte de qué se trató. Opcional.</p>
+            <x-input-error :messages="$errors->get('description')" class="mt-2" />
         </div>
 
         <div class="grid grid-cols-3 gap-4">

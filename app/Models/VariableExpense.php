@@ -18,7 +18,7 @@ class VariableExpense extends Model
     /** @use HasFactory<VariableExpenseFactory> */
     use BelongsToTenant, HasFactory;
 
-    protected $fillable = ['tenant_id', 'variable_expense_category_id', 'supplier_id', 'name', 'amount', 'expense_date', 'receipt_image_path'];
+    protected $fillable = ['tenant_id', 'variable_expense_category_id', 'supplier_id', 'name', 'description', 'amount', 'expense_date', 'receipt_image_path'];
 
     protected function casts(): array
     {

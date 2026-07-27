@@ -126,3 +126,49 @@ El flujo manual (`purchases.modals.create` → `PurchaseController::store()`) ya
 - Modales `create.blade.php` y `edit-purchase.blade.php`: input de archivo compacto (no dropzone completo, es un modal), reutiliza `window.compressInvoiceImage` (mismo compresor cliente que el scan) y el patrón `onPick` de `scan/create.blade.php`. `enctype="multipart/form-data"` agregado a ambos forms.
 - `show.blade.php` no necesitó cambios: el botón "Ver factura original" ya era condicional a `invoice_image_path`, sin importar si vino de IA o de carga manual.
 - Tests: `tests/Feature/PurchaseCrudTest.php` (no existía cobertura de `purchases.store`/`update` antes de esto).
+
+## Renglones no imputables — consumo personal (v0.12.4)
+
+Feedback real de Confitería Orfano: el dueño mete compras personales en la misma factura del proveedor de insumos. Antes esos renglones sólo podían quedar «— sin asociar —», que **es** el estado pendiente, así que la factura nunca llegaba a verde.
+
+### Tres estados del renglón (mutuamente excluyentes)
+
+| Estado | Cómo se reconoce | Imputa costo | Mueve stock |
+|---|---|---|---|
+| Pendiente | `! isResolved()` | no | no |
+| Aplicado | `cost_applied_at` | sí | sí |
+| Consumo personal | `excluded_at` | no | no |
+
+- Columnas nuevas en `purchase_lines`: `excluded_at` (timestamp nullable) y `exclusion_note` (string 255 nullable). Aditivas, sin backfill.
+- Helpers en `PurchaseLine`: `isExcluded()`, `isResolved()` (aplicado **o** excluido), `isPending()`.
+- **Invariante:** un renglón excluido nunca conserva `purchaseable_id` ni `cost_applied_at`. La garantiza `matchLine()`, que escribe los tres campos juntos en un único `update()` — no depende del orden de las ramas.
+
+### Flujo
+
+El select de `match.blade.php` manda el centinela `'excluded'` (constante `PurchaseController::EXCLUDED_MATCH`), interceptado **antes** del `explode(':')`. No colisiona con un match real, que siempre viaja como `tipo:id`.
+
+- Si el renglón ya estaba aplicado, se revierte su entrada de stock con contramovimiento vía `StockService::reversePurchaseLineEntry()` — igual que la rama de «— sin asociar —».
+- **El costo del insumo NO se revierte** al excluir, igual que hoy no se revierte al desasociar. Sólo el stock. El historial de precios es append-only.
+- Se audita como `purchase_line.excluded`.
+- Asociar a un ítem del catálogo, o volver a «— sin asociar —», limpia `excluded_at` y `exclusion_note`.
+
+### Cambio de semántica del contador (lo que no se deduce solo)
+
+El indicador de completitud pasó de contar **aplicados** a contar **resueltos** = aplicados + excluidos. Si esto queda mal, la feature no sirve. Lugares afectados:
+
+- `PurchaseController::index()`: `applied_count` → **`resolved_count`** (el `orWhere` del `withCount` va envuelto en closure).
+- `purchases/index.blade.php`: ícono ámbar/verde y títulos («N renglón(es) sin resolver»).
+- `purchases/match.blade.php`: contador `resueltos/total`, cartel «No queda ningún renglón por resolver».
+- `purchases/show.blade.php`: banner, badge neutro «Personal» por renglón, y línea informativa `Consumo personal: $X` bajo los totales — **el total de la factura no cambia**, tiene que cerrar contra el papel.
+- `NotificationService::syncUnappliedPurchases()`: la alerta «Compra sin imputar» ignora los excluidos (si no, una factura resuelta seguiría avisando).
+- `applyLineSuggestions()`: `->whereNull('excluded_at')`.
+
+### UI
+
+Opción «Consumo personal — no es del negocio» en un `<optgroup>` aparte del catálogo. El componente Alpine (`resources/js/purchases/match.js`) expone el getter `isExcluded` y sale temprano de `recalc()`: se oculta todo el bloque de cálculo (divisor, costo unitario, hint ✦), aparece un input de nota opcional y el botón pasa a «Marcar como personal». Los renglones ya excluidos **siguen en la rama interactiva** (no en la estática de aplicados) para poder volver atrás desde el mismo select.
+
+Badge **neutro** (`bg-miga`/`text-masa-madre`), deliberadamente **no ámbar**: el ámbar significa «pendiente» en todo el módulo.
+
+### Fuera de alcance (decidido, no implementar sin pedido)
+
+Tabla de alias para autosugerir renglones personales recurrentes; reporte mensual de retiros del titular; un cuarto destino para gastos del negocio que no son insumo (ferretería) con alta automática de `variable_expense`; distinguir si el consumo personal se pagó con plata del negocio; la opción de exclusión en el modal de edición de renglón de `purchases/show`.

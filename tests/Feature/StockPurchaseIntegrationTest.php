@@ -321,6 +321,40 @@ test('marcar una línea aplicada como sin asociar revierte su stock', function (
         ->and($line->fresh()->isMatched())->toBeFalse();
 });
 
+test('marcar una línea aplicada como consumo personal revierte su stock', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo]);
+    $purchase = stockPurchaseFor($tenant);
+    $line = stockLineFor($purchase, ['purchaseable_type' => 'ingredient', 'purchaseable_id' => $ingredient->id]);
+
+    lineRecorder()->apply($line);
+
+    $this->actingAs($user)
+        ->post(route('purchases.lines.match', [$purchase, $line]), ['match' => 'excluded'])
+        ->assertRedirect();
+
+    expect((float) $ingredient->stockLevels()->first()->quantity)->toBe(0.0)
+        ->and($line->fresh()->isExcluded())->toBeTrue()
+        ->and($line->fresh()->isMatched())->toBeFalse()
+        // Contramovimiento, no borrado: el ledger es append-only.
+        ->and($ingredient->stockMovements()->count())->toBe(2);
+});
+
+test('marcar una línea pendiente como consumo personal no genera movimiento de stock', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo, 'cost_per_unit' => 7]);
+    $purchase = stockPurchaseFor($tenant);
+    $line = stockLineFor($purchase);
+
+    $this->actingAs($user)
+        ->post(route('purchases.lines.match', [$purchase, $line]), ['match' => 'excluded'])
+        ->assertRedirect();
+
+    expect(StockMovement::count())->toBe(0)
+        ->and($ingredient->stockLevels()->count())->toBe(0)
+        ->and((float) $ingredient->fresh()->cost_per_unit)->toBe(7.0);
+});
+
 test('re-asociar la línea a otro insumo mueve el stock del viejo al nuevo', function () {
     [, $tenant] = stockPurchaseOwner();
     $original = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo]);

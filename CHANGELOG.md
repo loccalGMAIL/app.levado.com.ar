@@ -5,6 +5,45 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.4] — 2026-07-27
+
+### Compras personales en la factura del proveedor + descripción en gastos variables
+
+Las dos cosas salieron del mismo feedback de Confitería Orfano.
+
+#### Agregado
+
+- **Un renglón de compra ahora puede marcarse como «consumo personal».** El dueño mete compras personales (una gaseosa, el asado del domingo) en la misma factura del proveedor de insumos. Hasta ahora esos renglones sólo podían quedar en «— sin asociar —», que **es** el estado pendiente: la factura nunca llegaba a verde, el ícono del índice quedaba ámbar para siempre y el indicador de completitud dejaba de significar nada. Ahora hay un tercer estado explícito — resuelto, pero no es del negocio — que no imputa costo al catálogo ni genera movimiento de stock. En la pantalla de vincular aparece como una opción aparte del catálogo («Consumo personal — no es del negocio»), con una nota opcional para acordarse de qué fue, y se puede volver atrás en cualquier momento eligiendo «— sin asociar —» o asociándolo a un insumo.
+- **El total de la factura no cambia**: sigue siendo la suma de todos los renglones, porque tiene que cerrar contra el papel. Debajo del total aparece, sólo si corresponde, una línea informativa con cuánto de esa factura fue consumo personal.
+- **Los gastos variables tienen descripción.** El campo `name` cumplía doble función: etiqueta corta del listado y explicación de qué fue el gasto, así que o quedaba un nombre ilegible de tres renglones o se perdía el detalle. Ahora son dos campos: un nombre corto y una descripción opcional. La búsqueda del índice cubre los dos, y en el listado la descripción se muestra truncada como segunda línea, sin ensanchar la tabla.
+- **El lector de comprobantes con IA devuelve los dos campos**: un nombre corto («Compra de ferretería») y el detalle de los ítems («Tornillos, cinta aisladora y silicona»). Como siempre, la IA propone y el usuario confirma: los dos campos quedan editables en el modal de alta.
+
+#### Cambiado
+
+- **El indicador de completitud de una compra pasó de contar renglones *aplicados* a contar renglones *resueltos*** (aplicados **+** consumo personal). Es el cambio que da sentido a todo lo demás: sin él, una factura con un renglón personal quedaría pendiente para siempre. Afecta al contador de la pantalla de vincular (ahora «N/M renglones resueltos», verde cuando no queda nada por resolver), al ícono ámbar/verde del índice de compras y al banner del detalle de la compra.
+- La alerta «Compra sin imputar» del centro de alertas dejó de contar los renglones de consumo personal: una factura totalmente resuelta ya no genera aviso.
+
+#### Técnico
+
+- **`purchase_lines.excluded_at` + `exclusion_note`** (timestamp y string(255), ambos nullable). Migración aditiva, sin backfill: las filas existentes quedan idénticas a hoy. `PurchaseLine` suma `isExcluded()`, `isResolved()` e `isPending()`. **Los tres estados son mutuamente excluyentes**: un renglón excluido nunca conserva `purchaseable_id` ni `cost_applied_at`, y `matchLine()` escribe los tres campos juntos en un único `update()` para que la invariante no dependa del orden de las ramas.
+- El select manda un **valor centinela** `excluded`, interceptado antes del `explode(':')`. No puede colisionar con un match real, que siempre viaja como `tipo:id`.
+- **Marcar como personal un renglón ya aplicado revierte su entrada de stock con un contramovimiento**, igual que hace «— sin asociar —»; `stock_movements` sigue siendo append-only y todo pasa por `StockService`. **El costo del insumo no se revierte**, también igual que hoy al desasociar: el historial de precios es append-only y revertirlo sería reescribir el pasado.
+- `applied_count` del índice se renombró a **`resolved_count`**, con el `orWhere` del `withCount` envuelto en closure. Mismo motivo por el que la búsqueda de gastos variables ahora también envuelve su `where`/`orWhere`: un `orWhere` suelto se agrupa con los filtros de categoría, proveedor y fechas y hace que la búsqueda los ignore. Hay un test que ancla exactamente ese caso.
+- El badge de los renglones personales es **neutro** (`bg-miga`/`text-masa-madre`), deliberadamente **no ámbar**: el ámbar significa «pendiente» en todo el módulo y esa semántica había que preservarla.
+- `variable_expenses.description` (text nullable, aditiva). El prompt de `ExpenseReceiptExtractor` pasa a pedir dos campos y `normalize()` los normaliza igual que el resto; se mantuvo la regla de no usar el nombre del proveedor como etiqueta, porque `supplier_name` ya existe y se matchea contra el catálogo de proveedores.
+- 19 tests nuevos (11 de exclusión de renglones, 2 de stock, 6 de gastos variables), sin modificar ninguno de los existentes. **504 tests, todos verdes.**
+
+#### Al deployar
+
+Las dos migraciones son columnas nullable aditivas: sin migración de datos, sin backfill, sin riesgo de downtime.
+
+1. `php artisan migrate`
+2. `php artisan optimize:clear`
+
+**Ojo:** si al momento del deploy **v0.12.0 todavía no está en producción**, ese release requiere además `php artisan recipes:refresh-costs`. No es parte de este cambio, pero si van juntos no hay que saltearlo.
+
+---
+
 ## [0.12.3] — 2026-07-24
 
 ### Compras: número de factura inventado por la IA

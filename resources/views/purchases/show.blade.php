@@ -21,9 +21,11 @@
             ];
         }
 
-        $appliedCount = $purchase->lines->filter(fn ($l) => $l->isApplied())->count();
-        $totalLines   = $purchase->lines->count();
-        $allApplied   = $totalLines > 0 && $appliedCount === $totalLines;
+        $resolvedCount = $purchase->lines->filter(fn ($l) => $l->isResolved())->count();
+        $excludedLines = $purchase->lines->filter(fn ($l) => $l->isExcluded());
+        $totalLines    = $purchase->lines->count();
+        $allResolved   = $totalLines > 0 && $resolvedCount === $totalLines;
+        $personalTotal = $excludedLines->sum(fn ($l) => (float) $l->subtotal);
 
         $totalSubtotal   = $purchase->lines->sum(fn ($l) => (float) $l->subtotal);
         $totalIva        = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * (float) $l->iva_rate);
@@ -151,12 +153,12 @@
 
                 {{-- Banner de vinculación --}}
                 @if($totalLines > 0)
-                    @if($allApplied)
+                    @if($allResolved)
                         <div class="mb-3 flex items-center gap-2 px-4 py-2.5 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            Todos los renglones tienen costo imputado
+                            No queda ningún renglón por resolver
                         </div>
                     @else
                         <div class="mb-3 flex items-center justify-between gap-4 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
@@ -164,7 +166,7 @@
                                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                                 </svg>
-                                {{ $appliedCount }} de {{ $totalLines }} {{ $totalLines === 1 ? 'renglón tiene' : 'renglones tienen' }} costo imputado
+                                {{ $resolvedCount }} de {{ $totalLines }} {{ $totalLines === 1 ? 'renglón resuelto' : 'renglones resueltos' }}
                             </div>
                             @can('manage-costs')
                                 <a href="{{ route('purchases.match', $purchase) }}"
@@ -198,7 +200,12 @@
                                             {{ $line->purchase_unit->short() }}
                                             &middot; ${{ number_format($line->unit_price, 2, ',', '.') }}/u
                                         </p>
-                                        @if($line->isApplied())
+                                        @if($line->isExcluded())
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-miga text-masa-madre"
+                                                @if($line->exclusion_note) title="{{ $line->exclusion_note }}" @endif>
+                                                Personal
+                                            </span>
+                                        @elseif($line->isApplied())
                                             <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
                                                 <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -267,6 +274,14 @@
                             <span class="font-mono font-semibold text-corteza whitespace-nowrap"
                                   x-text="'$ ' + fmt(tfootGrandTotal)"></span>
                         </div>
+                        @if($excludedLines->isNotEmpty())
+                            <div class="px-4 pb-3 -mt-1 flex items-center justify-between gap-4 bg-miga/30">
+                                <span class="text-xs text-masa-madre">Consumo personal (no imputado al negocio)</span>
+                                <span class="font-mono text-xs text-masa-madre whitespace-nowrap">
+                                    $ {{ number_format($personalTotal, 2, ',', '.') }}
+                                </span>
+                            </div>
+                        @endif
 
                         {{-- Expandir a tabla completa --}}
                         <div class="px-4 py-2.5 flex justify-center">
@@ -404,7 +419,12 @@
                                         <td class="px-4 py-3 align-top text-right font-mono font-semibold text-corteza whitespace-nowrap"
                                             x-text="'$ ' + fmt(lineTotal)"></td>
                                         <td class="px-4 py-3 align-top text-center">
-                                            @if($line->isApplied())
+                                            @if($line->isExcluded())
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-miga text-masa-madre"
+                                                    title="{{ $line->exclusion_note ?: 'Consumo personal — no es del negocio' }}">
+                                                    Personal
+                                                </span>
+                                            @elseif($line->isApplied())
                                                 <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium"
                                                     title="Costo imputado el {{ $line->cost_applied_at->format('d/m/Y') }}">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -479,6 +499,18 @@
                                         x-text="'$ ' + fmt(tfootGrandTotal)"></td>
                                     <td @can('manage-costs') colspan="2" @endcan class="px-4 py-3"></td>
                                 </tr>
+                                {{-- Informativo: el total de arriba NO lo descuenta, tiene que cerrar contra el papel. --}}
+                                @if($excludedLines->isNotEmpty())
+                                    <tr>
+                                        <td colspan="6" class="px-4 py-2 text-xs text-masa-madre text-right">
+                                            Consumo personal (no imputado al negocio)
+                                        </td>
+                                        <td class="px-4 py-2 text-right font-mono text-masa-madre text-xs whitespace-nowrap">
+                                            $ {{ number_format($personalTotal, 2, ',', '.') }}
+                                        </td>
+                                        <td @can('manage-costs') colspan="2" @endcan class="px-4 py-2"></td>
+                                    </tr>
+                                @endif
                             </tfoot>
                         </table>
                     </div>

@@ -2,13 +2,14 @@
     <x-slot name="title">Gastos Variables</x-slot>
 
     @php
-        $expenseFields  = ['name', 'variable_expense_category_id', 'supplier_id', 'amount', 'expense_date', 'receipt'];
+        $expenseFields  = ['name', 'description', 'variable_expense_category_id', 'supplier_id', 'amount', 'expense_date', 'receipt'];
         $errorsInCreate = $errors->hasAny($expenseFields) && old('_form') === 've-create';
         $errorsInEdit   = $errors->hasAny($expenseFields) && old('_form') === 've-edit';
-        $editingDefault = ['id' => null, 'name' => '', 'variable_expense_category_id' => '', 'supplier_id' => '', 'amount' => '', 'expense_date' => date('Y-m-d'), 'receipt_image_path' => null];
+        $editingDefault = ['id' => null, 'name' => '', 'description' => '', 'variable_expense_category_id' => '', 'supplier_id' => '', 'amount' => '', 'expense_date' => date('Y-m-d'), 'receipt_image_path' => null];
         $editingOnError = $errorsInEdit ? [
             'id'                           => old('variable_expense_id'),
             'name'                         => old('name'),
+            'description'                  => old('description'),
             'variable_expense_category_id' => old('variable_expense_category_id'),
             'supplier_id'                  => old('supplier_id'),
             'amount'                       => old('amount'),
@@ -57,7 +58,7 @@
                 <input type="hidden" name="dir" value="{{ request('dir') }}">
                 <div class="flex-1 min-w-48">
                     <input type="text" name="search" value="{{ request('search') }}"
-                        placeholder="Buscar por nombre..."
+                        placeholder="Buscar por nombre o descripción..."
                         class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
                 <select name="category"
@@ -120,6 +121,11 @@
                                             <x-receipt-link :href="route('variable-expenses.receipt', $variableExpense)" />
                                         @endif
                                     </div>
+                                    @if($variableExpense->description)
+                                        <div class="text-xs text-masa-madre mt-0.5" title="{{ $variableExpense->description }}">
+                                            {{ \Illuminate\Support\Str::limit($variableExpense->description, 70) }}
+                                        </div>
+                                    @endif
                                     <div class="text-xs text-masa-madre mt-0.5">
                                         {{ implode(' · ', array_filter([$variableExpense->category?->name, $variableExpense->supplier?->name])) ?: '—' }}
                                     </div>
@@ -133,6 +139,7 @@
                                         @click="openEdit({{ Js::from([
                                             'id'                           => $variableExpense->id,
                                             'name'                         => $variableExpense->name,
+                                            'description'                  => $variableExpense->description,
                                             'variable_expense_category_id' => $variableExpense->variable_expense_category_id ?? '',
                                             'supplier_id'                  => $variableExpense->supplier_id ?? '',
                                             'amount'                       => $variableExpense->amount,
@@ -182,6 +189,7 @@
                                                     @click="openEdit({{ Js::from([
                                                         'id'                           => $variableExpense->id,
                                                         'name'                         => $variableExpense->name,
+                                                        'description'                  => $variableExpense->description,
                                                         'variable_expense_category_id' => $variableExpense->variable_expense_category_id ?? '',
                                                         'supplier_id'                  => $variableExpense->supplier_id ?? '',
                                                         'amount'                       => $variableExpense->amount,
@@ -198,6 +206,11 @@
                                                 <x-receipt-link :href="route('variable-expenses.receipt', $variableExpense)" />
                                             @endif
                                         </div>
+                                        @if($variableExpense->description)
+                                            <div class="text-xs font-normal text-masa-madre mt-0.5" title="{{ $variableExpense->description }}">
+                                                {{ \Illuminate\Support\Str::limit($variableExpense->description, 60) }}
+                                            </div>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $variableExpense->category?->name ?? '—' }}</td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $variableExpense->supplier?->name ?? '—' }}</td>
@@ -212,6 +225,7 @@
                                                     @click="openEdit({{ Js::from([
                                                         'id'                           => $variableExpense->id,
                                                         'name'                         => $variableExpense->name,
+                                                        'description'                  => $variableExpense->description,
                                                         'variable_expense_category_id' => $variableExpense->variable_expense_category_id ?? '',
                                                         'supplier_id'                  => $variableExpense->supplier_id ?? '',
                                                         'amount'                       => $variableExpense->amount,
