@@ -5,6 +5,61 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.5] — 2026-07-28
+
+### Los descartables no tomaban la subdivisión al vincular una compra
+
+#### Corregido
+
+- **Un descartable con subdivisión asociado a mano desde la pantalla de vincular guardaba el precio del bulto entero como costo de la sub-unidad.** `Sobre Kraft N°4A` (100 sobres por caja) quedó en **$2.000 por sobre** cuando el sobre vale **$20**: cien veces más caro. La pantalla trataba a los descartables como un caso especial que cortaba antes de dividir por las subdivisiones, mientras que los insumos sí lo hacían. Ahora recorren exactamente el mismo camino que un insumo. El camino automático —aplicar una sugerencia sin tocar el renglón— siempre dividió bien, así que sólo se ensuciaron los renglones asociados uno por uno.
+- **El stock del descartable también entraba mal**: ingresaban bultos donde tenían que ingresar sub-unidades. Se corrige por el mismo lado, sin tocar el cálculo de existencias.
+- **El descartable ahora se ve como un insumo en la pantalla de vincular**: el select muestra «(100 sobres / envase)», el costo aparece por sobre y no por caja, y al lado se lee «1 envase = 100 sobres». El renglón ya aplicado también muestra la subdivisión, que antes sólo salía para insumos.
+- **La columna «Por presentación» del listado mostraba un precio viejo.** Al imputar un costo escrito a mano, el precio por envase no se recalculaba y quedaba el de la compra anterior. Afectaba a insumos y descartables por igual.
+- **El lápiz de la tabla abría el modal de edición con el campo de costo vacío.** El botón del nombre y la tarjeta del celular mandaban el precio por envase, el lápiz no; el modal se quedaba sin valor y había que reescribirlo. Pasaba en Insumos y en Envases.
+
+#### Técnico
+
+- El catálogo que `match.js` consulta pasa a indexarse por **`"tipo:id"`** en vez de por id pelado, e incluye los descartables con una unidad `'u'` sintética. No es cosmético: **los 68 ids de `packagings` existen también en `ingredients`**, así que un catálogo con ambos tipos indexado por id devolvía el ítem equivocado. La clave es la misma cadena que ya manda el `<select>`, así que el `split(':')` del cliente desaparece.
+- Con eso, la rama `packaging` de `recalc()` deja de ser un caso especial: cae en el flujo común y hereda `subdivisionFactor`, `displayUnit` y el hint de subdivisión. Sobrevive un único guard —los descartables sólo se compran por unidad—, que sigue mostrando el error de unidad incompatible.
+- `PurchaseLineRecorder::applyWithCost()` deriva el precio del envase como `costo × subdivisiones` en vez de reescribir el valor que ya tenía el modelo. Queda coherente **aunque el usuario sobrescriba el costo a mano**, que es el escape para el proveedor que factura sub-unidades sueltas en vez del bulto. El guard replica el de `apply()`: un insumo con subdivisiones pero medido en kg no lleva precio por envase.
+- `syncStockFromExplicitCost()` **no se tocó**. Deriva las unidades por bulto como `precio_del_renglón / costo_unitario`, y con el costo ya corregido da bien en los dos casos: bulto ($2.000 / $20 = 100 sobres) y suelto ($80 / $80 = 1).
+- `ingredients:fix-subdivision-costs` detectaba sólo los ítems sin precio por envase y **ya no matcheaba ninguno de los rotos**, que sí lo tienen pero incoherente. Ahora clasifica en dos correcciones **opuestas**, evaluadas en ese orden porque el caso A también dispararía el B: **A ·** el mismo valor quedó en las dos columnas → se divide por las subdivisiones; **B ·** el costo por sub-unidad es correcto y el precio por envase quedó viejo → se recalcula el envase. La tabla de preview dice cuál se aplica a cada ítem y sigue pidiendo confirmación antes de escribir.
+- El umbral del caso B es **1% de desvío relativo**. Separa limpio los dos grupos que hay en los datos: redondeos del usuario al cargar el costo a mano (≤ 0,09%; p. ej. 133,30 contra 133,3333) contra desincronizaciones reales (≥ 5,5%). Los redondeos no se tocan.
+- 15 tests nuevos: 6 sobre la ruta HTTP de vinculación —que no tenía **ninguna** cobertura, porque los tests de stock invocaban el servicio en directo—, 8 sobre la clasificación del comando de reparación y 1 de CRUD. Los 4 tests de subdivisión de envases verificaban las etiquetas pero **ningún costo**; ahora asertan las dos columnas. **519 tests, todos verdes.**
+
+#### Verificado en la aplicación
+
+La división ocurre en el navegador y no hay runner de JS en el proyecto, así que se verificó contra la app corriendo, sobre el tenant Confitería Orfano.
+
+- Renglón `5 CAJAS SERVILLETAS` a **$60.500,00 /u** asociado a `Servilletas 33×30`: el costo calculado pasa a **$60,50 / Servilletas** con el hint «1 envase = 1000 Servilletas», y el campo que se postea viaja como `unit_cost = 60.5000`. Antes iba **60500**, el precio de la caja entera.
+- Se ejercitó además el bundle compilado con un catálogo que **colisiona el id 6 entre un insumo y un descartable**: resuelve cada uno por separado. Sin la clave compuesta, ese caso devolvía el ítem del tipo equivocado.
+- Sin regresiones en los caminos vecinos: descartable sin subdivisión no divide, descartable comprado en kg sigue mostrando el error de unidad incompatible, e insumo con subdivisión sigue dando lo mismo que antes.
+
+#### Corrección de datos aplicada
+
+El comando encontró y corrigió **6 ítems**:
+
+| Ítem | Sub. | Motivo | Costo / sub-unidad | Precio por envase |
+|---|---|---|---|---|
+| Sobre Kraft N°4A | 100 | A · nunca dividido | **$ 2.000,00 → $ 20,00** | $ 2.000,00 |
+| Vasos de Polipapel 8oz | 50 | B · envase viejo | $ 55,00 | $ 4.000,00 → $ 2.750,00 |
+| Pan de Miga | 24 | B · envase viejo | $ 395,83 | $ 9.000,00 → $ 9.499,92 |
+| Ketchup Individual | 192 | B · envase viejo | $ 74,04 | $ 87,80 → $ 14.215,68 |
+| Barrita Chocolate de Taza | 24 | B · envase viejo | $ 672,80 | $ 1.153,50 → $ 16.147,20 |
+| Té Negro | 15 | B · envase viejo | $ 162,00 | $ 3.442,17 → $ 2.430,00 |
+
+**Ninguna receta cambió de costo.** El único ítem cuyo costo por sub-unidad se movió es `Sobre Kraft N°4A`, que no está en ninguna receta; los cinco casos B sólo tocan el precio por envase, que es informativo y no entra en el cálculo. Por lo mismo se generó **un solo** registro de historial de precios: el historial es append-only y no se anota lo que no cambió. Una segunda corrida del comando ya no encuentra nada.
+
+#### Al deployar
+
+No hay migraciones. **La corrección de datos no es opcional**: los ítems ya cargados no se arreglan solos, y el comando es el único que los toca.
+
+1. `php artisan optimize:clear`
+2. `npm run build` — el arreglo del cálculo vive en `match.js` y viaja en el bundle.
+3. `php artisan ingredients:fix-subdivision-costs` — revisar la tabla de preview y confirmar. Es idempotente: si ya se corrió, no encuentra nada.
+
+---
+
 ## [0.12.4] — 2026-07-27
 
 ### Compras personales en la factura del proveedor + descripción en gastos variables

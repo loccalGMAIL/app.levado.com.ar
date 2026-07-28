@@ -23,7 +23,7 @@
             mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
-                if (record.subdivisions && record.cost_per_package !== null) {
+                if (record.subdivisions && record.cost_per_package != null) {
                     record.cost_per_unit = record.cost_per_package;
                 }
                 this.editing = record;
@@ -403,6 +403,7 @@
                                                         'brand'            => $packaging->brand ?? '',
                                                         'supplier_id'      => $packaging->supplier_id ?? '',
                                                         'cost_per_unit'    => round((float) $packaging->cost_per_unit, 2),
+                                                        'cost_per_package' => $packaging->cost_per_package !== null ? round((float) $packaging->cost_per_package, 2) : null,
                                                         'subdivisions'     => $packaging->subdivisions,
                                                         'subdivision_label' => $packaging->subdivision_label ?? '',
                                                     ]) }})"

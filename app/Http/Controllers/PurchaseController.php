@@ -391,15 +391,27 @@ class PurchaseController extends Controller
         $ingredients = $tenant->ingredients()->orderBy('name')->get();
         $packagings = $tenant->packagings()->orderBy('name')->get();
 
-        // Catalog keyed by id for fast Alpine.js lookup.
-        $ingredientCatalog = $ingredients->keyBy('id')->map(fn ($i) => [
-            'unit' => $i->unit->value,
-            'name' => $i->name,
-            'subdivisions' => $i->subdivisions,
-            'subdivisionLabel' => $i->subdivision_label,
-        ])->toArray();
+        // Catálogo para el lookup de Alpine, con la misma clave "tipo:id" que manda
+        // el select: los ids de ingredients y packagings colisionan entre sí.
+        $matchCatalog = $ingredients->mapWithKeys(fn ($i) => [
+            "ingredient:{$i->id}" => [
+                'unit' => $i->unit->value,
+                'name' => $i->name,
+                'subdivisions' => $i->subdivisions,
+                'subdivisionLabel' => $i->subdivision_label,
+            ],
+        ])->merge($packagings->mapWithKeys(fn ($p) => [
+            // Los descartables no tienen columna unit: siempre se compran por unidad.
+            // El 'u' sintético los hace caer en el mismo camino que los insumos.
+            "packaging:{$p->id}" => [
+                'unit' => Unit::Unidad->value,
+                'name' => $p->name,
+                'subdivisions' => $p->subdivisions,
+                'subdivisionLabel' => $p->subdivision_label,
+            ],
+        ]))->toArray();
 
-        return view('purchases.match', compact('purchase', 'ingredients', 'packagings', 'ingredientCatalog'));
+        return view('purchases.match', compact('purchase', 'ingredients', 'packagings', 'matchCatalog'));
     }
 
     /**

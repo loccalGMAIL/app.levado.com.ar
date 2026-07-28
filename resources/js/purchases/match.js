@@ -68,22 +68,16 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
                 return;
             }
 
-            const [type, id] = this.selected.split(':');
+            // El catálogo está indexado por el mismo "tipo:id" que manda el select.
+            const item = (window.MATCH_CATALOG || {})[this.selected];
+            if (!item) return;
 
-            if (type === 'packaging') {
-                if (this.purchaseUnit !== 'u') {
-                    this.incompatiblePkg = true;
-                    this.unitCost = this.unitPrice;
-                } else {
-                    this.catalogUnit = 'u';
-                    this.unitCost = this.unitPrice;
-                }
+            // Único caso especial de los descartables: sólo se compran por unidad.
+            if (this.selected.startsWith('packaging:') && this.purchaseUnit !== 'u') {
+                this.incompatiblePkg = true;
+                this.unitCost = this.unitPrice;
                 return;
             }
-
-            const catalog = window.MATCH_CATALOG || {};
-            const item = catalog[id];
-            if (!item) return;
 
             this.catalogUnit = item.unit;
             this.subdivisions = item.subdivisions || null;
@@ -95,7 +89,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
 
             if (directFactor !== undefined) {
                 this.needsPkgQty = false;
-                // When the ingredient tracks sub-units, divide by subdivisions so unitCost
+                // When the item tracks sub-units, divide by subdivisions so unitCost
                 // represents cost per sub-unit (what gets stored in cost_per_unit).
                 const subdivisionFactor = (this.subdivisions && this.purchaseUnit === 'u' && item.unit === 'u')
                     ? this.subdivisions : 1;

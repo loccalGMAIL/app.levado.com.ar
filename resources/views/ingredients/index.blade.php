@@ -24,7 +24,7 @@
             mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
-                if (record.subdivisions && record.unit === 'u' && record.cost_per_package !== null) {
+                if (record.subdivisions && record.unit === 'u' && record.cost_per_package != null) {
                     record.cost_per_unit = record.cost_per_package;
                 }
                 this.editing = record;
@@ -297,6 +297,7 @@
                                                         'supplier_id'       => $ingredient->supplier_id ?? '',
                                                         'unit'              => $ingredient->unit->value,
                                                         'cost_per_unit'     => round((float) $ingredient->cost_per_unit, 2),
+                                                        'cost_per_package'  => $ingredient->cost_per_package !== null ? round((float) $ingredient->cost_per_package, 2) : null,
                                                         'subdivisions'      => $ingredient->subdivisions ?? '',
                                                         'subdivision_label' => $ingredient->subdivision_label ?? '',
                                                     ]) }})"

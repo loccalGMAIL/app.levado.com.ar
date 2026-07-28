@@ -210,7 +210,7 @@ test('owner puede crear envase con subdivisiones', function () {
     $this->actingAs($user)
         ->post(route('packaging.store'), [
             'name' => 'Bolsas kraft x100',
-            'cost_per_unit' => '0.50',
+            'cost_per_unit' => '2000',
             'subdivisions' => 100,
             'subdivision_label' => 'bolsa',
         ])
@@ -219,6 +219,8 @@ test('owner puede crear envase con subdivisiones', function () {
     $packaging = $tenant->packagings()->where('name', 'Bolsas kraft x100')->first();
     expect($packaging->subdivisions)->toBe(100);
     expect($packaging->subdivision_label)->toBe('bolsa');
+    expect((float) $packaging->cost_per_package)->toBe(2000.0)
+        ->and((float) $packaging->cost_per_unit)->toBe(20.0);
 });
 
 test('crear envase sin subdivisiones mantiene null', function () {
@@ -234,6 +236,8 @@ test('crear envase sin subdivisiones mantiene null', function () {
     $packaging = $tenant->packagings()->where('name', 'Caja simple')->first();
     expect($packaging->subdivisions)->toBeNull();
     expect($packaging->subdivision_label)->toBeNull();
+    expect($packaging->cost_per_package)->toBeNull()
+        ->and((float) $packaging->cost_per_unit)->toBe(5.0);
 });
 
 test('owner puede editar envase agregando subdivisiones', function () {
@@ -246,14 +250,40 @@ test('owner puede editar envase agregando subdivisiones', function () {
     $this->actingAs($user)
         ->put(route('packaging.update', $packaging), [
             'name' => 'Caja sin subdivisión',
-            'cost_per_unit' => '0.25',
+            'cost_per_unit' => '100',
             'subdivisions' => 4,
             'subdivision_label' => 'compartimento',
         ])
         ->assertRedirect(route('packaging.index'));
 
-    expect($packaging->fresh()->subdivisions)->toBe(4);
-    expect($packaging->fresh()->subdivision_label)->toBe('compartimento');
+    $packaging->refresh();
+
+    expect($packaging->subdivisions)->toBe(4);
+    expect($packaging->subdivision_label)->toBe('compartimento');
+    expect((float) $packaging->cost_per_package)->toBe(100.0)
+        ->and((float) $packaging->cost_per_unit)->toBe(25.0);
+});
+
+test('quitar subdivisiones al editar un envase limpia cost_per_package', function () {
+    [$user, $tenant] = ownerForPackaging();
+    $packaging = Packaging::factory()->for($tenant)->create([
+        'cost_per_unit' => '20',
+        'cost_per_package' => '2000',
+        'subdivisions' => 100,
+        'subdivision_label' => 'bolsa',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('packaging.update', $packaging), [
+            'name' => $packaging->name,
+            'cost_per_unit' => '50',
+        ])
+        ->assertRedirect(route('packaging.index'));
+
+    $packaging->refresh();
+
+    expect($packaging->cost_per_package)->toBeNull()
+        ->and((float) $packaging->cost_per_unit)->toBe(50.0);
 });
 
 test('subdivisions debe ser al menos 2', function () {
