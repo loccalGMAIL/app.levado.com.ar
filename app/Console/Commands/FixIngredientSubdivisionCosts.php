@@ -6,6 +6,7 @@ use App\Models\Ingredient;
 use App\Models\Packaging;
 use App\Services\RecipeCostPropagator;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\info;
@@ -17,7 +18,14 @@ class FixIngredientSubdivisionCosts extends Command
     protected $signature = 'ingredients:fix-subdivision-costs
                             {--type=all : Qué tipo corregir: ingredient, packaging, all}';
 
-    protected $description = 'Corrige el costo de ingredientes/envases con subdivisión creados manualmente (cost_per_package nulo).';
+    protected $description = 'Corrige ingredientes/envases con subdivisión cuyo costo por sub-unidad o precio por envase quedó incoherente.';
+
+    /**
+     * Desvío relativo a partir del cual se considera que cost_per_package quedó viejo.
+     * Por debajo son redondeos del usuario al cargar el costo a mano (ej. 133,30 contra
+     * 133,3333), que no hay que tocar.
+     */
+    private const STALE_THRESHOLD = 0.01;
 
     public function __construct(private readonly RecipeCostPropagator $propagator)
     {
@@ -28,61 +36,38 @@ class FixIngredientSubdivisionCosts extends Command
     {
         $type = $this->option('type');
 
-        $ingredients = collect();
-        $packagings = collect();
+        $items = collect();
 
         if (in_array($type, ['all', 'ingredient'])) {
-            $ingredients = Ingredient::whereNotNull('subdivisions')
-                ->whereNull('cost_per_package')
-                ->get();
+            $items = $items->concat($this->candidates(Ingredient::query()->whereNotNull('subdivisions')->get(), 'Ingrediente'));
         }
 
         if (in_array($type, ['all', 'packaging'])) {
-            $packagings = Packaging::whereNotNull('subdivisions')
-                ->whereNull('cost_per_package')
-                ->get();
+            $items = $items->concat($this->candidates(Packaging::query()->whereNotNull('subdivisions')->get(), 'Envase'));
         }
 
-        $total = $ingredients->count() + $packagings->count();
-
-        if ($total === 0) {
+        if ($items->isEmpty()) {
             info('No hay ingredientes ni envases pendientes de corregir.');
 
             return self::SUCCESS;
         }
 
-        $rows = [];
-
-        foreach ($ingredients as $item) {
-            $rows[] = [
-                'Tipo' => 'Ingrediente',
-                'Nombre' => $item->name,
-                'Subdivisiones' => $item->subdivisions.' '.($item->subdivision_label ?? 'u.').' / envase',
-                'Costo actual' => '$ '.number_format($item->cost_per_unit, 2),
-                '→ Por envase' => '$ '.number_format($item->cost_per_unit, 2),
-                '→ Sub-unidad' => '$ '.number_format($item->cost_per_unit / $item->subdivisions, 4),
-            ];
-        }
-
-        foreach ($packagings as $item) {
-            $rows[] = [
-                'Tipo' => 'Envase',
-                'Nombre' => $item->name,
-                'Subdivisiones' => $item->subdivisions.' '.($item->subdivision_label ?? 'u.').' / presentación',
-                'Costo actual' => '$ '.number_format($item->cost_per_unit, 2),
-                '→ Por envase' => '$ '.number_format($item->cost_per_unit, 2),
-                '→ Sub-unidad' => '$ '.number_format($item->cost_per_unit / $item->subdivisions, 4),
-            ];
-        }
-
-        warning("Se encontraron {$total} ítem(s) con subdivisión y sin costo de envase registrado.");
+        warning("Se encontraron {$items->count()} ítem(s) con costos de subdivisión incoherentes.");
         $this->newLine();
         table(
-            headers: ['Tipo', 'Nombre', 'Subdivisiones', 'Costo actual', '→ Por envase', '→ Sub-unidad'],
-            rows: $rows,
+            headers: ['Tipo', 'Nombre', 'Subdivisiones', 'Motivo', 'Sub-unidad', 'Por envase'],
+            rows: $items->map(fn (array $row) => [
+                $row['kind'],
+                $row['item']->name,
+                $row['item']->subdivisions.' '.($row['item']->subdivision_label ?? 'u.').' / envase',
+                $row['reason'],
+                $this->transition((float) $row['item']->cost_per_unit, $row['costPerUnit']),
+                $this->transition((float) $row['item']->cost_per_package, $row['costPerPackage']),
+            ])->all(),
         );
         $this->newLine();
-        info('El "costo actual" se asume como precio del ENVASE y se dividirá entre las subdivisiones.');
+        info('Caso A: el costo cargado es el del envase y nunca se dividió — se divide por las subdivisiones.');
+        info('Caso B: el costo por sub-unidad es correcto y el precio por envase quedó viejo — se recalcula el envase.');
 
         if (! confirm('¿Confirmar la corrección de todos los ítems listados?', default: false)) {
             info('Operación cancelada.');
@@ -90,46 +75,107 @@ class FixIngredientSubdivisionCosts extends Command
             return self::SUCCESS;
         }
 
-        $fixed = 0;
+        foreach ($items as $row) {
+            $item = $row['item'];
+            $costChanged = abs((float) $item->cost_per_unit - $row['costPerUnit']) > 0.0001;
 
-        foreach ($ingredients as $item) {
-            $packagePrice = (float) $item->cost_per_unit;
-            $subUnitPrice = $packagePrice / $item->subdivisions;
-
-            $item->priceLogs()->create([
-                'cost_per_unit' => $subUnitPrice,
-                'recorded_at' => now(),
-            ]);
-
-            $item->update([
-                'cost_per_package' => $packagePrice,
-                'cost_per_unit' => $subUnitPrice,
-            ]);
-
-            $this->propagator->propagateFromIngredient($item->id);
-            $fixed++;
-        }
-
-        foreach ($packagings as $item) {
-            $packagePrice = (float) $item->cost_per_unit;
-            $subUnitPrice = $packagePrice / $item->subdivisions;
-
-            $item->priceLogs()->create([
-                'cost_per_unit' => $subUnitPrice,
-                'recorded_at' => now(),
-            ]);
+            if ($costChanged) {
+                $item->priceLogs()->create([
+                    'cost_per_unit' => $row['costPerUnit'],
+                    'recorded_at' => now(),
+                ]);
+            }
 
             $item->update([
-                'cost_per_package' => $packagePrice,
-                'cost_per_unit' => $subUnitPrice,
+                'cost_per_package' => $row['costPerPackage'],
+                'cost_per_unit' => $row['costPerUnit'],
             ]);
 
-            $this->propagator->propagateFromPackaging($item->id);
-            $fixed++;
+            if ($costChanged) {
+                $item instanceof Ingredient
+                    ? $this->propagator->propagateFromIngredient($item->id)
+                    : $this->propagator->propagateFromPackaging($item->id);
+            }
         }
 
-        info("Se corrigieron {$fixed} ítem(s) correctamente. Los costos de recetas fueron actualizados.");
+        info("Se corrigieron {$items->count()} ítem(s) correctamente. Los costos de recetas fueron actualizados.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Clasifica cada ítem con subdivisión y devuelve sólo los que hay que corregir.
+     *
+     * @param  Collection<int, Ingredient|Packaging>  $rows
+     * @return list<array{item: Ingredient|Packaging, kind: string, reason: string, costPerUnit: float, costPerPackage: float}>
+     */
+    private function candidates(Collection $rows, string $kind): array
+    {
+        $candidates = [];
+
+        foreach ($rows as $item) {
+            $subdivisions = (int) $item->subdivisions;
+            $costPerUnit = (float) $item->cost_per_unit;
+
+            if ($subdivisions < 2) {
+                continue;
+            }
+
+            // Sin precio por envase el costo cargado es, por definición, el del envase:
+            // es el ítem creado a mano antes de que existiera la columna.
+            if ($item->cost_per_package === null) {
+                $candidates[] = [
+                    'item' => $item,
+                    'kind' => $kind,
+                    'reason' => 'A · nunca dividido',
+                    'costPerUnit' => $costPerUnit / $subdivisions,
+                    'costPerPackage' => $costPerUnit,
+                ];
+
+                continue;
+            }
+
+            $costPerPackage = (float) $item->cost_per_package;
+
+            // Caso A — se guardó el precio del envase en las dos columnas. Va antes que el
+            // caso B, que también dispararía: son correcciones opuestas. Con la validación
+            // min:2 sobre subdivisions, esta igualdad nunca es legítima.
+            if (abs($costPerUnit - $costPerPackage) < 0.0001) {
+                $candidates[] = [
+                    'item' => $item,
+                    'kind' => $kind,
+                    'reason' => 'A · nunca dividido',
+                    'costPerUnit' => $costPerPackage / $subdivisions,
+                    'costPerPackage' => $costPerPackage,
+                ];
+
+                continue;
+            }
+
+            // Caso B — el costo por sub-unidad viene de la última compra y es la fuente de
+            // verdad; el precio por envase quedó sin actualizar.
+            $expected = $costPerPackage / $subdivisions;
+
+            if ($expected > 0 && abs($expected - $costPerUnit) / $expected > self::STALE_THRESHOLD) {
+                $candidates[] = [
+                    'item' => $item,
+                    'kind' => $kind,
+                    'reason' => 'B · envase viejo',
+                    'costPerUnit' => $costPerUnit,
+                    'costPerPackage' => $costPerUnit * $subdivisions,
+                ];
+            }
+        }
+
+        return $candidates;
+    }
+
+    private function transition(float $from, float $to): string
+    {
+        if (abs($from - $to) < 0.0001) {
+            return '$ '.number_format($from, 2).' (sin cambio)';
+        }
+
+        return '$ '.number_format($from, 2).' -> $ '.number_format($to, 2);
     }
 }

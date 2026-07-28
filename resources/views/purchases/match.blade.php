@@ -10,7 +10,7 @@
         $total          = $purchase->lines->count();
     @endphp
 
-    <script>window.MATCH_CATALOG = @json($ingredientCatalog);</script>
+    <script>window.MATCH_CATALOG = @json($matchCatalog);</script>
 
     <div class="py-8 px-6 lg:px-8">
         <div class="space-y-6">
@@ -113,9 +113,9 @@
                                 @if($line->isApplied())
                                     {{-- Renglón ya aplicado — estático --}}
                                     @php
-                                        $appliedIngredient = $line->isIngredient()
+                                        $appliedItem = $line->isIngredient()
                                             ? $ingredients->firstWhere('id', $line->purchaseable_id)
-                                            : null;
+                                            : $packagings->firstWhere('id', $line->purchaseable_id);
                                     @endphp
                                     <tr class="bg-green-50/40">
                                         <td class="px-4 py-3 text-corteza text-xs" title="{{ $line->raw_name }}">
@@ -127,9 +127,9 @@
                                         </td>
                                         <td class="px-4 py-3 font-medium text-corteza text-sm">
                                             {{ $matchedName ?? '—' }}
-                                            @if($appliedIngredient?->subdivisions)
+                                            @if($appliedItem?->subdivisions)
                                                 <span class="block text-[11px] font-normal text-masa-madre">
-                                                    {{ $appliedIngredient->subdivisions }} {{ $appliedIngredient->subdivision_label ?? 'u' }} / envase
+                                                    {{ $appliedItem->subdivisions }} {{ $appliedItem->subdivision_label ?? 'u' }} / envase
                                                 </span>
                                             @endif
                                         </td>
@@ -225,6 +225,9 @@
                                                                     <option value="packaging:{{ $pkg->id }}"
                                                                         @selected($currentValue === "packaging:{$pkg->id}")>
                                                                         {{ $pkg->name }}@if(! $pkg->active) (inactivo)@endif
+                                                                        @if($pkg->subdivisions)
+                                                                            ({{ $pkg->subdivisions }} {{ $pkg->subdivision_label ?? 'u' }} / envase)
+                                                                        @endif
                                                                     </option>
                                                                 @endforeach
                                                             </optgroup>

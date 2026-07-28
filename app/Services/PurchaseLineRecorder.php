@@ -173,16 +173,31 @@ class PurchaseLineRecorder
         if ($line->isIngredient()) {
             $item = Ingredient::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Ingrediente no válido.');
+            $item->cost_per_package = $this->packagePriceFor($item, $unitCost);
             $this->applyIngredientCost($item, $unitCost, $line);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
+            $item->cost_per_package = $this->packagePriceFor($item, $unitCost);
             $this->applyPackagingCost($item, $unitCost, $line);
         }
 
         $this->syncStockFromExplicitCost($line, $item, $unitCost);
 
         $line->update(['cost_applied_at' => now()]);
+    }
+
+    /**
+     * El costo explícito ya viene expresado por sub-unidad (lo divide match.js).
+     * El precio del bulto se deriva de vuelta para que ambas columnas queden
+     * coherentes aun si el usuario sobrescribió el costo a mano al vincular.
+     */
+    private function packagePriceFor(Ingredient|Packaging $item, float $unitCost): ?float
+    {
+        $tracksSubUnits = $item->subdivisions
+            && ($item instanceof Packaging || $item->unit === Unit::Unidad);
+
+        return $tracksSubUnits ? $unitCost * $item->subdivisions : null;
     }
 
     /**
