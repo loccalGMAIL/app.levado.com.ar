@@ -52,10 +52,13 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   (index + kardex + ajuste/recuento/mínimo; rutas `whereIn` +product). `displayUnit` usa `unit->short()` para product.
   El tab muestra todos los productos activos; valuación por `cost_per_unit` (manufactured=null→0 hasta Producción).
   `ProductStockTest` (8). **520 tests verdes.**
-- **2B 🔲** Compra de reventa: `PurchaseLine::isProduct()`, ramificar `PurchaseLineRecorder::apply()/applyWithCost()`
-  (producto = ingrediente sin subdivisiones ni propagación; solo `isResale()`), `matchLine` `$belongs` +product,
-  `match()` pasa productos de reventa, y optgroup "Productos" en `purchases/match.blade.php` (+catálogo Alpine).
-  DELICADO: `PurchaseLineRecorder` es el servicio de imputación de facturas; testear con cuidado.
+- **2B ✅** Compra de reventa: `PurchaseLine::isProduct()`/`product()`; `PurchaseLineRecorder::apply()/applyWithCost()`
+  con rama de producto (= ingrediente sin subdivisiones; `applyProductCost()` solo actualiza `cost_per_unit`,
+  sin price log ni propagación ni alerta — no interviene en recetas; guard `isResale()`); `syncStockFromExplicitCost`
+  amplió tipo. `PurchaseController::match()` pasa `$products` (solo reventa) + `$productCatalog`; `matchLine` `$belongs`
+  con match de 3 tipos. Vista: optgroup "Productos (reventa)" + `window.MATCH_PRODUCT_CATALOG` **aparte** del de
+  ingredientes (los ids colisionan); `match.js` elige catálogo por tipo. `ProductPurchaseTest` (8). **528 tests verdes.**
+  Requiere `npm run build` para reflejar `match.js`.
 - **3 🔲** Producción: `RecipeExploder` (BOM completo, phantom), generalizar referencia de `StockService::registerMovement`
   + `reverseMovementsFor()`, tabla `productions` + `ProductionService::produce()/cancel()`, UI grupo Producción con preview.
   Ojo: bloquear las filas de `stock_levels` en orden determinista (deadlocks).

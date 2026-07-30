@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use Illuminate\Support\Facades\DB;
@@ -111,6 +112,23 @@ class PurchaseLineRecorder
             }
 
             $this->applyIngredientCost($item, $costPerUnit, $line);
+        } elseif ($line->isProduct()) {
+            $item = Product::find($line->purchaseable_id);
+            abort_unless($item && $item->tenant_id === $line->purchase->tenant_id && $item->isResale(), 422, 'Producto de reventa no válido.');
+
+            // Un producto de reventa se compra como un ingrediente sin subdivisiones:
+            // se convierte la cantidad a su unidad y el costo se guarda por unidad.
+            $costPerUnit = $this->costPerUnit($purchaseUnit, $item->unit, (float) $line->unit_price);
+            $stockQuantity = $this->converter->convert((float) $line->quantity_purchased, $purchaseUnit, $item->unit);
+
+            if ($costPerUnit === null) {
+                $pkgQty = $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
+                abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del producto.');
+                $costPerUnit = (float) $line->unit_price / $pkgQty;
+                $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
+            }
+
+            $this->applyProductCost($item, $costPerUnit);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
@@ -181,6 +199,10 @@ class PurchaseLineRecorder
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Ingrediente no válido.');
             $item->cost_per_package = $this->packagePriceFor($item, $unitCost);
             $this->applyIngredientCost($item, $unitCost, $line);
+        } elseif ($line->isProduct()) {
+            $item = Product::find($line->purchaseable_id);
+            abort_unless($item && $item->tenant_id === $line->purchase->tenant_id && $item->isResale(), 422, 'Producto de reventa no válido.');
+            $this->applyProductCost($item, $unitCost);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
@@ -212,7 +234,7 @@ class PurchaseLineRecorder
      * catálogo trae cada bulto. Si el costo no permite derivarlo, se imputa el
      * costo igual y la línea queda sin movimiento de stock.
      */
-    private function syncStockFromExplicitCost(PurchaseLine $line, Ingredient|Packaging $item, float $unitCost): void
+    private function syncStockFromExplicitCost(PurchaseLine $line, Ingredient|Packaging|Product $item, float $unitCost): void
     {
         if ($unitCost <= 0) {
             return;
@@ -245,6 +267,16 @@ class PurchaseLineRecorder
         $item->update(['cost_per_unit' => $costPerUnit, 'cost_per_package' => $item->cost_per_package]);
         $this->propagator->propagateFromPackaging($item->id);
         $this->notifications->raiseCostSpike($line, $item, $oldCost, $costPerUnit);
+    }
+
+    /**
+     * Un producto de reventa no interviene en el costo de ninguna receta, así que
+     * comprarlo solo actualiza su cost_per_unit: sin price log propio, sin
+     * propagación de costos y sin alerta de salto de costo.
+     */
+    private function applyProductCost(Product $item, float $costPerUnit): void
+    {
+        $item->update(['cost_per_unit' => $costPerUnit]);
     }
 
     /**

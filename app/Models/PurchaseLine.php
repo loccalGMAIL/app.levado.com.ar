@@ -59,6 +59,11 @@ class PurchaseLine extends Model
         return $this->belongsTo(Packaging::class, 'purchaseable_id');
     }
 
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'purchaseable_id');
+    }
+
     public function isIngredient(): bool
     {
         return $this->purchaseable_type === CatalogItemType::Ingredient->value;
@@ -67,6 +72,11 @@ class PurchaseLine extends Model
     public function isPackaging(): bool
     {
         return $this->purchaseable_type === CatalogItemType::Packaging->value;
+    }
+
+    public function isProduct(): bool
+    {
+        return $this->purchaseable_type === CatalogItemType::Product->value;
     }
 
     public function isMatched(): bool

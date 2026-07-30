@@ -74,7 +74,8 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
                 return;
             }
 
-            // El catálogo está indexado por el mismo "tipo:id" que manda el select.
+            // El catálogo está indexado por el mismo "tipo:id" que manda el select
+            // (ingredientes, descartables y productos de reventa comparten la tabla).
             const item = (window.MATCH_CATALOG || {})[this.selected];
             if (!item) return;
 

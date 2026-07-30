@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CatalogItemType;
+use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Http\Requests\StorePurchaseLineRequest;
 use App\Http\Requests\StorePurchaseRequest;
@@ -392,26 +393,42 @@ class PurchaseController extends Controller
         // y guardar ese renglón revertiría stock y costo en silencio.
         $ingredients = $tenant->ingredients()->orderBy('name')->get();
         $packagings = $tenant->packagings()->orderBy('name')->get();
+        // Solo reventa: los elaborados obtienen su costo de la receta, no de una compra.
+        $products = $tenant->products()->where('type', ProductType::Resale->value)->orderBy('name')->get();
 
         // Catálogo para el lookup de Alpine, con la misma clave "tipo:id" que manda
-        // el select: los ids de ingredients y packagings colisionan entre sí.
-        $matchCatalog = $ingredients->mapWithKeys(fn ($i) => [
-            "ingredient:{$i->id}" => [
-                'unit' => $i->unit->value,
-                'name' => $i->name,
-                'subdivisions' => $i->subdivisions,
-                'subdivisionLabel' => $i->subdivision_label,
-            ],
-        ])->merge($packagings->mapWithKeys(fn ($p) => [
-            // Los descartables no tienen columna unit: siempre se compran por unidad.
-            // El 'u' sintético los hace caer en el mismo camino que los insumos.
-            "packaging:{$p->id}" => [
-                'unit' => Unit::Unidad->value,
-                'name' => $p->name,
-                'subdivisions' => $p->subdivisions,
-                'subdivisionLabel' => $p->subdivision_label,
-            ],
-        ]))->toArray();
+        // el select: los ids de ingredients, packagings y products colisionan entre sí.
+        // Se arranca de un Collection base (no Eloquent) porque mapWithKeys() sobre una
+        // colección Eloquent vacía no se "degrada" a base, y su merge() espera modelos
+        // (llama getKey()), explotando si el catálogo se arma con arrays.
+        $matchCatalog = collect()
+            ->merge($ingredients->mapWithKeys(fn ($i) => [
+                "ingredient:{$i->id}" => [
+                    'unit' => $i->unit->value,
+                    'name' => $i->name,
+                    'subdivisions' => $i->subdivisions,
+                    'subdivisionLabel' => $i->subdivision_label,
+                ],
+            ]))
+            ->merge($packagings->mapWithKeys(fn ($p) => [
+                // Los descartables no tienen columna unit: siempre se compran por unidad.
+                // El 'u' sintético los hace caer en el mismo camino que los insumos.
+                "packaging:{$p->id}" => [
+                    'unit' => Unit::Unidad->value,
+                    'name' => $p->name,
+                    'subdivisions' => $p->subdivisions,
+                    'subdivisionLabel' => $p->subdivision_label,
+                ],
+            ]))
+            ->merge($products->mapWithKeys(fn ($p) => [
+                "product:{$p->id}" => [
+                    'unit' => $p->unit->value,
+                    'name' => $p->name,
+                    'subdivisions' => null,
+                    'subdivisionLabel' => null,
+                ],
+            ]))
+            ->toArray();
 
         // Divisores recordados de facturas anteriores de este proveedor, indexados
         // por "tipo:id" para que el componente Alpine sólo los use si el renglón
@@ -435,7 +452,7 @@ class PurchaseController extends Controller
             ->toArray();
 
         return view('purchases.match', compact(
-            'purchase', 'ingredients', 'packagings', 'matchCatalog', 'rememberedPkgQty',
+            'purchase', 'ingredients', 'packagings', 'products', 'matchCatalog', 'rememberedPkgQty',
         ));
     }
 
@@ -530,9 +547,11 @@ class PurchaseController extends Controller
         abort_unless($itemType !== null && is_numeric($id), 422);
         $type = $itemType->value;
 
-        $belongs = $itemType === CatalogItemType::Ingredient
-            ? $tenant->ingredients()->whereKey($id)->exists()
-            : $tenant->packagings()->whereKey($id)->exists();
+        $belongs = match ($itemType) {
+            CatalogItemType::Ingredient => $tenant->ingredients()->whereKey($id)->exists(),
+            CatalogItemType::Packaging => $tenant->packagings()->whereKey($id)->exists(),
+            CatalogItemType::Product => $tenant->products()->where('type', ProductType::Resale->value)->whereKey($id)->exists(),
+        };
         abort_unless($belongs, 422);
 
         try {

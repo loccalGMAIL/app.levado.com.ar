@@ -89,7 +89,7 @@
                             <tr>
                                 <th class="px-4 py-3 font-medium w-[32%]">Descripción (factura)</th>
                                 <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Precio unit.</th>
-                                <th class="px-4 py-3 font-medium">Insumo o descartable</th>
+                                <th class="px-4 py-3 font-medium">Insumo, descartable o producto</th>
                                 <th class="px-4 py-3 font-medium">Costo unitario</th>
                                 <th class="px-4 py-3 font-medium w-[8%]"></th>
                             </tr>
@@ -107,6 +107,8 @@
                                         $matchedName = $ingredients->firstWhere('id', $line->purchaseable_id)?->name;
                                     } elseif ($line->purchaseable_type === 'packaging') {
                                         $matchedName = $packagings->firstWhere('id', $line->purchaseable_id)?->name;
+                                    } elseif ($line->purchaseable_type === 'product') {
+                                        $matchedName = $products->firstWhere('id', $line->purchaseable_id)?->name;
                                     }
                                 @endphp
 
@@ -231,6 +233,16 @@
                                                                         @if($pkg->subdivisions)
                                                                             ({{ $pkg->subdivisions }} {{ $pkg->subdivision_label ?? 'u' }} / envase)
                                                                         @endif
+                                                                    </option>
+                                                                @endforeach
+                                                            </optgroup>
+                                                        @endif
+                                                        @if($products->isNotEmpty())
+                                                            <optgroup label="Productos (reventa)">
+                                                                @foreach($products as $prod)
+                                                                    <option value="product:{{ $prod->id }}"
+                                                                        @selected($currentValue === "product:{$prod->id}")>
+                                                                        {{ $prod->name }}@if(! $prod->active) (inactivo)@endif ({{ $prod->unit->short() }})
                                                                     </option>
                                                                 @endforeach
                                                             </optgroup>
