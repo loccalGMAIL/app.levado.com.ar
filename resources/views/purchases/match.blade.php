@@ -160,7 +160,8 @@
                                         {{ Js::from($currentValue) }},
                                         {{ (float) $line->unit_price }},
                                         {{ Js::from($line->purchase_unit->value) }},
-                                        {{ Js::from($line->raw_name ?? '') }}
+                                        {{ Js::from($line->raw_name ?? '') }},
+                                        {{ Js::from($rememberedPkgQty[$line->id] ?? null) }}
                                     )">
                                         <td class="px-4 py-3 align-top">
                                             <span class="text-xs text-corteza" title="{{ $line->raw_name }}">
@@ -191,6 +192,8 @@
                                                 @csrf
                                                 <input type="hidden" name="match" x-bind:value="selected">
                                                 <input type="hidden" name="unit_cost" x-bind:value="unitCost > 0 ? unitCost.toFixed(4) : ''">
+                                                {{-- Se recuerda para las próximas facturas de este proveedor. --}}
+                                                <input type="hidden" name="pkg_qty" x-bind:value="needsPkgQty && pkgQty > 0 ? pkgQty : ''">
 
                                                 <div class="flex items-start gap-3 flex-wrap">
                                                     {{-- Select de insumo/descartable --}}
@@ -252,12 +255,21 @@
                                                                     @input="onPkgQtyChange()"
                                                                     min="0.001" step="0.001"
                                                                     class="w-20 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1 text-center font-mono"
-                                                                    :class="pkgQtyFromDesc ? 'border-amber-300 bg-amber-50' : ''">
+                                                                    :class="{
+                                                                        'border-amber-300 bg-amber-50': pkgQtyFromDesc,
+                                                                        'border-green-300 bg-green-50': pkgQtyFromMemory,
+                                                                    }">
                                                                 <span x-text="catalogUnit + '/u'"></span>
                                                                 <span x-show="pkgQtyFromDesc" x-cloak
                                                                     class="text-amber-600"
                                                                     title="Cantidad detectada automáticamente en la descripción del producto">
                                                                     ✦
+                                                                </span>
+                                                                {{-- Distinto del ✦ a propósito: acá no se adivinó nada, lo confirmó el usuario antes. --}}
+                                                                <span x-show="pkgQtyFromMemory" x-cloak
+                                                                    class="text-green-700"
+                                                                    title="Divisor recordado de una factura anterior de este proveedor">
+                                                                    ↻
                                                                 </span>
                                                             </div>
                                                         </template>

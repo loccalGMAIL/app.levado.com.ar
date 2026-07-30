@@ -18,11 +18,16 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.12.6. La fuente de verdad es **`config/app.php`**; `package.json` y `package-lock.json` la espejan (ver [[project-architecture]] → Convenciones).
+- **Versión actual:** 0.12.7. La fuente de verdad es **`config/app.php`**; `package.json` y `package-lock.json` la espejan (ver [[project-architecture]] → Convenciones).
 - **Último deploy anotado acá:** 0.11.0 — **mergeada (PR #43) y desplegada en producción el 17/07/2026**. Producción venía de 0.9.x, así que ese deploy le trajo de una v0.10.0 (gastos variables), v0.10.1 (auditoría) y v0.11.0. Se corrió `invoices:relocate`: **165 comprobantes movidos al disco privado**. Los deploys de la serie 0.12.x no quedaron registrados en esta memoria: **no asumir qué versión corre en producción a partir de este archivo.**
 - **Al subir una base corregida a producción, el orden es: respaldo → subir la base → desplegar código → `migrate` → `invoices:relocate` → `optimize:clear`.** Si se despliega el código y se corre `migrate` antes de subir la base, la migración del índice único aborta contra los duplicados viejos. Con la base ya subida, `migrate` saltea lo que viene registrado y sólo corre lo que falta. Ojo: el import pisa `sessions` y cierra todas las sesiones.
 
 ## Todo lo que está hecho
+
+### v0.12.7 — Memoria de vinculación de productos (rama `claude/product-linking-invoices-7uqgph`)
+- Tabla `supplier_product_links` + servicio `ProductLinkMemory`: la vinculación de un renglón queda guardada **por proveedor** y la próxima factura llega pre-vinculada. Antes vivía sólo en `purchase_lines` y cada escaneo dependía de la IA.
+- **Pre-selecciona, nunca aplica** — el renglón recordado queda pendiente (test-ancla). El divisor de unidades incompatibles también se recuerda, lo que hace que «Aplicar N sugerencias» resuelva renglones que antes salteaba siempre.
+- **Al desplegar, correr `purchases:backfill-product-links`** (probar antes con `--dry-run`) para sembrar la memoria desde las facturas ya imputadas. Ver [[feature-compras]] → Memoria de vinculación.
 
 ### v0.12.0 — Mediano plazo de la auditoría, 1er lote (rama `claude/technical-debt-audit-obzekw`, pendiente de merge)
 - **Dashboard sobre caches:** `unit_cost` + nueva columna `recipes.labor_hours` (propagador la mantiene); orden y paginación en SQL con margen/margen % y NULLs al final. Matriz de precios y edición inline de precio también leen el cache. Comando **`recipes:refresh-costs`** para backfill — **correrlo tras el deploy, junto con `migrate`**.

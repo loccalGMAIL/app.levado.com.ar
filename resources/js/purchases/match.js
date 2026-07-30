@@ -17,17 +17,21 @@ const UNIT_ALIASES = {
     'cc': 'cc', 'cm3': 'cc',
 };
 
-window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, description) {
+// `remembered` viene de ProductLinkMemory: { selection: 'ingredient:42', pkgQty: 25 }.
+// Va atado a la selección porque el divisor es del ítem, no del renglón.
+window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, description, remembered = null) {
     return {
         selected,
         unitPrice,
         purchaseUnit,
         description,
+        remembered,
 
         catalogUnit: '',
         displayUnit: '',
         pkgQty: 1,
         pkgQtyFromDesc: false,
+        pkgQtyFromMemory: false,
         unitCost: unitPrice,
         needsPkgQty: false,
         incompatiblePkg: false,
@@ -46,6 +50,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         onSelect() {
             this.pkgQty = 1;
             this.pkgQtyFromDesc = false;
+            this.pkgQtyFromMemory = false;
             this.subdivisions = null;
             this.subdivisionLabel = null;
             this.recalc();
@@ -54,6 +59,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         recalc() {
             this.needsPkgQty = false;
             this.incompatiblePkg = false;
+            this.pkgQtyFromMemory = false;
             this.catalogUnit = '';
 
             if (!this.selected) {
@@ -96,13 +102,26 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
                 this.unitCost = Math.round((this.unitPrice / directFactor / subdivisionFactor) * 10000) / 10000;
             } else {
                 this.needsPkgQty = true;
-                const parsed = this.parseDesc(this.description);
 
-                if (parsed) {
-                    const parsedFactor = UNIT_CONV[parsed.unit]?.[item.unit];
-                    if (parsedFactor !== undefined) {
-                        this.pkgQty = parsed.qty * parsedFactor;
-                        this.pkgQtyFromDesc = true;
+                // El divisor recordado gana sobre el que se adivina de la
+                // descripción, pero sólo si el renglón sigue apuntando al mismo
+                // ítem con el que se guardó.
+                const memoryHit = this.remembered?.selection === this.selected
+                    ? this.remembered.pkgQty
+                    : null;
+
+                if (memoryHit > 0) {
+                    this.pkgQty = memoryHit;
+                    this.pkgQtyFromMemory = true;
+                } else {
+                    const parsed = this.parseDesc(this.description);
+
+                    if (parsed) {
+                        const parsedFactor = UNIT_CONV[parsed.unit]?.[item.unit];
+                        if (parsedFactor !== undefined) {
+                            this.pkgQty = parsed.qty * parsedFactor;
+                            this.pkgQtyFromDesc = true;
+                        }
                     }
                 }
 
@@ -112,6 +131,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
 
         onPkgQtyChange() {
             this.pkgQtyFromDesc = false;
+            this.pkgQtyFromMemory = false;
             if (this.pkgQty > 0) {
                 this.unitCost = Math.round((this.unitPrice / this.pkgQty) * 100) / 100;
             }
