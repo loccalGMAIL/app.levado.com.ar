@@ -40,6 +40,10 @@ Se midió con Playwright sobre el marcado y el CSS compilado reales, en **320, 3
 - **Después:** **0px de desborde y 0px de scroll horizontal en los 10 anchos**, con la cifra entre 16px y 24px según lo que permita la card. Un monto de 10 dígitos (mil millones por hora) envuelve en dos líneas a 1024px en vez de salirse.
 - 4 tests nuevos que fijan el marcado del que depende el arreglo —el utilitario en la cifra, el `col-span` de las cards de importe y el `title` con el valor exacto—, verificados contra un revert de la corrección: fallan. **523 tests, todos verdes.**
 
+#### Versionado realineado
+
+`package.json` y `package-lock.json` habían quedado en **0.8.6** porque los bumps de versión sólo tocaban `config/app.php`, que es la fuente de verdad y la que se muestra en el pie del sidebar. Los tres declaran ahora **0.12.6**. Del lockfile se editaron a mano los dos campos del paquete raíz —el del encabezado y el de `packages[""]`— para no arrastrar ruido de dependencias; el árbol quedó intacto. La convención de los cuatro archivos a tocar en cada bump quedó anotada en la memoria del proyecto.
+
 #### Al deployar
 
 No hay migraciones ni corrección de datos.

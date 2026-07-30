@@ -34,6 +34,12 @@ metadata:
 - Hostinger hosting (sin workers persistentes — recálculo síncrono en MVP)
 
 ## Convenciones
+- **Versión: `config/app.php` es la fuente de verdad** (es la que se muestra en el pie del sidebar).
+  Al subir de versión hay que tocar **cuatro** lugares, siempre con el mismo número:
+  `config/app.php` → `package.json` → `package-lock.json` (dos campos: el raíz y `packages[""]`,
+  editados a mano — regenerar el lock trae ruido de dependencias) → entrada nueva en `CHANGELOG.md`.
+  Se desincronizaron entre 0.8.6 y 0.12.5 porque los bumps sólo tocaban `app.php`; realineados en
+  0.12.6.
 - Toda migración con `tenant_id` como primer campo en índices compuestos
 - Baja lógica siempre: ninguna tabla usa DELETE físico en producción
 - Sin registro público — usuarios entran solo por invitación (ruta /register eliminada)

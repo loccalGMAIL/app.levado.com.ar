@@ -243,8 +243,11 @@ metadata:
 - 396 tests, todos verdes (44 nuevos). Gate de no-regresión: `FixedCostCrudTest` pasa 21/21 sin haber modificado el archivo.
 
 ## Versioning
-- Rama activa: `v0.10.0-gastos-variables` (sobre `master`, que ya tiene v0.9.3 mergeado)
-- Versión actual: `0.10.0`
+- Versión actual: **`0.12.6`**. La fuente de verdad es **`config/app.php`** (es la que se lee en el
+  pie del sidebar); `package.json` y `package-lock.json` la espejan. Ver [[project-architecture]] →
+  Convenciones para los archivos que hay que tocar al subir de versión.
+- Rama activa: `claude/mobile-typography-overflow-3imfwx`, sobre `master` (que ya tiene v0.12.5
+  mergeado, PR #51).
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.
