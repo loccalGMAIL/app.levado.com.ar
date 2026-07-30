@@ -106,18 +106,18 @@
                             $cardAllResolved = $purchase->lines_count > 0 && $purchase->resolved_count >= $purchase->lines_count;
                         @endphp
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
-                            <div class="flex items-start justify-between">
-                                <div>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
                                     <div class="font-medium text-corteza">{{ $purchase->supplier->name }}</div>
-                                    <div class="text-xs text-masa-madre mt-0.5 font-mono">
+                                    <div class="text-xs text-masa-madre mt-0.5 font-mono [overflow-wrap:anywhere]">
                                         {{ $purchase->invoice_date->format('d/m/Y') }}
                                         @if($purchase->invoice_number)
                                             · #{{ $purchase->invoice_number }}
                                         @endif
                                     </div>
                                 </div>
-                                <div class="text-right">
-                                    <div class="font-mono font-medium text-corteza">$ {{ number_format($cardTotal, 2, ',', '.') }}</div>
+                                <div class="text-right shrink-0">
+                                    <div class="font-mono font-medium text-corteza [overflow-wrap:anywhere]">$ {{ number_format($cardTotal, 2, ',', '.') }}</div>
                                     <div class="text-xs text-masa-madre mt-0.5">{{ $purchase->lines_count }} ítems</div>
                                 </div>
                             </div>

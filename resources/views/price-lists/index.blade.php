@@ -85,8 +85,8 @@
                     <x-slot:cards>
                     @foreach($priceLists as $priceList)
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $priceList->active ? '' : 'opacity-50' }}">
-                            <div class="flex items-start justify-between">
-                                <div>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
                                     <div class="flex items-center gap-2">
                                         <span class="font-medium text-corteza">{{ $priceList->name }}</span>
                                         @if($priceList->is_default)

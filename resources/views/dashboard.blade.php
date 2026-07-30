@@ -88,13 +88,19 @@
         {{-- ═══════════════════════════════════════════════
              KPI CARDS
         ════════════════════════════════════════════════ --}}
+        {{-- Las dos cards de importe pasan a ancho completo en mobile: un monto de
+             8 o 9 dígitos no entra en media pantalla ni bajando la tipografía a un
+             tamaño legible. El `order` deja a las dos cards cortas compartiendo la
+             primera fila para no estirar el dashboard de más. --}}
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
             {{-- Recetas activas --}}
-            <div class="bg-white border border-miga rounded-xl p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow group">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="w-10 h-10 rounded-xl bg-brown-100 flex items-center justify-center text-lg">📖</div>
-                    <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full bg-green-50 text-green-700">
+            <div class="order-1 kpi-card bg-white border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow group">
+                <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-brown-100 flex items-center justify-center text-lg shrink-0">📖</div>
+                    {{-- La píldora no entra al lado del ícono en una card de media
+                         pantalla, y acá no dice nada que no diga el rótulo de abajo. --}}
+                    <span class="hidden sm:inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full bg-green-50 text-green-700 whitespace-nowrap">
                         ↑ activas
                     </span>
                 </div>
@@ -105,31 +111,35 @@
             </div>
 
             {{-- Gastos fijos --}}
-            <div class="bg-white border border-miga rounded-xl p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-lg">💰</div>
-                    <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full bg-miga text-masa-madre">
+            <div class="col-span-2 order-3 sm:col-span-1 sm:order-2 kpi-card bg-white border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
+                <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-lg shrink-0">💰</div>
+                    <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full bg-miga text-masa-madre whitespace-nowrap">
                         / mes
                     </span>
                 </div>
-                <div class="text-2xl font-bold text-corteza leading-none mb-1.5 font-mono">
-                    $&nbsp;{{ number_format((float) $totalFixedCosts, 2, ',', '.') }}
+                {{-- Sin centavos: en un total mensual son ruido y son 3 caracteres
+                     que a esta tipografía no sobran. El valor exacto va en el title. --}}
+                <div class="kpi-figure font-bold text-corteza leading-none mb-1.5 font-mono"
+                    title="$ {{ number_format((float) $totalFixedCosts, 2, ',', '.') }} por mes">
+                    $&nbsp;{{ number_format((float) $totalFixedCosts, 0, ',', '.') }}
                 </div>
                 <div class="text-sm text-masa-madre">Gastos fijos</div>
                 <div class="text-[11.5px] text-masa-madre/60 mt-0.5">Sueldos, alquiler, servicios</div>
             </div>
 
             {{-- Overhead / hora --}}
-            <div class="bg-white border border-miga rounded-xl p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-lg">🏭</div>
-                    <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full bg-miga text-masa-madre">
+            <div class="col-span-2 order-4 sm:col-span-1 sm:order-3 kpi-card bg-white border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
+                <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-lg shrink-0">🏭</div>
+                    <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full bg-miga text-masa-madre whitespace-nowrap">
                         / hora
                     </span>
                 </div>
                 @if($overheadPerHour !== null)
-                    <div class="text-2xl font-bold text-corteza leading-none mb-1.5 font-mono">
-                        $&nbsp;{{ number_format($overheadPerHour, 2, ',', '.') }}
+                    <div class="kpi-figure font-bold text-corteza leading-none mb-1.5 font-mono"
+                        title="$ {{ number_format($overheadPerHour, 2, ',', '.') }} por hora">
+                        $&nbsp;{{ number_format($overheadPerHour, 0, ',', '.') }}
                     </div>
                 @else
                     <div class="text-2xl font-bold text-masa-madre/50 leading-none mb-1.5">—</div>
@@ -145,13 +155,13 @@
             </div>
 
             {{-- Utilidad promedio --}}
-            <div class="bg-white border border-miga rounded-xl p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-lg">📊</div>
+            <div class="order-2 sm:order-4 kpi-card bg-white border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
+                <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-lg shrink-0">📊</div>
                     @if($avgMarginPct !== null)
-                        <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full
+                        <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full whitespace-nowrap
                             {{ $avgMarginPct >= 38 ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700' }}">
-                            {{ $avgMarginPct >= 38 ? '↑' : '↓' }} obj. 38%
+                            {{ $avgMarginPct >= 38 ? '↑' : '↓' }} <span class="hidden sm:inline">obj.&nbsp;</span>38%
                         </span>
                     @endif
                 </div>

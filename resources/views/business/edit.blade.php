@@ -230,17 +230,19 @@
                             </div>
                         </div>
                         @if($overheadPerHour !== null)
-                        <div class="bg-miga rounded-lg px-5 py-4 text-right shrink-0">
+                        {{-- w-full en mobile: apilado y con el ancho del contenido, un
+                             overhead de 8 dígitos se pasaba del borde de la card. --}}
+                        <div class="bg-miga rounded-lg px-5 py-4 w-full sm:w-auto text-right sm:shrink-0">
                             <p class="text-xs text-masa-madre">Overhead / hora</p>
-                            <p class="text-xl font-semibold text-corteza font-mono mt-0.5">
+                            <p class="text-lg sm:text-xl font-semibold text-corteza font-mono mt-0.5 [overflow-wrap:anywhere]">
                                 $ {{ number_format($overheadPerHour, 2, ',', '.') }}
                             </p>
-                            <p class="text-[11px] text-masa-madre mt-1">
+                            <p class="text-[11px] text-masa-madre mt-1 [overflow-wrap:anywhere]">
                                 Gastos fijos: $ {{ number_format((float)$totalFixedCosts, 2, ',', '.') }} / mes
                             </p>
                         </div>
                         @elseif($tenant->productive_hours_month > 0)
-                        <div class="bg-miga rounded-lg px-5 py-4 text-right shrink-0">
+                        <div class="bg-miga rounded-lg px-5 py-4 w-full sm:w-auto text-right sm:shrink-0">
                             <p class="text-xs text-masa-madre">Overhead / hora</p>
                             <p class="text-sm text-masa-madre mt-1">Sin gastos fijos activos</p>
                         </div>

@@ -50,22 +50,26 @@
             </div>
 
             {{-- Resumen --}}
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+            {{-- El 4-up arranca en lg y no en md: a 768px las cuatro columnas dejan
+                 87px por card, donde no entra ninguna valuación de 8 dígitos. --}}
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="kpi-card bg-white border border-miga rounded-lg p-4 shadow-sm">
                     <p class="text-xs text-masa-madre">Stock actual</p>
-                    <p class="mt-1 font-mono text-lg {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }}">
+                    <p class="mt-1 font-mono kpi-figure [--kpi-figure-min:0.75rem] [--kpi-figure-max:1.125rem] {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }}">
                         {{ number_format($qty, 2, ',', '.') }} <span class="text-xs text-masa-madre">{{ $displayUnit }}</span>
                     </p>
                 </div>
-                <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+                <div class="kpi-card bg-white border border-miga rounded-lg p-4 shadow-sm">
                     <p class="text-xs text-masa-madre">Mínimo</p>
-                    <p class="mt-1 font-mono text-lg text-corteza">
+                    <p class="mt-1 font-mono kpi-figure [--kpi-figure-min:0.75rem] [--kpi-figure-max:1.125rem] text-corteza">
                         {{ $level?->min_quantity !== null ? number_format($level->min_quantity, 2, ',', '.') : '—' }}
                     </p>
                 </div>
-                <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+                {{-- La valuación es el número más largo de las cuatro: mientras el grid
+                     sea de dos columnas toma las dos para que entre completo. --}}
+                <div class="col-span-2 lg:col-span-1 kpi-card bg-white border border-miga rounded-lg p-4 shadow-sm">
                     <p class="text-xs text-masa-madre">Valuación</p>
-                    <p class="mt-1 font-mono text-lg text-corteza">$ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}</p>
+                    <p class="mt-1 font-mono kpi-figure [--kpi-figure-min:0.75rem] [--kpi-figure-max:1.125rem] text-corteza">$ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}</p>
                 </div>
                 <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
                     <p class="text-xs text-masa-madre">Estado</p>

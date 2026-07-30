@@ -5,6 +5,54 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.6] — 2026-07-30
+
+### Los montos grandes se salían de las cards del dashboard
+
+#### Corregido
+
+- **Un importe de 8 o 9 dígitos se salía de la card del dashboard y arrastraba scroll horizontal a toda la página.** `$ 123.456.789,00` mide 230px a la tipografía del KPI y la card en un celular de 375px deja 113px de interior: el número se pasaba **117px** del borde. Ahora las dos cards de importe —Gastos fijos y Overhead por hora— toman el ancho completo en mobile y la cifra entra entera, sin recortes ni scroll lateral.
+- **No era sólo mobile.** El mismo monto se salía en **todos los anchos por debajo de ~1440px**, porque el espacio disponible no crece con la pantalla: a 1024px las cuatro columnas dejan **136px** de interior por card, *menos* que un celular de 390px. Se salía 94px a 1024px, 30px a 1280px y 86px a 640px. Verificado ahora en 10 anchos entre 320px y 1920px, sin desborde en ninguno.
+- **La misma cifra pasaba en el kardex de existencias** (Existencias → historial): la Valuación se salía 55px a 320px y 28px a 375px. Ahora toma las dos columnas mientras el grid sea de dos, y el 4-up arranca en `lg` en vez de `md` porque a 768px cuatro columnas dejan 87px por card, donde no entra ninguna valuación de 8 dígitos.
+- **El total de la factura en Compras → Ver detalle** estaba anclado a la derecha con `shrink-0`: no cedía ancho y empujaba el monto fuera de la card. En mobile baja a su propia fila con el ancho completo.
+- **El recuadro de Overhead / hora en Mi negocio** se dimensionaba por su contenido, así que un overhead largo se pasaba del borde de la card. Pasa a ancho completo en mobile.
+- **Las cards de mobile de los listados** (Insumos, Envases, Gastos fijos, Gastos variables, Mano de obra, Compras, Listas de precios, Existencias) no dejaban que la columna del nombre cediera ancho: un nombre largo o un importe largo empujaba la badge de estado fuera de la card. Ahora la columna cede y el texto envuelve.
+
+#### Cambio visible
+
+- **Los dos KPI de importe del dashboard ya no muestran centavos**: `$ 123.456.789` en vez de `$ 123.456.789,00`. En un total mensual los centavos no aportan y son 3 caracteres que a ese tamaño no sobran. **El valor exacto sigue disponible al pasar el mouse** por la cifra, y no se toca en ningún otro lado: tablas, detalle de receta, Resumen operativo y Mi negocio siguen con centavos.
+- **En mobile las cards quedan en tres filas** en vez de dos: Recetas activas y Utilidad promedio comparten la primera, y las dos de importe van una debajo de la otra. Es una fila más de scroll; a cambio el monto entra completo, que a media pantalla no pasa a ningún tamaño legible.
+- La píldora `↑ activas` no se muestra en mobile —no dice nada que no diga el rótulo de abajo y no entra al lado del ícono— y `↑ obj. 38%` se acorta a `↑ 38%`.
+
+#### Técnico
+
+- El tamaño de la cifra se mide **contra el ancho de la card y no contra el del viewport**, con un container query: `.kpi-card` declara `container-type: inline-size` y `.kpi-figure` resuelve `clamp(var(--kpi-figure-min), 10cqi, var(--kpi-figure-max))`. Es la única forma limpia de resolverlo, porque el ancho disponible **no es monótono** respecto del viewport: una escala por breakpoints tendría que ir 2xl → lg → 2xl → base → 2xl entre mobile y desktop.
+- `10cqi` no es arbitrario: cada glifo de JetBrains Mono avanza 0,6em, así que 16 glifos —`$ 123.456.789,00` completo— ocupan 9,6em y entran con el ancho de la card dividido 10.
+- Los límites se ajustan por card con `[--kpi-figure-max:…]` / `[--kpi-figure-min:…]`, y las reglas van en `@layer components` **justo por eso**: en la capa de utilities, Tailwind emite el override de la custom property *antes* que `.kpi-figure` y, con la misma especificidad, ganaba el valor por defecto.
+- `.kpi-card` sólo se aplica a items de grid. `container-type: inline-size` implica `contain: inline-size`, que **colapsa a 0 cualquier elemento cuyo ancho venga de su contenido** — un flex item con `shrink-0`, por ejemplo. Ahí el arreglo va por breakpoints (`text-lg sm:text-xl`) en vez de container query.
+- `overflow-wrap: anywhere` en la cifra como última red: si algún día aparece un monto más largo que lo previsto, parte en dos líneas en vez de salirse. Las filas de ícono + píldora llevan `flex-wrap` por lo mismo, que además hace el arreglo independiente de las métricas exactas de Inter.
+
+#### Verificado en la aplicación
+
+Se midió con Playwright sobre el marcado y el CSS compilado reales, en **320, 375, 390, 414, 640, 768, 1024, 1280, 1440 y 1920px**, replicando la geometría de producción (sidebar `w-52` a partir de `sm`, `px-6 lg:px-8`). Para cada cifra se comparó el ancho que necesita el texto contra el borde interior de su card.
+
+- **Antes:** desborde en los 10 anchos y scroll horizontal del documento de 99px a 320px, 72px a 375px y 52px a 414px.
+- **Después:** **0px de desborde y 0px de scroll horizontal en los 10 anchos**, con la cifra entre 16px y 24px según lo que permita la card. Un monto de 10 dígitos (mil millones por hora) envuelve en dos líneas a 1024px en vez de salirse.
+- 4 tests nuevos que fijan el marcado del que depende el arreglo —el utilitario en la cifra, el `col-span` de las cards de importe y el `title` con el valor exacto—, verificados contra un revert de la corrección: fallan. **523 tests, todos verdes.**
+
+#### Versionado realineado
+
+`package.json` y `package-lock.json` habían quedado en **0.8.6** porque los bumps de versión sólo tocaban `config/app.php`, que es la fuente de verdad y la que se muestra en el pie del sidebar. Los tres declaran ahora **0.12.6**. Del lockfile se editaron a mano los dos campos del paquete raíz —el del encabezado y el de `packages[""]`— para no arrastrar ruido de dependencias; el árbol quedó intacto. La convención de los cuatro archivos a tocar en cada bump quedó anotada en la memoria del proyecto.
+
+#### Al deployar
+
+No hay migraciones ni corrección de datos.
+
+1. `php artisan optimize:clear`
+2. `npm run build` — el arreglo vive en el CSS compilado.
+
+---
+
 ## [0.12.5] — 2026-07-28
 
 ### Los descartables no tomaban la subdivisión al vincular una compra

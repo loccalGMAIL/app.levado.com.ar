@@ -78,10 +78,10 @@
                     <x-slot:cards>
                     @foreach($laborTypes as $laborType)
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $laborType->active ? '' : 'opacity-50' }}">
-                            <div class="flex items-start justify-between">
-                                <div>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
                                     <div class="font-medium text-corteza">{{ $laborType->name }}</div>
-                                    <div class="text-sm font-mono text-corteza mt-1">$ {{ number_format($laborType->hourly_rate, 2, ',', '.') }} / hora</div>
+                                    <div class="text-sm font-mono text-corteza mt-1 [overflow-wrap:anywhere]">$ {{ number_format($laborType->hourly_rate, 2, ',', '.') }} / hora</div>
                                 </div>
                                 <x-status-badge :active="$laborType->active" />
                             </div>

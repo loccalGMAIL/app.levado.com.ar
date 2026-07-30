@@ -131,8 +131,8 @@
                                     }
                                 }
                             }">
-                            <div class="flex items-start justify-between">
-                                <div>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
                                     <div class="font-medium text-corteza">{{ $packaging->name }}</div>
                                     <div class="text-xs text-masa-madre mt-0.5">
                                         @if($packaging->brand || $packaging->supplier)
@@ -145,7 +145,7 @@
                                 </div>
                                 <x-status-badge :active="$packaging->active" />
                             </div>
-                            <div class="mt-2 font-mono text-corteza text-sm">
+                            <div class="mt-2 font-mono text-corteza text-sm [overflow-wrap:anywhere]">
                                 @can('manage-costs')
                                     <div x-show="!editing && !saving"
                                         @click="startEdit()"

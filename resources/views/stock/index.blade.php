@@ -99,8 +99,8 @@
                             $payload = $rowPayload($item, $level);
                         @endphp
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
-                            <div class="flex items-start justify-between">
-                                <div>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
                                     <a href="{{ route('stock.show', [$type, $item->id]) }}" class="font-medium text-corteza hover:underline">{{ $item->name }}</a>
                                     <div class="text-xs text-masa-madre mt-0.5">
                                         Mínimo: {{ $level?->min_quantity !== null ? number_format($level->min_quantity, 2, ',', '.').' '.$displayUnit($item) : '—' }}
@@ -112,8 +112,8 @@
                                     <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Bajo mínimo</span>
                                 @endif
                             </div>
-                            <div class="mt-2 flex items-baseline justify-between">
-                                <span class="text-sm font-mono {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }} inline-flex items-center gap-1.5">
+                            <div class="mt-2 flex items-baseline justify-between gap-2">
+                                <span class="text-sm font-mono {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }} inline-flex items-center gap-1.5 min-w-0">
                                     {{ number_format($qty, 2, ',', '.') }} <span class="text-xs text-masa-madre">{{ $displayUnit($item) }}</span>
                                     <a href="{{ route('stock.show', [$type, $item->id]) }}"
                                         class="text-masa-madre hover:text-corteza" title="Ver movimientos de stock">
@@ -122,7 +122,7 @@
                                         </svg>
                                     </a>
                                 </span>
-                                <span class="text-xs text-masa-madre font-mono">$ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}</span>
+                                <span class="text-xs text-masa-madre font-mono text-right [overflow-wrap:anywhere]">$ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}</span>
                             </div>
                             @can('manage-costs')
                                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga text-sm">
