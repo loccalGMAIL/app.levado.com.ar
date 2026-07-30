@@ -5,6 +5,37 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.7] — 2026-07-30
+
+### La vinculación de productos se recuerda para las próximas facturas
+
+#### Agregado
+
+- **Vincular un renglón ahora se aprende.** Hasta esta versión el vínculo entre el texto de un renglón y tu insumo vivía sólo en esa fila de esa factura: si asociabas «SALAME MILAN X 3 KG» a Salame, la factura del mes siguiente arrancaba de cero y todo dependía de que la IA volviera a acertar. Ahora la decisión queda guardada **por proveedor**, y la próxima factura de ese proveedor llega con el renglón ya vinculado.
+- **La memoria le gana a la IA.** Si lo vinculaste a mano una vez, esa elección pisa la sugerencia del modelo — es una decisión tuya contra una conjetura suya.
+- **El divisor también se recuerda.** Cuando comprás por bulto y el insumo se lleva por kilo (una bolsa de 25 kg), el «÷ 25» que cargabas a mano cada mes queda guardado junto al vínculo. **El costo unitario no se guarda**, porque ese cambia en cada compra.
+- **Los renglones por bulto ahora entran con el botón masivo.** «Aplicar N sugerencias» salteaba siempre los renglones de unidades incompatibles, porque sin divisor no sabía a cuánto sale el kilo. Con el divisor recordado los resuelve, y dejan de tener que aplicarse uno por uno.
+- **Comando de siembra para el historial:** `php artisan purchases:backfill-product-links` aprende de las facturas que ya imputaste, así la memoria no arranca vacía. Tiene `--dry-run` para ver qué haría antes de escribir.
+
+#### Cómo se comporta
+
+- **Un renglón recordado queda pendiente, nunca aplicado.** La memoria pre-selecciona el insumo, pero no imputa el costo ni mueve stock: eso sigue pasando sólo cuando lo confirmás desde la pantalla de vinculación. Un texto ambiguo no puede ensuciar costos por su cuenta.
+- **Desasociar un renglón, o marcarlo como consumo personal, borra lo recordado.** Si no, la próxima factura volvería a sugerir justo lo que acabás de descartar.
+- **Cada proveedor tiene su propia memoria.** El mismo texto en la factura de otro proveedor no arrastra el vínculo, porque cada uno escribe sus renglones a su manera.
+- **No cruza negocios ni ítems ajenos.** Un vínculo que quedó apuntando a un insumo borrado, o al catálogo de otro negocio, simplemente no se usa.
+- El texto se compara sin distinguir mayúsculas, acentos ni espacios de más: `HARINA  000   X 25 Kg` y `Harina 000 x 25 KG` son el mismo renglón.
+
+#### Detalle técnico
+
+- Tabla nueva `supplier_product_links`, con clave única `(tenant_id, supplier_id, raw_name_normalized)` y el modelo bajo `BelongsToTenant`. Guarda `pkg_qty`, `times_confirmed` y `last_used_at`.
+- `ProductLinkMemory` concentra `recall()` / `recallMany()` / `remember()` / `forget()` / `fold()`. `recallMany()` resuelve la factura entera en una query. `fold()` sigue el criterio de `SupplierMatcher::fold()` y le suma el colapso de espacios.
+- Se consulta en `PurchaseScanController::scan()` (para la pre-selección visible en la revisión) **y** en `store()`, con el proveedor definitivo: en la revisión se puede cambiar el proveedor, y los campos ocultos habían quedado congelados contra el que adivinó la IA.
+- Se escribe en `PurchaseController::matchLine()` y en `applyLineSuggestions()` — aceptar en masa también es una decisión humana, y sin eso la memoria sólo habría aprendido de las correcciones una por una.
+- `PurchaseLineRecorder::apply()` prefiere el divisor recordado por sobre el que deduce de la descripción.
+- 22 tests nuevos. **545 tests, todos verdes.**
+
+---
+
 ## [0.12.6] — 2026-07-30
 
 ### Los montos grandes se salían de las cards del dashboard

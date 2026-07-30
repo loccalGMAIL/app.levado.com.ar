@@ -26,6 +26,7 @@ class PurchaseLineRecorder
         private readonly UnitConverter $converter,
         private readonly StockService $stock,
         private readonly NotificationService $notifications,
+        private readonly ProductLinkMemory $linkMemory,
     ) {}
 
     /**
@@ -88,7 +89,12 @@ class PurchaseLineRecorder
             $stockQuantity = $this->converter->convert((float) $line->quantity_purchased, $purchaseUnit, $item->unit);
 
             if ($costPerUnit === null) {
-                $pkgQty = $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
+                // El divisor recordado de una factura anterior gana sobre el que se
+                // adivina de la descripción: alguien ya lo confirmó a mano. Es lo que
+                // permite que "Aplicar N sugerencias" resuelva renglones de unidades
+                // incompatibles, que antes salteaba siempre.
+                $pkgQty = $this->rememberedPkgQty($line)
+                    ?? $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
                 abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del ingrediente.');
                 $costPerUnit = (float) $line->unit_price / $pkgQty;
                 $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
@@ -262,6 +268,30 @@ class PurchaseLineRecorder
         }
 
         return $unitPrice / $purchaseUnitInIngredientUnits;
+    }
+
+    /**
+     * Divisor confirmado a mano en una factura anterior del mismo proveedor, si
+     * sigue apuntando al ítem con el que está asociado este renglón.
+     */
+    private function rememberedPkgQty(PurchaseLine $line): ?float
+    {
+        $purchase = $line->purchase;
+
+        if ($purchase === null) {
+            return null;
+        }
+
+        $hit = $this->linkMemory->recall($purchase->tenant, $purchase->supplier_id, $line->raw_name);
+
+        if ($hit === null || $hit['pkg_qty'] === null) {
+            return null;
+        }
+
+        $sameItem = $hit['purchaseable_type'] === $line->purchaseable_type
+            && $hit['purchaseable_id'] === (int) $line->purchaseable_id;
+
+        return $sameItem ? $hit['pkg_qty'] : null;
     }
 
     /**

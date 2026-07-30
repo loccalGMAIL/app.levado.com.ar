@@ -127,6 +127,85 @@ El flujo manual (`purchases.modals.create` → `PurchaseController::store()`) ya
 - `show.blade.php` no necesitó cambios: el botón "Ver factura original" ya era condicional a `invoice_image_path`, sin importar si vino de IA o de carga manual.
 - Tests: `tests/Feature/PurchaseCrudTest.php` (no existía cobertura de `purchases.store`/`update` antes de esto).
 
+## Memoria de vinculación por proveedor (v0.12.7)
+
+Hasta acá el vínculo vivía **sólo** en `purchase_lines.purchaseable_type/id`: la corrección
+humana se perdía y cada factura dependía de que la IA volviera a acertar. El `raw_name` nunca
+se consultaba contra el historial. Estaba anotado como diferido en este mismo archivo.
+
+### Tabla `supplier_product_links`
+
+`id, tenant_id, supplier_id, raw_name_normalized, raw_name_sample, purchaseable_type,
+purchaseable_id, pkg_qty (nullable), times_confirmed, last_used_at, timestamps`
+
+- Unique `(tenant_id, supplier_id, raw_name_normalized)` — la clave natural.
+- `purchaseable_id` **sin FK**, igual que en `purchase_lines` (apunta a dos tablas).
+- Modelo bajo `BelongsToTenant`. **Borrado físico**, contra la convención general: es un caché
+  de decisiones, no registro histórico, y olvidar es una operación legítima del usuario.
+- `pkg_qty` es el divisor **ya expresado en la unidad del catálogo**. El costo unitario NO se
+  guarda: ese cambia en cada compra.
+
+### `ProductLinkMemory`
+
+`recall()` / `recallMany()` / `remember()` / `forget()` / `fold()`.
+
+- `recallMany()` resuelve la factura entera en una query (una factura de 30 líneas no puede
+  costar 30 queries). `recall()` delega en él.
+- `fold()` = criterio de `SupplierMatcher::fold()` **más colapso de espacios**: las facturas
+  imprimen `"HARINA  000   X 25KG"` con espaciado irregular. Duplicado a propósito respecto de
+  SupplierMatcher — no hay acoplamiento de corrección entre las dos y ahora divergen.
+- `recall*()` **valida pertenencia al tenant antes de devolver**: sin FK, un vínculo puede
+  apuntar a un ítem borrado o ajeno, y un id inválido en los hidden inputs daría un match
+  fantasma sin nombre. Incluye ítems **inactivos** a propósito (regla del proveedor inactivo).
+- `remember()` conserva un `pkg_qty` viejo mientras el vínculo apunte al mismo ítem: la
+  confirmación en masa no manda divisor, y sin eso el primer clic en «Aplicar N sugerencias»
+  borraría el que se cargó a mano.
+
+### Dónde se lee y dónde se escribe
+
+| Punto | Qué hace |
+|---|---|
+| `PurchaseScanController::scan()` | pisa `matched_type/id` de la IA con lo recordado (decisión humana > conjetura) |
+| `PurchaseScanController::store()` | **vuelve a consultar** con el `supplier_id` definitivo |
+| `PurchaseController::matchLine()` | `remember()` en la rama de match; `forget()` en «— sin asociar —» y en `'excluded'` |
+| `PurchaseController::applyLineSuggestions()` | `remember()` por cada línea aplicada |
+| `PurchaseLineRecorder::apply()` | prefiere el `pkg_qty` recordado sobre `parseDescPkgQty()` |
+
+**Por qué `store()` no es redundante con `scan()`:** en la pantalla de revisión el usuario puede
+cambiar el proveedor o crear uno nuevo, y los hidden inputs quedaron congelados contra el que
+adivinó la IA. En `store()` el proveedor ya es el definitivo.
+
+**Por qué `applyLineSuggestions()` también escribe:** sin eso la memoria sólo aprendería de las
+correcciones una por una, y el camino más usado (aceptar en masa) no enseñaría nada.
+
+### Invariante de la feature
+
+**Un renglón recordado queda PENDIENTE, nunca aplicado.** La memoria pre-selecciona; ningún
+costo ni stock se mueve sin confirmación. Hay un test-ancla dedicado. Si esto se rompe, un texto
+ambiguo puede ensuciar costos y stock en silencio.
+
+**El `'excluded'` olvida pero no recuerda.** La tabla de alias para consumo personal recurrente
+sigue fuera de alcance (ver más abajo); recordar exclusiones acá rompería la invariante de los
+tres estados.
+
+### Divisor en la UI
+
+- Hidden `pkg_qty` en `match.blade.php` (antes el form sólo mandaba `unit_cost` ya dividido).
+- `matchRow()` recibe `remembered = { selection, pkgQty }`. Atado a la selección: el divisor es
+  del ítem, no del renglón, y `onSelect()` lo descarta al cambiar de ítem.
+- Rótulo **↻ verde** distinto del **✦ ámbar**: el ✦ significa «detectado en la descripción» y
+  mentiría sobre algo que confirmó el usuario.
+- **Efecto no obvio:** `applyLineSuggestions()` salteaba **siempre** los renglones de unidades
+  incompatibles (`apply()` abortaba 422). Con divisor recordado los resuelve. Es el mayor
+  ahorro de clicks de la feature.
+
+### Backfill
+
+`php artisan purchases:backfill-product-links [--dry-run]` — sólo renglones con
+`cost_applied_at` (decisiones consumadas; un pendiente puede ser una sugerencia de IA que nadie
+confirmó). Ante textos repetidos gana la imputación más reciente. Deja `pkg_qty` en null: no
+está persistido en ningún lado y derivarlo sería recrear el fallback que ya existe.
+
 ## Renglones no imputables — consumo personal (v0.12.4)
 
 Feedback real de Confitería Orfano: el dueño mete compras personales en la misma factura del proveedor de insumos. Antes esos renglones sólo podían quedar «— sin asociar —», que **es** el estado pendiente, así que la factura nunca llegaba a verde.
@@ -172,3 +251,7 @@ Badge **neutro** (`bg-miga`/`text-masa-madre`), deliberadamente **no ámbar**: e
 ### Fuera de alcance (decidido, no implementar sin pedido)
 
 Tabla de alias para autosugerir renglones personales recurrentes; reporte mensual de retiros del titular; un cuarto destino para gastos del negocio que no son insumo (ferretería) con alta automática de `variable_expense`; distinguir si el consumo personal se pagó con plata del negocio; la opción de exclusión en el modal de edición de renglón de `purchases/show`.
+
+**Ojo:** la memoria de vinculación de la v0.12.7 **no** cubre el primer punto. Recuerda a qué
+ítem del catálogo corresponde un texto, no que un texto sea consumo personal — `matchLine()`
+*olvida* el vínculo al excluir. Autosugerir exclusiones sigue siendo trabajo aparte.

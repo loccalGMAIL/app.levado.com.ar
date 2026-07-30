@@ -10,6 +10,7 @@ use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceExtractor;
 use App\Services\InvoiceImagePreparer;
+use App\Services\ProductLinkMemory;
 use App\Services\PurchaseLineRecorder;
 use App\Services\SupplierMatcher;
 use Illuminate\Http\RedirectResponse;
@@ -28,6 +29,7 @@ class PurchaseScanController extends Controller
         private readonly InvoiceImagePreparer $preparer,
         private readonly PurchaseLineRecorder $lineRecorder,
         private readonly SupplierMatcher $supplierMatcher,
+        private readonly ProductLinkMemory $linkMemory,
     ) {}
 
     public function create(): View
@@ -79,6 +81,12 @@ class PurchaseScanController extends Controller
         $matchedSupplierId = $this->supplierMatcher->match($draft['header']['supplier_name'] ?? null, $suppliers);
         $invoiceNumber = $draft['header']['invoice_number'] ?? null;
 
+        // Lo que ya se vinculó a mano en facturas anteriores de este proveedor pisa
+        // a la IA: es una decisión humana contra una conjetura. Si el proveedor no
+        // se reconoció, no hay memoria que consultar — store() lo reintenta con el
+        // proveedor definitivo que elija el usuario.
+        $draft['lines'] = $this->applyMemory($draft['lines'], $tenant, $matchedSupplierId);
+
         $possibleDuplicate = null;
         if (filled($invoiceNumber) && $matchedSupplierId !== null) {
             $possibleDuplicate = Purchase::where('tenant_id', $tenant->id)
@@ -94,9 +102,11 @@ class PurchaseScanController extends Controller
             'suppliers' => $suppliers,
             'units' => Unit::cases(),
             'possibleDuplicate' => $possibleDuplicate,
-            // For the "se sugerirá: X" hint per line.
-            'ingredientNames' => $ingredients->pluck('name', 'id'),
-            'packagingNames' => $packagings->pluck('name', 'id'),
+            // For the "se sugerirá: X" hint per line. Incluye los ítems dados de
+            // baja: la memoria sí puede devolver uno (misma regla del proveedor
+            // inactivo), y sin su nombre el hint quedaría vacío.
+            'ingredientNames' => $tenant->ingredients()->pluck('name', 'id'),
+            'packagingNames' => $tenant->packagings()->pluck('name', 'id'),
         ]);
     }
 
@@ -123,7 +133,16 @@ class PurchaseScanController extends Controller
             return back()->withInput()->with('error', 'Marcá al menos un renglón para guardar la compra.');
         }
 
-        $purchase = DB::transaction(function () use ($tenant, $data, $imagePath, $rows, $ingredientIds, $packagingIds) {
+        // No es redundante con scan(): en la revisión el usuario puede cambiar el
+        // proveedor o crear uno nuevo, y los hidden inputs quedaron congelados
+        // contra el que adivinó la IA. Acá el proveedor ya es el definitivo.
+        $recalled = $this->linkMemory->recallMany(
+            $tenant,
+            (int) $data['supplier_id'],
+            $rows->pluck('raw_name')->all(),
+        );
+
+        $purchase = DB::transaction(function () use ($tenant, $data, $imagePath, $rows, $ingredientIds, $packagingIds, $recalled) {
             $purchase = $tenant->purchases()->create([
                 'supplier_id' => $data['supplier_id'],
                 'invoice_number' => $data['invoice_number'] ?? null,
@@ -136,7 +155,11 @@ class PurchaseScanController extends Controller
             ]);
 
             foreach ($rows as $row) {
-                [$type, $id] = $this->validSuggestion($row, $ingredientIds, $packagingIds);
+                $hit = $recalled[$this->linkMemory->fold((string) ($row['raw_name'] ?? ''))] ?? null;
+
+                [$type, $id] = $hit !== null
+                    ? [$hit['purchaseable_type'], $hit['purchaseable_id']]
+                    : $this->validSuggestion($row, $ingredientIds, $packagingIds);
 
                 $this->lineRecorder->storePending($purchase, [
                     'raw_name' => $row['raw_name'] ?? null,
@@ -164,6 +187,39 @@ class PurchaseScanController extends Controller
 
         return redirect()->route('purchases.show', $purchase)
             ->with('status', 'Compra guardada. Ahora asociá los renglones con tus insumos para actualizar los costos.');
+    }
+
+    /**
+     * Pisa la sugerencia de la IA con lo que ya se vinculó a mano para este
+     * proveedor. Devuelve las líneas tal cual si no hay proveedor reconocido.
+     *
+     * @param  array<int, array<string, mixed>>  $lines
+     * @return array<int, array<string, mixed>>
+     */
+    private function applyMemory(array $lines, Tenant $tenant, ?int $supplierId): array
+    {
+        $recalled = $this->linkMemory->recallMany(
+            $tenant,
+            $supplierId,
+            array_column($lines, 'raw_name'),
+        );
+
+        if ($recalled === []) {
+            return $lines;
+        }
+
+        return array_map(function (array $line) use ($recalled) {
+            $hit = $recalled[$this->linkMemory->fold((string) ($line['raw_name'] ?? ''))] ?? null;
+
+            if ($hit === null) {
+                return $line;
+            }
+
+            $line['matched_type'] = $hit['purchaseable_type'];
+            $line['matched_id'] = $hit['purchaseable_id'];
+
+            return $line;
+        }, $lines);
     }
 
     /**

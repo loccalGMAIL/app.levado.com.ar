@@ -242,12 +242,25 @@ metadata:
 - Componentes nuevos: `x-expense-tabs` (data-driven; un tercer tipo = una línea en el array) y `x-expense-categories-modal` (extracción parametrizada del modal de categorías, ahora compartido). Deuda deliberada: `VariableExpenseCategoryController` duplica ~90 L; extraer a base class recién cuando haya un tercer tipo con 3 casos reales.
 - 396 tests, todos verdes (44 nuevos). Gate de no-regresión: `FixedCostCrudTest` pasa 21/21 sin haber modificado el archivo.
 
+## v0.12.7 — Memoria de vinculación de productos por proveedor (2026-07-30)
+- La vinculación de un renglón con un insumo/descartable **ya no se pierde**: queda guardada por
+  proveedor en `supplier_product_links` y la próxima factura de ese proveedor llega
+  pre-vinculada. Antes el vínculo vivía sólo en `purchase_lines` y todo dependía de que la IA
+  volviera a acertar en cada escaneo. Ver [[feature-compras]] → Memoria de vinculación.
+- **Pre-selecciona, nunca aplica:** el renglón recordado queda pendiente; el costo y el stock se
+  siguen moviendo sólo con confirmación humana. Es la invariante de la feature, con test-ancla.
+- El **divisor** de unidades incompatibles también se recuerda. Efecto no obvio: «Aplicar N
+  sugerencias» salteaba siempre esos renglones y ahora los resuelve.
+- Comando `purchases:backfill-product-links` (con `--dry-run`) para sembrar la memoria desde las
+  facturas ya imputadas.
+- **545 tests, todos verdes** (22 nuevos).
+
 ## Versioning
-- Versión actual: **`0.12.6`**. La fuente de verdad es **`config/app.php`** (es la que se lee en el
+- Versión actual: **`0.12.7`**. La fuente de verdad es **`config/app.php`** (es la que se lee en el
   pie del sidebar); `package.json` y `package-lock.json` la espejan. Ver [[project-architecture]] →
   Convenciones para los archivos que hay que tocar al subir de versión.
-- Rama activa: `claude/mobile-typography-overflow-3imfwx`, sobre `master` (que ya tiene v0.12.5
-  mergeado, PR #51).
+- Rama activa: `claude/product-linking-invoices-7uqgph`, sobre `master` (que ya tiene v0.12.6
+  mergeado, PR #52).
 
 **Why:** El MVP prioriza costos de producción (el diferenciador real); POS y stock son etapas posteriores.
 **How to apply:** Al sugerir tareas, respetar el orden de dependencias. No construir stock ni POS hasta tener recetas completas.

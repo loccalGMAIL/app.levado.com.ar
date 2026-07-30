@@ -13,6 +13,7 @@ use App\Models\PurchaseLine;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceImagePreparer;
+use App\Services\ProductLinkMemory;
 use App\Services\PurchaseLineRecorder;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,7 @@ class PurchaseController extends Controller
         private readonly PurchaseLineRecorder $lineRecorder,
         private readonly StockService $stock,
         private readonly InvoiceImagePreparer $imagePreparer,
+        private readonly ProductLinkMemory $linkMemory,
     ) {}
 
     public function index(): View
@@ -411,7 +413,30 @@ class PurchaseController extends Controller
             ],
         ]))->toArray();
 
-        return view('purchases.match', compact('purchase', 'ingredients', 'packagings', 'matchCatalog'));
+        // Divisores recordados de facturas anteriores de este proveedor, indexados
+        // por "tipo:id" para que el componente Alpine sólo los use si el renglón
+        // sigue apuntando al mismo ítem que se recordó.
+        $recalled = $this->linkMemory->recallMany(
+            $tenant,
+            $purchase->supplier_id,
+            $purchase->lines->pluck('raw_name')->all(),
+        );
+
+        $rememberedPkgQty = $purchase->lines
+            ->mapWithKeys(function (PurchaseLine $line) use ($recalled) {
+                $hit = $recalled[$this->linkMemory->fold((string) $line->raw_name)] ?? null;
+
+                return [$line->id => $hit === null || $hit['pkg_qty'] === null ? null : [
+                    'selection' => "{$hit['purchaseable_type']}:{$hit['purchaseable_id']}",
+                    'pkgQty' => $hit['pkg_qty'],
+                ]];
+            })
+            ->filter()
+            ->toArray();
+
+        return view('purchases.match', compact(
+            'purchase', 'ingredients', 'packagings', 'matchCatalog', 'rememberedPkgQty',
+        ));
     }
 
     /**
@@ -426,6 +451,7 @@ class PurchaseController extends Controller
         $validated = $request->validate([
             'match' => ['nullable', 'string'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'pkg_qty' => ['nullable', 'numeric', 'min:0.001'],
             'exclusion_note' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -433,11 +459,16 @@ class PurchaseController extends Controller
         $unitCost = isset($validated['unit_cost']) && $validated['unit_cost'] !== ''
             ? (float) $validated['unit_cost']
             : null;
+        $pkgQty = isset($validated['pkg_qty']) && $validated['pkg_qty'] !== ''
+            ? (float) $validated['pkg_qty']
+            : null;
+
+        $tenant = app(Tenant::class);
 
         // "— sin asociar —": mark the line as pending again (does not revert costs,
         // but does revert its stock entry so the ledger stays consistent).
         if (blank($match)) {
-            DB::transaction(function () use ($line) {
+            DB::transaction(function () use ($line, $tenant, $purchase) {
                 if ($line->isApplied()) {
                     $this->stock->reversePurchaseLineEntry($line, request()->user());
                 }
@@ -449,6 +480,10 @@ class PurchaseController extends Controller
                     'excluded_at' => null,
                     'exclusion_note' => null,
                 ]);
+
+                // Sin esto la próxima factura volvería a sugerir justo lo que
+                // el usuario acaba de descartar.
+                $this->linkMemory->forget($tenant, $purchase->supplier_id, $line->raw_name);
             });
 
             return back()->with('status', 'Renglón marcado como pendiente.');
@@ -458,7 +493,7 @@ class PurchaseController extends Controller
         // titular en la factura del proveedor). No colisiona con un match real, que
         // siempre viaja como "tipo:id".
         if ($match === self::EXCLUDED_MATCH) {
-            DB::transaction(function () use ($line, $request, $validated) {
+            DB::transaction(function () use ($line, $request, $validated, $tenant, $purchase) {
                 if ($line->isApplied()) {
                     $this->stock->reversePurchaseLineEntry($line, $request->user());
                 }
@@ -470,6 +505,12 @@ class PurchaseController extends Controller
                     'excluded_at' => now(),
                     'exclusion_note' => $validated['exclusion_note'] ?? null,
                 ]);
+
+                // Se olvida el vínculo, pero NO se recuerda la exclusión: la tabla
+                // de alias para consumo personal recurrente está fuera de alcance
+                // (ver feature-compras.md), y mezclarla acá rompería la invariante
+                // de los tres estados del renglón.
+                $this->linkMemory->forget($tenant, $purchase->supplier_id, $line->raw_name);
             });
 
             $this->recorder->record(
@@ -489,14 +530,13 @@ class PurchaseController extends Controller
         abort_unless($itemType !== null && is_numeric($id), 422);
         $type = $itemType->value;
 
-        $tenant = app(Tenant::class);
         $belongs = $itemType === CatalogItemType::Ingredient
             ? $tenant->ingredients()->whereKey($id)->exists()
             : $tenant->packagings()->whereKey($id)->exists();
         abort_unless($belongs, 422);
 
         try {
-            DB::transaction(function () use ($line, $type, $id, $unitCost) {
+            DB::transaction(function () use ($line, $type, $id, $unitCost, $pkgQty) {
                 // Asociar saca al renglón del estado "consumo personal", si venía de ahí.
                 $line->update([
                     'purchaseable_type' => $type,
@@ -509,6 +549,10 @@ class PurchaseController extends Controller
                 } else {
                     $this->lineRecorder->apply($line);
                 }
+
+                // La corrección a mano es la señal de máxima calidad: es lo que
+                // hace que la próxima factura de este proveedor llegue vinculada.
+                $this->linkMemory->remember($line, $pkgQty);
             });
         } catch (HttpException $e) {
             return back()->with('error', $e->getMessage());
@@ -546,7 +590,13 @@ class PurchaseController extends Controller
         foreach ($pending as $line) {
             $line->setRelation('purchase', $purchase);
             try {
-                DB::transaction(fn () => $this->lineRecorder->apply($line));
+                DB::transaction(function () use ($line) {
+                    $this->lineRecorder->apply($line);
+                    // Aceptar en masa también es una decisión humana. Sin esto la
+                    // memoria sólo aprendería de las correcciones una por una, y
+                    // el camino más usado no enseñaría nada.
+                    $this->linkMemory->remember($line);
+                });
                 $applied++;
             } catch (HttpException $e) {
                 if (str_contains($e->getMessage(), 'unidades no son compatibles')) {
