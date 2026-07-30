@@ -56,9 +56,31 @@ Nota: `@vite` carga como `type="module"` (deferred), así que un `<script>` inli
 ## Otros detalles del port
 - Tipografía **Inter** en títulos/números/charts (se descartaron Playfair Display y DM Sans);
   JetBrains Mono sigue para montos. Escala de color `brown` agregada en `tailwind.config.js`.
-- Gastos fijos con **2 decimales** (antes 0). Badge `x-semi-badge` en la tabla, sufijo `/ u` en
-  precio, `Unit::short()` en el rinde.
+- Gastos fijos con **2 decimales** (antes 0) — **revertido a 0 en v0.12.6, ver abajo.** Badge
+  `x-semi-badge` en la tabla, sufijo `/ u` en precio, `Unit::short()` en el rinde.
 - Selector de lista de precios (fallback a default si el param es inválido/ajeno/inactivo).
+
+## v0.12.6 — los montos de 8-9 dígitos se salían de las KPI cards
+`$ 123.456.789,00` mide 230px en JetBrains Mono a `text-2xl`, y la card del grid de 2 columnas deja
+113px de interior en un celular de 375px: el número se pasaba 117px y arrastraba scroll horizontal a
+toda la página. **No era un problema de mobile:** se salía en todos los anchos por debajo de ~1440px,
+porque el interior disponible **no es monótono** respecto del viewport (a 1024px las 4 columnas dejan
+136px, *menos* que un celular de 390px). Ver [[pattern-cifras-responsive]] para el mecanismo.
+
+Lo específico del dashboard:
+- **Gastos fijos y Overhead por hora toman `col-span-2` mientras el grid sea de 2 columnas**, con
+  `order-3` / `order-4` para que Recetas activas y Utilidad promedio compartan la primera fila. Sin
+  el `order` la auto-colocación deja media fila vacía arriba y abajo. En mobile son 3 filas en vez
+  de 2: a media pantalla el monto no entra a ningún tamaño legible.
+- **Los dos KPI de importe vuelven a 0 decimales** (revierte a propósito la decisión de v0.12.1):
+  son 3 caracteres que a ese tamaño no sobran y en un total mensual los centavos no aportan. El
+  valor exacto pasa al `title`. **El cambio es sólo del KPI** — tabla, Resumen operativo, detalle de
+  receta y Mi negocio siguen con 2 decimales.
+- Las filas de ícono + píldora llevan `flex-wrap` (la píldora baja en vez de salirse, y así el
+  arreglo no depende de las métricas exactas de Inter). `↑ activas` se oculta en mobile y
+  `↑ obj. 38%` se acorta a `↑ 38%`.
+- Anclas en `MontosGrandesEnMobileTest`: el utilitario en la cifra, el `col-span` de las cards de
+  importe y el `title` con el valor exacto. Verificadas contra un revert del arreglo — fallan.
 
 ## Tests
 `DashboardCachedCostTest` y `DashboardRentabilidadTest`. Se agregaron 4 anclas: `margin_filter=high`

@@ -80,8 +80,8 @@
 
             {{-- Header de la compra --}}
             <div class="bg-white rounded-lg shadow p-6">
-                <div class="flex items-start justify-between gap-4">
-                    <div class="space-y-2">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div class="min-w-0 space-y-2">
                         <div class="flex items-center gap-2">
                             <h2 class="text-base font-semibold text-corteza">
                                 {{ $purchase->invoice_number ? 'Factura N° ' . $purchase->invoice_number : 'Compra sin número de factura' }}
@@ -116,17 +116,19 @@
                             </button>
                         @endif
                     </div>
-                    <div class="text-right shrink-0 space-y-2">
+                    {{-- En mobile los totales bajan a su propia fila con el ancho completo:
+                         apilados a la derecha con `shrink-0` empujaban el monto fuera de la card. --}}
+                    <div class="sm:text-right sm:shrink-0 space-y-2">
                         <div>
                             <p class="text-xs text-masa-madre">Total renglones{{ $totalIva > 0 ? ' (sin IVA)' : '' }}</p>
-                            <p class="text-xl font-mono font-semibold text-corteza">
+                            <p class="text-lg sm:text-xl font-mono font-semibold text-corteza [overflow-wrap:anywhere]">
                                 ${{ number_format($purchase->totalAmount(), 2, ',', '.') }}
                             </p>
                         </div>
                         @if($purchase->invoice_total && $totalIva > 0)
                             <div>
                                 <p class="text-xs text-masa-madre">Total factura (con IVA)</p>
-                                <p class="text-sm font-mono text-corteza">
+                                <p class="text-sm font-mono text-corteza [overflow-wrap:anywhere]">
                                     ${{ number_format($purchase->invoice_total, 2, ',', '.') }}
                                 </p>
                             </div>

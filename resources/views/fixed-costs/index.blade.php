@@ -89,13 +89,13 @@
                     <x-slot:cards>
                     @foreach($fixedCosts as $fixedCost)
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $fixedCost->active ? '' : 'opacity-50' }}">
-                            <div class="flex items-start justify-between">
-                                <div>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
                                     <div class="font-medium text-corteza">{{ $fixedCost->name }}</div>
                                     @if($fixedCost->category)
                                         <div class="text-xs text-masa-madre mt-0.5">{{ $fixedCost->category->name }}</div>
                                     @endif
-                                    <div class="text-sm font-mono text-corteza mt-1">$ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }} / mes</div>
+                                    <div class="text-sm font-mono text-corteza mt-1 [overflow-wrap:anywhere]">$ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }} / mes</div>
                                 </div>
                                 <x-status-badge :active="$fixedCost->active" />
                             </div>

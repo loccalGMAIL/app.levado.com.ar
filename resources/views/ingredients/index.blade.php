@@ -95,8 +95,8 @@
                                 : $ingredient->unit->short();
                         @endphp
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $ingredient->active ? '' : 'opacity-50' }}">
-                            <div class="flex items-start justify-between">
-                                <div>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
                                     <div class="font-medium text-corteza">{{ $ingredient->name }}</div>
                                     <div class="text-xs text-masa-madre mt-0.5">
                                         {{ $ingredient->unit->short() }}
@@ -107,7 +107,7 @@
                                 </div>
                                 <x-status-badge :active="$ingredient->active" />
                             </div>
-                            <div class="mt-2">
+                            <div class="mt-2 [overflow-wrap:anywhere]">
                                 <span class="text-sm font-mono text-corteza">$ {{ number_format($ingredient->cost_per_unit, 2, ',', '.') }}</span>
                                 <span class="text-xs text-masa-madre">/ {{ $ingredient->subdivisions && $ingredient->subdivision_label ? $ingredient->subdivision_label : $ingredient->unit->short() }}</span>
                             </div>

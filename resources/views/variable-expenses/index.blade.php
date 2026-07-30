@@ -113,8 +113,8 @@
                     <x-slot:cards>
                     @foreach($variableExpenses as $variableExpense)
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
-                            <div class="flex items-start justify-between">
-                                <div>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
                                     <div class="font-medium text-corteza flex items-center gap-1.5">
                                         {{ $variableExpense->name }}
                                         @if($variableExpense->receipt_image_path)
@@ -129,7 +129,7 @@
                                     <div class="text-xs text-masa-madre mt-0.5">
                                         {{ implode(' · ', array_filter([$variableExpense->category?->name, $variableExpense->supplier?->name])) ?: '—' }}
                                     </div>
-                                    <div class="text-sm font-mono text-corteza mt-1">$ {{ number_format($variableExpense->amount, 2, ',', '.') }}</div>
+                                    <div class="text-sm font-mono text-corteza mt-1 [overflow-wrap:anywhere]">$ {{ number_format($variableExpense->amount, 2, ',', '.') }}</div>
                                 </div>
                                 <div class="text-xs text-masa-madre shrink-0">{{ $variableExpense->expense_date->format('d/m/Y') }}</div>
                             </div>

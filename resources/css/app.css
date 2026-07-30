@@ -4,6 +4,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────
+   Cifras de las cards de resumen
+
+   Un importe de 8 o 9 dígitos ("$ 123.456.789") mide 7,8em en
+   JetBrains Mono: a 24px son 187px, más de lo que mide una card
+   de KPI en casi cualquier pantalla. El ancho disponible además
+   NO crece con el viewport — la card del 4-up a 1024px es más
+   angosta que la de un celular de 390px —, así que el tamaño se
+   mide contra el ancho de la card (container query) y no contra
+   el del viewport.
+
+   El padre lleva .kpi-card y la cifra .kpi-figure. Los límites
+   se ajustan por card con [--kpi-figure-max:…] cuando la cifra
+   no es el dato principal.
+
+   Va en la capa `components` y no al final del archivo: en la de
+   utilities, Tailwind emite el override de la custom property
+   ANTES que .kpi-figure y, con la misma especificidad, ganaba el
+   valor por defecto.
+
+   Ojo: container-type implica `contain: inline-size`, que colapsa
+   a 0 cualquier elemento cuyo ancho venga de su contenido (un
+   flex item con shrink-0, p. ej.). .kpi-card sólo va en items de
+   grid; en el resto el arreglo va por breakpoints.
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+    .kpi-card {
+        container-type: inline-size;
+    }
+
+    .kpi-figure {
+        --kpi-figure-min: 1rem;
+        --kpi-figure-max: 1.5rem;
+
+        /* 10cqi = el ancho de la card dividido 10: alcanza para 16 glifos de
+           JetBrains Mono (0,6em cada uno), o sea "$ 123.456.789,00" completo. */
+        font-size: var(--kpi-figure-max); /* fallback si el navegador no soporta cqi */
+        font-size: clamp(var(--kpi-figure-min), 10cqi, var(--kpi-figure-max));
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere; /* red de seguridad: parte el número antes de salirse */
+    }
+}
+
 /* Tom Select — match Tailwind form inputs */
 .ts-wrapper { position: relative; }
 
