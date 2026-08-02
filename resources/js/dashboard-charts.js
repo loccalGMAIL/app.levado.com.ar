@@ -1,9 +1,7 @@
-import ApexCharts from 'apexcharts';
-
 // Gráficos del dashboard (gauge / barras / dona). Los datos llegan desde un
 // <script type="application/json" id="dashboard-chart-data"> que emite la vista,
 // así que este módulo no depende de variables globales ni de JS inline.
-function initDashboardCharts() {
+async function initDashboardCharts() {
     const dataEl = document.getElementById('dashboard-chart-data');
     const gaugeEl = document.querySelector('#gaugeChart');
     if (!dataEl || !gaugeEl) {
@@ -16,6 +14,8 @@ function initDashboardCharts() {
     } catch (e) {
         return;
     }
+
+    const { default: ApexCharts } = await import('apexcharts');
 
     const brown500 = '#9B6240';
     const brown300 = '#C49272';

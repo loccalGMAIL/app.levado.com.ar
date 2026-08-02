@@ -5,6 +5,23 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.9] — 2026-08-02
+
+### El JS inicial pesaba 690 kB porque dos librerías pesadas viajaban en todas las páginas
+
+#### Cambiado
+
+- **ApexCharts y Shepherd (el tour de onboarding) ahora se cargan bajo demanda.** Antes se importaban de forma estática en el bundle principal, así que cualquier página los descargaba y parseaba aunque no los usara — sólo el dashboard usa gráficos, y el tour corre una única vez por usuario. Ahora cada uno se trae con `import()` dinámico justo cuando hace falta.
+- **TomSelect sigue siendo estático.** Alcanzaba con los dos cambios de arriba para bajar el bundle principal muy por debajo del límite de 500 kB de Vite, así que no hizo falta tocar `app.js` ni los blades que instancian `TomSelect` desde Alpine.
+
+#### Técnico
+
+- `dashboard-charts.js`: `initDashboardCharts()` pasa a `async` y hace `await import('apexcharts')` recién después del guard que confirma que estamos en el dashboard. `wireMarginFilter()` no depende de ApexCharts y sigue llamándose sin esperar ese import.
+- `onboarding-tour.js`: el cuerpo del módulo (ya condicionado a `window.levadoOnboarding`) pasa a un IIFE `async` que importa `shepherd.js` y su CSS de forma dinámica, así ambos salen del bundle principal.
+- Bundle principal: de 689.97 kB (191.96 kB gzip) a 117.62 kB (39.86 kB gzip). `apexcharts` y `shepherd` quedan como chunks separados que sólo se piden desde el dashboard y el onboarding respectivamente.
+
+---
+
 ## [0.12.8] — 2026-08-02
 
 ### En mobile el botón «Crear» de una categoría nueva quedaba tapado por la fecha
