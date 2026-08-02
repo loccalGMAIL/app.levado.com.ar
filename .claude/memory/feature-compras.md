@@ -57,7 +57,7 @@ Rama: `feature/compras` — versión 0.7.1
 **Tom Select** integrado en todos los selects del módulo:
 - `purchases/modals/create.blade.php`: supplier select con `data-searchable`; el handler `supplier-created` usa `el._ts.addOption()` + `setValue()`.
 - `purchases/scan/review.blade.php`: supplier select migrado de Alpine `x-for` a `@foreach` server-side; Tom Select inicializado con `x-init`/`$nextTick` y `supplierTs` guardado en Alpine data; handler `supplier-created` usa la instancia.
-- `purchases/match.blade.php`: select de insumo/descartable por renglón, Tom Select via `x-init`/`$nextTick`, coexiste con `x-model` + `@change` (Tom Select dispara `change` en el native select).
+- `purchases/match.blade.php`: select de insumo/descartable por renglón, coexiste con `x-model` + `@change` (Tom Select dispara `change` en el native select). **Desde v0.12.10 el catálogo NO se repite por renglón**: viaja una sola vez en `<template id="match-catalog-options">` y cada select se completa y monta Tom Select recién en el primer `mousedown`/`focus`, vía `upgradeMatchSelect()` (`resources/js/purchases/match.js`). El renglón renderiza sólo su opción elegida, para que se vea sin JS y el form siga siendo válido. Repetirlo costaba 15.000 `<option>` y 50 instancias de Tom Select al cargar una factura larga.
 
 **Límite de 4 decimales:**
 - `data-maxdecimals="4"` en inputs de cantidad y precio en show, edit-line, scan/review y match.
@@ -83,7 +83,7 @@ Rama: `feature/compras` — versión 0.7.1
 **Servicios:**
 - `PurchaseLineRecorder::applyWithCost(line, unitCost)`: aplica costo explícito sin conversión de unidades
 
-**Aplicación masiva:** botón "Aplicar N sugerencias de la IA" llama `applyLineSuggestions()` — solo aplica líneas con `purchaseable_id` set y unidades compatibles; las incompatibles quedan pendientes.
+**Aplicación masiva:** botón "Aplicar N sugerencias de la IA" llama `applyLineSuggestions()` — solo aplica líneas con `purchaseable_id` set y unidades compatibles; las incompatibles quedan pendientes. Desde v0.12.10 el bucle va dentro de `RecipeCostPropagator::batch()`: el árbol de recetas se recalcula **una vez al final**, no una vez por renglón (una factura de 30 renglones pasó de 3.132 a 676 queries).
 
 ## Vistas
 

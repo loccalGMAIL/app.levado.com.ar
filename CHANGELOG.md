@@ -5,6 +5,32 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.10] — 2026-08-02
+
+### Las pantallas de recetas y compras se quedaban pensando en negocios con muchas recetas
+
+#### Corregido
+
+- **Aplicar las sugerencias de una factura dejaba la pantalla colgada.** Cada renglón imputado recalculaba, por su cuenta, el costo de todas las recetas que usan ese insumo y de todas las recetas que las usan a ellas. Con 200 recetas y un insumo tan repartido como la harina, una factura de 30 renglones lanzaba **más de 3.100 consultas** y podía tardar minutos o directamente cortarse por timeout. Ahora la factura entera se recalcula **una sola vez al final**: 676 consultas para el mismo caso.
+- **Cambiar el costo de un insumo muy usado era igual de caro.** Pasa por el mismo recorrido, y lo mismo vale para editar la tarifa horaria de un rol —que está en casi todas las recetas— o corregir un descartable. Un insumo presente en 125 recetas pasó de **1.722 consultas a 16**.
+- **La pantalla de vincular renglones se trababa al abrirla.** El `<select>` de insumos se repetía completo en cada renglón: una factura de 50 líneas en un catálogo de 300 ítems mandaba **15.000 `<option>`** al navegador y montaba 50 buscadores TomSelect antes de dejar tocar nada. Ahora el catálogo viaja **una sola vez** y cada renglón se completa recién cuando lo tocás.
+- **Todos los listados hacían dos consultas por permiso, por fila.** El chequeo de permisos (`@can`) se evalúa una vez por fila de cada tabla y Laravel no cachea el resultado: abrir Recetas con 20 filas costaba **195 consultas**, de las cuales unas 180 eran sólo permisos. Ahora la membresía del usuario se resuelve una vez por request: **9 consultas**.
+- **El modal de sub-recetas recorría el árbol una vez por candidato.** Para decidir qué semi-elaboraciones se pueden agregar sin generar un ciclo, se preguntaba receta por receta caminando el mismo árbol desde cero cada vez. Ahora se recorre una vez y el filtro se resuelve en SQL: de 26 consultas a 2.
+- **Reconciliar las alertas del dashboard buscaba cada alerta por separado** y reescribía las que no habían cambiado. Ahora las trae todas juntas, sólo escribe las que efectivamente cambiaron, y busca los ítems de stock bajo en dos consultas en vez de una por ítem.
+
+#### Detalle técnico
+
+- `RecipeCostPropagator` se reescribió alrededor de un recorrido único: descubre el conjunto afectado (las recetas semilla y **todos** sus ancestros) con **una query por nivel** del árbol en vez de una por receta, lo ordena topológicamente —ninguna receta se recalcula antes que las sub-recetas de las que depende— y recién ahí hidrata y escribe, de a lotes de 100. Antes la corrección del orden dependía de que el mismo nodo se recorriera varias veces; ahora es una garantía del orden y hay un test de "diamante" que la fija.
+- Se agregó `RecipeCostPropagator::batch()`: agrupa en un solo recálculo todas las propagaciones que dispare el callback. Lo usan `PurchaseController::applyLineSuggestions()` y el comando `ingredients:fix-subdivision-costs`. El servicio se registra como singleton para que el batch alcance también a las propagaciones que dispara `PurchaseLineRecorder` más abajo en el grafo de dependencias.
+- El recálculo ya no escribe la receta si el costo no cambió (antes hacía un `update` por nodo recorrido, y le movía el `updated_at`).
+- `RecipeCostPropagator::ancestorsOf()` reemplaza al `isAncestor()` por candidato en `RecipeShowViewModel`; `isAncestor()` queda como caso particular y se sigue usando para el guard de ciclos.
+- `User::roleInTenant()` / `isSuperAdmin()` resuelven contra la relación `tenantUsers` cargada una vez por request en lugar de consultar la base en cada chequeo. Se invalida con `$user->unsetRelation('tenantUsers')`.
+- `purchases/match.blade.php` emite el catálogo en un `<template id="match-catalog-options">` compartido; cada renglón renderiza sólo su opción elegida (así se ve bien y el formulario sigue siendo válido sin JS) y `upgradeMatchSelect()` clona la lista y monta TomSelect en el primer `mousedown`/`focus`.
+- `NotificationService` cachea las alertas vivas del tenant durante la reconciliación y usa `isDirty()` antes de escribir.
+- 8 tests nuevos. **553 tests, todos verdes.** Bundle JS principal sin cambios (117,9 kB).
+
+---
+
 ## [0.12.9] — 2026-08-02
 
 ### El JS inicial pesaba 690 kB porque dos librerías pesadas viajaban en todas las páginas

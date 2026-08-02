@@ -62,9 +62,12 @@ servicios, la migración es mecánica):
 - **Mails** (`Mail::send` → `queue()`): invitaciones, bienvenida, reset.
 - **Escaneo IA** (`InvoiceExtractor`, `ExpenseReceiptExtractor`): hoy bloquea
   un worker PHP-FPM hasta 60 s dentro del request. Es el mayor beneficiario.
-- **Propagación de costos** (`RecipeCostPropagator`): síncrona está bien a la
-  escala actual; encolar solo si un cambio de precio de ingrediente muy usado
-  se vuelve lento (medir antes).
+- **Propagación de costos** (`RecipeCostPropagator`): se midió en v0.12.10 con
+  un escenario tamaño Orfano (220 recetas, insumo en 125 de ellas) y **era** el
+  cuelgue reportado: 1.722 queries por propagación, ×30 renglones al aplicar una
+  factura. Resuelto sin colas — recorrido único con orden topológico y
+  `batch()`— y quedó en 16 queries. Encolarlo ya no es prioritario: si vuelve a
+  aparecer, el candidato es el `batch()` completo, no cada propagación suelta.
 - Regla de diseño vigente: los servicios nuevos deben ser serializables
   (recibir IDs, no closures) para que el pasaje a Jobs sea trivial.
 

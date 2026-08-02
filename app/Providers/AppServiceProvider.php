@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\TenantUserRole;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\RecipeCostPropagator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
@@ -12,7 +13,13 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // Singleton para que RecipeCostPropagator::batch() agrupe también las
+        // propagaciones que disparan los servicios inyectados más abajo en el
+        // grafo (PurchaseLineRecorder, por ejemplo).
+        $this->app->singleton(RecipeCostPropagator::class);
+    }
 
     public function boot(): void
     {

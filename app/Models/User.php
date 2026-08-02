@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 
 #[Fillable(['name', 'email', 'password', 'active'])]
@@ -37,12 +38,7 @@ class User extends Authenticatable
 
     public function roleInTenant(Tenant $tenant): ?TenantUserRole
     {
-        $tenantUser = $this->tenantUsers()
-            ->where('tenant_id', $tenant->id)
-            ->where('active', true)
-            ->first();
-
-        return $tenantUser?->role;
+        return $this->activeTenantUsers()->firstWhere('tenant_id', $tenant->id)?->role;
     }
 
     public function hasRoleInTenant(Tenant $tenant, TenantUserRole ...$roles): bool
@@ -54,10 +50,25 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->tenantUsers()
-            ->where('role', TenantUserRole::SuperAdmin->value)
-            ->where('active', true)
-            ->exists();
+        return $this->activeTenantUsers()
+            ->contains(fn (TenantUser $tenantUser) => $tenantUser->role === TenantUserRole::SuperAdmin);
+    }
+
+    /**
+     * Membresías activas del usuario, resueltas una sola vez por request.
+     *
+     * Los gates (manage-costs, edit-settings, …) se evalúan una vez por fila en
+     * cada tabla y Laravel no cachea su resultado: con una query por chequeo,
+     * un listado de 20 filas se iba a ~80 queries sólo en permisos. La relación
+     * cargada hace de cache; `$user->unsetRelation('tenantUsers')` la invalida.
+     *
+     * @return Collection<int, TenantUser>
+     */
+    private function activeTenantUsers(): Collection
+    {
+        $this->loadMissing('tenantUsers');
+
+        return $this->tenantUsers->where('active', true);
     }
 
     public function sendPasswordResetNotification($token): void

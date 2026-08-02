@@ -15,6 +15,7 @@ use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceImagePreparer;
 use App\Services\ProductLinkMemory;
 use App\Services\PurchaseLineRecorder;
+use App\Services\RecipeCostPropagator;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +42,7 @@ class PurchaseController extends Controller
         private readonly StockService $stock,
         private readonly InvoiceImagePreparer $imagePreparer,
         private readonly ProductLinkMemory $linkMemory,
+        private readonly RecipeCostPropagator $propagator,
     ) {}
 
     public function index(): View
@@ -587,25 +589,30 @@ class PurchaseController extends Controller
             ->whereNull('excluded_at')
             ->get();
 
-        foreach ($pending as $line) {
-            $line->setRelation('purchase', $purchase);
-            try {
-                DB::transaction(function () use ($line) {
-                    $this->lineRecorder->apply($line);
-                    // Aceptar en masa también es una decisión humana. Sin esto la
-                    // memoria sólo aprendería de las correcciones una por una, y
-                    // el camino más usado no enseñaría nada.
-                    $this->linkMemory->remember($line);
-                });
-                $applied++;
-            } catch (HttpException $e) {
-                if (str_contains($e->getMessage(), 'unidades no son compatibles')) {
-                    $skipped++;
-                } else {
-                    $failed++;
+        // Un solo recálculo del árbol de recetas para toda la factura: sin esto
+        // cada renglón lo recorría entero por su cuenta, y una factura larga en
+        // un negocio con cientos de recetas dejaba la request colgada minutos.
+        $this->propagator->batch(function () use ($pending, $purchase, &$applied, &$skipped, &$failed) {
+            foreach ($pending as $line) {
+                $line->setRelation('purchase', $purchase);
+                try {
+                    DB::transaction(function () use ($line) {
+                        $this->lineRecorder->apply($line);
+                        // Aceptar en masa también es una decisión humana. Sin esto la
+                        // memoria sólo aprendería de las correcciones una por una, y
+                        // el camino más usado no enseñaría nada.
+                        $this->linkMemory->remember($line);
+                    });
+                    $applied++;
+                } catch (HttpException $e) {
+                    if (str_contains($e->getMessage(), 'unidades no son compatibles')) {
+                        $skipped++;
+                    } else {
+                        $failed++;
+                    }
                 }
             }
-        }
+        });
 
         $message = match (true) {
             $applied > 0 && $skipped > 0 => "{$applied} renglón(es) aplicado(s). {$skipped} requieren especificar el divisor manualmente.",

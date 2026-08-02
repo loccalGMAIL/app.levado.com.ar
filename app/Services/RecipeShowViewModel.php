@@ -141,13 +141,16 @@ class RecipeShowViewModel
      */
     private function availableSemiElaborates(Recipe $recipe, Tenant $tenant): Collection
     {
+        // Un solo recorrido hacia arriba para todos los candidatos: preguntar
+        // isAncestor() por candidato repetía el mismo camino una vez por receta.
+        $ancestorIds = $this->propagator->ancestorsOf($recipe->id, $tenant->id);
+
         return $tenant->recipes()
             ->where('is_semi_elaborate', true)
             ->active()
-            ->where('id', '!=', $recipe->id)
+            ->whereKeyNot($recipe->id)
+            ->when($ancestorIds !== [], fn ($query) => $query->whereKeyNot($ancestorIds))
             ->orderBy('name')
-            ->get()
-            ->filter(fn ($candidate) => ! $this->propagator->isAncestor($candidate->id, $recipe->id, $tenant->id))
-            ->values();
+            ->get();
     }
 }

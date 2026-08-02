@@ -196,44 +196,20 @@
                                                 <input type="hidden" name="pkg_qty" x-bind:value="needsPkgQty && pkgQty > 0 ? pkgQty : ''">
 
                                                 <div class="flex items-start gap-3 flex-wrap">
-                                                    {{-- Select de insumo/descartable --}}
+                                                    {{-- Select de insumo/descartable.
+                                                         El catálogo entero se emite UNA vez por página (ver el
+                                                         <template> del final): acá va sólo la opción elegida, y
+                                                         upgradeMatchSelect() completa la lista y monta TomSelect
+                                                         recién cuando el usuario toca el select. --}}
                                                     <select x-model="selected" @change="onSelect()"
-                                                        x-init="$nextTick(() => { new TomSelect($el, { maxOptions: null, dropdownParent: 'body' }); })"
+                                                        @mousedown.prevent="upgradeMatchSelect($el)"
+                                                        @focus="upgradeMatchSelect($el, false)"
                                                         class="text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1.5 min-w-[220px]">
                                                         <option value="">— sin asociar —</option>
-                                                        {{-- Aparte del catálogo para que no se mezcle con los ingredientes. --}}
-                                                        <optgroup label="Otros destinos">
-                                                            <option value="excluded" @selected($currentValue === 'excluded')>
-                                                                Consumo personal
-                                                            </option>
-                                                        </optgroup>
-                                                        @if($ingredients->isNotEmpty())
-                                                            <optgroup label="Insumos">
-                                                                @foreach($ingredients as $ing)
-                                                                    <option value="ingredient:{{ $ing->id }}"
-                                                                        @selected($currentValue === "ingredient:{$ing->id}")>
-                                                                        {{ $ing->name }}@if(! $ing->active) (inactivo)@endif
-                                                                        @if($ing->subdivisions)
-                                                                            ({{ $ing->subdivisions }} {{ $ing->subdivision_label ?? 'u' }} / envase)
-                                                                        @else
-                                                                            ({{ $ing->unit->short() }})
-                                                                        @endif
-                                                                    </option>
-                                                                @endforeach
-                                                            </optgroup>
-                                                        @endif
-                                                        @if($packagings->isNotEmpty())
-                                                            <optgroup label="Descartables">
-                                                                @foreach($packagings as $pkg)
-                                                                    <option value="packaging:{{ $pkg->id }}"
-                                                                        @selected($currentValue === "packaging:{$pkg->id}")>
-                                                                        {{ $pkg->name }}@if(! $pkg->active) (inactivo)@endif
-                                                                        @if($pkg->subdivisions)
-                                                                            ({{ $pkg->subdivisions }} {{ $pkg->subdivision_label ?? 'u' }} / envase)
-                                                                        @endif
-                                                                    </option>
-                                                                @endforeach
-                                                            </optgroup>
+                                                        @if($currentValue === 'excluded')
+                                                            <option value="excluded" selected>Consumo personal</option>
+                                                        @elseif($currentValue !== '')
+                                                            <option value="{{ $currentValue }}" selected>{{ $matchedName ?? $currentValue }}</option>
                                                         @endif
                                                     </select>
 
@@ -335,6 +311,32 @@
                         Los renglones pendientes no actualizan ningún costo hasta asociarlos.
                     </p>
                 @endif
+
+                {{-- Catálogo compartido por todos los selects de la tabla. Antes viajaba
+                     repetido renglón por renglón: una factura de 50 líneas con 300 ítems
+                     de catálogo mandaba 15.000 <option> y montaba 50 TomSelect al cargar,
+                     que es lo que dejaba la pantalla trabada. --}}
+                <template id="match-catalog-options">
+                    <option value="">— sin asociar —</option>
+                    {{-- Aparte del catálogo para que no se mezcle con los ingredientes. --}}
+                    <optgroup label="Otros destinos">
+                        <option value="excluded">Consumo personal</option>
+                    </optgroup>
+                    @if($ingredients->isNotEmpty())
+                        <optgroup label="Insumos">
+                            @foreach($ingredients as $ing)
+                                <option value="ingredient:{{ $ing->id }}">{{ $ing->name }}@if(! $ing->active) (inactivo)@endif @if($ing->subdivisions)({{ $ing->subdivisions }} {{ $ing->subdivision_label ?? 'u' }} / envase)@else({{ $ing->unit->short() }})@endif</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                    @if($packagings->isNotEmpty())
+                        <optgroup label="Descartables">
+                            @foreach($packagings as $pkg)
+                                <option value="packaging:{{ $pkg->id }}">{{ $pkg->name }}@if(! $pkg->active) (inactivo)@endif @if($pkg->subdivisions)({{ $pkg->subdivisions }} {{ $pkg->subdivision_label ?? 'u' }} / envase)@endif</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                </template>
             @endif
 
         </div>

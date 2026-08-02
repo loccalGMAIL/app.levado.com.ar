@@ -1,3 +1,5 @@
+import TomSelect from 'tom-select';
+
 // ingredient_units per 1 purchase_unit (for auto-conversion between compatible units).
 const UNIT_CONV = {
     'gr': { 'gr': 1, 'kg': 0.001 },
@@ -15,6 +17,37 @@ const UNIT_ALIASES = {
     'l': 'L', 'lt': 'L', 'lts': 'L', 'litro': 'L', 'litros': 'L', 'litre': 'L', 'liter': 'L',
     'ml': 'ml', 'mls': 'ml', 'mililitro': 'ml', 'mililitros': 'ml',
     'cc': 'cc', 'cm3': 'cc',
+};
+
+// El catálogo de insumos/descartables se emite una sola vez por página, en el
+// <template id="match-catalog-options">. Cada renglón arranca con su opción
+// elegida nada más, y recién al tocarlo se le completa la lista y se monta
+// TomSelect: montar uno por renglón al cargar bloqueaba el hilo principal
+// varios segundos en facturas largas con catálogos grandes.
+window.upgradeMatchSelect = function upgradeMatchSelect(el, open = true) {
+    if (el.tomselect) {
+        return el.tomselect;
+    }
+
+    const template = document.getElementById('match-catalog-options');
+
+    if (template) {
+        const current = el.value;
+        el.innerHTML = '';
+        el.appendChild(template.content.cloneNode(true));
+        el.value = current;
+    }
+
+    const ts = new TomSelect(el, { maxOptions: null, dropdownParent: 'body' });
+
+    // El mousedown que dispara el upgrade viene con preventDefault (si no, el
+    // foco se lo lleva el select nativo que TomSelect acaba de esconder).
+    if (open) {
+        ts.focus();
+        ts.open();
+    }
+
+    return ts;
 };
 
 // `remembered` viene de ProductLinkMemory: { selection: 'ingredient:42', pkgQty: 25 }.

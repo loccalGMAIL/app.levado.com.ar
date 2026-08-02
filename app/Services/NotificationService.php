@@ -11,6 +11,7 @@ use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\StockLevel;
 use App\Models\Tenant;
+use Illuminate\Support\Collection;
 
 /**
  * Único punto de escritura del feed de alertas (tabla notifications).
@@ -24,14 +25,35 @@ use App\Models\Tenant;
 class NotificationService
 {
     /**
+     * Alertas vivas del tenant indexadas por dedupe_key mientras corre
+     * syncStateAlerts(); null fuera de una reconciliación.
+     *
+     * @var Collection<string, Notification>|null
+     */
+    private ?Collection $liveAlerts = null;
+
+    /**
      * Reconcilia las 3 alertas de estado del tenant respetando los toggles y
      * umbrales de tenant_settings. Un tipo apagado resuelve sus alertas vivas.
      */
     public function syncStateAlerts(Tenant $tenant): void
     {
-        $this->syncLowStock($tenant);
-        $this->syncStaleCost($tenant);
-        $this->syncUnappliedPurchases($tenant);
+        // Las alertas vivas se traen de una sola vez: la reconciliación toca una
+        // por insumo / por nivel de stock / por compra pendiente, y buscar cada
+        // dedupe_key con su propia query hacía que abrir el dashboard de un
+        // negocio grande costara cientos de consultas.
+        $this->liveAlerts = Notification::where('tenant_id', $tenant->id)
+            ->whereNull('resolved_at')
+            ->get()
+            ->keyBy('dedupe_key');
+
+        try {
+            $this->syncLowStock($tenant);
+            $this->syncStaleCost($tenant);
+            $this->syncUnappliedPurchases($tenant);
+        } finally {
+            $this->liveAlerts = null;
+        }
     }
 
     private function syncLowStock(Tenant $tenant): void
@@ -47,12 +69,16 @@ class NotificationService
         $levels = StockLevel::where('tenant_id', $tenant->id)->get()
             ->filter(fn (StockLevel $level) => $level->hasAlert());
 
+        // Dos queries para todo el lote, en vez de un find() por nivel con alerta.
+        $items = [
+            'ingredient' => Ingredient::whereIn('id', $levels->where('stockable_type', 'ingredient')->pluck('stockable_id'))->get()->keyBy('id'),
+            'packaging' => Packaging::whereIn('id', $levels->where('stockable_type', 'packaging')->pluck('stockable_id'))->get()->keyBy('id'),
+        ];
+
         $activeKeys = [];
 
         foreach ($levels as $level) {
-            $item = $level->stockable_type === 'ingredient'
-                ? Ingredient::find($level->stockable_id)
-                : Packaging::find($level->stockable_id);
+            $item = ($items[$level->stockable_type] ?? null)?->get($level->stockable_id);
 
             if (! $item) {
                 continue;
@@ -260,23 +286,30 @@ class NotificationService
         ?int $subjectId = null,
         array $meta = [],
     ): void {
-        $existing = Notification::where('tenant_id', $tenant->id)
-            ->where('dedupe_key', $dedupeKey)
-            ->whereNull('resolved_at')
-            ->first();
+        $existing = $this->liveAlerts !== null
+            ? $this->liveAlerts->get($dedupeKey)
+            : Notification::where('tenant_id', $tenant->id)
+                ->where('dedupe_key', $dedupeKey)
+                ->whereNull('resolved_at')
+                ->first();
 
         if ($existing) {
-            $existing->update([
+            $existing->fill([
                 'title' => $title,
                 'body' => $body,
                 'action_url' => $actionUrl,
                 'meta' => $meta ?: null,
             ]);
 
+            // Reconciliar no es novedad: si el texto no cambió, no se escribe.
+            if ($existing->isDirty()) {
+                $existing->save();
+            }
+
             return;
         }
 
-        Notification::create([
+        $created = Notification::create([
             'tenant_id' => $tenant->id,
             'type' => $type,
             'severity' => $type->severity(),
@@ -288,6 +321,8 @@ class NotificationService
             'dedupe_key' => $dedupeKey,
             'meta' => $meta ?: null,
         ]);
+
+        $this->liveAlerts?->put($dedupeKey, $created);
     }
 
     /**

@@ -75,28 +75,31 @@ class FixIngredientSubdivisionCosts extends Command
             return self::SUCCESS;
         }
 
-        foreach ($items as $row) {
-            $item = $row['item'];
-            $costChanged = abs((float) $item->cost_per_unit - $row['costPerUnit']) > 0.0001;
+        // Un único recálculo del árbol de recetas para toda la corrección.
+        $this->propagator->batch(function () use ($items) {
+            foreach ($items as $row) {
+                $item = $row['item'];
+                $costChanged = abs((float) $item->cost_per_unit - $row['costPerUnit']) > 0.0001;
 
-            if ($costChanged) {
-                $item->priceLogs()->create([
+                if ($costChanged) {
+                    $item->priceLogs()->create([
+                        'cost_per_unit' => $row['costPerUnit'],
+                        'recorded_at' => now(),
+                    ]);
+                }
+
+                $item->update([
+                    'cost_per_package' => $row['costPerPackage'],
                     'cost_per_unit' => $row['costPerUnit'],
-                    'recorded_at' => now(),
                 ]);
-            }
 
-            $item->update([
-                'cost_per_package' => $row['costPerPackage'],
-                'cost_per_unit' => $row['costPerUnit'],
-            ]);
-
-            if ($costChanged) {
-                $item instanceof Ingredient
-                    ? $this->propagator->propagateFromIngredient($item->id)
-                    : $this->propagator->propagateFromPackaging($item->id);
+                if ($costChanged) {
+                    $item instanceof Ingredient
+                        ? $this->propagator->propagateFromIngredient($item->id)
+                        : $this->propagator->propagateFromPackaging($item->id);
+                }
             }
-        }
+        });
 
         info("Se corrigieron {$items->count()} ítem(s) correctamente. Los costos de recetas fueron actualizados.");
 
