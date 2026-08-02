@@ -51,8 +51,8 @@
             <x-input-error :messages="$errors->get('name')" class="mt-2" />
         </div>
 
-        <div class="grid grid-cols-3 gap-4">
-            <div class="col-span-2">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="sm:col-span-2">
                 <div class="flex items-center justify-between mb-1">
                     <x-input-label for="edit_fc_category" value="Categoría" />
                     <button type="button" @click="showNewCat = !showNewCat"
@@ -66,7 +66,7 @@
                         <input type="text" x-model="newCatName"
                             placeholder="Nombre de la categoría"
                             @keydown.enter.prevent="createCategory()"
-                            class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm" />
+                            class="flex-1 min-w-0 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm" />
                         <button type="button"
                             @click="createCategory()"
                             :disabled="newCatLoading || !newCatName.trim()"
