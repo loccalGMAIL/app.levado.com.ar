@@ -5,6 +5,24 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.8] — 2026-08-02
+
+### En mobile el botón «Crear» de una categoría nueva quedaba tapado por la fecha
+
+#### Corregido
+
+- **No se podía crear una categoría desde el celular.** En Gastos variables → Nuevo gasto, al tocar «+ Nueva categoría» aparecía el campo de nombre, pero el botón **«Crear» quedaba por debajo del campo de fecha y el tap no le llegaba nunca**: la categoría no se podía crear sin cambiar a una pantalla grande. Ahora en mobile Categoría y Fecha van uno debajo del otro, a lo ancho, y el botón queda entero y tocable.
+- **Pasaba en los cuatro modales con el mismo layout**, no sólo en el que se reportó: crear y editar gasto variable, y crear y editar costo fijo (ahí la fecha se llama «Vigente desde»). Se corrigieron los cuatro.
+- El modal de administración de categorías tenía el mismo riesgo de desborde en pantallas muy angostas, aunque su fila ocupa el ancho completo. Se blindó igual.
+
+#### Detalle técnico
+
+- La fila del alta inline vivía en una columna `col-span-2` de un `grid-cols-3` **fijo**: nunca se apilaba. El input con `flex-1` conserva `min-width: auto`, así que no podía achicarse por debajo del ancho de su placeholder; la fila se desbordaba de su columna y el botón caía sobre el campo de fecha. Como la fecha es un item **posterior** del grid, se pintaba encima y se comía el click.
+- Dos cambios por modal: el grid pasa a `grid-cols-1 sm:grid-cols-3` con `sm:col-span-2`, y el input suma `min-w-0` para que la fila no se desborde a ningún ancho, ni siquiera con el grid apilado.
+- **No hace falta recompilar assets**: las cuatro utilidades (`grid-cols-1`, `sm:grid-cols-3`, `sm:col-span-2`, `min-w-0`) ya están en el CSS compilado que sirve el manifest.
+
+---
+
 ## [0.12.7] — 2026-07-30
 
 ### La vinculación de productos se recuerda para las próximas facturas

@@ -18,11 +18,15 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
   - `levado.com.ar` → `public_html/` (coming soon estático)
   - `app.levado.com.ar` → `domains/app.levado.com.ar/public_html/` (symlink a `public/` de Laravel)
 - **Git:** rama `master` (producción). Deploy con git push + PR manual.
-- **Versión actual:** 0.12.7. La fuente de verdad es **`config/app.php`**; `package.json` y `package-lock.json` la espejan (ver [[project-architecture]] → Convenciones).
+- **Versión actual:** 0.12.8. La fuente de verdad es **`config/app.php`**; `package.json` y `package-lock.json` la espejan (ver [[project-architecture]] → Convenciones).
 - **Último deploy anotado acá:** 0.11.0 — **mergeada (PR #43) y desplegada en producción el 17/07/2026**. Producción venía de 0.9.x, así que ese deploy le trajo de una v0.10.0 (gastos variables), v0.10.1 (auditoría) y v0.11.0. Se corrió `invoices:relocate`: **165 comprobantes movidos al disco privado**. Los deploys de la serie 0.12.x no quedaron registrados en esta memoria: **no asumir qué versión corre en producción a partir de este archivo.**
 - **Al subir una base corregida a producción, el orden es: respaldo → subir la base → desplegar código → `migrate` → `invoices:relocate` → `optimize:clear`.** Si se despliega el código y se corre `migrate` antes de subir la base, la migración del índice único aborta contra los duplicados viejos. Con la base ya subida, `migrate` saltea lo que viene registrado y sólo corre lo que falta. Ojo: el import pisa `sessions` y cierra todas las sesiones.
 
 ## Todo lo que está hecho
+
+### v0.12.8 — El botón «Crear categoría» era intocable en mobile (rama `claude/mobile-gastos-variables-button-5v1wic`)
+- El alta inline de categoría vivía en una columna de un `grid-cols-3` **fijo**; con `flex-1` + `min-width:auto` la fila se desbordaba y el botón caía debajo del campo de fecha (item posterior del grid ⇒ se pintaba encima y comía el tap). Solución: `grid-cols-1 sm:grid-cols-3` + `sm:col-span-2`, y `min-w-0` en el input.
+- Aplicado a los 4 modales con ese layout (crear/editar gasto variable, crear/editar costo fijo) + el modal de categorías. **Sin rebuild de assets**: las utilidades ya estaban en el CSS compilado.
 
 ### v0.12.7 — Memoria de vinculación de productos (rama `claude/product-linking-invoices-7uqgph`)
 - Tabla `supplier_product_links` + servicio `ProductLinkMemory`: la vinculación de un renglón queda guardada **por proveedor** y la próxima factura llega pre-vinculada. Antes vivía sólo en `purchase_lines` y cada escaneo dependía de la IA.
