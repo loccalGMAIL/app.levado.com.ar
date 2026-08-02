@@ -54,7 +54,7 @@
                                 @method('PUT')
                                 <input type="text" name="name"
                                     x-model="editingName"
-                                    class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1.5"
+                                    class="flex-1 min-w-0 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1.5"
                                     required />
                                 <button type="submit"
                                     class="px-3 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors">
@@ -80,7 +80,7 @@
                 @csrf
                 <input type="text" name="name"
                     placeholder="Nombre de la categoría"
-                    class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm"
+                    class="flex-1 min-w-0 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm"
                     required />
                 <button type="submit"
                     class="px-4 py-2 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors whitespace-nowrap">
