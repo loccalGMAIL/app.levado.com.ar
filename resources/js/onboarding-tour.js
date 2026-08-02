@@ -1,7 +1,10 @@
-import Shepherd from 'shepherd.js';
-import 'shepherd.js/dist/css/shepherd.css';
-
 if (window.levadoOnboarding) {
+    (async () => {
+    const [{ default: Shepherd }] = await Promise.all([
+        import('shepherd.js'),
+        import('shepherd.js/dist/css/shepherd.css'),
+    ]);
+
     const { step, route } = window.levadoOnboarding;
 
     const tour = new Shepherd.Tour({
@@ -203,4 +206,5 @@ if (window.levadoOnboarding) {
     if (tour.steps.length > 0) {
         tour.start();
     }
+    })();
 }
