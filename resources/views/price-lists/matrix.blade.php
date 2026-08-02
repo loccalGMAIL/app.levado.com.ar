@@ -92,6 +92,7 @@
                                 @php
                                     $costPerUnit = $costsPerUnit[$recipe->id] ?? null;
                                     $recipePrices = $prices[$recipe->id] ?? collect();
+                                    $recipePolicies = $policies[$recipe->id] ?? collect();
                                     $basePrice = isset($recipePrices[$defaultList->id]) ? (float) $recipePrices[$defaultList->id] : null;
                                 @endphp
                                 <tr>
@@ -122,15 +123,14 @@
                                                 $marginPct = (($cellPrice - $costPerUnit) / $cellPrice) * 100;
                                                 $marginColor = $marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500');
                                             }
+                                            $policy = $recipePolicies[$list->id] ?? ['type' => 'manual', 'value' => null];
                                         @endphp
                                         <td class="px-4 py-3 text-right font-mono text-corteza whitespace-nowrap align-top">
                                             @can('manage-costs')
                                                 @if($recipe->manufacturedProduct)
                                                 <div
-                                                    x-data="{
-                                                        editing: false,
-                                                        saving: false,
-                                                        isDirty: false,
+                                                    x-data="priceCell({
+                                                        url: @js(route('products.prices.update', [$recipe->manufacturedProduct, $list])),
                                                         price: {{ $cellPrice ?? 'null' }},
                                                         priceFormatted: '{{ $cellPrice !== null ? number_format($cellPrice, 2, ',', '.') : '' }}',
                                                         suggested: {{ $suggested ?? 'null' }},
@@ -138,71 +138,29 @@
                                                         marginPct: {{ $marginPct ?? 'null' }},
                                                         marginPctFormatted: '{{ $marginPct !== null ? number_format($marginPct, 1, ',', '.') : '' }}',
                                                         marginColor: '{{ $marginColor }}',
-                                                        startEdit() {
-                                                            this.isDirty = false;
-                                                            const initial = this.price ?? this.suggested;
-                                                            this.$refs.priceInput.value = initial !== null ? parseFloat(initial).toFixed(2) : '';
-                                                            this.isDirty = this.price === null && this.suggested !== null;
-                                                            this.editing = true;
-                                                            this.$nextTick(() => this.$refs.priceInput.select());
-                                                        },
-                                                        async savePrice() {
-                                                            if (this.saving) return;
-                                                            if (!this.isDirty) { this.editing = false; return; }
-                                                            const raw = this.$refs.priceInput.value.trim();
-                                                            const payload = raw !== '' ? raw : null;
-                                                            this.saving = true;
-                                                            this.editing = false;
-                                                            try {
-                                                                const res = await fetch('{{ $recipe->manufacturedProduct ? route('products.prices.update', [$recipe->manufacturedProduct, $list]) : '' }}', {
-                                                                    method: 'PATCH',
-                                                                    headers: {
-                                                                        'Content-Type': 'application/json',
-                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                                        'Accept': 'application/json',
-                                                                    },
-                                                                    body: JSON.stringify({ price: payload })
-                                                                });
-                                                                const data = await res.json();
-                                                                this.price = data.selling_price;
-                                                                this.priceFormatted = data.selling_price_formatted ?? '';
-                                                                this.marginPct = data.margin_pct;
-                                                                this.marginPctFormatted = data.margin_pct_formatted ?? '';
-                                                                this.marginColor = data.margin_color ?? 'text-masa-madre';
-                                                            } finally {
-                                                                this.saving = false;
-                                                            }
-                                                        }
-                                                    }">
-                                                    <div x-show="!editing && !saving"
-                                                        @click="startEdit()"
+                                                        policyType: '{{ $policy['type'] }}',
+                                                        policyValue: {{ $policy['value'] ?? 'null' }},
+                                                    })">
+                                                    <div @click="startEdit($event)"
                                                         class="cursor-pointer hover:text-horno select-none">
-                                                        <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
-                                                        <span x-show="price === null && suggested !== null"
+                                                        <span x-show="!saving && price !== null" x-text="'$ ' + priceFormatted"></span>
+                                                        <span x-show="!saving && price === null && suggested !== null"
                                                             class="text-xs text-masa-madre italic">
                                                             $ <span x-text="suggestedFormatted"></span> sugerido
                                                         </span>
-                                                        <span x-show="price === null && suggested === null"
+                                                        <span x-show="!saving && price === null && suggested === null"
                                                             class="text-xs text-masa-madre hover:text-corteza">
                                                             Agregar →
                                                         </span>
+                                                        <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                                        <span x-show="hasPolicy" x-text="policyBadge"
+                                                            class="block text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none mt-0.5"></span>
+                                                        <span x-show="marginPct !== null"
+                                                            :class="marginColor"
+                                                            class="block text-[11px] font-medium"
+                                                            x-text="marginPct !== null ? marginPctFormatted + ' %' : ''"></span>
                                                     </div>
-                                                    <input
-                                                        x-show="editing"
-                                                        x-ref="priceInput"
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        @input="isDirty = true"
-                                                        @keydown.enter.prevent="savePrice()"
-                                                        @keydown.escape="editing = false; isDirty = false"
-                                                        @blur="savePrice()"
-                                                        class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
-                                                    <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
-                                                    <span x-show="marginPct !== null && !editing"
-                                                        :class="marginColor"
-                                                        class="block text-[11px] font-medium"
-                                                        x-text="marginPct !== null ? marginPctFormatted + ' %' : ''"></span>
+                                                    <x-price-cell-editor />
                                                 </div>
                                                 @else
                                                     <span class="text-masa-madre" title="Creá el artículo elaborado para ponerle precio">—</span>

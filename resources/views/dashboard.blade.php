@@ -485,74 +485,16 @@
                                     $initMarginPctFormatted = $pct !== null ? number_format($pct, 1, ',', '.') : '';
                                 @endphp
                                 <tr
-                                    x-data="{
-                                        editing: false,
-                                        saving: false,
-                                        isDirty: false,
+                                    x-data="priceCell({
+                                        url: @js($row['product'] ? route('products.prices.update', [$row['product'], $priceList]) : ''),
                                         price: {{ $row['selling_price'] ?? 'null' }},
                                         priceFormatted: '{{ $initPriceFormatted }}',
-                                        margin: {{ $row['margin'] ?? 'null' }},
-                                        marginFormatted: '{{ $initMarginFormatted }}',
                                         marginPct: {{ $row['margin_pct'] ?? 'null' }},
                                         marginPctFormatted: '{{ $initMarginPctFormatted }}',
                                         marginColor: '{{ $initMarginColor }}',
-                                        get barColor() {
-                                            if (this.marginPct === null) return 'bg-miga';
-                                            if (this.marginPct >= 60) return 'bg-green-500';
-                                            if (this.marginPct >= 40) return 'bg-amber-500';
-                                            if (this.marginPct >= 20) return 'bg-orange-400';
-                                            return 'bg-red-500';
-                                        },
-                                        get badgeClass() {
-                                            if (this.marginPct === null) return 'bg-miga text-masa-madre';
-                                            if (this.marginPct >= 60) return 'bg-green-100 text-green-700';
-                                            if (this.marginPct >= 40) return 'bg-amber-100 text-amber-700';
-                                            if (this.marginPct >= 20) return 'bg-orange-100 text-orange-700';
-                                            return 'bg-red-100 text-red-700';
-                                        },
-                                        get badgeLabel() {
-                                            if (this.marginPct === null) return '—';
-                                            if (this.marginPct >= 60) return 'Alta';
-                                            if (this.marginPct >= 40) return 'Media';
-                                            if (this.marginPct >= 20) return 'Regular';
-                                            return 'Baja';
-                                        },
-                                        startEdit() {
-                                            this.isDirty = false;
-                                            this.$refs.priceInput.value = this.price !== null ? parseFloat(this.price).toFixed(2) : '';
-                                            this.editing = true;
-                                            this.$nextTick(() => this.$refs.priceInput.select());
-                                        },
-                                        async savePrice() {
-                                            if (this.saving) return;
-                                            if (!this.isDirty) { this.editing = false; return; }
-                                            const raw = this.$refs.priceInput.value.trim();
-                                            const payload = raw !== '' ? raw : null;
-                                            this.saving = true;
-                                            this.editing = false;
-                                            try {
-                                                const res = await fetch('{{ $row['product'] ? route('products.prices.update', [$row['product'], $priceList]) : '' }}', {
-                                                    method: 'PATCH',
-                                                    headers: {
-                                                        'Content-Type': 'application/json',
-                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                        'Accept': 'application/json',
-                                                    },
-                                                    body: JSON.stringify({ price: payload })
-                                                });
-                                                const data = await res.json();
-                                                this.price = data.selling_price;
-                                                this.priceFormatted = data.selling_price_formatted ?? '';
-                                                this.margin = data.margin;
-                                                this.marginFormatted = data.margin_formatted ?? '';
-                                                this.marginPct = data.margin_pct;
-                                                this.marginPctFormatted = data.margin_pct_formatted ?? '';
-                                                this.marginColor = data.margin_color ?? 'text-masa-madre';
-                                            } finally {
-                                                this.saving = false;
-                                            }
-                                        }
-                                    }"
+                                        policyType: '{{ $row['policy']['type'] }}',
+                                        policyValue: {{ $row['policy']['value'] ?? 'null' }},
+                                    })"
                                     class="hover:bg-harina/70 transition-colors {{ $recipe->active ? '' : 'opacity-40' }}"
                                 >
                                     {{-- Nombre --}}
@@ -591,27 +533,20 @@
                                     <td class="px-4 py-3.5 text-right font-mono text-[13px]">
                                         @can('manage-costs')
                                             @if($row['product'])
-                                                <div x-show="!editing && !saving"
-                                                    @click="startEdit()"
-                                                    class="cursor-pointer text-corteza hover:text-horno transition-colors select-none">
-                                                    <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
-                                                    <span x-show="price === null"
-                                                        class="text-[12px] text-masa-madre/50 hover:text-masa-madre">
-                                                        Agregar →
+                                                <div @click="startEdit($event)"
+                                                    class="cursor-pointer text-corteza hover:text-horno transition-colors select-none inline-flex flex-col items-end gap-0.5">
+                                                    <span x-show="!saving">
+                                                        <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
+                                                        <span x-show="price === null"
+                                                            class="text-[12px] text-masa-madre/50 hover:text-masa-madre">
+                                                            Agregar →
+                                                        </span>
                                                     </span>
+                                                    <span x-show="saving" class="text-[11.5px] text-masa-madre/60">guardando…</span>
+                                                    <span x-show="hasPolicy" x-text="policyBadge"
+                                                        class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
                                                 </div>
-                                                <input
-                                                    x-show="editing"
-                                                    x-ref="priceInput"
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    @input="isDirty = true"
-                                                    @keydown.enter.prevent="savePrice()"
-                                                    @keydown.escape="editing = false; isDirty = false"
-                                                    @blur="savePrice()"
-                                                    class="w-28 text-right text-sm border border-brown-300 rounded-lg px-2 py-1 focus:border-brown-400 focus:ring-1 focus:ring-brown-200 outline-none font-mono bg-harina">
-                                                <span x-show="saving" class="text-[11.5px] text-masa-madre/60">guardando…</span>
+                                                <x-price-cell-editor />
                                             @else
                                                 {{-- Sin artículo elaborado: el precio se carga en Artículos --}}
                                                 <span class="text-[11px] text-masa-madre/50" title="Creá el artículo elaborado para ponerle precio">—</span>
@@ -633,7 +568,7 @@
                                                 <div class="h-1.5 rounded-full bg-miga overflow-hidden">
                                                     <div
                                                         class="h-full rounded-full transition-all duration-500"
-                                                        :class="barColor"
+                                                        :class="marginPct === null ? 'bg-miga' : (marginPct >= 60 ? 'bg-green-500' : (marginPct >= 40 ? 'bg-amber-500' : (marginPct >= 20 ? 'bg-orange-400' : 'bg-red-500')))"
                                                         :style="'width: ' + Math.min(Math.max(marginPct ?? 0, 0), 100) + '%'">
                                                     </div>
                                                 </div>
@@ -649,9 +584,9 @@
                                             {{-- Badge estado --}}
                                             <span
                                                 x-show="marginPct !== null"
-                                                :class="badgeClass"
+                                                :class="marginPct === null ? 'bg-miga text-masa-madre' : (marginPct >= 60 ? 'bg-green-100 text-green-700' : (marginPct >= 40 ? 'bg-amber-100 text-amber-700' : (marginPct >= 20 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700')))"
                                                 class="hidden lg:inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold"
-                                                x-text="badgeLabel">
+                                                x-text="marginPct === null ? '—' : (marginPct >= 60 ? 'Alta' : (marginPct >= 40 ? 'Media' : (marginPct >= 20 ? 'Regular' : 'Baja')))">
                                             </span>
                                         </div>
                                     </td>

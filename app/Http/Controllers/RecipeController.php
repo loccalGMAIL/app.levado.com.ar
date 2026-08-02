@@ -64,15 +64,17 @@ class RecipeController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        // Mapa recipe_id → precio del artículo en la lista elegida.
-        $prices = ProductPrice::query()
+        // Mapas recipe_id → precio y política del artículo en la lista elegida.
+        $priceRows = ProductPrice::query()
             ->join('products', 'products.id', '=', 'product_prices.product_id')
             ->where('products.type', ProductType::Manufactured->value)
             ->where('product_prices.price_list_id', $priceList->id)
             ->whereIn('products.recipe_id', $recipes->pluck('id'))
-            ->pluck('product_prices.price', 'products.recipe_id');
+            ->get(['product_prices.price', 'product_prices.policy_type', 'product_prices.policy_value', 'products.recipe_id']);
+        $prices = $priceRows->pluck('price', 'recipe_id');
+        $policies = $priceRows->mapWithKeys(fn (ProductPrice $row) => [$row->recipe_id => $row->policyPayload()]);
 
-        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices'));
+        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices', 'policies'));
     }
 
     public function show(Recipe $recipe): View

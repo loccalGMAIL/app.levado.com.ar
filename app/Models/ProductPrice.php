@@ -43,4 +43,18 @@ class ProductPrice extends Model
     {
         return $this->belongsTo(PriceList::class);
     }
+
+    /**
+     * Forma que consumen las celdas de precio inline (factory JS priceCell):
+     * la política de precio y su valor. type siempre presente (default manual).
+     *
+     * @return array{type: string, value: float|null}
+     */
+    public function policyPayload(): array
+    {
+        return [
+            'type' => $this->policy_type?->value ?? PricingPolicy::Manual->value,
+            'value' => $this->policy_value !== null ? (float) $this->policy_value : null,
+        ];
+    }
 }

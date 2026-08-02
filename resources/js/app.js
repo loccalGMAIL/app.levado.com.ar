@@ -6,6 +6,8 @@ import TomSelect from 'tom-select';
 window.Alpine = Alpine;
 window.TomSelect = TomSelect;
 
+import './pricing/price-cell';
+
 Alpine.start();
 
 import './onboarding-tour';

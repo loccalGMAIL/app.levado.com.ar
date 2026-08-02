@@ -47,13 +47,14 @@ class RecipeShowViewModel
 
         // El precio de venta vive en el artículo elaborado (product_prices).
         $product = $recipe->manufacturedProduct;
-        $allPrices = $product !== null
+        $priceRows = $product !== null
             ? ProductPrice::where('product_id', $product->id)
                 ->whereIn('price_list_id', $priceLists->pluck('id'))
-                ->pluck('price', 'price_list_id')
-                ->map(fn ($p) => $p !== null ? (float) $p : null)
-                ->toArray()
-            : [];
+                ->get()
+                ->keyBy('price_list_id')
+            : collect();
+        $allPrices = $priceRows->map(fn (ProductPrice $row) => $row->price !== null ? (float) $row->price : null)->toArray();
+        $allPolicies = $priceRows->map(fn (ProductPrice $row) => $row->policyPayload())->toArray();
 
         return [
             'recipe' => $recipe,
@@ -62,6 +63,7 @@ class RecipeShowViewModel
             'defaultPrice' => $allPrices[$defaultPriceList->id] ?? null,
             'priceLists' => $priceLists,
             'allPrices' => $allPrices,
+            'allPolicies' => $allPolicies,
             'ingredientCost' => $costs['ingredient_cost'],
             'packagingCost' => $costs['packaging_cost'],
             'laborCost' => $costs['labor_cost'],

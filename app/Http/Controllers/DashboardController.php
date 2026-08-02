@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
+use App\Models\ProductPrice;
 use App\Models\Tenant;
 use App\Services\NotificationService;
 use App\Services\RecipeCostCalculator;
@@ -136,6 +137,18 @@ class DashboardController extends Controller
                     'margin_pct' => $marginPct,
                 ];
             });
+
+        // Política de precio (manual/margen/recargo) por artículo elaborado, en la
+        // lista elegida. Se resuelve después de paginar para no N+1 en el subquery.
+        $rowProductIds = $recipeRows->getCollection()->pluck('product.id')->filter();
+        $policyMap = ProductPrice::where('price_list_id', $priceList->id)
+            ->whereIn('product_id', $rowProductIds)
+            ->get()
+            ->mapWithKeys(fn (ProductPrice $row) => [$row->product_id => $row->policyPayload()]);
+        $recipeRows->getCollection()->transform(fn ($row) => $row + [
+            'policy' => ($row['product'] !== null ? ($policyMap[$row['product']->id] ?? null) : null)
+                ?? ['type' => 'manual', 'value' => null],
+        ]);
 
         $activeRecipeCount = $tenant->recipes()->active()->count();
         $packagingCount = $tenant->packagings()->active()->count();

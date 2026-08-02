@@ -22,7 +22,10 @@
             targetMargin:    30,
             priceLists:      @js($priceLists->map(fn($l) => ['id' => $l->id, 'name' => $l->name])),
             allPrices:       @js($allPrices),
+            allPolicies:     @js($allPolicies),
             selectedListId:  @js($defaultPriceList->id),
+            policyType:      @js($allPolicies[$defaultPriceList->id]['type'] ?? 'manual'),
+            policyValue:     @js($allPolicies[$defaultPriceList->id]['value'] ?? null),
             productId:       @js($manufacturedProduct?->id),
             savingPrice:     false,
             ingSort: { by: 'name', dir: 1 },
@@ -136,20 +139,47 @@
             },
             changeList(id) {
                 this.selectedListId = id;
+                const pol = this.allPolicies[id] ?? { type: 'manual', value: null };
+                this.policyType = pol.type ?? 'manual';
+                this.policyValue = pol.value ?? null;
                 this.sellingPrice = this.allPrices[id] ?? 0;
+                this.recomputePreview();
+            },
+            /** Precio efectivo en vivo para margen/recargo (contra el costo con overhead). */
+            recomputePreview() {
+                if (this.policyType === 'manual' || this.costPerUnit === null) return;
+                const v = parseFloat(this.policyValue);
+                if (isNaN(v)) return;
+                if (this.policyType === 'margin') {
+                    this.sellingPrice = v < 100 ? Math.round(this.costPerUnit / (1 - v / 100) * 100) / 100 : 0;
+                } else if (this.policyType === 'markup') {
+                    this.sellingPrice = Math.round(this.costPerUnit * (1 + v / 100) * 100) / 100;
+                }
             },
             async savePrice() {
                 if (this.savingPrice || !this.productId) return;
+                let payload;
+                if (this.policyType === 'manual') {
+                    payload = { policy_type: 'manual', price: this.sellingPrice > 0 ? this.sellingPrice : null };
+                } else {
+                    const v = parseFloat(this.policyValue);
+                    if (isNaN(v)) return;
+                    payload = { policy_type: this.policyType, policy_value: v };
+                }
                 this.savingPrice = true;
                 try {
                     const res = await fetch('/products/' + this.productId + '/prices/' + this.selectedListId, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                        body: JSON.stringify({ price: this.sellingPrice > 0 ? this.sellingPrice : null }),
+                        body: JSON.stringify(payload),
                     });
                     if (res.ok) {
                         const data = await res.json();
                         this.allPrices[this.selectedListId] = data.selling_price;
+                        this.allPolicies[this.selectedListId] = { type: data.policy_type ?? 'manual', value: data.policy_value ?? null };
+                        this.sellingPrice = data.selling_price ?? 0;
+                        this.policyType = data.policy_type ?? 'manual';
+                        this.policyValue = data.policy_value ?? null;
                     }
                 } finally {
                     this.savingPrice = false;
@@ -819,7 +849,8 @@
                 </div>
 
                 {{-- Precio de venta --}}
-                <div class="bg-white rounded-lg shadow p-4 space-y-3">
+                <div class="bg-white rounded-lg shadow p-4 space-y-3"
+                    x-effect="if (policyType !== 'manual' && costPerUnit !== null && policyValue) recomputePreview()">
                     <div class="flex items-center justify-between gap-2">
                         <p class="text-xs font-semibold text-masa-madre uppercase tracking-wide">Precio de venta</p>
                         @if($priceLists->count() > 1)
@@ -837,13 +868,38 @@
                     </div>
 
                     @if($manufacturedProduct)
-                        <div class="flex items-center gap-2">
+                        {{-- Política de precio --}}
+                        <select x-model="policyType" @change="recomputePreview()"
+                            class="w-full text-sm border-gray-300 rounded-md shadow-sm focus:border-horno focus:ring-horno">
+                            <option value="manual">Manual</option>
+                            <option value="margin">Margen % sobre costo</option>
+                            <option value="markup">Recargo % sobre costo</option>
+                        </select>
+
+                        {{-- Manual: precio a mano --}}
+                        <div x-show="policyType === 'manual'" class="flex items-center gap-2">
                             <span class="text-sm text-masa-madre shrink-0">$</span>
                             <input type="number"
                                 x-model.number="sellingPrice"
                                 step="0.01" min="0"
                                 placeholder="0,00"
                                 class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono text-right" />
+                        </div>
+
+                        {{-- Margen / Recargo: porcentaje + precio efectivo --}}
+                        <div x-show="policyType !== 'manual'" class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <input type="number"
+                                    x-model.number="policyValue" @input="recomputePreview()"
+                                    step="0.01" min="0"
+                                    placeholder="0"
+                                    class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm font-mono text-right" />
+                                <span class="text-sm text-masa-madre shrink-0">%</span>
+                            </div>
+                            <p class="text-xs text-masa-madre text-right">
+                                Precio efectivo:
+                                <span class="font-mono text-corteza" x-text="sellingPrice > 0 ? '$ ' + fmt(sellingPrice) : '—'"></span>
+                            </p>
                         </div>
                     @else
                         <p class="text-xs text-masa-madre">

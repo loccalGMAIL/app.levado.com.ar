@@ -37,7 +37,8 @@
       "Bash(unset GIT_EDITOR)",
       "Bash(echo \"EXIT:$?\")",
       "PowerShell(git rebase *)",
-      "Bash(git cherry-pick *)"
+      "Bash(git cherry-pick *)",
+      "Bash(sed -n '182,197p' CHANGELOG.md)"
     ]
   },
   "enableAllProjectMcpServers": true,

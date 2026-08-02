@@ -56,11 +56,13 @@ class ProductController extends Controller
         $priceLists = $tenant->priceLists()->active()->orderByDesc('is_default')->orderBy('name')->get();
         $priceList = $priceLists->firstWhere('id', (int) request('price_list')) ?? $priceLists->firstWhere('is_default', true);
         $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
-        $priceMap = ProductPrice::where('price_list_id', $priceList->id)
+        $priceRows = ProductPrice::where('price_list_id', $priceList->id)
             ->whereIn('product_id', $products->pluck('id'))
-            ->pluck('price', 'product_id');
+            ->get();
+        $priceMap = $priceRows->pluck('price', 'product_id');
+        $policyMap = $priceRows->mapWithKeys(fn (ProductPrice $row) => [$row->product_id => $row->policyPayload()]);
 
-        return view('products.index', compact('products', 'recipes', 'categories', 'showCategories', 'priceLists', 'priceList', 'overheadPerHour', 'priceMap'));
+        return view('products.index', compact('products', 'recipes', 'categories', 'showCategories', 'priceLists', 'priceList', 'overheadPerHour', 'priceMap', 'policyMap'));
     }
 
     public function store(StoreProductRequest $request): RedirectResponse

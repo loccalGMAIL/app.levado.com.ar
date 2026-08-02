@@ -89,16 +89,18 @@ class PriceListController extends Controller
 
         // El precio vive en el artículo elaborado (product_prices); se indexa por recipe_id para la vista.
         /** @var array<int, Collection<int, string>> $prices [recipe_id][price_list_id] => price */
-        $prices = ProductPrice::query()
+        $priceRows = ProductPrice::query()
             ->join('products', 'products.id', '=', 'product_prices.product_id')
             ->where('products.type', ProductType::Manufactured->value)
             ->whereIn('products.recipe_id', collect($recipes->items())->pluck('id'))
             ->whereIn('product_prices.price_list_id', $priceLists->pluck('id'))
-            ->get(['products.recipe_id', 'product_prices.price_list_id', 'product_prices.price'])
-            ->groupBy('recipe_id')
-            ->map(fn ($group) => $group->pluck('price', 'price_list_id'));
+            ->get(['products.recipe_id', 'product_prices.price_list_id', 'product_prices.price', 'product_prices.policy_type', 'product_prices.policy_value'])
+            ->groupBy('recipe_id');
+        $prices = $priceRows->map(fn ($group) => $group->pluck('price', 'price_list_id'));
+        /** @var array<int, Collection<int, array{type: string, value: float|null}>> $policies [recipe_id][price_list_id] => policy */
+        $policies = $priceRows->map(fn ($group) => $group->mapWithKeys(fn (ProductPrice $row) => [$row->price_list_id => $row->policyPayload()]));
 
-        return view('price-lists.matrix', compact('priceLists', 'defaultList', 'recipes', 'costsPerUnit', 'prices'));
+        return view('price-lists.matrix', compact('priceLists', 'defaultList', 'recipes', 'costsPerUnit', 'prices', 'policies'));
     }
 
     public function store(StorePriceListRequest $request): RedirectResponse

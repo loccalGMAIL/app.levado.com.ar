@@ -74,47 +74,17 @@
                     @foreach($recipes as $recipe)
                         @php
                             $price = isset($prices[$recipe->id]) ? (float) $prices[$recipe->id] : null;
-                            $initPriceInput     = $price !== null ? number_format($price, 2, '.', '') : '';
                             $initPriceFormatted = $price !== null ? number_format($price, 2, ',', '.') : '';
+                            $policy = $policies[$recipe->id] ?? ['type' => 'manual', 'value' => null];
                         @endphp
                         <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $recipe->active ? '' : 'opacity-50' }}"
-                            x-data="{
-                                editing: false,
-                                saving: false,
-                                isDirty: false,
+                            x-data="priceCell({
+                                url: @js($recipe->manufacturedProduct ? route('products.prices.update', [$recipe->manufacturedProduct, $priceList]) : ''),
                                 price: {{ $price ?? 'null' }},
                                 priceFormatted: '{{ $initPriceFormatted }}',
-                                startEdit() {
-                                    this.isDirty = false;
-                                    this.$refs.priceInputCard.value = this.price !== null ? parseFloat(this.price).toFixed(2) : '';
-                                    this.editing = true;
-                                    this.$nextTick(() => this.$refs.priceInputCard.select());
-                                },
-                                async savePrice() {
-                                    if (this.saving) return;
-                                    if (!this.isDirty) { this.editing = false; return; }
-                                    const raw = this.$refs.priceInputCard.value.trim();
-                                    const payload = raw !== '' ? raw : null;
-                                    this.saving = true;
-                                    this.editing = false;
-                                    try {
-                                        const res = await fetch('{{ $recipe->manufacturedProduct ? route('products.prices.update', [$recipe->manufacturedProduct, $priceList]) : '' }}', {
-                                            method: 'PATCH',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                'Accept': 'application/json',
-                                            },
-                                            body: JSON.stringify({ price: payload })
-                                        });
-                                        const data = await res.json();
-                                        this.price = data.selling_price;
-                                        this.priceFormatted = data.selling_price_formatted ?? '';
-                                    } finally {
-                                        this.saving = false;
-                                    }
-                                }
-                            }">
+                                policyType: '{{ $policy['type'] }}',
+                                policyValue: {{ $policy['value'] ?? 'null' }},
+                            })">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1 min-w-0">
                                     <a href="{{ $showUrl($recipe) }}" class="font-medium text-corteza hover:underline">
@@ -132,21 +102,18 @@
                                 <div class="font-mono text-sm text-corteza">
                                     @can('manage-costs')
                                         @if($recipe->manufacturedProduct)
-                                            <div x-show="!editing && !saving"
-                                                @click="startEdit()"
+                                            <div @click="startEdit($event)"
                                                 class="cursor-pointer hover:text-horno select-none inline-flex items-center gap-1">
-                                                <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
-                                                <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
-                                                <svg class="w-3 h-3 text-masa-madre" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
+                                                <span x-show="!saving">
+                                                    <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
+                                                    <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
+                                                </span>
+                                                <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                                <span x-show="hasPolicy" x-text="policyBadge"
+                                                    class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
+                                                <svg x-show="!hasPolicy" class="w-3 h-3 text-masa-madre" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
                                             </div>
-                                            <input x-show="editing" x-ref="priceInputCard"
-                                                type="number" step="0.01" min="0"
-                                                @input="isDirty = true"
-                                                @keydown.enter.prevent="savePrice()"
-                                                @keydown.escape="editing = false; isDirty = false"
-                                                @blur="savePrice()"
-                                                class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
-                                            <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                            <x-price-cell-editor />
                                         @else
                                             <span class="text-xs text-masa-madre" title="Creá el artículo elaborado para ponerle precio">—</span>
                                         @endif
@@ -199,8 +166,8 @@
                             @foreach($recipes as $recipe)
                                 @php
                                     $price = isset($prices[$recipe->id]) ? (float) $prices[$recipe->id] : null;
-                                    $initPriceInput     = $price !== null ? number_format($price, 2, '.', '') : '';
                                     $initPriceFormatted = $price !== null ? number_format($price, 2, ',', '.') : '';
+                                    $policy = $policies[$recipe->id] ?? ['type' => 'manual', 'value' => null];
                                 @endphp
                                 <tr class="{{ $recipe->active ? '' : 'opacity-50' }}">
                                     <td class="px-4 py-3 font-medium text-corteza">
@@ -213,67 +180,30 @@
                                         {{ number_format((float)$recipe->yield_quantity, 0, ',', '.') }} {{ $recipe->yield_unit->short() }}
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono text-corteza"
-                                        x-data="{
-                                            editing: false,
-                                            saving: false,
-                                            isDirty: false,
+                                        x-data="priceCell({
+                                            url: @js($recipe->manufacturedProduct ? route('products.prices.update', [$recipe->manufacturedProduct, $priceList]) : ''),
                                             price: {{ $price ?? 'null' }},
                                             priceFormatted: '{{ $initPriceFormatted }}',
-                                            startEdit() {
-                                                this.isDirty = false;
-                                                this.$refs.priceInput.value = this.price !== null ? parseFloat(this.price).toFixed(2) : '';
-                                                this.editing = true;
-                                                this.$nextTick(() => this.$refs.priceInput.select());
-                                            },
-                                            async savePrice() {
-                                                if (this.saving) return;
-                                                if (!this.isDirty) { this.editing = false; return; }
-                                                const raw = this.$refs.priceInput.value.trim();
-                                                const payload = raw !== '' ? raw : null;
-                                                this.saving = true;
-                                                this.editing = false;
-                                                try {
-                                                    const res = await fetch('{{ $recipe->manufacturedProduct ? route('products.prices.update', [$recipe->manufacturedProduct, $priceList]) : '' }}', {
-                                                        method: 'PATCH',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                            'Accept': 'application/json',
-                                                        },
-                                                        body: JSON.stringify({ price: payload })
-                                                    });
-                                                    const data = await res.json();
-                                                    this.price = data.selling_price;
-                                                    this.priceFormatted = data.selling_price_formatted ?? '';
-                                                } finally {
-                                                    this.saving = false;
-                                                }
-                                            }
-                                        }">
+                                            policyType: '{{ $policy['type'] }}',
+                                            policyValue: {{ $policy['value'] ?? 'null' }},
+                                        })">
                                         @can('manage-costs')
                                             @if($recipe->manufacturedProduct)
-                                                <div x-show="!editing && !saving"
-                                                    @click="startEdit()"
-                                                    class="cursor-pointer hover:text-horno select-none">
-                                                    <span x-show="price !== null"
-                                                        x-text="'$ ' + priceFormatted"></span>
-                                                    <span x-show="price === null"
-                                                        class="text-xs text-masa-madre hover:text-corteza">
-                                                        Agregar →
+                                                <div @click="startEdit($event)"
+                                                    class="cursor-pointer hover:text-horno select-none inline-flex flex-col items-end gap-0.5">
+                                                    <span x-show="!saving">
+                                                        <span x-show="price !== null"
+                                                            x-text="'$ ' + priceFormatted"></span>
+                                                        <span x-show="price === null"
+                                                            class="text-xs text-masa-madre hover:text-corteza">
+                                                            Agregar →
+                                                        </span>
                                                     </span>
+                                                    <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                                    <span x-show="hasPolicy" x-text="policyBadge"
+                                                        class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
                                                 </div>
-                                                <input
-                                                    x-show="editing"
-                                                    x-ref="priceInput"
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    @input="isDirty = true"
-                                                    @keydown.enter.prevent="savePrice()"
-                                                    @keydown.escape="editing = false; isDirty = false"
-                                                    @blur="savePrice()"
-                                                    class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
-                                                <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                                <x-price-cell-editor />
                                             @else
                                                 <span class="text-xs text-masa-madre" title="Creá el artículo elaborado para ponerle precio">—</span>
                                             @endif

@@ -217,48 +217,19 @@
                                 $marginColor = $marginPct === null ? 'text-masa-madre' : ($marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500'));
                                 $initPriceFormatted = $price !== null ? number_format($price, 2, ',', '.') : '';
                                 $initMarginPctFormatted = $marginPct !== null ? number_format($marginPct, 1, ',', '.') : '';
+                                $policy = $policyMap[$product->id] ?? ['type' => 'manual', 'value' => null];
                             @endphp
                             <tr class="{{ $product->active ? '' : 'opacity-50' }}"
-                                x-data="{
-                                    editing: false, saving: false, isDirty: false,
+                                x-data="priceCell({
+                                    url: @js(route('products.prices.update', [$product, $priceList])),
                                     price: {{ $price ?? 'null' }},
                                     priceFormatted: '{{ $initPriceFormatted }}',
                                     marginPct: {{ $marginPct ?? 'null' }},
                                     marginPctFormatted: '{{ $initMarginPctFormatted }}',
                                     marginColor: '{{ $marginColor }}',
-                                    startEdit() {
-                                        this.isDirty = false;
-                                        this.$refs.priceInput.value = this.price !== null ? parseFloat(this.price).toFixed(2) : '';
-                                        this.editing = true;
-                                        this.$nextTick(() => this.$refs.priceInput.select());
-                                    },
-                                    async savePrice() {
-                                        if (this.saving) return;
-                                        if (!this.isDirty) { this.editing = false; return; }
-                                        const raw = this.$refs.priceInput.value.trim();
-                                        const payload = raw !== '' ? raw : null;
-                                        this.saving = true; this.editing = false;
-                                        try {
-                                            const res = await fetch('{{ route('products.prices.update', [$product, $priceList]) }}', {
-                                                method: 'PATCH',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                    'Accept': 'application/json',
-                                                },
-                                                body: JSON.stringify({ price: payload })
-                                            });
-                                            const data = await res.json();
-                                            this.price = data.selling_price;
-                                            this.priceFormatted = data.selling_price_formatted ?? '';
-                                            this.marginPct = data.margin_pct;
-                                            this.marginPctFormatted = data.margin_pct_formatted ?? '';
-                                            this.marginColor = data.margin_color ?? 'text-masa-madre';
-                                        } finally {
-                                            this.saving = false;
-                                        }
-                                    }
-                                }">
+                                    policyType: '{{ $policy['type'] }}',
+                                    policyValue: {{ $policy['value'] ?? 'null' }},
+                                })">
                                 <td class="px-4 py-3 font-medium text-corteza">
                                     @can('manage-costs')
                                         <button type="button"
@@ -304,17 +275,16 @@
                                 </td>
                                 <td class="px-4 py-3 text-right text-corteza font-mono">
                                     @can('manage-costs')
-                                        <div x-show="!editing && !saving" @click="startEdit()" class="cursor-pointer hover:text-horno select-none">
-                                            <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
-                                            <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
+                                        <div @click="startEdit($event)" class="cursor-pointer hover:text-horno select-none inline-flex flex-col items-end gap-0.5">
+                                            <span x-show="!saving">
+                                                <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
+                                                <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
+                                            </span>
+                                            <span x-show="saving" class="text-xs text-masa-madre">…</span>
+                                            <span x-show="hasPolicy" x-text="policyBadge"
+                                                class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
                                         </div>
-                                        <input x-show="editing" x-ref="priceInput" type="number" step="0.01" min="0"
-                                            @input="isDirty = true"
-                                            @keydown.enter.prevent="savePrice()"
-                                            @keydown.escape="editing = false; isDirty = false"
-                                            @blur="savePrice()"
-                                            class="w-24 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
-                                        <span x-show="saving" class="text-xs text-masa-madre">…</span>
+                                        <x-price-cell-editor />
                                     @else
                                         {{ $price !== null ? '$ '.number_format($price, 2, ',', '.') : '—' }}
                                     @endcan
