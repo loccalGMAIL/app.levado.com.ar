@@ -59,7 +59,9 @@ hallazgos ya enumerados.
 **Restricción que condiciona todo el informe.** Los tests corren sobre **SQLite en memoria**
 (`phpunit.xml:27-28`) mientras producción es MySQL. Todo el SQL propuesto acá es portable entre
 ambos motores; donde hubo que elegir entre el constructor de Eloquent y SQL crudo, se eligió
-Eloquent (`whereColumn`, `leftJoinSub`, `withExists`, `having`) precisamente por eso.
+Eloquent (`whereColumn`, `leftJoinSub`, `joinSub`, `withExists`) precisamente por eso. Todas las
+construcciones SQL propuestas en este informe fueron **verificadas contra SQLite 3.45.1**; una de
+ellas (`having` sobre un alias de `withCount`) falló la verificación y fue reemplazada — ver Q3.
 
 **Nota de procedencia.** Este informe fusiona dos auditorías independientes del mismo código. La
 segunda aportó 10 hallazgos que la primera no tenía —entre ellos Q13 (el de peor cota superior de
@@ -69,6 +71,13 @@ La primera aportó N7, Q3, Q4, el morph map reutilizando `CatalogItemType::model
 Que dos recorridos independientes coincidieran en los cinco problemas de fondo (alertas,
 propagación, ciclos, dashboard, autorización) es la señal más fuerte de ambos: no son artefactos de
 interpretación. Donde **no** coincidieron es igual de informativo, y está anotado en cada hallazgo.
+
+**Nota de validación.** Las soluciones propuestas se contrastaron contra la documentación oficial de
+Laravel 13, y **las construcciones SQL se ejecutaron contra SQLite 3.45.1** (el motor de la suite).
+Eso encontró un error propio —el `having` que se recomendaba en Q3 rompe en SQLite— y dos
+advertencias de la documentación que cambian el matiz de otras dos recomendaciones (el segundo
+argumento de `upsert()` se ignora en MySQL, §8.3 y Q13; `cursor()` no es seguro al actualizar
+durante la iteración, Q12). El detalle está en el anexo.
 
 **Nota metodológica.** Los conteos de queries son **estimaciones derivadas de leer el camino de
 ejecución**, no mediciones con profiler. Cada uno se presenta con su fórmula visible (p. ej. «7 ×
@@ -491,6 +500,18 @@ Las columnas ya siguen la convención de Laravel (`stockable_type`/`stockable_id
 `whereHasMorph()` sobre `StockLevel`, `StockMovement` y `PurchaseLine`. N4(b) se simplifica a
 `->with('stockable')` y `StockService::reverseMovement:196` (`$original->stockable()`) deja de
 lazy-loadear dentro del bucle de `PurchaseController::destroy`.
+
+Y habilita `morphWith()`, que es la forma documentada de eager-loadear relaciones **anidadas** por
+cada tipo posible —útil el día que un listado de movimientos necesite el proveedor del ingrediente:
+
+```php
+StockMovement::with(['stockable' => fn (MorphTo $morphTo) => $morphTo->morphWith([
+    Ingredient::class => ['supplier'],
+    Packaging::class  => ['supplier'],
+])])->get();
+```
+
+Hoy eso es directamente imposible: sin `morphTo` real no hay nada que eager-loadear.
 
 > **Precaución.** `enforceMorphMap()` es estricto: si alguna columna `*_type` de la BD guarda un
 > valor fuera del mapa, Eloquent lanza excepción. Antes de aplicarlo conviene verificar en
@@ -986,21 +1007,53 @@ $purchases = Purchase::where('tenant_id', $tenant->id)
 **Problema.** Dos subconsultas sobre `purchase_lines` con el mismo predicado: una para filtrar y otra
 para contar. Y el `get()` no tiene techo: un tenant con años de compras sin imputar las trae todas.
 
-**Código optimizado propuesto.** Una sola subconsulta, con `having` sobre el alias del `withCount`:
+> ⚠️ **`having` sobre el alias del `withCount` NO es la solución** — aunque es lo primero que se
+> ocurre y funciona en MySQL. **Verificado empíricamente contra SQLite 3.45.1**, que es donde corre
+> la suite (`phpunit.xml:27-28`):
+>
+> ```
+> SQLSTATE[HY000]: General error: 1 HAVING clause on a non-aggregate query
+> ```
+>
+> SQLite exige `GROUP BY` para admitir `HAVING`. Y en MySQL, `HAVING` sin `GROUP BY` es una
+> extensión propietaria de semántica ambigua, no algo en lo que convenga apoyarse. Esta auditoría
+> recomendó `having` en su versión anterior; era un error y **habría roto los tests**.
+
+**Código optimizado propuesto.** Un `joinSub` agrupado: **una sola pasada** sobre `purchase_lines`
+que filtra y cuenta a la vez. El `INNER JOIN` reemplaza al `whereHas` (solo sobreviven las compras
+con líneas pendientes) y la columna agregada reemplaza al `withCount`:
 
 ```php
-$purchases = Purchase::where('tenant_id', $tenant->id)
-    ->withCount(['lines as pending_lines_count' => $unresolved])
-    ->having('pending_lines_count', '>', 0)     // ← reemplaza al whereHas
+$pendingLines = PurchaseLine::query()
+    ->selectRaw('purchase_id, count(*) as pending_lines_count')
+    ->whereNull('cost_applied_at')
+    ->whereNull('excluded_at')
+    ->groupBy('purchase_id');
+
+$purchases = Purchase::where('purchases.tenant_id', $tenant->id)
+    ->joinSub($pendingLines, 'pl', 'pl.purchase_id', '=', 'purchases.id')   // filtra Y cuenta
+    ->select('purchases.*', 'pl.pending_lines_count')
     ->with('supplier')
     ->get();
 ```
 
+**Verificado en SQLite 3.45.1**: devuelve exactamente las compras con líneas pendientes, con su
+conteo correcto, y descarta tanto las resueltas como las que no tienen líneas. Portable a MySQL 8
+sin cambios.
+
 > **Aclaración sobre `withWhereHas()`:** es la herramienta correcta cuando se necesita *filtrar y
 > cargar la relación* en un solo paso, pero acá lo que se necesita es el **conteo**, no la colección
-> de líneas. Cargar las líneas para contarlas en PHP sería peor. Por eso: `withCount` + `having`.
+> de líneas. Cargar las líneas para contarlas en PHP sería peor.
+>
+> La otra opción documentada es `whereHas('lines', $unresolved, '>=', 1)`, que acepta operador y
+> cantidad — pero sigue dejando dos subconsultas si además se necesita el conteo para el texto de la
+> alerta. El `joinSub` resuelve las dos cosas de una vez.
 
-**Riesgo:** 🟢 Bajo.
+**Beneficio esperado.** 2 subconsultas correlacionadas (evaluadas una vez por compra) → **1 pasada
+agrupada** sobre `purchase_lines`, aprovechando el índice I5.
+
+**Riesgo:** 🟡 Medio — el `joinSub` cambia el `select` base, así que hay que calificar las columnas
+(`purchases.*`) para no colisionar con `pl.purchase_id`. `NotificationAlertsTest` es la red.
 
 ---
 
@@ -1362,17 +1415,32 @@ $existing = SupplierProductLink::query()
 **Problema.** Comandos de mantenimiento que cargan tablas completas en memoria. Es aceptable —corren
 fuera del request, con supervisión— pero se rompen justo cuando más falta hacen: en el tenant grande.
 
-**Código optimizado propuesto.** `chunkById()` o `lazy()`, siguiendo el patrón que
-`RefreshRecipeCosts:32` **ya usa correctamente**. Para el caso de arriba, `pluck` de las tres
-columnas en vez de hidratar modelos:
+**Código optimizado propuesto.** Depende de si la iteración **escribe** o solo lee, y la distinción
+importa:
 
-```php
-$existing = SupplierProductLink::withoutGlobalScopes()
-    ->select('tenant_id', 'supplier_id', 'raw_name_normalized')
-    ->cursor()      // no materializa la colección entera
-    ->map(fn ($l) => "{$l->tenant_id}|{$l->supplier_id}|{$l->raw_name_normalized}")
-    ->flip();
-```
+- **Solo lectura** (el caso de arriba): `cursor()` devuelve una `LazyCollection` y no materializa la
+  colección entera. Más `select()` de las tres columnas para no hidratar modelos completos:
+
+  ```php
+  $existing = SupplierProductLink::withoutGlobalScopes()
+      ->select('tenant_id', 'supplier_id', 'raw_name_normalized')
+      ->cursor()
+      ->map(fn ($l) => "{$l->tenant_id}|{$l->supplier_id}|{$l->raw_name_normalized}")
+      ->flip();
+  ```
+
+- **Iteración que actualiza filas** (`FixIngredientSubdivisionCosts:78-99`, que hace `update()`
+  dentro del recorrido): **`chunkById()` o `lazyById()`, nunca `chunk()` ni `cursor()`**. La
+  documentación es explícita: cuando se actualizan registros mientras se itera, hay que paginar por
+  clave primaria o los resultados se corren y algunas filas se saltean. `RefreshRecipeCosts:32` ya
+  usa `chunkById` correctamente por este motivo.
+
+  ```php
+  Ingredient::whereNotNull('subdivisions')->lazyById(200)->each(function ($item) { /* … */ });
+  ```
+
+> Es una distinción que se pasa por alto seguido: `cursor()` es más eficiente en memoria que
+> `chunkById()`, pero **no es seguro** si la iteración modifica las filas que está recorriendo.
 
 **Riesgo:** 🟢 Bajo.
 
@@ -1463,6 +1531,22 @@ aplicable** —al contrario que en `NotificationService`, ver §8.3— porque `r
 RecipePrice::upsert($rows, ['price_list_id', 'recipe_id'], ['price', 'tenant_id']);
 RecipePriceLog::insert($logRows);      // por chunks, dentro de la misma transacción
 ```
+
+> ⚠️ **Tres advertencias sobre `upsert()`, confirmadas en la documentación de Laravel 13:**
+>
+> 1. **En MySQL y MariaDB el segundo argumento se ignora.** La documentación es explícita: *«MariaDB
+>    and MySQL drivers ignore the second argument and always use the table's primary and unique
+>    indexes to detect existing records»*. Es decir, `['price_list_id', 'recipe_id']` es
+>    documentación para el lector, no una instrucción para el motor: MySQL usará **todos** los
+>    índices únicos de la tabla. Funciona bien acá porque el único índice único relevante es
+>    justamente ese y las filas nuevas no traen `id` — pero es una diferencia de comportamiento que
+>    hay que conocer antes de usar `upsert()` en cualquier tabla con más de un único.
+> 2. **SQLite sí honra el segundo argumento.** O sea que la operación se comporta distinto en los
+>    tests que en producción. No invalida el enfoque, pero significa que un test verde no prueba el
+>    comportamiento real de MySQL.
+> 3. **`upsert()` no dispara eventos de modelo** ni mantiene `updated_at` salvo que se incluya en
+>    los arrays. Para `recipe_prices` no hay observers, así que es seguro; conviene verificarlo si
+>    se agregan más adelante.
 
 **Beneficio esperado.** `listas × recetas × 3` → **2 escrituras en lote**. De ~14.000 queries a ~4.
 
@@ -1660,7 +1744,10 @@ Resumen de dónde aplica cada herramienta del arsenal de Eloquent en este códig
 | `distinct()` | `RecipeCostPropagator:64, 76, 88` — reemplaza el `->unique()` en PHP | Dedup en SQL |
 | `whereColumn()` | `NotificationService::syncLowStock:47` — traduce `hasAlert()` a SQL | Filtra en BD, no en PHP |
 | `leftJoinSub()` | `NotificationService::syncStaleCost:98-106` | Agrega una vez, no por fila |
-| `having()` | `NotificationService::syncUnappliedPurchases:150` — reemplaza el `whereHas` redundante | 2 subconsultas → 1 |
+| `having()` | ❌ **Descartado.** Falla en SQLite (`HAVING clause on a non-aggregate query`) y en MySQL depende de una extensión propietaria — ver Q3 | — |
+| `joinSub()` agrupado | `NotificationService::syncUnappliedPurchases:150` — filtra y cuenta en una pasada, reemplazando `whereHas` + `withCount` (Q3) | 2 subconsultas correlacionadas → 1 pasada agrupada |
+| `morphWith()` | Eager loading de relaciones anidadas por tipo, disponible **solo después** de N5 | Habilita lo que hoy es imposible |
+| `lazyById()` | `FixIngredientSubdivisionCosts:78-99` — itera **actualizando**, así que `cursor()` no es seguro (Q12) | Memoria acotada sin saltear filas |
 | `whereKeyNot()` | `RecipeShowViewModel:147` (`where('id','!=',…)`) | Legibilidad |
 | `whereNotIn()` | `RecipeShowViewModel:150` — mueve el `filter()` a SQL | N×M queries → 1 (N3) |
 | `chunkById()` / `cursor()` / `lazy()` | `BackfillProductLinks:38, 85`, `FixIngredientSubdivisionCosts:42, 46` | Memoria acotada |
@@ -1820,7 +1907,7 @@ producción en vez de esperar a la próxima revisión manual.
 | 13 | 🟠 Alta | Q5 — dashboard sin techo de memoria | Crece con el catálogo, sin límite | Agregados sobre el cache + 3 columnas nuevas | 4 h |
 | 14 | 🟠 Alta | N9 — `defaultLocation()` en el bucle | Hasta 4 queries por movimiento | Memoización, como `getSetting()` | 30 min |
 | 15 | 🟠 Alta | **R13 — propagaciones concurrentes por autosave** | Cache de costo calculado con valores intermedios | `AbortController` + lock por receta | 2 h |
-| 16 | 🟡 Media | Q1, Q2, Q3 — `NotificationService` | 2 queries por alerta; filtros en PHP | `having`, `leftJoinSub`, inserción en lote | 2 h |
+| 16 | 🟡 Media | Q1, Q2, Q3 — `NotificationService` | 2 queries por alerta; filtros en PHP | `joinSub`, `leftJoinSub`, inserción en lote | 2 h |
 | 17 | 🟡 Media | Q6 — `defaultPriceList()` redundante | −1 query en 4 pantallas | Uniformar con `RecipeController::index` | 20 min |
 | 18 | 🟡 Media | **Q15, Q16 — doble `SUM`, `load('lines')` para 3 sumas** | 1-2 queries evitables por página | Memoización + `selectRaw` | 30 min |
 | 19 | 🟡 Media | N10, N11, Q7-Q12 | Queries evitables, overfetching | Ver cada hallazgo | 3 h |
@@ -1842,7 +1929,7 @@ Sin dependencias entre sí, sin cambios de esquema, alto beneficio inmediato:
 | 1.3 | N9 | `Tenant.php:53-58` | Memoizar `defaultLocation()` |
 | 1.4 | Q6 | `DashboardController:40`, `PriceListController:30,51`, `RecipeShowViewModel:40` | Uniformar con el patrón de `RecipeController::index:39-43` |
 | 1.5 | N2 (a,b) | `RecipeCostPropagator.php:61-92` | `distinct()->pluck()` y quitar el `->get()` |
-| 1.6 | Q3 | `NotificationService.php:149-153` | `having` en vez de `whereHas` |
+| 1.6 | Q3 | `NotificationService.php:149-153` | `joinSub` agrupado en vez de `whereHas` + `withCount` |
 | 1.7 | Q7 | `Purchase.php:56-59` | `relationLoaded('lines')` |
 | 1.8 | N11 | `Admin/TenantController.php:79-85` | `loadCount()` |
 | 1.9 | R6 | `AppServiceProvider.php:19` | `handleLazyLoadingViolationUsing()` |
@@ -1963,6 +2050,15 @@ las resueltas. La alternativa aplicable es la de Q1: una lectura agrupada + `ins
 > porque `recipe_prices` tiene el único `(price_list_id, recipe_id)` que la operación necesita y no
 > hay ninguna regla de negocio que dependa de filas duplicadas. La misma herramienta, dos veredictos
 > opuestos: lo que decide no es la herramienta, es el esquema y la semántica de cada tabla.
+>
+> **La documentación de Laravel 13 refuerza el argumento con un detalle que lo vuelve más grave de
+> lo que parecía:** *«MariaDB and MySQL drivers ignore the second argument and always use the
+> table's primary and unique indexes to detect existing records»*. En producción, entonces, no
+> alcanza con pasarle a `upsert()` las columnas «correctas» — el motor va a usar **todos** los
+> índices únicos de `notifications`. Si alguien agrega el único sobre `(tenant_id, dedupe_key)` para
+> que el `upsert()` funcione, no solo rompe la regla de las alertas resueltas: la rompe de una forma
+> que **no se puede acotar pasando otro segundo argumento**. La única salida sería no tener ese
+> índice — y entonces el `upsert()` no hace nada útil.
 
 **8.4 — Quitar las verificaciones de tenant de las 12 policies.** Son estructuralmente redundantes
 con el global scope de `BelongsToTenant` —que ya hace que un recurso de otro tenant dé 404 en el
@@ -1978,6 +2074,22 @@ consulta. Cambiaría los resultados, que es exactamente lo que el pedido prohíb
 resolvería el cierre en **una** query en vez de 3-5. Pero la variante por niveles con `whereIn`
 logra casi lo mismo en Eloquent puro y legible, sin meter SQL recursivo crudo en un servicio de
 dominio. Si el árbol de sub-recetas creciera a 8-10 niveles de profundidad, conviene reevaluarla.
+
+**8.7 — `having()` sobre el alias de un `withCount`.** Descartado **después de haberlo
+recomendado**. Es la forma más corta de reemplazar un `whereHas` redundante y funciona en MySQL,
+pero **falla en SQLite**, que es donde corre la suite de este proyecto:
+
+```
+SQLSTATE[HY000]: General error: 1 HAVING clause on a non-aggregate query
+```
+
+Verificado contra SQLite 3.45.1. Además, en MySQL `HAVING` sin `GROUP BY` es una extensión
+propietaria de semántica ambigua. La alternativa portable es el `joinSub` agrupado de Q3.
+
+Vale la pena dejarlo anotado como lo que es: **un error de esta misma auditoría, detectado al
+verificar en vez de al razonar**. La restricción de portabilidad estaba enunciada en la primera
+página del informe, y aun así la recomendación la violaba. Razonar sobre compatibilidad no sustituye
+a ejecutar la consulta.
 
 ---
 
@@ -2023,6 +2135,21 @@ de comprobarlo:
 2. **La suite completa verde, sin modificar tests.** Si una corrección de rendimiento obliga a
    cambiar un test de comportamiento, dejó de ser una corrección de rendimiento.
    `php artisan test --compact`.
+
+   **Correr la suite es obligatorio, no opcional, para cualquier cambio de SQL.** La producción es
+   MySQL y los tests son SQLite: una consulta puede ser correcta en un motor e inválida en el otro.
+   Esta auditoría recomendó en su versión anterior un `having` que funciona en MySQL y **rompe en
+   SQLite** — el error se detectó ejecutando la consulta, no leyéndola.
+
+   Construcciones de este informe ya verificadas contra SQLite 3.45.1:
+
+   | Construcción | Hallazgo | Resultado |
+   |---|---|---|
+   | `whereColumn('quantity', '<=', 'min_quantity')` con `OR` anidado | N4 | ✅ portable, semántica idéntica a `hasAlert()` |
+   | `leftJoinSub` + `coalesce(l.last_cost_at, created_at)` | Q2 | ✅ portable, incluye el caso «sin logs» |
+   | `joinSub` agrupado con `count(*)` | Q3 | ✅ portable, filtra y cuenta en una pasada |
+   | `selectRaw` con `sum()` y `coalesce` anidado | Q16 | ✅ portable, precisión correcta |
+   | `having` sobre alias de `withCount` | Q3 (descartado) | ❌ **falla en SQLite** |
 3. **Redes específicas por hallazgo:** N1/N2 → `RecipeCostPropagatorTest`,
    `RecipeCostCalculatorSubrecipeTest`, `RecipeCostTest`. N3 → `RecipeSubrecipeLineTest`. N4/Q1/Q2/Q3
    → `NotificationAlertsTest`. N6/N7 → `TenantIsolationTest`, `tests/Feature/Auth`. N8 →
