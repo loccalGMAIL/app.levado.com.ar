@@ -22,7 +22,9 @@
       "Bash(timeout 60 bash -c 'while true; do sleep 5; done')",
       "PowerShell(herd sites 2>&1)",
       "Bash(sed -i 's|### v0.11.1 — Aislamiento estructural entre tenants \\(rama `claude/technical-debt-audit-obzekw`, pendiente de merge\\)|### v0.11.1 — Aislamiento estructural entre tenants \\(PR #44, mergeada a master\\)|' .claude/memory/project_status.md)",
-      "Bash(git commit -m 'feat\\(ux\\): páginas de error 404/403/419/500/503 con branding \\(v0.11.2\\) *)"
+      "Bash(git commit -m 'feat\\(ux\\): páginas de error 404/403/419/500/503 con branding \\(v0.11.2\\) *)",
+      "mcp__Context7__resolve-library-id",
+      "mcp__Context7__query-docs"
     ]
   },
   "enableAllProjectMcpServers": true,
