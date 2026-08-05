@@ -3,7 +3,8 @@
 **Fecha:** 4 de agosto de 2026
 **Alcance:** código completo del repositorio, acotado a acceso a datos y rendimiento de consultas.
 **Enfoque:** eliminar N+1 y reducir consultas **sin alterar el comportamiento funcional**.
-**Stack auditado:** Laravel 13.7, PHP 8.3, MySQL en producción, Blade + Alpine (no hay Inertia/Vue).
+**Stack auditado:** Laravel 13.8.0 (`composer.lock`), PHP 8.3, MySQL en producción, Blade + Alpine
+(no hay Inertia/Vue).
 
 Complementa a `AUDITORIA_DEUDA_TECNICA.md` (16/07/2026), que ya había marcado el techo de
 escalabilidad como riesgo genérico —«dashboard que recalcula todo en memoria, propagación de costos
@@ -28,20 +29,21 @@ El costo se corrió a tres lugares donde nadie lo miró:
 3. **La capa de autorización** (`Gate::before` → `User::isSuperAdmin()`) emite una query por cada
    `@can` y cada `authorize()`. Hay 18 `@can` en una sola vista y 57 `authorize()` en controllers.
 
-**30 hallazgos enumerados** — 11 de N+1 (§1), 12 de consultas ineficientes (§2) y 7 de índices
+**41 hallazgos enumerados** — 11 de N+1 (§1), 18 de consultas ineficientes (§2) y 12 de índices
 faltantes (§4):
 
 | Severidad | Cantidad | Detalle | Naturaleza |
 |---|---|---|---|
-| 🔴 Crítica | 8 | N1-N6, I2, I3 | Escalan con el volumen de datos del tenant; ya son medibles hoy |
-| 🟠 Alta | 11 | N7-N9, Q1-Q5, I1, I5, I7 | Costo fijo por request en rutas de uso diario |
-| 🟡 Media | 10 | N10, N11, Q6-Q11, I4, I6 | Consultas evitables, overfetching, colecciones sin límite |
-| 🟢 Baja | 1 | Q12 | Comandos de mantenimiento sin acotar |
+| 🔴 Crítica | 9 | N1-N6, Q13, I2, I3 | Escalan con el volumen de datos del tenant; ya son medibles hoy |
+| 🟠 Alta | 13 | N7-N9, Q1-Q5, Q14, I1, I5, I7, I8 | Costo fijo por request en rutas de uso diario |
+| 🟡 Media | 16 | N10, N11, Q6-Q11, Q15, Q16, I4, I6, I9-I12 | Consultas evitables, overfetching, colecciones sin límite |
+| 🟢 Baja | 3 | Q12, Q17, Q18 | Consultas duplicadas menores y comandos sin acotar |
 
-A eso se suman **12 riesgos transversales** (§5, `R1`-`R12`), que en su mayoría **no son hallazgos
+A eso se suman **13 riesgos transversales** (§5, `R1`-`R13`), que en su mayoría **no son hallazgos
 nuevos**: reagrupan los anteriores por tipo de riesgo. Las excepciones son `R6` (los N+1 son
-silenciosos en producción), `R10` y `R11`, que se documentan para dejar cerrados los puntos de
-eventos de modelo y de jobs — en ambos casos **no se encontró problema**.
+silenciosos en producción), `R13` (propagaciones concurrentes por el autosave), y `R10`/`R11`, que
+se documentan para dejar cerrados los puntos de eventos de modelo y de jobs — en ambos casos **no se
+encontró problema**.
 
 La §3 (optimización de Eloquent) no agrega hallazgos: mapea las herramientas de la API contra los
 hallazgos ya enumerados.
@@ -58,6 +60,15 @@ hallazgos ya enumerados.
 (`phpunit.xml:27-28`) mientras producción es MySQL. Todo el SQL propuesto acá es portable entre
 ambos motores; donde hubo que elegir entre el constructor de Eloquent y SQL crudo, se eligió
 Eloquent (`whereColumn`, `leftJoinSub`, `withExists`, `having`) precisamente por eso.
+
+**Nota de procedencia.** Este informe fusiona dos auditorías independientes del mismo código. La
+segunda aportó 10 hallazgos que la primera no tenía —entre ellos Q13 (el de peor cota superior de
+todo el documento), Q14, Q15 y el riesgo de concurrencia R13— y corrigió la versión del framework.
+La primera aportó N7, Q3, Q4, el morph map reutilizando `CatalogItemType::modelClass()`, y §8.
+
+Que dos recorridos independientes coincidieran en los cinco problemas de fondo (alertas,
+propagación, ciclos, dashboard, autorización) es la señal más fuerte de ambos: no son artefactos de
+interpretación. Donde **no** coincidieron es igual de informativo, y está anotado en cada hallazgo.
 
 **Nota metodológica.** Los conteos de queries son **estimaciones derivadas de leer el camino de
 ejecución**, no mediciones con profiler. Cada uno se presenta con su fórmula visible (p. ej. «7 ×
@@ -330,7 +341,7 @@ tocar a `RecipeLineController:201`, que lo usa correctamente una sola vez.
 completa ya hidratada: menos memoria y menos hidratación de modelos que se iban a descartar.
 
 **Alternativa evaluada:** una única query con `WITH RECURSIVE` (soportado por MySQL 8 y por SQLite
-3.8.3+). **No se recomienda** — ver §9.6.
+3.8.3+). **No se recomienda** — ver §8.6.
 
 **Riesgo:** 🟢 Bajo — el comportamiento observable es idéntico y `RecipeSubrecipeLineTest` cubre la
 detección de ciclos.
@@ -401,7 +412,7 @@ foreach ($levels as $level) {
 
 N queries → **2**. Ver **N5** para la solución de fondo, que es mejor.
 
-**(c) El `raise()` por alerta se agrupa.** Detalle en **Q1**; y en §9.3 se explica por qué el
+**(c) El `raise()` por alerta se agrupa.** Detalle en **Q1**; y en §8.3 se explica por qué el
 `upsert()` masivo —la respuesta obvia— **no es aplicable acá**.
 
 **Beneficio esperado.** ~121 queries → **~6**, y la hidratación cae de «todo el stock» a «lo que
@@ -499,7 +510,7 @@ lazy-loadear dentro del bucle de `PurchaseController::destroy`.
 
 ---
 
-### 🔴 N6 — `Gate::before` → `isSuperAdmin()`: una query por cada `@can`
+### 🔴 N6 — `Gate::before` → `isSuperAdmin()`: 1-2 queries por cada `@can`
 
 **Ubicación:** `app/Providers/AppServiceProvider.php:43-47` + `app/Models/User.php:55-61`
 
@@ -525,10 +536,18 @@ public function isSuperAdmin(): bool
 `isSuperAdmin()` no memoiza nada, cada `@can` de una vista y cada `authorize()` de un controller
 emite una query idéntica.
 
-**Queries estimadas.** `1 × cada @can + 1 × cada authorize()`. Medido sobre el repo:
-`resources/views/recipes/show.blade.php` tiene **18 `@can`** → **18 queries idénticas** solo para
-decidir qué botones pintar. Hay **57 `authorize()`** en controllers y `@can` en otras 17 vistas
-(`purchases/show` 11, `packaging/index` 9, `ingredients/index` 7, `fixed-costs/index` 7…).
+**Queries estimadas.** **1 o 2 por verificación, según el tipo:**
+
+- **1** cuando la verificación resuelve por *policy* (`@can('update', $recipe)`): `Gate::before`
+  consulta, y la policy compara `tenant_id` en memoria sin tocar la BD.
+- **2** cuando resuelve por una de las tres *Gates con nombre* (`manage-team`, `edit-settings`,
+  `manage-costs`, definidas en `AppServiceProvider:49-79`): a la de `Gate::before` se le suma la de
+  `hasRoleInTenant()`.
+
+Medido sobre el repo: `resources/views/recipes/show.blade.php` tiene **18 `@can`** → **18-20 queries
+idénticas** solo para decidir qué botones pintar. Hay **57 `authorize()`** en controllers y `@can` en
+otras 17 vistas (`purchases/show` 11, `packaging/index` 9, `ingredients/index` 7,
+`fixed-costs/index` 7…).
 
 Lo mismo aplica a `roleInTenant()` (`User.php:38-46`), que consulta en cada llamada y es invocado
 por `CheckTenantRole:28` y por las tres Gates de `AppServiceProvider:49-79`.
@@ -889,7 +908,7 @@ idéntico al que ya está guardado.
 
 **Beneficio esperado.** `2 × N` → `1 + 1 + (updates realmente necesarios ≈ 0)`.
 
-> ⚠️ **`upsert()` no sirve acá** y el motivo es de diseño, no de rendimiento — ver §9.3.
+> ⚠️ **`upsert()` no sirve acá** y el motivo es de diseño, no de rendimiento — ver §8.3.
 
 **Riesgo:** 🟡 Medio — `Notification::insert()` saltea eventos y casts (`meta` es `array` y habría que
 serializarlo a mano). `NotificationAlertsTest` es la red.
@@ -1359,6 +1378,269 @@ $existing = SupplierProductLink::withoutGlobalScopes()
 
 ---
 
+### 🔴 Q13 — `RecipePriceWriter::set()`: doble SELECT, amplificado por dos loops anidados
+
+**Ubicación:** `app/Services/RecipePriceWriter.php:15-43` +
+`app/Http/Controllers/PriceListController.php:157-215`
+
+```php
+// RecipePriceWriter.php:17-32
+$existing = RecipePrice::where('price_list_id', $priceList->id)
+    ->where('recipe_id', $recipe->id)
+    ->first();                                    // ← SELECT #1
+// …
+$recipePrice = RecipePrice::updateOrCreate(
+    ['price_list_id' => $priceList->id, 'recipe_id' => $recipe->id],
+    ['tenant_id' => $recipe->tenant_id, 'price' => $price],
+);                                                // ← SELECT #2 (updateOrCreate vuelve a buscar) + escritura
+```
+
+```php
+// PriceListController.php:196-208 — y esto lo llama dentro de DOS loops
+foreach ($lists as $list) {
+    $existing = RecipePrice::where('price_list_id', $list->id)
+        ->whereIn('recipe_id', $recipeIds)
+        ->pluck('price', 'recipe_id');            // ← Q9: 1 query por lista
+    foreach ($recipes as $recipe) {
+        if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) { continue; }
+        $this->writer->set($recipe, $list, $suggested);   // ← 3 queries por receta
+    }
+}
+```
+
+**Problema.** `set()` busca el precio **dos veces**: una explícita con `first()` y otra implícita
+dentro de `updateOrCreate()`. Y el controller **ya sabe** que el precio no existe —lo verificó con
+`$existing->has($recipe->id)` en la línea anterior— así que las dos búsquedas son redundantes por
+partida doble.
+
+**Queries estimadas.** `listas × recetas × 3`. Un tenant con 12 listas y 400 recetas ≈ **14.000
+queries en una sola request HTTP**. Es el hallazgo con peor cota superior de todo el informe.
+
+> Este hallazgo corrige una omisión de la primera versión de esta auditoría, que identificó el loop
+> externo (Q9) pero descartó el writer como «trabajo pendiente aparte». Era la mitad más grande del
+> problema.
+
+**Código optimizado propuesto.** Para el caso unitario, `firstOrNew()` + `isDirty()` elimina el
+segundo SELECT y evita escribir cuando nada cambió:
+
+```php
+public function set(Recipe $recipe, PriceList $priceList, ?float $price): ?RecipePrice
+{
+    $recipePrice = RecipePrice::firstOrNew([
+        'price_list_id' => $priceList->id,
+        'recipe_id' => $recipe->id,
+    ]);
+
+    if ($price === null) {
+        $recipePrice->exists ? $recipePrice->delete() : null;
+
+        return null;
+    }
+
+    $recipePrice->fill(['tenant_id' => $recipe->tenant_id, 'price' => $price]);
+    $priceChanged = ! $recipePrice->exists || $recipePrice->isDirty('price');
+
+    $recipePrice->save();
+
+    if ($priceChanged) {
+        $recipe->priceLogs()->create([
+            'price_list_id' => $priceList->id,
+            'price' => $price,
+            'recorded_at' => now(),
+        ]);
+    }
+
+    return $recipePrice;
+}
+```
+
+Para las aplicaciones masivas, construir los arrays y escribir en lote. **Acá `upsert()` sí es
+aplicable** —al contrario que en `NotificationService`, ver §8.3— porque `recipe_prices` tiene el
+único `(price_list_id, recipe_id)` que la operación necesita
+(`create_price_lists_tables.php:34`):
+
+```php
+RecipePrice::upsert($rows, ['price_list_id', 'recipe_id'], ['price', 'tenant_id']);
+RecipePriceLog::insert($logRows);      // por chunks, dentro de la misma transacción
+```
+
+**Beneficio esperado.** `listas × recetas × 3` → **2 escrituras en lote**. De ~14.000 queries a ~4.
+
+**Riesgo:** 🟠 Alto para la parte masiva (`upsert()` saltea eventos y timestamps del modelo), 🟢 Bajo
+para el `firstOrNew()`. `RecipePriceWriterTest`, `PriceListCrudTest` y `PriceListMatrixTest` cubren
+el camino. Conviene separarlo en dos commits.
+
+---
+
+### 🟠 Q14 — `whereDate()` inutiliza un índice que ya existe
+
+**Ubicación:** `app/Models/VariableExpense.php:31-35`
+
+```php
+public function scopeBetween(Builder $query, ?string $from, ?string $to): void
+{
+    $query->when($from, fn ($q, $date) => $q->whereDate('expense_date', '>=', $date))
+        ->when($to, fn ($q, $date) => $q->whereDate('expense_date', '<=', $date));
+}
+```
+
+**Problema.** `whereDate()` genera `date(expense_date) >= ?`, y envolver la columna en una función
+**impide usar el índice**. Y el índice existe: `(tenant_id, expense_date)`
+(`create_variable_expenses_table:22`). Se está pagando el costo de escritura de un índice que las
+consultas de rango no pueden aprovechar.
+
+Además es **innecesario**: la columna es `date` en la BD y está casteada a `date` en el modelo
+(`:27`), así que no hay componente de hora que truncar. `whereDate()` no aporta nada.
+
+**Queries estimadas.** No cambia el número de queries: cambia el **plan de ejecución**, de búsqueda
+por rango en índice a escaneo completo de los gastos del tenant.
+
+**Dónde duele.** `VariableExpenseController::index:43` (el listado con filtro de período) y `:45`
+(`(clone $filtered)->sum('amount')`, que recorre lo mismo otra vez).
+
+**Código optimizado propuesto.**
+
+```php
+public function scopeBetween(Builder $query, ?string $from, ?string $to): void
+{
+    $query->when($from, fn ($q, $date) => $q->where('expense_date', '>=', $date))
+        ->when($to, fn ($q, $date) => $q->where('expense_date', '<=', $date));
+}
+```
+
+**Beneficio esperado.** Habilita el índice existente. Es el mejor ratio beneficio/esfuerzo del
+informe: dos palabras.
+
+**Riesgo:** 🟢 Muy bajo. `VariableExpenseCrudTest` cubre el filtro de período; verificar que los
+límites del rango sigan siendo inclusivos.
+
+---
+
+### 🟡 Q15 — Doble `SUM` de gastos fijos en cada página que muestra overhead
+
+**Ubicación:** `app/Models/Tenant.php:151-170`
+
+```php
+/**
+ * Suma de gastos fijos activos del mes. Único dueño de esta consulta:
+ * no repetir `fixedCosts()->active()->sum(...)` en controllers ni vistas.
+ */
+public function totalFixedCosts(): float
+{
+    return (float) $this->fixedCosts()->active()->sum('monthly_amount');
+}
+
+public function overheadPerHour(): ?float
+{
+    $productiveHours = (int) $this->productive_hours_month;
+
+    return $productiveHours > 0 ? $this->totalFixedCosts() / $productiveHours : null;   // ← SUM otra vez
+}
+```
+
+**Problema.** `overheadPerHour()` llama internamente a `totalFixedCosts()`, así que **pedir los dos
+ejecuta el `SUM` dos veces**. Y es exactamente lo que hacen los dos llamadores:
+`DashboardController:49,51` y `BusinessController:19,20`.
+
+Lo notable es que el docblock advierte *«Único dueño de esta consulta: no repetir»*. La intención de
+centralizar está bien; **es la forma de la API la que provoca la duplicación** que el comentario
+quiere evitar.
+
+**Queries estimadas.** 1 `SUM(monthly_amount)` evitable por página del dashboard y de configuración
+del negocio.
+
+**Código optimizado propuesto.** Memoizar por instancia, con el mismo patrón que `getSetting()`
+(`Tenant.php:172-180`) ya usa en este archivo:
+
+```php
+/** @var float|null Cache por instancia: dashboard y business piden total y overhead en la misma request */
+private ?float $cachedTotalFixedCosts = null;
+
+public function totalFixedCosts(): float
+{
+    return $this->cachedTotalFixedCosts ??= (float) $this->fixedCosts()->active()->sum('monthly_amount');
+}
+```
+
+Mantiene la firma pública y arregla a los dos llamadores sin tocarlos.
+
+**Riesgo:** 🟢 Bajo. Invalidar el cache si se muta un gasto fijo en la misma request.
+
+---
+
+### 🟡 Q16 — `updateLinePrice()` carga todas las líneas para tres sumas
+
+**Ubicación:** `app/Http/Controllers/PurchaseController.php:260-263`
+
+```php
+$purchase->load('lines');
+$totalSubtotal   = $purchase->lines->sum(fn ($l) => (float) $l->subtotal);
+$totalIva        = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * (float) $l->iva_rate);
+$totalPercepcion = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * ((float) ($l->percepcion_rate ?? 0) / 100));
+```
+
+**Problema.** Endpoint AJAX que se invoca cada vez que el usuario corrige un precio. Trae **todas**
+las líneas de la factura por la red para devolver tres números.
+
+**Código optimizado propuesto.** Agregar en SQL — transferencia O(N) → O(1):
+
+```php
+$totals = $purchase->lines()
+    ->selectRaw('coalesce(sum(subtotal), 0) as total_subtotal')
+    ->selectRaw('coalesce(sum(subtotal * iva_rate), 0) as total_iva')
+    ->selectRaw('coalesce(sum(subtotal * coalesce(percepcion_rate, 0) / 100), 0) as total_percepcion')
+    ->first();
+```
+
+**Riesgo:** 🟢 Bajo — verificar que la precisión decimal coincida con la suma en PHP.
+
+---
+
+### 🟢 Q17 — `MailTemplate::forType()` consultado dos veces por cada mail
+
+**Ubicación:** `app/Models/MailTemplate.php:16-19`; llamado en `app/Mail/TeamInvitation.php:21,29` y
+`app/Mail/WelcomeMail.php:25,33`
+
+```php
+public static function forType(string $type): ?self
+{
+    return static::where('mail_type', $type)->first();     // ← query
+}
+```
+
+**Problema.** Laravel invoca `envelope()` y `content()` por separado al construir un mailable, y
+ambos llaman a `forType()` con el mismo argumento: **2 queries idénticas por cada mail enviado**.
+
+**Código optimizado propuesto.** Memoizar en el mailable:
+
+```php
+private ?MailTemplate $template = null;
+
+private function template(): ?MailTemplate
+{
+    return $this->template ??= MailTemplate::forType('team-invitation');
+}
+```
+
+**Riesgo:** 🟢 Muy bajo. `AdminMailPreviewTest` cubre el render.
+
+---
+
+### 🟢 Q18 — La invitación se resuelve dos veces por request
+
+**Ubicación:** `app/Http/Requests/AcceptInvitationRequest.php:21-22` +
+`app/Http/Controllers/InvitationController.php:80`
+
+**Problema.** El form request busca la invitación por token para validar, y el controller la vuelve a
+buscar con `Invitation::where('token', $token)->firstOrFail()`.
+
+**Código optimizado propuesto.** Resolverla una vez —binding de ruta o atributo del request— y
+reutilizarla. Es un arreglo de legibilidad tanto como de rendimiento.
+
+**Riesgo:** 🟢 Muy bajo. `InvitationAcceptTest` cubre el flujo.
+
+---
+
 ## 3. Optimización de Eloquent — oportunidades por API
 
 Resumen de dónde aplica cada herramienta del arsenal de Eloquent en este código:
@@ -1385,7 +1667,11 @@ Resumen de dónde aplica cada herramienta del arsenal de Eloquent en este códig
 | `paginate()` | Ya bien usado en los 12 `index` de catálogo | — |
 | `morphTo()` + `enforceMorphMap()` | `StockLevel`, `StockMovement`, `PurchaseLine` (N5) | Desbloquea eager loading polimórfico |
 | `loadMorph()` / `whereHasMorph()` | Disponibles **solo después** de N5 | — |
-| `upsert()` | Evaluado para `NotificationService::raise()` — **descartado**, ver §9.3 | — |
+| `firstOrNew()` + `isDirty()` | `RecipePriceWriter::set():17-32` — elimina el segundo SELECT y evita escribir si nada cambió (Q13) | 3 queries → 2, y 0 escrituras cuando el precio no cambió |
+| `upsert()` | ✅ **Sí** en `recipe_prices` para las sugerencias masivas (Q13): existe el único `(price_list_id, recipe_id)`. ❌ **No** en `NotificationService::raise()` — ver §8.3 | La misma herramienta, dos veredictos: decide el esquema, no la API |
+| `insert()` por lote | `recipe_price_logs` (Q13), `notifications` nuevas (Q1), líneas de `purchase_lines` en el scan | N inserts → 1 |
+| `selectRaw()` con agregados | `PurchaseController::updateLinePrice:260-263` (Q16) | Transferencia O(N) → O(1) |
+| `where()` en vez de `whereDate()` | `VariableExpense::scopeBetween:33-34` (Q14) | Habilita el índice `(tenant_id, expense_date)` que ya existe |
 | `withWhereHas()` | Evaluado para `syncUnappliedPurchases` — **no aplica**, se necesita el conteo (Q3) | — |
 | `simplePaginate()` / `cursorPaginate()` | Opción para `stock/show` (ledger de movimientos, sólo navegación adelante/atrás) | Evita el `COUNT(*)` de `paginate()` |
 
@@ -1411,6 +1697,11 @@ proveedor).
 | I5 | `purchase_lines` | `(purchase_id, cost_applied_at, excluded_at)` | Compuesto | El predicado «sin resolver» de `syncUnappliedPurchases:147` y los `withCount` condicionales de `PurchaseController::index:57-59`. Hoy solo `index('purchase_id')`. | 🟠 Alto |
 | I6 | `packagings` | `(tenant_id, active)` | Compuesto | `ingredients` ya lo tiene (`create_ingredients_table:23`) y se consulta igual; `packagings` quedó con `index('tenant_id')` solo (`create_packagings_table:24`). Asimetría sin motivo. | 🟡 Medio |
 | I7 | `stock_levels` | `(tenant_id, location_id, stockable_type)` | Compuesto | El único existente arranca por `stockable_type` (`stock_levels_stockable_unique`), así que no sirve de prefijo para los filtros por sucursal de `StockController::index:69-73`, `IngredientController:47-52` y `PackagingController:47-52`. | 🟠 Alto |
+| I8 | `stock_movements` | `(reference_type, reference_id, type)` | Compuesto | `activePurchaseEntryFor()` (`StockService:217-229`) filtra por los tres y ordena por `id desc`. Hoy existe solo `(reference_type, reference_id)`. Se ejecuta en cada imputación y en cada reversión de línea. | 🟠 Alto |
+| I9 | `notifications` | `(tenant_id, dedupe_key, resolved_at)` | Compuesto | **Reemplaza** al `notifications_dedupe_index` actual: `raise()` (`:263-266`) filtra por los tres, y sin `resolved_at` en el índice hay que ir a la fila para descartarla. | 🟡 Medio |
+| I10 | `locations` | `(tenant_id, is_default)` | Compuesto | `defaultLocation()` (`Tenant.php:55`) filtra por `is_default`; hoy solo hay `index('tenant_id')`. Complementa a N9. | 🟡 Medio |
+| I11 | `variable_expenses` | `(tenant_id, variable_expense_category_id, expense_date)` | Compuesto | El filtro combinado de categoría + período de `VariableExpenseController::index:41,43`. **Solo tiene sentido junto con Q14**: mientras el `whereDate()` siga ahí, ningún índice sobre `expense_date` se usa. | 🟡 Medio |
+| I12 | `tenant_users` | `(user_id, active, role)` | Compuesto, **cubridor** | `isSuperAdmin()` y `roleInTenant()` filtran por `user_id` y los índices declarados empiezan por `tenant_id`. **No es un tablescan** —`foreignId('user_id')->constrained()` hace que InnoDB cree su propio índice sobre `user_id`— pero un compuesto resuelve la consulta sin ir a la fila. | 🟡 Medio |
 
 **Migración propuesta** (documentada, **no ejecutada** en esta auditoría):
 
@@ -1421,7 +1712,19 @@ Schema::table('ingredient_price_logs', fn (Blueprint $t) => $t->index(['ingredie
 Schema::table('purchase_lines', fn (Blueprint $t) => $t->index(['purchase_id', 'cost_applied_at', 'excluded_at']));
 Schema::table('packagings', fn (Blueprint $t) => $t->index(['tenant_id', 'active']));
 Schema::table('stock_levels', fn (Blueprint $t) => $t->index(['tenant_id', 'location_id', 'stockable_type']));
+Schema::table('stock_movements', fn (Blueprint $t) => $t->index(['reference_type', 'reference_id', 'type']));
+Schema::table('locations', fn (Blueprint $t) => $t->index(['tenant_id', 'is_default']));
+Schema::table('variable_expenses', fn (Blueprint $t) => $t->index(['tenant_id', 'variable_expense_category_id', 'expense_date']));
+Schema::table('tenant_users', fn (Blueprint $t) => $t->index(['user_id', 'active', 'role']));
+
+// notifications: sustituye al índice de dedupe existente
+Schema::table('notifications', function (Blueprint $t) {
+    $t->dropIndex('notifications_dedupe_index');
+    $t->index(['tenant_id', 'dedupe_key', 'resolved_at'], 'notifications_dedupe_index');
+});
 ```
+
+**Todos en una sola migración**, para no acumular locks de tabla en despliegues sucesivos.
 
 Conviene seguir el patrón defensivo de `2026_06_15_165805_add_missing_indexes.php`, que verifica con
 `Schema::getIndexes()` antes de crear — hace la migración reejecutable sin romper.
@@ -1454,6 +1757,26 @@ Conviene seguir el patrón defensivo de `2026_06_15_165805_add_missing_indexes.p
 | R10 | **Eventos de modelo** | `StockMovement::booted()` (`:45-54`) solo lanza excepciones (bien); `BelongsToTenant::creating` (`:44-48`) solo setea un atributo (bien). **Sin riesgo detectado** — se documenta para cerrar el punto | 🟢 |
 | R11 | **Jobs con consultas repetidas** | **No aplica**: `QUEUE_CONNECTION` es `sync` y no hay clases `Job` en el proyecto. Es a la vez la ausencia de riesgo y la causa de R8 | — |
 | R12 | **Underfetching** | `PurchaseLineRecorder:86, 279-285`, `NotificationService:191` — cadenas `línea → compra → tenant` resueltas de a un salto | 🟡 |
+| R13 | **Concurrencia: propagaciones superpuestas** | `resources/views/recipes/show.blade.php:158-186` dispara cuatro `fetch(… method:'PATCH')` de autosave; cada uno entra por `RecipeLineController` y termina en `propagateFrom()`. Dos ediciones rápidas seguidas lanzan **dos recorridos concurrentes del mismo árbol**, cada uno leyendo `unit_cost` a mitad de la escritura del otro | 🟠 |
+
+**Sobre R13.** No es un problema de cantidad de queries sino de **orden de escritura**, y por eso
+ninguna de las optimizaciones de este informe lo resuelve — N1 lo hace más rápido, no más seguro. El
+riesgo concreto: dos PATCH sobre líneas distintas de la misma receta pueden intercalarse de modo que
+el cache de un ancestro quede calculado con el valor viejo del hijo. Hoy la ventana es grande
+justamente porque cada propagación tarda (~7 queries por nodo); acortarla reduce la probabilidad
+pero no la elimina.
+
+Mitigaciones, de menor a mayor alcance:
+
+1. **Cliente** — `AbortController` para cancelar el PATCH en vuelo cuando llega otra edición de la
+   misma línea, más un contador de versión para descartar respuestas fuera de orden.
+2. **Backend** — un lock por receta durante la propagación (`Cache::lock("recipe-propagation:{$id}")`),
+   que serializa los recorridos sin bloquear otras recetas.
+3. **De fondo** — encolar la propagación con *coalescing* por receta: varias ediciones seguidas
+   colapsan en un solo recálculo. Encaja con §7.4.1.
+
+**Nota:** este riesgo lo aportó una segunda auditoría independiente; la primera versión de este
+informe no consideró la concurrencia en ningún punto.
 
 **Sobre R6, la recomendación más transversal del informe.** `preventLazyLoading` activo solo fuera de
 producción significa que **todo N+1 por lazy loading es ruidoso en desarrollo y mudo en producción**.
@@ -1485,19 +1808,24 @@ producción en vez de esperar a la próxima revisión manual.
 | 1 | 🔴 Crítica | N6 — `Gate::before` → `isSuperAdmin()` sin cachear | 1 query por cada `@can`/`authorize()`; 18 en una sola vista | Eager-load de `tenantUsers`, métodos relacionales | 30 min |
 | 2 | 🔴 Crítica | N1 — BFS del propagador con I/O por nodo | ~7 queries × nodos, en cada edición de línea | Cierre por niveles + carga en lote + orden topológico | 3-4 h |
 | 3 | 🔴 Crítica | N2 — propagación por semilla sin `$visited` compartido | Multiplica N1 por cada receta afectada | `propagateManyFrom(ids)` + `distinct()` | 1 h (tras N1) |
-| 4 | 🔴 Crítica | N4 — `syncLowStock` con `find()` por fila | ~121 queries en cada carga del dashboard | Filtro en SQL + carga agrupada + `raise` en lote | 2 h |
-| 5 | 🔴 Crítica | N3 — `isAncestor()` por candidata | N×M queries en `/recipes/{id}` | Cierre único + `whereNotIn` | 1 h |
-| 6 | 🟠 Alta | Q4 — view composer de onboarding | Hasta 6 queries en **cada página** | `withExists()` | 20 min |
-| 7 | 🟠 Alta | N7 — `SetTenantContext` con 3 queries | 3 queries en **cada request** | Relación ya cargada por N6 | 20 min |
-| 8 | 🟠 Alta | I2/I3 — índices faltantes | Subconsultas sin índice utilizable | Migración de índices | 30 min |
-| 9 | 🟠 Alta | N5 — polimorfismo sin morph map | Impide eager loading en 3 modelos | `enforceMorphMap()` + `morphTo()` | 1 h |
-| 10 | 🟠 Alta | N8 — cascada en `applyLineSuggestions` | Miles de queries en una request | Se resuelve con N1+N2+N5 | — |
-| 11 | 🟠 Alta | Q5 — dashboard sin techo de memoria | Crece con el catálogo, sin límite | Agregados sobre el cache + 3 columnas nuevas | 4 h |
-| 12 | 🟠 Alta | N9 — `defaultLocation()` en el bucle | Hasta 4 queries por movimiento | Memoización, como `getSetting()` | 30 min |
-| 13 | 🟡 Media | Q1, Q2, Q3 — `NotificationService` | 2 queries por alerta; filtros en PHP | `having`, `leftJoinSub`, inserción en lote | 2 h |
-| 14 | 🟡 Media | Q6 — `defaultPriceList()` redundante | −1 query en 4 pantallas | Uniformar con `RecipeController::index` | 20 min |
-| 15 | 🟡 Media | N10, N11, Q7-Q12 | Queries evitables, overfetching | Ver cada hallazgo | 3 h |
-| 16 | 🟢 Baja | R6 — N+1 invisible en producción | Sin observabilidad | `handleLazyLoadingViolationUsing()` | 20 min |
+| 4 | 🔴 Crítica | **Q13 — `RecipePriceWriter::set()` doble SELECT en loops anidados** | `listas × recetas × 3`: hasta ~14.000 queries en una request | `firstOrNew` + `isDirty`; `upsert()` para las masivas | 30 min + 2 h |
+| 5 | 🔴 Crítica | N4 — `syncLowStock` con `find()` por fila | ~121 queries en cada carga del dashboard | Filtro en SQL + carga agrupada + `raise` en lote | 2 h |
+| 6 | 🔴 Crítica | N3 — `isAncestor()` por candidata | N×M queries en `/recipes/{id}` | Cierre único + `whereNotIn` | 1 h |
+| 7 | 🟠 Alta | **Q14 — `whereDate()` inutiliza un índice existente** | Escaneo en vez de rango por índice | `where()` en lugar de `whereDate()` | 2 min |
+| 8 | 🟠 Alta | Q4 — view composer de onboarding | Hasta 6 queries en **cada página** | `withExists()` | 20 min |
+| 9 | 🟠 Alta | N7 — `SetTenantContext` con 3 queries | 3 queries en **cada request** | Relación ya cargada por N6 | 20 min |
+| 10 | 🟠 Alta | I2/I3/I8 — índices faltantes | Subconsultas y ledger sin índice utilizable | Migración única con los 12 índices | 30 min |
+| 11 | 🟠 Alta | N5 — polimorfismo sin morph map | Impide eager loading en 3 modelos | `enforceMorphMap()` + `morphTo()` | 1 h |
+| 12 | 🟠 Alta | N8 — cascada en `applyLineSuggestions` | Miles de queries en una request | Se resuelve con N1+N2+N5 | — |
+| 13 | 🟠 Alta | Q5 — dashboard sin techo de memoria | Crece con el catálogo, sin límite | Agregados sobre el cache + 3 columnas nuevas | 4 h |
+| 14 | 🟠 Alta | N9 — `defaultLocation()` en el bucle | Hasta 4 queries por movimiento | Memoización, como `getSetting()` | 30 min |
+| 15 | 🟠 Alta | **R13 — propagaciones concurrentes por autosave** | Cache de costo calculado con valores intermedios | `AbortController` + lock por receta | 2 h |
+| 16 | 🟡 Media | Q1, Q2, Q3 — `NotificationService` | 2 queries por alerta; filtros en PHP | `having`, `leftJoinSub`, inserción en lote | 2 h |
+| 17 | 🟡 Media | Q6 — `defaultPriceList()` redundante | −1 query en 4 pantallas | Uniformar con `RecipeController::index` | 20 min |
+| 18 | 🟡 Media | **Q15, Q16 — doble `SUM`, `load('lines')` para 3 sumas** | 1-2 queries evitables por página | Memoización + `selectRaw` | 30 min |
+| 19 | 🟡 Media | N10, N11, Q7-Q12 | Queries evitables, overfetching | Ver cada hallazgo | 3 h |
+| 20 | 🟢 Baja | **Q17, Q18 — consultas duplicadas menores** | 2 queries por mail; invitación resuelta 2× | Memoización | 20 min |
+| 21 | 🟢 Baja | R6 — N+1 invisible en producción | Sin observabilidad | `handleLazyLoadingViolationUsing()` | 20 min |
 
 ---
 
@@ -1518,11 +1846,17 @@ Sin dependencias entre sí, sin cambios de esquema, alto beneficio inmediato:
 | 1.7 | Q7 | `Purchase.php:56-59` | `relationLoaded('lines')` |
 | 1.8 | N11 | `Admin/TenantController.php:79-85` | `loadCount()` |
 | 1.9 | R6 | `AppServiceProvider.php:19` | `handleLazyLoadingViolationUsing()` |
-| 1.10 | I1-I7 | Migración nueva | Índices, con el patrón defensivo de `add_missing_indexes` |
+| 1.10 | **Q14** | `VariableExpense.php:33-34` | `where()` en vez de `whereDate()` — **empezar por acá: 2 minutos** |
+| 1.11 | **Q15** | `Tenant.php:157` | Memoizar `totalFixedCosts()` |
+| 1.12 | **Q16** | `PurchaseController.php:260-263` | `selectRaw` de agregados |
+| 1.13 | **Q13 (parte 1)** | `RecipePriceWriter.php:15-43` | `firstOrNew()` + `isDirty('price')` — elimina un SELECT de cada escritura de precio |
+| 1.14 | **Q17, Q18** | `TeamInvitation`, `WelcomeMail`, `InvitationController` | Memoizar la plantilla; resolver la invitación una vez |
+| 1.15 | I1-I12 | Migración nueva | Los 12 índices en **una sola** migración, con el patrón defensivo de `add_missing_indexes` |
 
 **Resultado esperado de la Fase 1:** −2 queries en cada request, −5 en cada página, −18 en
-`/recipes/{id}`, y los índices que hacen baratas las correcciones de la Fase 2. **Sin ningún cambio
-de comportamiento observable.**
+`/recipes/{id}`, el índice de gastos variables vuelve a usarse, la escritura de precios baja de 3
+consultas a 2, y quedan puestos los índices que hacen baratas las correcciones de la Fase 2. **Sin
+ningún cambio de comportamiento observable.**
 
 ### Fase 2 — Correcciones medianas (1-2 horas cada una)
 
@@ -1534,6 +1868,8 @@ de comportamiento observable.**
 | 2.4 | Q1 | `raise()` en lote | 2.3 |
 | 2.5 | Q2 | `leftJoinSub` en `syncStaleCost` | I3 |
 | 2.6 | N10, Q9, Q10, Q12 | Eager loading en el borde, agrupación de consultas | — |
+| 2.7 | **Q13 (parte 2)** | `upsert()` sobre `recipe_prices` + `insert()` por chunks de logs en las aplicaciones masivas de `PriceListController` | 1.13 |
+| 2.8 | **R13** | `AbortController` + contador de versión en el autosave; lock por receta en la propagación | — |
 
 ### Fase 3 — Refactorizaciones importantes (medio día cada una)
 
@@ -1612,6 +1948,21 @@ diseño exige lo contrario: el propio código documenta en `:246-249` que una al
 debe revivir** y que, si el estado recurre, se crea una fila **nueva con la misma `dedupe_key`**. Un
 único sobre esa pareja rompería la regla de negocio, y MySQL no tiene índices parciales para excluir
 las resueltas. La alternativa aplicable es la de Q1: una lectura agrupada + `insert()` en lote.
+
+> **Este caso dejó de ser hipotético.** Una segunda auditoría independiente del mismo código
+> propuso exactamente este `upsert()` como su corrección **P0 de máxima prioridad**. La
+> optimización es correcta en general, es la primera que se le ocurre a cualquiera que mire
+> `raise()`, y aplicada acá introduce un bug funcional en el feed de alertas: las notificaciones
+> resueltas volverían a revivir en vez de crearse de nuevo sin leer.
+>
+> Es el mejor argumento a favor de que esta sección exista. Un informe que solo lista mejoras no
+> distingue entre «no se me ocurrió» y «lo evalué y no va» — y esa diferencia es justamente lo que
+> separa una auditoría de una lista de deseos.
+>
+> Contraste útil: **en `RecipePriceWriter` el `upsert()` sí es la solución correcta** (ver Q13),
+> porque `recipe_prices` tiene el único `(price_list_id, recipe_id)` que la operación necesita y no
+> hay ninguna regla de negocio que dependa de filas duplicadas. La misma herramienta, dos veredictos
+> opuestos: lo que decide no es la herramienta, es el esquema y la semántica de cada tabla.
 
 **8.4 — Quitar las verificaciones de tenant de las 12 policies.** Son estructuralmente redundantes
 con el global scope de `BelongsToTenant` —que ya hace que un recurso de otro tenant dé 404 en el
