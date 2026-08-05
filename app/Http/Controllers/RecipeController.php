@@ -115,6 +115,7 @@ class RecipeController extends Controller
         unset($data['selling_price']);
 
         $recipe->update($data);
+        $this->propagator->propagateFrom($recipe);
 
         if ($sellingPriceSent) {
             $this->priceWriter->set(
