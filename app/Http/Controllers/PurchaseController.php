@@ -8,6 +8,7 @@ use App\Http\Requests\StorePurchaseLineRequest;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseLineRequest;
 use App\Http\Requests\UpdatePurchaseRequest;
+use App\Models\Ingredient;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Tenant;
@@ -15,6 +16,7 @@ use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceImagePreparer;
 use App\Services\ProductLinkMemory;
 use App\Services\PurchaseLineRecorder;
+use App\Services\RecipeCostPropagator;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +43,7 @@ class PurchaseController extends Controller
         private readonly StockService $stock,
         private readonly InvoiceImagePreparer $imagePreparer,
         private readonly ProductLinkMemory $linkMemory,
+        private readonly RecipeCostPropagator $propagator,
     ) {}
 
     public function index(): View
@@ -590,6 +593,8 @@ class PurchaseController extends Controller
         $applied = 0;
         $skipped = 0;
         $failed = 0;
+        $touchedIngredientIds = [];
+        $touchedPackagingIds = [];
 
         $pending = $purchase->lines()
             ->whereNotNull('purchaseable_id')
@@ -601,8 +606,15 @@ class PurchaseController extends Controller
             // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
             $line->setRelation('purchase', $purchase->loadMissing('tenant'));
             try {
-                DB::transaction(function () use ($line) {
-                    $this->lineRecorder->apply($line);
+                DB::transaction(function () use ($line, &$touchedIngredientIds, &$touchedPackagingIds) {
+                    $item = $this->lineRecorder->apply($line, propagate: false);
+
+                    if ($item instanceof Ingredient) {
+                        $touchedIngredientIds[] = $item->id;
+                    } else {
+                        $touchedPackagingIds[] = $item->id;
+                    }
+
                     // Aceptar en masa también es una decisión humana. Sin esto la
                     // memoria sólo aprendería de las correcciones una por una, y
                     // el camino más usado no enseñaría nada.
@@ -616,6 +628,17 @@ class PurchaseController extends Controller
                     $failed++;
                 }
             }
+        }
+
+        // Propagar UNA vez con los ítems tocados de todo el lote (N8): un
+        // ancestro compartido por varias líneas se recalcula una sola vez en
+        // vez de una vez por línea que lo afecta.
+        if ($touchedIngredientIds !== [] || $touchedPackagingIds !== []) {
+            $recipeIds = array_merge(
+                $this->propagator->recipeIdsUsingIngredients(array_values(array_unique($touchedIngredientIds))),
+                $this->propagator->recipeIdsUsingPackagings(array_values(array_unique($touchedPackagingIds))),
+            );
+            $this->propagator->propagateManyFrom($recipeIds);
         }
 
         $message = match (true) {
