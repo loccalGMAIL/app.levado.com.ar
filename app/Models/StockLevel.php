@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
  * Cache derivado del ledger stock_movements: cantidad actual por ítem y sucursal.
@@ -44,14 +45,9 @@ class StockLevel extends Model
         return $this->belongsTo(Location::class);
     }
 
-    public function ingredient(): BelongsTo
+    public function stockable(): MorphTo
     {
-        return $this->belongsTo(Ingredient::class, 'stockable_id');
-    }
-
-    public function packaging(): BelongsTo
-    {
-        return $this->belongsTo(Packaging::class, 'stockable_id');
+        return $this->morphTo();
     }
 
     public function hasAlert(): bool

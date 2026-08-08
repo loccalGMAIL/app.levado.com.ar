@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Enums\CatalogItemType;
 use App\Enums\TenantUserRole;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\LazyLoadingViolationException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +21,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::preventLazyLoading();
+
+        // Morph map real para stockable/purchaseable (N5): los discriminadores
+        // 'ingredient'/'packaging' ya persistidos en BD coinciden exactamente
+        // con las claves que necesita un morph map, así que no requiere
+        // migración de datos. Desbloquea with()/whereHasMorph() sobre
+        // StockLevel, StockMovement y PurchaseLine.
+        Relation::enforceMorphMap(
+            collect(CatalogItemType::cases())
+                ->mapWithKeys(fn (CatalogItemType $type) => [$type->value => $type->modelClass()])
+                ->all(),
+        );
 
         Model::handleLazyLoadingViolationUsing(function (Model $model, string $relation) {
             if (app()->isProduction()) {

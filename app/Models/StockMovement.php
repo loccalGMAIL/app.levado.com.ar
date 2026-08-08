@@ -7,6 +7,7 @@ use App\Enums\StockMovementType;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use LogicException;
 
 /**
@@ -63,16 +64,6 @@ class StockMovement extends Model
         return $this->belongsTo(Location::class);
     }
 
-    public function ingredient(): BelongsTo
-    {
-        return $this->belongsTo(Ingredient::class, 'stockable_id');
-    }
-
-    public function packaging(): BelongsTo
-    {
-        return $this->belongsTo(Packaging::class, 'stockable_id');
-    }
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -83,13 +74,9 @@ class StockMovement extends Model
         return $this->belongsTo(self::class, 'reverses_movement_id');
     }
 
-    public function stockable(): Ingredient|Packaging|null
+    public function stockable(): MorphTo
     {
-        return match ($this->stockable_type) {
-            CatalogItemType::Ingredient->value => $this->ingredient,
-            CatalogItemType::Packaging->value => $this->packaging,
-            default => null,
-        };
+        return $this->morphTo();
     }
 
     public function isIngredient(): bool
