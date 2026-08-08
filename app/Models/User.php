@@ -37,12 +37,11 @@ class User extends Authenticatable
 
     public function roleInTenant(Tenant $tenant): ?TenantUserRole
     {
-        $tenantUser = $this->tenantUsers()
-            ->where('tenant_id', $tenant->id)
-            ->where('active', true)
-            ->first();
+        $this->loadMissing('tenantUsers');
 
-        return $tenantUser?->role;
+        return $this->tenantUsers
+            ->first(fn (TenantUser $tenantUser) => $tenantUser->active && $tenantUser->tenant_id === $tenant->id)
+            ?->role;
     }
 
     public function hasRoleInTenant(Tenant $tenant, TenantUserRole ...$roles): bool
@@ -54,10 +53,10 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->tenantUsers()
-            ->where('role', TenantUserRole::SuperAdmin->value)
-            ->where('active', true)
-            ->exists();
+        $this->loadMissing('tenantUsers');
+
+        return $this->tenantUsers
+            ->contains(fn (TenantUser $tenantUser) => $tenantUser->active && $tenantUser->role === TenantUserRole::SuperAdmin);
     }
 
     public function sendPasswordResetNotification($token): void

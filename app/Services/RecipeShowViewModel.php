@@ -37,6 +37,8 @@ class RecipeShowViewModel
 
         $costs = $this->calculator->calculate($recipe);
 
+        // defaultPriceList() debe correr ANTES del get(): priceLists se renderiza
+        // completa (selector de listas) y tiene que incluir la recién creada.
         $defaultPriceList = $tenant->defaultPriceList();
         $priceLists = $tenant->priceLists()
             ->active()

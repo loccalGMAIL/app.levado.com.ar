@@ -257,10 +257,14 @@ class PurchaseController extends Controller
             tenantId: $purchase->tenant_id,
         );
 
-        $purchase->load('lines');
-        $totalSubtotal = $purchase->lines->sum(fn ($l) => (float) $l->subtotal);
-        $totalIva = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * (float) $l->iva_rate);
-        $totalPercepcion = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * ((float) ($l->percepcion_rate ?? 0) / 100));
+        $totals = $purchase->lines()
+            ->selectRaw('coalesce(sum(subtotal), 0) as total_subtotal')
+            ->selectRaw('coalesce(sum(subtotal * iva_rate), 0) as total_iva')
+            ->selectRaw('coalesce(sum(subtotal * coalesce(percepcion_rate, 0) / 100), 0) as total_percepcion')
+            ->first();
+        $totalSubtotal = (float) $totals->total_subtotal;
+        $totalIva = (float) $totals->total_iva;
+        $totalPercepcion = (float) $totals->total_percepcion;
 
         return response()->json([
             'unit_price' => (float) $line->unit_price,

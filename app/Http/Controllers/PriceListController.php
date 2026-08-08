@@ -48,6 +48,8 @@ class PriceListController extends Controller
     public function matrix(): View
     {
         $tenant = app(Tenant::class);
+        // defaultPriceList() debe correr ANTES del get(): $priceLists se renderiza
+        // completa (una columna por lista) y tiene que incluir la recién creada.
         $tenant->defaultPriceList();
 
         $priceLists = $tenant->priceLists()

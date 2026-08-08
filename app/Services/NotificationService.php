@@ -144,11 +144,17 @@ class NotificationService
 
         // Los renglones marcados como consumo personal están resueltos: no imputan
         // costo, pero tampoco quedan pendientes, así que no deben mantener viva la alerta.
-        $unresolved = fn ($q) => $q->whereNull('cost_applied_at')->whereNull('excluded_at');
+        // joinSub agrupado: filtra (INNER JOIN) y cuenta a la vez, en una sola
+        // pasada sobre purchase_lines en vez de dos subconsultas correlacionadas.
+        $pendingLines = PurchaseLine::query()
+            ->selectRaw('purchase_id, count(*) as pending_lines_count')
+            ->whereNull('cost_applied_at')
+            ->whereNull('excluded_at')
+            ->groupBy('purchase_id');
 
-        $purchases = Purchase::where('tenant_id', $tenant->id)
-            ->whereHas('lines', $unresolved)
-            ->withCount(['lines as pending_lines_count' => $unresolved])
+        $purchases = Purchase::where('purchases.tenant_id', $tenant->id)
+            ->joinSub($pendingLines, 'pl', 'pl.purchase_id', '=', 'purchases.id')
+            ->select('purchases.*', 'pl.pending_lines_count')
             ->with('supplier')
             ->get();
 

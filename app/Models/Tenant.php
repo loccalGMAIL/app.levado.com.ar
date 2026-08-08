@@ -46,13 +46,16 @@ class Tenant extends Model
         return $this->hasMany(Location::class);
     }
 
+    /** @var Location|null Cache por instancia: defaultLocation() se llama una vez por ítem en los bucles de compra */
+    private ?Location $cachedDefaultLocation = null;
+
     /**
      * Sucursal por defecto para operaciones de stock. Lazy, espejo de defaultPriceList():
      * cubre tenants existentes sin locations y tenants nuevos sin hooks de creación.
      */
     public function defaultLocation(): Location
     {
-        return $this->locations()->where('is_default', true)->first()
+        return $this->cachedDefaultLocation ??= $this->locations()->where('is_default', true)->first()
             ?? $this->locations()->orderBy('id')->first()
             ?? $this->locations()->create(['name' => 'Casa Central', 'is_default' => true, 'active' => true]);
     }
@@ -148,13 +151,16 @@ class Tenant extends Model
             || $this->recipes()->exists();
     }
 
+    /** @var float|null Cache por instancia: dashboard y business piden total y overhead en la misma request */
+    private ?float $cachedTotalFixedCosts = null;
+
     /**
      * Suma de gastos fijos activos del mes. Único dueño de esta consulta:
      * no repetir `fixedCosts()->active()->sum(...)` en controllers ni vistas.
      */
     public function totalFixedCosts(): float
     {
-        return (float) $this->fixedCosts()->active()->sum('monthly_amount');
+        return $this->cachedTotalFixedCosts ??= (float) $this->fixedCosts()->active()->sum('monthly_amount');
     }
 
     /**

@@ -61,10 +61,10 @@ class RecipeCostPropagator
     public function propagateFromIngredient(int $ingredientId): void
     {
         $recipeIds = RecipeIngredientLine::where('ingredient_id', $ingredientId)
-            ->pluck('recipe_id')
-            ->unique();
+            ->distinct()
+            ->pluck('recipe_id');
 
-        Recipe::whereIn('id', $recipeIds)->get()->each(fn (Recipe $recipe) => $this->propagateFrom($recipe));
+        Recipe::whereIn('id', $recipeIds)->select('id')->get()->each(fn (Recipe $recipe) => $this->propagateFrom($recipe));
     }
 
     /**
@@ -73,10 +73,10 @@ class RecipeCostPropagator
     public function propagateFromPackaging(int $packagingId): void
     {
         $recipeIds = RecipePackagingLine::where('packaging_id', $packagingId)
-            ->pluck('recipe_id')
-            ->unique();
+            ->distinct()
+            ->pluck('recipe_id');
 
-        Recipe::whereIn('id', $recipeIds)->get()->each(fn (Recipe $recipe) => $this->propagateFrom($recipe));
+        Recipe::whereIn('id', $recipeIds)->select('id')->get()->each(fn (Recipe $recipe) => $this->propagateFrom($recipe));
     }
 
     /**
@@ -85,10 +85,10 @@ class RecipeCostPropagator
     public function propagateFromLaborType(int $laborTypeId): void
     {
         $recipeIds = RecipeLaborLine::where('labor_type_id', $laborTypeId)
-            ->pluck('recipe_id')
-            ->unique();
+            ->distinct()
+            ->pluck('recipe_id');
 
-        Recipe::whereIn('id', $recipeIds)->get()->each(fn (Recipe $recipe) => $this->propagateFrom($recipe));
+        Recipe::whereIn('id', $recipeIds)->select('id')->get()->each(fn (Recipe $recipe) => $this->propagateFrom($recipe));
     }
 
     /**
