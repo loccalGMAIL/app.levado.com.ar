@@ -232,6 +232,8 @@ class PurchaseController extends Controller
     public function updateLinePrice(Request $request, Purchase $purchase, PurchaseLine $line): JsonResponse
     {
         $this->authorize('update', $purchase);
+        // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
+        $line->setRelation('purchase', $purchase->loadMissing('tenant'));
 
         $validated = $request->validate([
             'unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
@@ -344,6 +346,8 @@ class PurchaseController extends Controller
     public function updateLine(UpdatePurchaseLineRequest $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
         $this->authorize('update', $purchase);
+        // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
+        $line->setRelation('purchase', $purchase->loadMissing('tenant'));
 
         $this->lineRecorder->recompute($line, $request->validated());
 
@@ -451,6 +455,8 @@ class PurchaseController extends Controller
     public function matchLine(Request $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
         $this->authorize('update', $purchase);
+        // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
+        $line->setRelation('purchase', $purchase->loadMissing('tenant'));
 
         $validated = $request->validate([
             'match' => ['nullable', 'string'],
@@ -592,7 +598,8 @@ class PurchaseController extends Controller
             ->get();
 
         foreach ($pending as $line) {
-            $line->setRelation('purchase', $purchase);
+            // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
+            $line->setRelation('purchase', $purchase->loadMissing('tenant'));
             try {
                 DB::transaction(function () use ($line) {
                     $this->lineRecorder->apply($line);

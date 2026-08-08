@@ -6,6 +6,7 @@ use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
 use App\Models\RecipeLaborLine;
 use App\Models\RecipePackagingLine;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class RecipeCostPropagator
@@ -14,8 +15,20 @@ class RecipeCostPropagator
 
     /**
      * Recalculate unit_cost for $recipe, then BFS upward through all parent recipes.
+     *
+     * Serializada por receta (R13): el autosave de /recipes/{id} dispara varios
+     * PATCH casi simultáneos sobre líneas distintas de la misma receta, y sin
+     * este lock dos recorridos superpuestos pueden calcular el costo de un
+     * ancestro común con el valor viejo del hijo. No afecta la concurrencia
+     * entre recetas distintas — el lock es por recipe_id.
      */
     public function propagateFrom(Recipe $recipe): void
+    {
+        Cache::lock("recipe-propagation:{$recipe->id}", 10)
+            ->block(5, fn () => $this->propagateFromLocked($recipe));
+    }
+
+    private function propagateFromLocked(Recipe $recipe): void
     {
         $visited = [];
         $queue = [$recipe->id];
@@ -97,35 +110,42 @@ class RecipeCostPropagator
      */
     public function isAncestor(int $ancestorId, int $descendantId, int $tenantId): bool
     {
-        $visited = [];
-        $queue = [$descendantId];
-
-        while (! empty($queue)) {
-            $current = array_shift($queue);
-
-            if ($current === $ancestorId) {
-                return true;
-            }
-
-            if (isset($visited[$current])) {
-                continue;
-            }
-            $visited[$current] = true;
-
-            $parentIds = DB::table('recipe_subrecipe_lines')
-                ->join('recipes', 'recipes.id', '=', 'recipe_subrecipe_lines.recipe_id')
-                ->where('recipe_subrecipe_lines.child_recipe_id', $current)
-                ->where('recipes.tenant_id', $tenantId)
-                ->pluck('recipe_subrecipe_lines.recipe_id')
-                ->toArray();
-
-            foreach ($parentIds as $pid) {
-                if (! isset($visited[$pid])) {
-                    $queue[] = $pid;
-                }
-            }
+        // Un nodo es trivialmente "ancestro" de sí mismo (guarda contra que una
+        // receta se agregue como su propia sub-receta); ancestorIdsOf() excluye
+        // la semilla a propósito porque devuelve el cierre de ancestros reales.
+        if ($ancestorId === $descendantId) {
+            return true;
         }
 
-        return false;
+        return in_array($ancestorId, $this->ancestorIdsOf($descendantId, $tenantId), true);
+    }
+
+    /**
+     * Ids de todas las recetas que usan a $recipeId como sub-receta, directa o
+     * indirectamente (el cierre completo de ancestros). BFS por niveles: una
+     * query por nivel de profundidad del árbol, no una por nodo visitado.
+     *
+     * @return array<int, int>
+     */
+    public function ancestorIdsOf(int $recipeId, int $tenantId): array
+    {
+        $found = [];
+        $level = [$recipeId];
+
+        while ($level !== []) {
+            $parents = DB::table('recipe_subrecipe_lines')
+                ->join('recipes', 'recipes.id', '=', 'recipe_subrecipe_lines.recipe_id')
+                ->whereIn('recipe_subrecipe_lines.child_recipe_id', $level)
+                ->where('recipes.tenant_id', $tenantId)
+                ->distinct()
+                ->pluck('recipe_subrecipe_lines.recipe_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $level = array_values(array_diff($parents, $found));
+            $found = array_merge($found, $level);
+        }
+
+        return $found;
     }
 }

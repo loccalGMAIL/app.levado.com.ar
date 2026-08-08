@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -60,6 +61,19 @@ class StockLevel extends Model
         }
 
         return $this->min_quantity !== null && (float) $this->quantity <= (float) $this->min_quantity;
+    }
+
+    /**
+     * Equivalente en SQL de hasAlert(), para filtrar en la BD en vez de traer
+     * todo el stock del tenant y descartar en PHP. Mantener ambas en sync.
+     */
+    public function scopeInAlert(Builder $query): void
+    {
+        $query->where(fn ($q) => $q
+            ->where('quantity', '<', 0)
+            ->orWhere(fn ($q2) => $q2
+                ->whereNotNull('min_quantity')
+                ->whereColumn('quantity', '<=', 'min_quantity')));
     }
 
     public function isNegative(): bool
