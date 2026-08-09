@@ -5,6 +5,30 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.10] — 2026-08-08
+
+### Los listados mandaban cada fila dos veces al navegador
+
+#### Cambiado
+
+- **Un listado ahora se escribe una sola vez.** Cada pantalla de lista tenía dos recorridos: uno armaba las tarjetas del celular y otro las filas de la tabla de escritorio, con los mismos datos escritos dos veces. Ahora la fila se escribe una sola vez y **el CSS decide** si se ve como fila o como tarjeta. La página además viaja más liviana porque deja de mandar las dos copias.
+- **Las dos vistas ya no pueden quedar distintas.** En Ingredientes la tabla mostraba 8 columnas y la tarjeta se comía «Por envase» y fusionaba Marca y Proveedor: cualquier columna nueva entraba de un lado y faltaba del otro. Con una sola fuente eso deja de ser posible.
+- **En el celular ahora se puede editar el stock desde la tarjeta**, sin pasar a «Ver tabla completa»: la edición inline existía sólo en la copia de tabla.
+- El toggle «Ver tabla completa ↓» / «← Volver a cards» funciona igual que antes, pero ahora cambia la presentación del mismo marcado en vez de esconder una copia y mostrar la otra.
+
+#### Técnico
+
+- Componentes nuevos `x-data-table` / `x-data-table.row` / `x-data-table.cell`: la celda declara su rol (`title`, `subtitle`, `figure`, `badge`, `meta`, `actions`) y el CSS de `@layer components` arma la tarjeta con `flex-wrap` + `order` por rol. Con `grid-template-areas` dos celdas del mismo rol caerían en la misma área y se pisarían.
+- `data-cards="hide"` saca del modo tarjeta las columnas de baja prioridad. Una celda sin valor se marca `data-empty`: la tabla le pone «—» y la tarjeta la omite, como hacía el marcado duplicado. No se usa `:empty` de CSS porque el whitespace de Blade lo vuelve inservible.
+- `x-data-table` trae su propio `x-data="{ mobileExpanded: false }"`. `x-responsive-table` dependía de que lo declarara el `x-data` de la página y se rompía en silencio si faltaba.
+- `.dt-card-only` es el mecanismo de fuente única para el texto que sólo tiene sentido en la tarjeta (el label de un botón de acción, la unidad de un importe que en la tabla ya dice el `<th>`).
+- `x-icon`, `x-list-header` y `x-list-filters` absorben los SVG de editar/activar pegados crudos, el encabezado con «+ Nuevo» y el formulario de filtros. El pie de paginación y la línea de total pasan a vivir dentro de `x-data-table`.
+- Migradas `ingredients/index` (356 → 230 líneas) y `labor-types/index` (207 → 128). `x-responsive-table` sigue en pie para las 7 vistas restantes, que se migran en tandas siguientes.
+- `DataTableComponentsTest` afirmaba lo contrario de lo que ahora se quiere (`assertSeeInOrder` del nombre dos veces, «card + fila de tabla»). Reescrito: cuenta celdas de título, verifica que el nombre aparezca una sola vez como texto y que el editor de stock no se duplique. Las anclas se probaron contra un revert: 5 de 6 fallan sin el arreglo.
+- Se realinean las cuatro fuentes de la versión, que venían desincronizadas desde 0.12.9 (`config/app.php` marcaba 0.12.8).
+
+---
+
 ## [0.12.9] — 2026-08-02
 
 ### El JS inicial pesaba 690 kB porque dos librerías pesadas viajaban en todas las páginas

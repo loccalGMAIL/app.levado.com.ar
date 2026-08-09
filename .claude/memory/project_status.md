@@ -24,6 +24,19 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 
 ## Todo lo que está hecho
 
+### v0.12.10 — Los listados mandaban cada fila dos veces (rama `v0.12.10-FIXCodigoDuplicado`)
+- **Fuente única de render en los listados**: se escribe sólo el `<tr>` y el CSS decide si se ve como
+  fila de tabla o como card. Componentes `x-data-table` / `.row` / `.cell` con roles de celda, más
+  `x-icon`, `x-list-header` y `x-list-filters` para el HTML repetido de alrededor. Ver
+  [[pattern-listados-fuente-unica]] para el mecanismo y las trampas.
+- Migradas `ingredients/index` y `labor-types/index`. **Pendientes las otras 7** que siguen en
+  `x-responsive-table` (que se mantiene funcionando), más `team/index`, `recipes/show` y
+  `purchases/show`, que copian el patrón a mano.
+- `DataTableComponentsTest` anclaba la duplicación (`assertSeeInOrder(['X','X']) // card + fila`);
+  reescrito para anclar lo contrario, con revert-check.
+- **Las cuatro fuentes de la versión estaban desincronizadas** (`config/app.php` 0.12.8,
+  `package.json` 0.12.9, lock 0.12.8): el bump a 0.12.10 las realinea.
+
 ### v0.12.8 — El botón «Crear categoría» era intocable en mobile (rama `claude/mobile-gastos-variables-button-5v1wic`)
 - El alta inline de categoría vivía en una columna de un `grid-cols-3` **fijo**; con `flex-1` + `min-width:auto` la fila se desbordaba y el botón caía debajo del campo de fecha (item posterior del grid ⇒ se pintaba encima y comía el tap). Solución: `grid-cols-1 sm:grid-cols-3` + `sm:col-span-2`, y `min-w-0` en el input.
 - Aplicado a los 4 modales con ese layout (crear/editar gasto variable, crear/editar costo fijo) + el modal de categorías. **Sin rebuild de assets**: las utilidades ya estaban en el CSS compilado.
