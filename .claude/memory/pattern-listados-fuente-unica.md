@@ -139,11 +139,27 @@ clases con tablas de lookup. El JS no conoce los cortes.
   en silencio. Hay que ejercitarla en navegador (abrir, escribir, guardar, ver el valor y el tramo
   actualizados sin recargar).
 
+## Los dos frentes se atacan juntos
+
+`packaging/index` y `recipes/index` tenían **las dos duplicaciones a la vez**: el doble render y el
+Alpine inline, así que el objeto viajaba dos y hasta tres veces por registro (en envases: costo en la
+card, costo otra vez en la fila, y stock). Migrarlos a `x-data-table` **y** extraer el Alpine en la
+misma pasada dio la mayor caída de todas: envases **6209 → 3109 líneas (−50%)**, recetas
+**4855 → 2296 (−53%)**.
+
+`stockCell` y `costCell` son el mismo editor con otra clave de payload y de respuesta: viven juntos
+en `rows/inline-number.js` con estado uniforme (`value` / `valueFormatted` / `save()`), no en dos
+módulos casi iguales.
+
+**Detalle de layout:** con tres acciones en la card («Ver receta / Copiar / Desactivar») repartir el
+ancho en partes iguales corta las palabras al medio. `.dt-actions` en modo card usa
+`flex: 1 1 8rem` + `flex-wrap`, así el botón que no entra baja a un renglón nuevo.
+
 ## Pendiente de este frente
 
-`packaging/index` (37 líneas × 3 objetos), `recipes/index` (37 × 2), `purchases/show` (45, sin
-paginar) y `purchases/scan/review` (11). Los dos primeros pesan el doble porque **todavía tienen el
-doble render**: conviene migrarlos a `x-data-table` y extraer el Alpine en la misma pasada.
+`purchases/show` (45 líneas, sin paginar) y `purchases/scan/review` (11). En listados quedan 5 vistas
+todavía en `x-responsive-table`: `variable-expenses`, `price-lists/index`, `purchases/index`,
+`fixed-costs` y `stock`.
 
 ---
 

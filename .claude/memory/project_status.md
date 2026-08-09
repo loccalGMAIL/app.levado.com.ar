@@ -38,9 +38,12 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - `PriceListMatrixTest` tenía un `assertDontSee('savePrice')` que al extraer el JS **pasaba siempre
   sin proteger nada**; reapuntado y verificado contra la quita del `@can`.
 - Verificado en navegador que la edición inline funciona de verdad en las tres pantallas.
-- **Pendiente del frente:** `packaging/index`, `recipes/index`, `purchases/show` y
-  `purchases/scan/review`. Los dos primeros conviene migrarlos a `x-data-table` y extraer el Alpine
-  en la misma pasada, porque hoy emiten el objeto dos veces (card + fila).
+- **`packaging/index` y `recipes/index` migradas a `x-data-table` + Alpine extraído en la misma
+  pasada** (tenían las dos duplicaciones a la vez): envases 6209 → 3109 líneas (−50%), recetas
+  4855 → 2296 (−53%). `stockCell` y `costCell` comparten implementación en `rows/inline-number.js`.
+- **Pendiente del frente:** `purchases/show` y `purchases/scan/review`; y 5 listados todavía en
+  `x-responsive-table` (`variable-expenses`, `price-lists/index`, `purchases/index`, `fixed-costs`,
+  `stock`).
 
 ### v0.12.10 — Los listados mandaban cada fila dos veces (rama `v0.12.10-FIXCodigoDuplicado`)
 - **Fuente única de render en los listados**: se escribe sólo el `<tr>` y el CSS decide si se ve como

@@ -13,6 +13,7 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 - **El dashboard pesaba menos de la mitad de lo que decía.** Con 20 recetas la página mandaba 4266 líneas de código, y **3314 eran la tabla**: adentro de cada fila viajaban las mismas 68 líneas de JavaScript (abrir el precio, guardarlo, pintar el semáforo). El mismo bloque, 20 veces. Ahora se manda una sola vez y cada fila lo invoca. La página quedó en **2926 líneas (−31%)**.
 - **La matriz de precios era el peor caso porque multiplica.** Su bloque se repetía por *celda*: recetas × listas. Con 20 recetas y 4 listas pasó de **7388 a 3708 líneas (−50%)**.
+- **Envases y Recetas eran las dos peores y ahora son las que más bajan**, porque además del JavaScript repetido seguían mandando cada registro dos veces (una para la tarjeta del celular, otra para la fila): Envases pasó de **6209 a 3109 líneas (−50%)** y Recetas de **4855 a 2296 (−53%)**. En Envases el bloque de código viajaba **tres veces por envase**: el costo en la tarjeta, el costo otra vez en la fila y el stock.
 - **Ingredientes** bajó de 3798 a 3078 líneas (−19%).
 - Nada cambió en lo que se ve ni en lo que se puede hacer: editar precios en el dashboard y en la matriz, y el stock en ingredientes, funciona igual.
 
@@ -25,12 +26,15 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 - Enum `MarginTier` (`Alta` ≥60 · `Media` ≥40 · `Regular` ≥20 · `Baja`) como dueño único de los cortes. Antes estaban repartidos en siete lugares: la vista del dashboard, tres getters Alpine, el filtro SQL y el contador de margen bajo del `DashboardController`, `RecipePriceController` y la matriz.
 - `RecipePriceController` devuelve `margin_tier` en vez de `margin_color`: el servidor manda el tramo y el cliente lo traduce a clases, así los cortes no se duplican en JS.
-- Módulos nuevos `resources/js/rows/price-editor.js` (`priceRow` para el dashboard, `priceCell` para la matriz) y `rows/stock-cell.js`, registrados con `Alpine.data()` en `alpine:init`. **Es el primer `Alpine.data()` del proyecto**; el precedente era `window.matchRow`.
+- Módulos nuevos `resources/js/rows/price-editor.js` (`priceRow` para el dashboard, `priceCell` para la matriz y para recetas) y `rows/inline-number.js` (`stockCell` y `costCell`), registrados con `Alpine.data()` en `alpine:init`. **Es el primer `Alpine.data()` del proyecto**; el precedente era `window.matchRow`.
+- `stockCell` y `costCell` son el mismo editor con otra clave de payload y de respuesta, así que comparten implementación y estado uniforme (`value` / `valueFormatted` / `save()`) en vez de vivir en dos módulos casi iguales.
+- `packaging/index` y `recipes/index` se migran a `x-data-table` **y** se les extrae el Alpine en la misma pasada: eran las dos que emitían el objeto por duplicado por culpa del doble render, así que separarlo en dos versiones no tenía sentido. Quedan 5 vistas en `x-responsive-table`.
 - El registro va colgado de `alpine:init` y no suelto en el módulo: en `app.js` el `Alpine.start()` *parece* estar antes de los imports, pero ESM los hoistea y corren antes. Depender de eso es frágil, y con `import()` dinámico directamente se rompe (un `Alpine.data()` posterior a `start()` no se aplica a lo ya montado, en silencio).
 - Al componer los objetos se copian los **descriptores** y no se usa spread: `{...base}` no copia un getter, lo ejecuta y congela su valor — `marginColor` habría dejado de reaccionar al cambiar el tramo.
 - `PriceListMatrixTest` tenía `assertDontSee('savePrice')` como gate de solo-lectura del rol Viewer. Al mudar el objeto a un módulo ese string desaparece del HTML para todos los roles, así que el test **pasaba siempre sin proteger nada**. Reapuntado al marcado que sí distingue al viewer, y verificado que falla si se saca el `@can`.
-- `AlpineRowComponentsTest` nuevo: fija que el cuerpo del objeto no esté en el HTML y que el factory aparezca una vez por fila. Las 4 anclas fallan contra un revert.
-- Verificado en navegador que la edición inline sigue funcionando de verdad en las tres pantallas (abrir, escribir, guardar, ver el valor y el tramo actualizados sin recargar).
+- `AlpineRowComponentsTest` nuevo: fija que el cuerpo del objeto no esté en el HTML y que el factory aparezca una vez por fila. Las anclas se verificaron contra un revert de cada vista.
+- Al renombrar el estado del editor de stock, el ancla `assertDontSee('async saveStock')` se volvió vacua —el string ya no existe en ningún lado— y se reapuntó a `counted_quantity`, la clave que el endpoint espera. Es el mismo modo de falla que el de `PriceListMatrixTest`: un ancla que deja de poder fallar.
+- Verificado en navegador que la edición inline sigue funcionando de verdad en las cinco pantallas (abrir, escribir, guardar, ver el valor y el tramo actualizados sin recargar), y que envases y recetas no desbordan a lo ancho en los 10 anchos de referencia y en los dos modos del toggle.
 
 ---
 

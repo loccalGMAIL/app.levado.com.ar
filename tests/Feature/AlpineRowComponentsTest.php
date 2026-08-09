@@ -3,6 +3,7 @@
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
+use App\Models\Packaging;
 use App\Models\PriceList;
 use App\Models\Recipe;
 use App\Models\RecipePrice;
@@ -70,8 +71,39 @@ test('ingredientes llama al factory una vez por fila y no manda el cuerpo', func
 
     $html = $this->actingAs($user)->get(route('ingredients.index'))->assertOk()->getContent();
 
+    // `counted_quantity` es la clave que el editor manda al endpoint: estaba en
+    // el cuerpo inline y ahora vive sólo en el módulo.
     expect(substr_count($html, 'x-data="stockCell('))->toBe(4)
-        ->and($html)->not->toContain('async saveStock');
+        ->and($html)->not->toContain('counted_quantity');
+});
+
+test('envases emite un solo costCell y un solo stockCell por fila', function () {
+    [$user, $tenant] = ownerForAlpineRows();
+    foreach (range(1, 3) as $i) {
+        Packaging::factory()->for($tenant)->create(['name' => "Envase {$i}", 'cost_per_unit' => 100]);
+    }
+
+    $html = $this->actingAs($user)->get(route('packaging.index'))->assertOk()->getContent();
+
+    // Antes eran TRES objetos por envase: el costo en la card, el costo en la
+    // fila (copia literal con otro x-ref) y el stock.
+    expect(substr_count($html, 'x-data="costCell('))->toBe(3)
+        ->and(substr_count($html, 'x-data="stockCell('))->toBe(3)
+        ->and($html)->not->toContain('counted_quantity')
+        ->and($html)->not->toContain('async saveCost');
+});
+
+test('recetas emite un solo editor de precio por fila', function () {
+    [$user, $tenant] = ownerForAlpineRows();
+    foreach (range(1, 3) as $i) {
+        Recipe::factory()->for($tenant)->create(['name' => "Receta {$i}", 'active' => true]);
+    }
+
+    $html = $this->actingAs($user)->get(route('recipes.index'))->assertOk()->getContent();
+
+    expect(substr_count($html, 'x-data="priceCell('))->toBe(3)
+        ->and($html)->not->toContain('async savePrice')
+        ->and($html)->not->toContain('priceInputCard');
 });
 
 test('el tramo del margen viaja al cliente y el color ya no se calcula en la vista', function () {

@@ -4,7 +4,7 @@ import Alpine from 'alpinejs';
 import TomSelect from 'tom-select';
 
 import { priceCell, priceRow } from './rows/price-editor';
-import { stockCell } from './rows/stock-cell';
+import { costCell, stockCell } from './rows/inline-number';
 
 window.Alpine = Alpine;
 window.TomSelect = TomSelect;
@@ -19,6 +19,7 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('priceRow', priceRow);
     Alpine.data('priceCell', priceCell);
     Alpine.data('stockCell', stockCell);
+    Alpine.data('costCell', costCell);
 });
 
 Alpine.start();
