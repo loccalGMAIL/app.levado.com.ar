@@ -5,6 +5,35 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.11] — 2026-08-08
+
+### El navegador recibía el mismo JavaScript una vez por fila
+
+#### Cambiado
+
+- **El dashboard pesaba menos de la mitad de lo que decía.** Con 20 recetas la página mandaba 4266 líneas de código, y **3314 eran la tabla**: adentro de cada fila viajaban las mismas 68 líneas de JavaScript (abrir el precio, guardarlo, pintar el semáforo). El mismo bloque, 20 veces. Ahora se manda una sola vez y cada fila lo invoca. La página quedó en **2926 líneas (−31%)**.
+- **La matriz de precios era el peor caso porque multiplica.** Su bloque se repetía por *celda*: recetas × listas. Con 20 recetas y 4 listas pasó de **7388 a 3708 líneas (−50%)**.
+- **Ingredientes** bajó de 3798 a 3078 líneas (−19%).
+- Nada cambió en lo que se ve ni en lo que se puede hacer: editar precios en el dashboard y en la matriz, y el stock en ingredientes, funciona igual.
+
+#### Corregido
+
+- **El color del margen mentía después de editar un precio.** Una receta con 35% de margen se dibujaba naranja al cargar el dashboard, pero al editar el precio y guardar **el número se ponía verde solo**, mientras la etiqueta de al lado seguía diciendo «Regular» en naranja. Eran dos escalas distintas conviviendo: la pantalla usaba 60/40/20 y la respuesta del guardado usaba 30/15. Ahora hay una sola escala.
+- **La matriz de precios usaba esa misma segunda escala**, así que sus colores se corren para quedar consistentes con el resto: un margen de 35% que antes se veía verde ahora se ve naranja. **Los números no cambian, solo el color** — y ahora coincide con lo que dice el dashboard para la misma receta.
+
+#### Técnico
+
+- Enum `MarginTier` (`Alta` ≥60 · `Media` ≥40 · `Regular` ≥20 · `Baja`) como dueño único de los cortes. Antes estaban repartidos en siete lugares: la vista del dashboard, tres getters Alpine, el filtro SQL y el contador de margen bajo del `DashboardController`, `RecipePriceController` y la matriz.
+- `RecipePriceController` devuelve `margin_tier` en vez de `margin_color`: el servidor manda el tramo y el cliente lo traduce a clases, así los cortes no se duplican en JS.
+- Módulos nuevos `resources/js/rows/price-editor.js` (`priceRow` para el dashboard, `priceCell` para la matriz) y `rows/stock-cell.js`, registrados con `Alpine.data()` en `alpine:init`. **Es el primer `Alpine.data()` del proyecto**; el precedente era `window.matchRow`.
+- El registro va colgado de `alpine:init` y no suelto en el módulo: en `app.js` el `Alpine.start()` *parece* estar antes de los imports, pero ESM los hoistea y corren antes. Depender de eso es frágil, y con `import()` dinámico directamente se rompe (un `Alpine.data()` posterior a `start()` no se aplica a lo ya montado, en silencio).
+- Al componer los objetos se copian los **descriptores** y no se usa spread: `{...base}` no copia un getter, lo ejecuta y congela su valor — `marginColor` habría dejado de reaccionar al cambiar el tramo.
+- `PriceListMatrixTest` tenía `assertDontSee('savePrice')` como gate de solo-lectura del rol Viewer. Al mudar el objeto a un módulo ese string desaparece del HTML para todos los roles, así que el test **pasaba siempre sin proteger nada**. Reapuntado al marcado que sí distingue al viewer, y verificado que falla si se saca el `@can`.
+- `AlpineRowComponentsTest` nuevo: fija que el cuerpo del objeto no esté en el HTML y que el factory aparezca una vez por fila. Las 4 anclas fallan contra un revert.
+- Verificado en navegador que la edición inline sigue funcionando de verdad en las tres pantallas (abrir, escribir, guardar, ver el valor y el tramo actualizados sin recargar).
+
+---
+
 ## [0.12.10] — 2026-08-08
 
 ### Los listados mandaban cada fila dos veces al navegador

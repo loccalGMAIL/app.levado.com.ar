@@ -3,8 +3,23 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import TomSelect from 'tom-select';
 
+import { priceCell, priceRow } from './rows/price-editor';
+import { stockCell } from './rows/stock-cell';
+
 window.Alpine = Alpine;
 window.TomSelect = TomSelect;
+
+// Componentes de fila: se definen una vez acá en vez de repetirse en el HTML
+// dentro de cada @foreach. Van colgados de 'alpine:init' —que corre durante
+// Alpine.start()— y no sueltos: así el registro no depende del orden de los
+// módulos. Por eso mismo NO se los debe cargar con import() dinámico: un
+// Alpine.data() que llega después de start() no se aplica a lo ya montado y el
+// x-data queda sin definir, en silencio.
+document.addEventListener('alpine:init', () => {
+    Alpine.data('priceRow', priceRow);
+    Alpine.data('priceCell', priceCell);
+    Alpine.data('stockCell', stockCell);
+});
 
 Alpine.start();
 

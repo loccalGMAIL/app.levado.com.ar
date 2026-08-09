@@ -117,62 +117,26 @@
                                             }
 
                                             $marginPct = null;
-                                            $marginColor = 'text-masa-madre';
                                             if ($cellPrice !== null && $costPerUnit !== null && $cellPrice > 0) {
                                                 $marginPct = (($cellPrice - $costPerUnit) / $cellPrice) * 100;
-                                                $marginColor = $marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500');
                                             }
+                                            // El color sale del enum: esta pantalla usaba una escala
+                                            // propia (30/15) distinta de la del dashboard (60/40/20).
+                                            $marginTier = \App\Enums\MarginTier::fromPercent($marginPct);
                                         @endphp
                                         <td class="px-4 py-3 text-right font-mono text-corteza whitespace-nowrap align-top">
                                             @can('manage-costs')
                                                 <div
-                                                    x-data="{
-                                                        editing: false,
-                                                        saving: false,
-                                                        isDirty: false,
-                                                        price: {{ $cellPrice ?? 'null' }},
-                                                        priceFormatted: '{{ $cellPrice !== null ? number_format($cellPrice, 2, ',', '.') : '' }}',
-                                                        suggested: {{ $suggested ?? 'null' }},
-                                                        suggestedFormatted: '{{ $suggested !== null ? number_format($suggested, 2, ',', '.') : '' }}',
-                                                        marginPct: {{ $marginPct ?? 'null' }},
-                                                        marginPctFormatted: '{{ $marginPct !== null ? number_format($marginPct, 1, ',', '.') : '' }}',
-                                                        marginColor: '{{ $marginColor }}',
-                                                        startEdit() {
-                                                            this.isDirty = false;
-                                                            const initial = this.price ?? this.suggested;
-                                                            this.$refs.priceInput.value = initial !== null ? parseFloat(initial).toFixed(2) : '';
-                                                            this.isDirty = this.price === null && this.suggested !== null;
-                                                            this.editing = true;
-                                                            this.$nextTick(() => this.$refs.priceInput.select());
-                                                        },
-                                                        async savePrice() {
-                                                            if (this.saving) return;
-                                                            if (!this.isDirty) { this.editing = false; return; }
-                                                            const raw = this.$refs.priceInput.value.trim();
-                                                            const payload = raw !== '' ? raw : null;
-                                                            this.saving = true;
-                                                            this.editing = false;
-                                                            try {
-                                                                const res = await fetch('{{ route('recipes.prices.update', [$recipe, $list]) }}', {
-                                                                    method: 'PATCH',
-                                                                    headers: {
-                                                                        'Content-Type': 'application/json',
-                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                                        'Accept': 'application/json',
-                                                                    },
-                                                                    body: JSON.stringify({ price: payload })
-                                                                });
-                                                                const data = await res.json();
-                                                                this.price = data.selling_price;
-                                                                this.priceFormatted = data.selling_price_formatted ?? '';
-                                                                this.marginPct = data.margin_pct;
-                                                                this.marginPctFormatted = data.margin_pct_formatted ?? '';
-                                                                this.marginColor = data.margin_color ?? 'text-masa-madre';
-                                                            } finally {
-                                                                this.saving = false;
-                                                            }
-                                                        }
-                                                    }">
+                                                    x-data="priceCell({{ Js::from([
+                                                        'price'              => $cellPrice,
+                                                        'priceFormatted'     => $cellPrice !== null ? number_format($cellPrice, 2, ',', '.') : '',
+                                                        'suggested'          => $suggested,
+                                                        'suggestedFormatted' => $suggested !== null ? number_format($suggested, 2, ',', '.') : '',
+                                                        'marginPct'          => $marginPct,
+                                                        'marginPctFormatted' => $marginPct !== null ? number_format($marginPct, 1, ',', '.') : '',
+                                                        'tier'               => $marginTier->value,
+                                                        'updateUrl'          => route('recipes.prices.update', [$recipe, $list]),
+                                                    ]) }})">
                                                     <div x-show="!editing && !saving"
                                                         @click="startEdit()"
                                                         class="cursor-pointer hover:text-horno select-none">
@@ -207,7 +171,7 @@
                                                 @if($cellPrice !== null)
                                                     $ {{ number_format($cellPrice, 2, ',', '.') }}
                                                     @if($marginPct !== null)
-                                                        <span class="block text-[11px] font-medium {{ $marginColor }}">
+                                                        <span class="block text-[11px] font-medium {{ $marginTier->textColor() }}">
                                                             {{ number_format($marginPct, 1, ',', '.') }} %
                                                         </span>
                                                     @endif

@@ -121,6 +121,11 @@ test('la edición inline de stock vive en la fila y no se duplica', function () 
 
     // Antes el editor existía sólo en la copia de tabla y la card mostraba el
     // stock de sólo lectura; ahora hay un único editor por ingrediente.
-    expect(substr_count($html, route('stock.level.update', ['ingredient', $ingredient->id])))->toBe(1)
+    //
+    // La URL viaja dentro de un Js::from(), que escapa las barras: se aplanan
+    // los backslashes antes de contar (la ruta no tiene ninguno).
+    $flat = str_replace('\\', '', $html);
+
+    expect(substr_count($flat, route('stock.level.update', ['ingredient', $ingredient->id])))->toBe(1)
         ->and($html)->toContain('data-label="Stock:"');
 });

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MarginTier;
 use App\Models\PriceList;
 use App\Models\Recipe;
 use App\Models\RecipePrice;
@@ -47,12 +48,10 @@ class RecipePriceController extends Controller
 
         $margin = null;
         $marginPct = null;
-        $marginColor = 'text-masa-madre';
 
         if ($sellingPrice !== null && $costPerUnit !== null && $sellingPrice > 0) {
             $margin = $sellingPrice - $costPerUnit;
             $marginPct = ($margin / $sellingPrice) * 100;
-            $marginColor = $marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500');
         }
 
         return response()->json([
@@ -62,7 +61,9 @@ class RecipePriceController extends Controller
             'margin_formatted' => $margin !== null ? number_format($margin, 2, ',', '.') : null,
             'margin_pct' => $marginPct,
             'margin_pct_formatted' => $marginPct !== null ? number_format($marginPct, 1, ',', '.') : null,
-            'margin_color' => $marginColor,
+            // El tramo, no el color: la presentación la resuelve el cliente a
+            // partir de él, y los cortes quedan con un solo dueño.
+            'margin_tier' => MarginTier::fromPercent($marginPct)->value,
         ]);
     }
 }
