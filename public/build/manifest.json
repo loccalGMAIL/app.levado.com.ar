@@ -1,6 +1,6 @@
 {
   "node_modules/apexcharts/dist/apexcharts.common.js": {
-    "file": "assets/apexcharts.common-DKuEvf4Q.js",
+    "file": "assets/apexcharts.common-CjlfJ2L2.js",
     "name": "apexcharts.common",
     "src": "node_modules/apexcharts/dist/apexcharts.common.js",
     "isDynamicEntry": true,
@@ -19,7 +19,7 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-DlJYRP6e.css",
+    "file": "assets/app-DcIi-U8K.css",
     "name": "app",
     "names": [
       "app.css"
@@ -28,7 +28,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-z1Ju8gdw.js",
+    "file": "assets/app-1eJeh4on.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,

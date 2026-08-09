@@ -46,7 +46,7 @@ function recipeWithUnitCost(Tenant $tenant, float $costPerUnit): Recipe
     return $recipe;
 }
 
-test('PATCH crea el precio y devuelve margen con color', function () {
+test('PATCH crea el precio y devuelve margen con su tramo', function () {
     [$user, $tenant] = ownerForRecipePrice();
     $recipe = recipeWithUnitCost($tenant, 50); // costo/u = 50
     $list = PriceList::factory()->for($tenant)->create();
@@ -59,8 +59,11 @@ test('PATCH crea el precio y devuelve margen con color', function () {
             'margin' => 50,
             'margin_pct' => 50,
             'margin_pct_formatted' => '50,0',
-            'margin_color' => 'text-green-600',
-        ]);
+            'margin_tier' => 'media',
+        ])
+        // El color ya no viaja en la respuesta: lo deriva el cliente del tramo,
+        // así los cortes tienen un solo dueño (MarginTier).
+        ->assertJsonMissingPath('margin_color');
 
     expect((float) $recipe->prices()->where('price_list_id', $list->id)->value('price'))->toBe(100.0);
 });
@@ -88,20 +91,29 @@ test('PATCH actualiza un precio existente y null lo elimina', function () {
     expect($recipe->prices()->where('price_list_id', $list->id)->exists())->toBeFalse();
 });
 
-test('el margen usa el semáforo de colores', function () {
+test('el semáforo del margen usa la misma escala que el dashboard', function () {
     [$user, $tenant] = ownerForRecipePrice();
     $recipe = recipeWithUnitCost($tenant, 50);
     $list = PriceList::factory()->for($tenant)->create();
 
-    // margen 20% → ámbar
+    // Antes esta respuesta usaba una escala propia (30/15) distinta de la del
+    // dashboard (60/40/20): editar un precio inline cambiaba el color del número
+    // a un tramo que la badge de al lado contradecía. Ahora es una sola escala.
+
+    // margen 60% → Alta
+    $this->actingAs($user)
+        ->patchJson(route('recipes.prices.update', [$recipe, $list]), ['price' => 125])
+        ->assertJson(['margin_pct' => 60, 'margin_tier' => 'alta']);
+
+    // margen 20% → Regular (con la escala vieja daba ámbar/«media»)
     $this->actingAs($user)
         ->patchJson(route('recipes.prices.update', [$recipe, $list]), ['price' => 62.50])
-        ->assertJson(['margin_color' => 'text-amber-600']);
+        ->assertJson(['margin_pct' => 20, 'margin_tier' => 'regular']);
 
-    // margen 9% → rojo
+    // margen 9% → Baja
     $this->actingAs($user)
         ->patchJson(route('recipes.prices.update', [$recipe, $list]), ['price' => 55])
-        ->assertJson(['margin_color' => 'text-red-500']);
+        ->assertJson(['margin_tier' => 'baja']);
 });
 
 test('loguea al crear y al cambiar, no si el monto no cambió', function () {

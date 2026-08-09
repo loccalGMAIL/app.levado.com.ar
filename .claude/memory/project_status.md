@@ -24,6 +24,27 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 
 ## Todo lo que está hecho
 
+### v0.12.11 — El navegador recibía el mismo JS una vez por fila (rama `v0.12.11-FIXAlpinePorFila`)
+- El objeto Alpine de edición inline vivía **adentro del `@foreach`**: 68 líneas × 20 recetas en el
+  dashboard, 47 por **celda** en la matriz (recetas × listas), 37 por fila en ingredientes. Ahora se
+  define una vez en `resources/js/rows/` y se registra con `Alpine.data()` en `alpine:init` — es el
+  **primer `Alpine.data()` del proyecto**. Ver [[pattern-listados-fuente-unica]] → «El Alpine por fila».
+- Medido con 20 registros: dashboard 4266 → 2926 líneas (−31%), matriz 7388 → 3708 (−50%),
+  ingredientes 3798 → 3078 (−19%).
+- **Bug corregido:** los cortes de margen vivían en 7 lugares con **dos escalas** (60/40/20 en el
+  dashboard, 30/15 en `RecipePriceController` y la matriz). Editar un precio inline pintaba el número
+  con la otra escala. Enum `MarginTier` como dueño único; el controller devuelve `margin_tier` y no
+  `margin_color`. **Cambio visible: los colores de la matriz se corren** (35% pasa de verde a naranja).
+- `PriceListMatrixTest` tenía un `assertDontSee('savePrice')` que al extraer el JS **pasaba siempre
+  sin proteger nada**; reapuntado y verificado contra la quita del `@can`.
+- Verificado en navegador que la edición inline funciona de verdad en las tres pantallas.
+- **`packaging/index` y `recipes/index` migradas a `x-data-table` + Alpine extraído en la misma
+  pasada** (tenían las dos duplicaciones a la vez): envases 6209 → 3109 líneas (−50%), recetas
+  4855 → 2296 (−53%). `stockCell` y `costCell` comparten implementación en `rows/inline-number.js`.
+- **Pendiente del frente:** `purchases/show` y `purchases/scan/review`; y 5 listados todavía en
+  `x-responsive-table` (`variable-expenses`, `price-lists/index`, `purchases/index`, `fixed-costs`,
+  `stock`).
+
 ### v0.12.10 — Los listados mandaban cada fila dos veces (rama `v0.12.10-FIXCodigoDuplicado`)
 - **Fuente única de render en los listados**: se escribe sólo el `<tr>` y el CSS decide si se ve como
   fila de tabla o como card. Componentes `x-data-table` / `.row` / `.cell` con roles de celda, más

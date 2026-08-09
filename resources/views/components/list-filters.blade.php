@@ -6,6 +6,8 @@
     'resetRoute',
     'placeholder' => 'Buscar por nombre...',
     'status' => true,
+    'statusActiveLabel' => 'Activos',
+    'statusInactiveLabel' => 'Inactivos',
 ])
 
 <form method="GET" class="flex gap-3 items-end flex-wrap">
@@ -22,8 +24,8 @@
         <select name="status"
             class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
             <option value="">Todos</option>
-            <option value="active"   @selected(request('status') === 'active')>Activos</option>
-            <option value="inactive" @selected(request('status') === 'inactive')>Inactivos</option>
+            <option value="active"   @selected(request('status') === 'active')>{{ $statusActiveLabel }}</option>
+            <option value="inactive" @selected(request('status') === 'inactive')>{{ $statusInactiveLabel }}</option>
         </select>
     @endif
 

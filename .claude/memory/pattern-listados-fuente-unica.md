@@ -77,6 +77,92 @@ es silencioso**. El rol se declara en la celda: una palabra, en el lugar donde i
 - **Playwright** sobre el CSS compilado real: `documentElement.scrollWidth - clientWidth === 0` en
   320/375/390/414/640/768/1024/1280/1440/1920px, **en los dos modos del toggle**.
 
+---
+
+# La otra duplicación: el Alpine por fila (v0.12.11)
+
+`x-data-table` sacó la **segunda copia de la fila**. Pero la copia que queda seguía siendo enorme por
+otro motivo: un objeto Alpine escrito **adentro del `@foreach`** se serializa una vez por fila.
+
+**Regla del proyecto: más de ~15 líneas de Alpine adentro de un `@foreach` van a `Alpine.data()`.**
+El Blade queda con la llamada al factory y los valores iniciales; el código vive en
+`resources/js/rows/`.
+
+```blade
+<tr x-data="priceRow({{ Js::from([
+        'price' => $row['selling_price'],
+        'tier'  => \App\Enums\MarginTier::fromPercent($pct)->value,
+        'updateUrl' => route('recipes.prices.update', [$recipe, $priceList]),
+    ]) }})">
+```
+
+Medido con 20 registros: dashboard **4266 → 2926 líneas (−31%)**, `price-lists/matrix`
+**7388 → 3708 (−50%**, porque multiplica recetas × listas**)**, `ingredients/index` 3798 → 3078 (−19%).
+
+## Cuatro trampas
+
+1. **`Alpine.start()` engaña.** En `app.js` está en la línea 9 y los `import` debajo, pero ESM
+   hoistea los imports: en runtime corren **antes**. `window.matchRow` funciona por ese accidente. El
+   registro va colgado de **`alpine:init`**, que corre durante `start()`, y así el orden deja de
+   importar.
+2. **Nada de `import()` dinámico para estos módulos.** Un `Alpine.data()` que llega después de
+   `start()` no se aplica a lo ya montado: el `x-data` queda sin definir **en silencio**, sin error
+   en consola. Para lazy-loading, el patrón es el de `dashboard-charts.js`: módulo estático,
+   `import()` dinámico sólo del vendor pesado adentro.
+3. **El spread aplana los getters.** `{...base}` no copia un getter: lo **ejecuta** y guarda el valor.
+   Un `get marginColor()` de la base quedaría congelado y no volvería a reaccionar. Por eso
+   `price-editor.js` compone con `Object.getOwnPropertyDescriptors`.
+4. **La URL se pasa como argumento, no se arma en JS.** La conoce Laravel, y además
+   `DataTableComponentsTest` ancla que aparezca una sola vez en el HTML. Ojo: `Js::from()` escapa las
+   barras (`http:\/\/…`) y las comillas (`"`), así que un test que busque la URL cruda tiene que
+   aplanar los backslashes primero.
+
+## Los umbrales de margen — `MarginTier`
+
+Encontrado midiendo esto: los cortes vivían en **siete lugares con dos escalas**. El dashboard usaba
+60/40/20 y `RecipePriceController` + la matriz usaban 30/15, así que **editar un precio inline movía
+el color del número a la otra escala**: una receta al 35% pasaba de naranja a verde sola mientras la
+badge de al lado seguía diciendo «Regular».
+
+`App\Enums\MarginTier` es ahora el único dueño (`HIGH=60`, `MEDIUM=40`, `LOW=20`). El controller
+devuelve **`margin_tier`, no `margin_color`**: el servidor manda el tramo y el cliente lo traduce a
+clases con tablas de lookup. El JS no conoce los cortes.
+
+## Anclas
+
+- `AlpineRowComponentsTest`: el **cuerpo** del objeto no está en el HTML (`assertDontSee('async
+  savePrice')`) y el factory aparece una vez por fila. Las 4 fallan contra un revert.
+- `PriceListMatrixTest` tenía `assertDontSee('savePrice')` como gate del rol Viewer. Al mudar el
+  objeto a un módulo ese string desaparece **para todos los roles**: el test pasaba siempre sin
+  proteger nada. Reapuntado, y verificado que falla si se saca el `@can`.
+- **Un test de marcado no alcanza acá**: si un factory queda mal registrado, la edición inline muere
+  en silencio. Hay que ejercitarla en navegador (abrir, escribir, guardar, ver el valor y el tramo
+  actualizados sin recargar).
+
+## Los dos frentes se atacan juntos
+
+`packaging/index` y `recipes/index` tenían **las dos duplicaciones a la vez**: el doble render y el
+Alpine inline, así que el objeto viajaba dos y hasta tres veces por registro (en envases: costo en la
+card, costo otra vez en la fila, y stock). Migrarlos a `x-data-table` **y** extraer el Alpine en la
+misma pasada dio la mayor caída de todas: envases **6209 → 3109 líneas (−50%)**, recetas
+**4855 → 2296 (−53%)**.
+
+`stockCell` y `costCell` son el mismo editor con otra clave de payload y de respuesta: viven juntos
+en `rows/inline-number.js` con estado uniforme (`value` / `valueFormatted` / `save()`), no en dos
+módulos casi iguales.
+
+**Detalle de layout:** con tres acciones en la card («Ver receta / Copiar / Desactivar») repartir el
+ancho en partes iguales corta las palabras al medio. `.dt-actions` en modo card usa
+`flex: 1 1 8rem` + `flex-wrap`, así el botón que no entra baja a un renglón nuevo.
+
+## Pendiente de este frente
+
+`purchases/show` (45 líneas, sin paginar) y `purchases/scan/review` (11). En listados quedan 5 vistas
+todavía en `x-responsive-table`: `variable-expenses`, `price-lists/index`, `purchases/index`,
+`fixed-costs` y `stock`.
+
+---
+
 ## Estado
 
 Migradas `ingredients/index` y `labor-types/index`. **Pendientes** (siguen en `x-responsive-table`,

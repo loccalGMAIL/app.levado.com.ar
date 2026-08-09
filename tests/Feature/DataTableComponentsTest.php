@@ -4,6 +4,8 @@ use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\LaborType;
+use App\Models\Packaging;
+use App\Models\Recipe;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
@@ -66,6 +68,22 @@ test('cada registro se renderiza en una sola fila, no en card + fila', function 
         ->and($html)->not->toContain("mobileExpanded ? 'hidden' : 'md:hidden'");
 });
 
+test('envases y recetas también renderizan una sola fila por registro', function () {
+    [$user, $tenant] = ownerForDataTable();
+    Packaging::factory()->for($tenant)->create(['name' => 'CajaSeisPorciones']);
+    Recipe::factory()->for($tenant)->create(['name' => 'PanDeCampo', 'active' => true]);
+
+    $envases = $this->actingAs($user)->get(route('packaging.index'))->assertOk()->getContent();
+    $recetas = $this->actingAs($user)->get(route('recipes.index'))->assertOk()->getContent();
+
+    // Eran las dos vistas más pesadas: emitían el registro en la card y otra
+    // vez en la fila, y con él su objeto Alpine.
+    expect(preg_match_all('/>\s*CajaSeisPorciones\s*</', $envases))->toBe(1)
+        ->and(preg_match_all('/>\s*PanDeCampo\s*</', $recetas))->toBe(1)
+        ->and($envases)->not->toContain("mobileExpanded ? 'hidden' : 'md:hidden'")
+        ->and($recetas)->not->toContain("mobileExpanded ? 'hidden' : 'md:hidden'");
+});
+
 test('el toggle entre card y tabla sigue disponible sobre el mismo marcado', function () {
     [$user, $tenant] = ownerForDataTable();
     LaborType::factory()->for($tenant)->create(['name' => 'Pastelero']);
@@ -121,6 +139,11 @@ test('la edición inline de stock vive en la fila y no se duplica', function () 
 
     // Antes el editor existía sólo en la copia de tabla y la card mostraba el
     // stock de sólo lectura; ahora hay un único editor por ingrediente.
-    expect(substr_count($html, route('stock.level.update', ['ingredient', $ingredient->id])))->toBe(1)
+    //
+    // La URL viaja dentro de un Js::from(), que escapa las barras: se aplanan
+    // los backslashes antes de contar (la ruta no tiene ninguno).
+    $flat = str_replace('\\', '', $html);
+
+    expect(substr_count($flat, route('stock.level.update', ['ingredient', $ingredient->id])))->toBe(1)
         ->and($html)->toContain('data-label="Stock:"');
 });

@@ -125,12 +125,20 @@ test('viewer accede a la matriz en solo lectura', function () {
         'price' => 700,
     ]);
 
-    $this->actingAs($user)
+    $html = $this->actingAs($user)
         ->get(route('price-lists.matrix'))
         ->assertOk()
         ->assertSee('Pan lactal')
         ->assertSee('700,00')
-        ->assertDontSee('savePrice');
+        ->getContent();
+
+    // El ancla vieja era `assertDontSee('savePrice')`. Al mudar el objeto Alpine
+    // a un módulo, ese string dejó de estar en el HTML para TODOS los roles, así
+    // que el assert pasaba siempre y no protegía nada. Ahora se mira el marcado
+    // que sí distingue al viewer: la celda editable y su ruta de guardado.
+    expect($html)->not->toContain('x-data="priceCell(')
+        ->and(str_replace('\\', '', $html))
+        ->not->toContain(route('recipes.prices.update', [$recipe, $tenant->defaultPriceList()]));
 });
 
 test('aislamiento: recetas y listas de otro tenant no aparecen', function () {

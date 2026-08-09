@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MarginTier;
 use App\Models\Notification;
 use App\Models\Tenant;
 use App\Services\NotificationService;
@@ -94,8 +95,8 @@ class DashboardController extends Controller
 
                 return $q->where('recipes.name', 'like', "%{$escaped}%");
             })
-            ->when($marginFilter === 'high', fn ($q) => $q->whereRaw("({$marginPctSql}) >= 60", $marginPctBindings))
-            ->when($marginFilter === 'low', fn ($q) => $q->whereRaw("({$marginPctSql}) < 20", $marginPctBindings))
+            ->when($marginFilter === 'high', fn ($q) => $q->whereRaw("({$marginPctSql}) >= ".MarginTier::HIGH, $marginPctBindings))
+            ->when($marginFilter === 'low', fn ($q) => $q->whereRaw("({$marginPctSql}) < ".MarginTier::LOW, $marginPctBindings))
             ->select('recipes.*')
             ->selectRaw("{$priceSql} as dashboard_selling_price", $priceBindings)
             ->orderByRaw("({$sortExpr}) is null", $sortBindings)
@@ -181,7 +182,7 @@ class DashboardController extends Controller
         $rowsWithMargin = $statRows->filter(fn ($r) => $r['margin_pct'] !== null);
         $avgMarginPct = $rowsWithMargin->count() > 0 ? $rowsWithMargin->avg('margin_pct') : null;
         $bestRecipeRow = $rowsWithMargin->sortByDesc('margin_pct')->first();
-        $lowMarginCount = $rowsWithMargin->filter(fn ($r) => $r['margin_pct'] < 20)->count();
+        $lowMarginCount = $rowsWithMargin->filter(fn ($r) => $r['margin_pct'] < MarginTier::LOW)->count();
 
         // Distribución de costos para la dona: [ingredientes, mano de obra,
         // gastos fijos, descartables]. Los descartables absorben el resto para

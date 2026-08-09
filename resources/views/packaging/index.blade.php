@@ -20,7 +20,6 @@
 
     <div class="py-8 px-6 lg:px-8"
         x-data="{
-            mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
                 if (record.subdivisions && record.cost_per_package != null) {
@@ -33,11 +32,8 @@
 
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Envases</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Cajas, bolsas y materiales de presentación con su costo por unidad.</p>
-                </div>
+            <x-list-header title="Envases"
+                subtitle="Cajas, bolsas y materiales de presentación con su costo por unidad.">
                 @can('manage-costs')
                     <button type="button"
                         @click="$dispatch('open-modal', 'packaging-create')"
@@ -45,29 +41,9 @@
                         + Nuevo envase
                     </button>
                 @endcan
-            </div>
+            </x-list-header>
 
-            <form method="GET" class="flex gap-3 items-end flex-wrap">
-                <input type="hidden" name="sort" value="{{ request('sort') }}">
-                <input type="hidden" name="dir" value="{{ request('dir') }}">
-                <div class="flex-1 min-w-48">
-                    <input type="text" name="search" value="{{ request('search') }}"
-                        placeholder="Buscar por nombre..."
-                        class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                </div>
-                <select name="status"
-                    class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                    <option value="">Todos</option>
-                    <option value="active"   @selected(request('status') === 'active')>Activos</option>
-                    <option value="inactive" @selected(request('status') === 'inactive')>Inactivos</option>
-                </select>
-                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
-                    Filtrar
-                </button>
-                @if(request('search') || request('status'))
-                    <a href="{{ route('packaging.index') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
-                @endif
-            </form>
+            <x-list-filters :reset-route="route('packaging.index')" />
 
             @php
                 $sort = request('sort', 'name');
@@ -83,8 +59,20 @@
                     @endif
                 </x-empty-state>
             @else
-                                <x-responsive-table>
-                    <x-slot:cards>
+                <x-data-table :paginator="$packagings" total-label="envase">
+                    <x-slot:head>
+                        <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
+                        <th class="px-4 py-3 font-medium">Marca</th>
+                        <th class="px-4 py-3 font-medium">Proveedor</th>
+                        <th class="px-4 py-3 font-medium text-right">Por presentación</th>
+                        <x-sortable-th column="cost_per_unit" :sort="$sort" :dir="$dir" align="right">Costo / sub-unidad</x-sortable-th>
+                        <th class="px-4 py-3 font-medium text-right">Stock</th>
+                        <th class="px-4 py-3 font-medium">Estado</th>
+                        @can('manage-costs')
+                            <th class="px-4 py-3"></th>
+                        @endcan
+                    </x-slot:head>
+
                     @foreach($packagings as $packaging)
                         @php
                             $stockLevel = $stockLevels->get($packaging->id);
@@ -92,362 +80,129 @@
                             $stockUnit = $packaging->subdivisions && $packaging->subdivision_label
                                 ? $packaging->subdivision_label
                                 : 'u.';
+                            $editPayload = [
+                                'id'                => $packaging->id,
+                                'name'              => $packaging->name,
+                                'brand'             => $packaging->brand ?? '',
+                                'supplier_id'       => $packaging->supplier_id ?? '',
+                                'cost_per_unit'     => round((float) $packaging->cost_per_unit, 2),
+                                'cost_per_package'  => $packaging->cost_per_package !== null ? round((float) $packaging->cost_per_package, 2) : null,
+                                'subdivisions'      => $packaging->subdivisions,
+                                'subdivision_label' => $packaging->subdivision_label ?? '',
+                            ];
                         @endphp
-                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $packaging->active ? '' : 'opacity-50' }}"
-                            x-data="{
-                                editing: false,
-                                saving: false,
-                                isDirty: false,
-                                cost: {{ (float) $packaging->cost_per_unit }},
-                                costFormatted: '{{ number_format($packaging->cost_per_unit, 2, ',', '.') }}',
-                                startEdit() {
-                                    this.isDirty = false;
-                                    this.$refs.costInputCard.value = parseFloat(this.cost).toFixed(2);
-                                    this.editing = true;
-                                    this.$nextTick(() => this.$refs.costInputCard.select());
-                                },
-                                async saveCost() {
-                                    if (this.saving) return;
-                                    if (!this.isDirty) { this.editing = false; return; }
-                                    const raw = this.$refs.costInputCard.value.trim();
-                                    if (raw === '') { this.editing = false; return; }
-                                    this.saving = true;
-                                    this.editing = false;
-                                    try {
-                                        const res = await fetch('{{ route('packaging.cost.update', $packaging) }}', {
-                                            method: 'PATCH',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                'Accept': 'application/json',
-                                            },
-                                            body: JSON.stringify({ cost_per_unit: raw })
-                                        });
-                                        const data = await res.json();
-                                        this.cost = data.cost_per_unit;
-                                        this.costFormatted = data.cost_per_unit_formatted;
-                                    } finally {
-                                        this.saving = false;
-                                    }
-                                }
-                            }">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <div class="font-medium text-corteza">{{ $packaging->name }}</div>
-                                    <div class="text-xs text-masa-madre mt-0.5">
-                                        @if($packaging->brand || $packaging->supplier)
-                                            {{ implode(', ', array_filter([$packaging->brand, $packaging->supplier?->name])) }}
-                                        @endif
-                                        @if($packaging->subdivisions)
-                                            · {{ $packaging->subdivisions }} {{ $packaging->subdivision_label ?? 'u.' }} / presentación
-                                        @endif
-                                    </div>
-                                </div>
-                                <x-status-badge :active="$packaging->active" />
-                            </div>
-                            <div class="mt-2 font-mono text-corteza text-sm [overflow-wrap:anywhere]">
+                        <x-data-table.row :dimmed="! $packaging->active">
+                            <x-data-table.cell role="title" class="font-medium text-corteza">
                                 @can('manage-costs')
-                                    <div x-show="!editing && !saving"
+                                    <button type="button" @click="openEdit({{ Js::from($editPayload) }})"
+                                        class="hover:underline text-left">
+                                        {{ $packaging->name }}
+                                    </button>
+                                @else
+                                    {{ $packaging->name }}
+                                @endcan
+                                @if($packaging->subdivisions)
+                                    <span class="text-xs text-masa-madre block font-normal">
+                                        {{ $packaging->subdivisions }} {{ $packaging->subdivision_label ?? 'u.' }} / presentación
+                                    </span>
+                                @endif
+                            </x-data-table.cell>
+
+                            <x-data-table.cell role="subtitle" class="text-masa-madre text-xs">{{ $packaging->brand }}</x-data-table.cell>
+                            <x-data-table.cell role="subtitle" class="text-masa-madre text-xs">{{ $packaging->supplier?->name }}</x-data-table.cell>
+
+                            <x-data-table.cell role="meta" align="right" cards="hide" class="text-masa-madre font-mono text-xs">
+                                @if($packaging->cost_per_package !== null){{ number_format($packaging->cost_per_package, 2, ',', '.') }}@endif
+                            </x-data-table.cell>
+
+                            <x-data-table.cell role="figure" align="right" class="font-mono text-corteza"
+                                x-data="costCell({{ Js::from([
+                                    'value' => (float) $packaging->cost_per_unit,
+                                    'valueFormatted' => number_format($packaging->cost_per_unit, 2, ',', '.'),
+                                    'updateUrl' => route('packaging.cost.update', $packaging),
+                                ]) }})">
+                                @can('manage-costs')
+                                    <span x-show="!editing && !saving"
                                         @click="startEdit()"
-                                        class="cursor-pointer hover:text-horno select-none inline-flex items-center gap-1">
-                                        $ <span x-text="costFormatted"></span>
-                                        <span class="text-xs text-masa-madre font-normal">/ {{ $packaging->subdivisions && $packaging->subdivision_label ? $packaging->subdivision_label : 'u.' }}</span>
-                                        <svg class="w-3 h-3 text-masa-madre" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
-                                    </div>
-                                    <input
-                                        x-show="editing"
-                                        x-ref="costInputCard"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
+                                        class="cursor-pointer hover:text-horno select-none"
+                                        x-text="'$ ' + valueFormatted"></span>
+                                    <input x-show="editing" x-ref="input"
+                                        type="number" step="0.01" min="0"
                                         @input="isDirty = true"
-                                        @keydown.enter.prevent="saveCost()"
+                                        @keydown.enter.prevent="save()"
                                         @keydown.escape="editing = false; isDirty = false"
-                                        @blur="saveCost()"
-                                        class="w-32 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                        @blur="save()"
+                                        class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
                                     <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
                                 @else
-                                    $ <span>{{ number_format($packaging->cost_per_unit, 2, ',', '.') }}</span>
+                                    $ <span x-text="valueFormatted"></span>
                                 @endcan
-                            </div>
-                            <div class="mt-1 text-xs text-masa-madre">
-                                Stock:
-                                <span class="font-mono {{ $stockQty < 0 ? 'text-red-600' : 'text-corteza' }}">{{ number_format($stockQty, 2, ',', '.') }}</span>
-                                {{ $stockUnit }}
-                                <a href="{{ route('stock.show', ['packaging', $packaging->id]) }}" class="hover:text-corteza underline">historial</a>
-                            </div>
-                            @can('manage-costs')
-                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
-                                    <button type="button"
-                                        @click="openEdit({{ Js::from([
-                                            'id'               => $packaging->id,
-                                            'name'             => $packaging->name,
-                                            'brand'            => $packaging->brand ?? '',
-                                            'supplier_id'      => $packaging->supplier_id ?? '',
-                                            'cost_per_unit'    => round((float) $packaging->cost_per_unit, 2),
-                                            'cost_per_package' => $packaging->cost_per_package !== null ? round((float) $packaging->cost_per_package, 2) : null,
-                                            'subdivisions'     => $packaging->subdivisions,
-                                            'subdivision_label' => $packaging->subdivision_label ?? '',
-                                        ]) }})"
-                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                        Editar
-                                    </button>
-                                    <form method="POST" action="{{ route('packaging.toggle-active', $packaging) }}" class="flex-1">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit"
-                                            class="w-full py-1.5 px-3 text-sm rounded transition-colors {{ $packaging->active ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-600 hover:bg-green-50' }}">
-                                            {{ $packaging->active ? 'Desactivar' : 'Activar' }}
-                                        </button>
-                                    </form>
-                                </div>
-                            @endcan
-                        </div>
-                    @endforeach
-                    </x-slot:cards>
+                                <span class="dt-card-only text-xs text-masa-madre font-sans font-normal">/ {{ $stockUnit }}</span>
+                            </x-data-table.cell>
 
-                        <thead class="bg-miga text-masa-madre border-b border-miga">
-                            <tr>
-                                <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
-                                <th class="px-4 py-3 font-medium">Marca</th>
-                                <th class="px-4 py-3 font-medium">Proveedor</th>
-                                <th class="px-4 py-3 font-medium text-right">Por presentación</th>
-                                <x-sortable-th column="cost_per_unit" :sort="$sort" :dir="$dir" align="right">Costo / sub-unidad</x-sortable-th>
-                                <th class="px-4 py-3 font-medium text-right">Stock</th>
-                                <th class="px-4 py-3 font-medium">Estado</th>
-                                @can('manage-costs')
-                                    <th class="px-4 py-3"></th>
-                                @endcan
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-miga">
-                            @foreach($packagings as $packaging)
-                                @php
-                                    $stockLevel = $stockLevels->get($packaging->id);
-                                    $stockQty = $stockLevel !== null ? (float) $stockLevel->quantity : 0.0;
-                                    $stockUnit = $packaging->subdivisions && $packaging->subdivision_label
-                                        ? $packaging->subdivision_label
-                                        : 'u.';
-                                @endphp
-                                <tr class="{{ $packaging->active ? '' : 'opacity-50' }}">
-                                    <td class="px-4 py-3 font-medium text-corteza">
-                                        @can('manage-costs')
-                                            <button type="button"
-                                                @click="openEdit({{ Js::from([
-                                                    'id'                => $packaging->id,
-                                                    'name'              => $packaging->name,
-                                                    'brand'             => $packaging->brand ?? '',
-                                                    'supplier_id'       => $packaging->supplier_id ?? '',
-                                                    'cost_per_unit'     => round((float) $packaging->cost_per_unit, 2),
-                                                    'cost_per_package'  => $packaging->cost_per_package !== null ? round((float) $packaging->cost_per_package, 2) : null,
-                                                    'subdivisions'      => $packaging->subdivisions,
-                                                    'subdivision_label' => $packaging->subdivision_label ?? '',
-                                                ]) }})"
-                                                class="hover:underline text-left">
-                                                {{ $packaging->name }}
-                                            </button>
-                                        @else
-                                            {{ $packaging->name }}
-                                        @endcan
-                                        @if($packaging->subdivisions)
-                                            <span class="text-xs text-masa-madre block font-normal">
-                                                {{ $packaging->subdivisions }} {{ $packaging->subdivision_label ?? 'u.' }} / presentación
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->brand ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-masa-madre text-xs">{{ $packaging->supplier?->name ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-right text-masa-madre font-mono text-xs">
-                                        @if($packaging->cost_per_package !== null)
-                                            {{ number_format($packaging->cost_per_package, 2, ',', '.') }}
-                                        @else
-                                            —
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-mono text-corteza"
-                                        x-data="{
-                                            editing: false,
-                                            saving: false,
-                                            isDirty: false,
-                                            cost: {{ (float) $packaging->cost_per_unit }},
-                                            costFormatted: '{{ number_format($packaging->cost_per_unit, 2, ',', '.') }}',
-                                            startEdit() {
-                                                this.isDirty = false;
-                                                this.$refs.costInput.value = parseFloat(this.cost).toFixed(2);
-                                                this.editing = true;
-                                                this.$nextTick(() => this.$refs.costInput.select());
-                                            },
-                                            async saveCost() {
-                                                if (this.saving) return;
-                                                if (!this.isDirty) { this.editing = false; return; }
-                                                const raw = this.$refs.costInput.value.trim();
-                                                if (raw === '') { this.editing = false; return; }
-                                                this.saving = true;
-                                                this.editing = false;
-                                                try {
-                                                    const res = await fetch('{{ route('packaging.cost.update', $packaging) }}', {
-                                                        method: 'PATCH',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                            'Accept': 'application/json',
-                                                        },
-                                                        body: JSON.stringify({ cost_per_unit: raw })
-                                                    });
-                                                    const data = await res.json();
-                                                    this.cost = data.cost_per_unit;
-                                                    this.costFormatted = data.cost_per_unit_formatted;
-                                                } finally {
-                                                    this.saving = false;
-                                                }
-                                            }
-                                        }">
-                                        @can('manage-costs')
-                                            <div x-show="!editing && !saving"
-                                                @click="startEdit()"
-                                                class="cursor-pointer hover:text-horno select-none"
-                                                x-text="'$ ' + costFormatted"></div>
-                                            <input
-                                                x-show="editing"
-                                                x-ref="costInput"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                @input="isDirty = true"
-                                                @keydown.enter.prevent="saveCost()"
-                                                @keydown.escape="editing = false; isDirty = false"
-                                                @blur="saveCost()"
-                                                class="w-28 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
-                                            <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
-                                        @else
-                                            $ <span x-text="costFormatted"></span>
-                                        @endcan
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-mono"
-                                        x-data="{
-                                            editing: false,
-                                            saving: false,
-                                            isDirty: false,
-                                            qty: {{ $stockQty }},
-                                            qtyFormatted: '{{ number_format($stockQty, 2, ',', '.') }}',
-                                            startEdit() {
-                                                this.isDirty = false;
-                                                this.$refs.stockInput.value = parseFloat(this.qty).toFixed(2);
-                                                this.editing = true;
-                                                this.$nextTick(() => this.$refs.stockInput.select());
-                                            },
-                                            async saveStock() {
-                                                if (this.saving) return;
-                                                if (!this.isDirty) { this.editing = false; return; }
-                                                const raw = this.$refs.stockInput.value.trim();
-                                                if (raw === '') { this.editing = false; return; }
-                                                this.saving = true;
-                                                this.editing = false;
-                                                try {
-                                                    const res = await fetch('{{ route('stock.level.update', ['packaging', $packaging->id]) }}', {
-                                                        method: 'PATCH',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                            'Accept': 'application/json',
-                                                        },
-                                                        body: JSON.stringify({ counted_quantity: raw })
-                                                    });
-                                                    const data = await res.json();
-                                                    this.qty = data.quantity;
-                                                    this.qtyFormatted = data.quantity_formatted;
-                                                } finally {
-                                                    this.saving = false;
-                                                }
-                                            }
-                                        }">
-                                        <div class="inline-flex items-center justify-end gap-1.5">
-                                            @can('manage-costs')
-                                                <div x-show="!editing && !saving"
-                                                    @click="startEdit()"
-                                                    class="cursor-pointer hover:text-horno select-none"
-                                                    :class="qty < 0 ? 'text-red-600' : 'text-corteza'"
-                                                    x-text="qtyFormatted"></div>
-                                                <input
-                                                    x-show="editing"
-                                                    x-ref="stockInput"
-                                                    type="number" step="0.01" min="0"
-                                                    @input="isDirty = true"
-                                                    @keydown.enter.prevent="saveStock()"
-                                                    @keydown.escape="editing = false; isDirty = false"
-                                                    @blur="saveStock()"
-                                                    class="w-24 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
-                                                <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
-                                            @else
-                                                <span :class="qty < 0 ? 'text-red-600' : 'text-corteza'" x-text="qtyFormatted"></span>
-                                            @endcan
-                                            <span class="text-masa-madre text-xs">{{ $stockUnit }}</span>
-                                            <a href="{{ route('stock.show', ['packaging', $packaging->id]) }}"
-                                                class="text-masa-madre hover:text-corteza" title="Ver movimientos de stock">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                            </a>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <x-status-badge :active="$packaging->active" />
-                                    </td>
+                            <x-data-table.cell role="meta" align="right" label="Stock:" class="font-mono"
+                                x-data="stockCell({{ Js::from([
+                                    'value' => $stockQty,
+                                    'valueFormatted' => number_format($stockQty, 2, ',', '.'),
+                                    'updateUrl' => route('stock.level.update', ['packaging', $packaging->id]),
+                                ]) }})">
+                                <span class="inline-flex items-center gap-1.5">
                                     @can('manage-costs')
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center justify-end gap-1">
-                                                <button type="button"
-                                                    @click="openEdit({{ Js::from([
-                                                        'id'               => $packaging->id,
-                                                        'name'             => $packaging->name,
-                                                        'brand'            => $packaging->brand ?? '',
-                                                        'supplier_id'      => $packaging->supplier_id ?? '',
-                                                        'cost_per_unit'    => round((float) $packaging->cost_per_unit, 2),
-                                                        'cost_per_package' => $packaging->cost_per_package !== null ? round((float) $packaging->cost_per_package, 2) : null,
-                                                        'subdivisions'     => $packaging->subdivisions,
-                                                        'subdivision_label' => $packaging->subdivision_label ?? '',
-                                                    ]) }})"
-                                                    aria-label="Editar envase" title="Editar envase"
-                                                    class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                                    </svg>
-                                                </button>
-                                                <form method="POST" action="{{ route('packaging.toggle-active', $packaging) }}">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <button type="submit"
-                                                        aria-label="{{ $packaging->active ? 'Desactivar' : 'Activar' }}" title="{{ $packaging->active ? 'Desactivar' : 'Activar' }}"
-                                                        class="p-1.5 rounded transition-colors {{ $packaging->active ? 'text-red-500 hover:text-red-700 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50' }}">
-                                                        @if($packaging->active)
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                                            </svg>
-                                                        @else
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                            </svg>
-                                                        @endif
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
+                                        <span x-show="!editing && !saving"
+                                            @click="startEdit()"
+                                            class="cursor-pointer hover:text-horno select-none"
+                                            :class="value < 0 ? 'text-red-600' : 'text-corteza'"
+                                            x-text="valueFormatted"></span>
+                                        <input x-show="editing" x-ref="input"
+                                            type="number" step="0.01" min="0"
+                                            @input="isDirty = true"
+                                            @keydown.enter.prevent="save()"
+                                            @keydown.escape="editing = false; isDirty = false"
+                                            @blur="save()"
+                                            class="w-24 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
+                                        <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
+                                    @else
+                                        <span :class="value < 0 ? 'text-red-600' : 'text-corteza'" x-text="valueFormatted"></span>
                                     @endcan
-                                </tr>
-                            @endforeach
-                        </tbody>
+                                    <span class="text-masa-madre text-xs font-sans">{{ $stockUnit }}</span>
+                                    <a href="{{ route('stock.show', ['packaging', $packaging->id]) }}"
+                                        class="inline-flex items-center gap-1 text-masa-madre hover:text-corteza"
+                                        title="Ver movimientos de stock">
+                                        <x-icon name="clock" class="w-3.5 h-3.5" />
+                                        <span class="dt-card-only text-xs font-sans underline">historial</span>
+                                    </a>
+                                </span>
+                            </x-data-table.cell>
 
-                    <x-slot:footer>
-                        @if($packagings->hasPages())
-                        <div class="px-4 py-3 border-t border-miga">
-                            {{ $packagings->links() }}
-                        </div>
-                    @endif
-                    </x-slot:footer>
-                </x-responsive-table>
+                            <x-data-table.cell role="badge">
+                                <x-status-badge :active="$packaging->active" />
+                            </x-data-table.cell>
 
-                <p class="text-xs text-masa-madre">{{ $packagings->total() }} envase(s) en total.</p>
+                            @can('manage-costs')
+                                <x-data-table.cell role="actions">
+                                    <div class="dt-actions">
+                                        <button type="button" @click="openEdit({{ Js::from($editPayload) }})"
+                                            aria-label="Editar envase" title="Editar envase" class="dt-action">
+                                            <x-icon name="pencil" />
+                                            <span class="dt-card-only">Editar</span>
+                                        </button>
+                                        <form method="POST" action="{{ route('packaging.toggle-active', $packaging) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit"
+                                                aria-label="{{ $packaging->active ? 'Desactivar' : 'Activar' }}"
+                                                title="{{ $packaging->active ? 'Desactivar' : 'Activar' }}"
+                                                class="dt-action {{ $packaging->active ? 'dt-action--danger' : 'dt-action--success' }}">
+                                                <x-icon :name="$packaging->active ? 'eye-off' : 'eye'" />
+                                                <span class="dt-card-only">{{ $packaging->active ? 'Desactivar' : 'Activar' }}</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </x-data-table.cell>
+                            @endcan
+                        </x-data-table.row>
+                    @endforeach
+                </x-data-table>
             @endif
 
         </div>

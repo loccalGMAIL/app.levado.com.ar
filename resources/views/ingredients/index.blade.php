@@ -121,62 +121,30 @@
                             </x-data-table.cell>
 
                             <x-data-table.cell role="meta" align="right" label="Stock:" class="font-mono"
-                                x-data="{
-                                    editing: false,
-                                    saving: false,
-                                    isDirty: false,
-                                    qty: {{ $stockQty }},
-                                    qtyFormatted: '{{ number_format($stockQty, 2, ',', '.') }}',
-                                    startEdit() {
-                                        this.isDirty = false;
-                                        this.$refs.stockInput.value = parseFloat(this.qty).toFixed(2);
-                                        this.editing = true;
-                                        this.$nextTick(() => this.$refs.stockInput.select());
-                                    },
-                                    async saveStock() {
-                                        if (this.saving) return;
-                                        if (!this.isDirty) { this.editing = false; return; }
-                                        const raw = this.$refs.stockInput.value.trim();
-                                        if (raw === '') { this.editing = false; return; }
-                                        this.saving = true;
-                                        this.editing = false;
-                                        try {
-                                            const res = await fetch('{{ route('stock.level.update', ['ingredient', $ingredient->id]) }}', {
-                                                method: 'PATCH',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                    'Accept': 'application/json',
-                                                },
-                                                body: JSON.stringify({ counted_quantity: raw })
-                                            });
-                                            const data = await res.json();
-                                            this.qty = data.quantity;
-                                            this.qtyFormatted = data.quantity_formatted;
-                                        } finally {
-                                            this.saving = false;
-                                        }
-                                    }
-                                }">
+                                x-data="stockCell({{ Js::from([
+                                    'value' => $stockQty,
+                                    'valueFormatted' => number_format($stockQty, 2, ',', '.'),
+                                    'updateUrl' => route('stock.level.update', ['ingredient', $ingredient->id]),
+                                ]) }})">
                                 <span class="inline-flex items-center gap-1.5">
                                     @can('manage-costs')
                                         <span x-show="!editing && !saving"
                                             @click="startEdit()"
                                             class="cursor-pointer hover:text-horno select-none"
-                                            :class="qty < 0 ? 'text-red-600' : 'text-corteza'"
-                                            x-text="qtyFormatted"></span>
+                                            :class="value < 0 ? 'text-red-600' : 'text-corteza'"
+                                            x-text="valueFormatted"></span>
                                         <input
                                             x-show="editing"
-                                            x-ref="stockInput"
+                                            x-ref="input"
                                             type="number" step="0.01" min="0"
                                             @input="isDirty = true"
-                                            @keydown.enter.prevent="saveStock()"
+                                            @keydown.enter.prevent="save()"
                                             @keydown.escape="editing = false; isDirty = false"
-                                            @blur="saveStock()"
+                                            @blur="save()"
                                             class="w-24 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
                                         <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
                                     @else
-                                        <span :class="qty < 0 ? 'text-red-600' : 'text-corteza'" x-text="qtyFormatted"></span>
+                                        <span :class="value < 0 ? 'text-red-600' : 'text-corteza'" x-text="valueFormatted"></span>
                                     @endcan
                                     <span class="text-masa-madre text-xs font-sans">{{ $stockUnit }}</span>
                                     <a href="{{ route('stock.show', ['ingredient', $ingredient->id]) }}"

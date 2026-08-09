@@ -476,83 +476,18 @@
                                 @php
                                     $recipe = $row['recipe'];
                                     $pct = $row['margin_pct'];
-                                    $initMarginColor = $pct !== null
-                                        ? ($pct >= 60 ? 'text-green-600' : ($pct >= 40 ? 'text-amber-600' : ($pct >= 20 ? 'text-orange-600' : 'text-red-500')))
-                                        : 'text-masa-madre';
-                                    $initPriceInput     = $row['selling_price'] !== null ? number_format($row['selling_price'], 2, '.', '') : '';
-                                    $initPriceFormatted = $row['selling_price'] !== null ? number_format($row['selling_price'], 2, ',', '.') : '';
-                                    $initMarginFormatted    = $row['margin'] !== null ? number_format($row['margin'], 2, ',', '.') : '';
-                                    $initMarginPctFormatted = $pct !== null ? number_format($pct, 1, ',', '.') : '';
                                 @endphp
                                 <tr
-                                    x-data="{
-                                        editing: false,
-                                        saving: false,
-                                        isDirty: false,
-                                        price: {{ $row['selling_price'] ?? 'null' }},
-                                        priceFormatted: '{{ $initPriceFormatted }}',
-                                        margin: {{ $row['margin'] ?? 'null' }},
-                                        marginFormatted: '{{ $initMarginFormatted }}',
-                                        marginPct: {{ $row['margin_pct'] ?? 'null' }},
-                                        marginPctFormatted: '{{ $initMarginPctFormatted }}',
-                                        marginColor: '{{ $initMarginColor }}',
-                                        get barColor() {
-                                            if (this.marginPct === null) return 'bg-miga';
-                                            if (this.marginPct >= 60) return 'bg-green-500';
-                                            if (this.marginPct >= 40) return 'bg-amber-500';
-                                            if (this.marginPct >= 20) return 'bg-orange-400';
-                                            return 'bg-red-500';
-                                        },
-                                        get badgeClass() {
-                                            if (this.marginPct === null) return 'bg-miga text-masa-madre';
-                                            if (this.marginPct >= 60) return 'bg-green-100 text-green-700';
-                                            if (this.marginPct >= 40) return 'bg-amber-100 text-amber-700';
-                                            if (this.marginPct >= 20) return 'bg-orange-100 text-orange-700';
-                                            return 'bg-red-100 text-red-700';
-                                        },
-                                        get badgeLabel() {
-                                            if (this.marginPct === null) return '—';
-                                            if (this.marginPct >= 60) return 'Alta';
-                                            if (this.marginPct >= 40) return 'Media';
-                                            if (this.marginPct >= 20) return 'Regular';
-                                            return 'Baja';
-                                        },
-                                        startEdit() {
-                                            this.isDirty = false;
-                                            this.$refs.priceInput.value = this.price !== null ? parseFloat(this.price).toFixed(2) : '';
-                                            this.editing = true;
-                                            this.$nextTick(() => this.$refs.priceInput.select());
-                                        },
-                                        async savePrice() {
-                                            if (this.saving) return;
-                                            if (!this.isDirty) { this.editing = false; return; }
-                                            const raw = this.$refs.priceInput.value.trim();
-                                            const payload = raw !== '' ? raw : null;
-                                            this.saving = true;
-                                            this.editing = false;
-                                            try {
-                                                const res = await fetch('{{ route('recipes.prices.update', [$recipe, $priceList]) }}', {
-                                                    method: 'PATCH',
-                                                    headers: {
-                                                        'Content-Type': 'application/json',
-                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                        'Accept': 'application/json',
-                                                    },
-                                                    body: JSON.stringify({ price: payload })
-                                                });
-                                                const data = await res.json();
-                                                this.price = data.selling_price;
-                                                this.priceFormatted = data.selling_price_formatted ?? '';
-                                                this.margin = data.margin;
-                                                this.marginFormatted = data.margin_formatted ?? '';
-                                                this.marginPct = data.margin_pct;
-                                                this.marginPctFormatted = data.margin_pct_formatted ?? '';
-                                                this.marginColor = data.margin_color ?? 'text-masa-madre';
-                                            } finally {
-                                                this.saving = false;
-                                            }
-                                        }
-                                    }"
+                                    x-data="priceRow({{ Js::from([
+                                        'price'              => $row['selling_price'],
+                                        'priceFormatted'     => $row['selling_price'] !== null ? number_format($row['selling_price'], 2, ',', '.') : '',
+                                        'margin'             => $row['margin'],
+                                        'marginFormatted'    => $row['margin'] !== null ? number_format($row['margin'], 2, ',', '.') : '',
+                                        'marginPct'          => $pct,
+                                        'marginPctFormatted' => $pct !== null ? number_format($pct, 1, ',', '.') : '',
+                                        'tier'               => \App\Enums\MarginTier::fromPercent($pct)->value,
+                                        'updateUrl'          => route('recipes.prices.update', [$recipe, $priceList]),
+                                    ]) }})"
                                     class="hover:bg-harina/70 transition-colors {{ $recipe->active ? '' : 'opacity-40' }}"
                                 >
                                     {{-- Nombre --}}
@@ -613,7 +548,7 @@
                                             <span x-show="saving" class="text-[11.5px] text-masa-madre/60">guardando…</span>
                                         @else
                                             @if($row['selling_price'] !== null)
-                                                <span class="text-corteza">$&nbsp;{{ $initPriceFormatted }}</span>
+                                                <span class="text-corteza">$&nbsp;{{ number_format($row['selling_price'], 2, ',', '.') }}</span>
                                             @else
                                                 <span class="text-masa-madre/50">—</span>
                                             @endif
