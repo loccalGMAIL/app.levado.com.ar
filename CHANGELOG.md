@@ -5,6 +5,32 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.11] — 2026-08-10
+
+### La app quedaba cargando para siempre y solo se destrababa borrando la cache a mano
+
+Dos clientes reportaron que el dashboard y compras se quedaban cargando sin terminar nunca. No era del servidor: el back no registró una sola excepción en trece días y la misma cuenta andaba bien desde otro navegador. Era el service worker de la PWA, que servía archivos viejos guardados en el equipo del cliente. La única salida era pedirle a la persona que abriera la consola del navegador y borrara la cache.
+
+#### Corregido
+
+- **El navegador ahora se actualiza solo en cada release.** El service worker no volvía a instalarse nunca, así que la limpieza de archivos viejos que ya tenía programada jamás llegaba a ejecutarse: un cliente podía arrastrar los archivos del día que instaló la app, deploy tras deploy. Ahora cada versión nueva se detecta en la siguiente visita y borra lo anterior sin que nadie tenga que hacer nada. **Los clientes ya afectados se destraban solos al entrar**, sin instrucciones ni soporte.
+- **Una conexión que se cuelga ya no deja la página cargando indefinidamente.** Al pedir el HTML no había límite de espera, y como el service worker se interpone, el navegador tampoco aplicaba el suyo: si la red no cortaba sino que quedaba colgada, la pantalla se quedaba en blanco para siempre. Ahora espera 10 segundos y muestra la página offline.
+- **Los íconos y el favicon vuelven a actualizarse.** Quedaban congelados en la primera versión que el navegador hubiera guardado, porque su dirección no cambia al cambiar el contenido.
+
+#### Técnico
+
+- `public/sw.js` (estático) pasa a `resources/views/sw.blade.php`, servido por la ruta `service-worker` en `/sw.js` con `Content-Type: application/javascript`, `Service-Worker-Allowed: /` y `Cache-Control: no-cache`. El browser solo dispara `install`/`activate` cuando cambian los bytes del script; con `CACHE_NAME` fijo en `'levado-v1'` dentro de un archivo que ningún deploy tocaba, el filtro de `activate` —que borra las caches cuyo nombre no coincide con el actual— nunca borraba nada. Ahora `CACHE_NAME` deriva de `config('app.version')`.
+- El precacheo pasa de `cache.addAll()` a `Promise.allSettled()` sobre `cache.add()`: `addAll` es atómico, así que un solo 404 en la lista abortaba el `install` y dejaba al service worker viejo sirviendo para siempre. El precacheo es una mejora, no un requisito para activar una versión nueva.
+- La navegación corre contra un `Promise.race` con timeout de 10 s en vez de un `fetch` pelado. No se usa `AbortController` porque pasarle un `init` a `fetch()` reconstruye el `Request` y un request de modo `navigate` no se puede reconstruir con ese modo.
+- Se separa la estrategia por tipo de asset: `/build/` sigue cache-first —lleva hash de Vite, el nombre cambia con el contenido— y `/icons/` + `/favicon` pasan a stale-while-revalidate, que es lo que corresponde a una URL estable. Antes los tres iban por la misma rama cache-first permanente.
+- `ServiceWorkerTest` cubre los headers, que la versión viaje en el cuerpo, y que no reaparezca un `public/sw.js` estático —el servidor web sirve `public/` antes que Laravel, así que un archivo que sobreviva a un deploy tapa la ruta y deja el arreglo sin efecto—. Incluye además un ancla contra la desincronización de versiones entre `config/app.php` y `package.json`, que ya había pasado en 0.12.9.
+
+#### Nota de despliegue
+
+Verificar que `public/sw.js` no exista en el servidor después del deploy. Si el despliegue no borra archivos eliminados del repo, hay que sacarlo a mano o el service worker versionado nunca se entrega.
+
+---
+
 ## [0.12.10] — 2026-08-08
 
 ### Los listados mandaban cada fila dos veces al navegador
