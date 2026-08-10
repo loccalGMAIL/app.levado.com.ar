@@ -37,14 +37,15 @@ class DashboardController extends Controller
             ->get();
         $alertCount = Notification::where('tenant_id', $tenant->id)->active()->unread()->count();
 
-        $tenant->defaultPriceList();
         $priceLists = $tenant->priceLists()
             ->active()
             ->orderByDesc('is_default')
             ->orderBy('name')
             ->get();
         $priceList = $priceLists->firstWhere('id', (int) request('price_list'))
-            ?? $priceLists->firstWhere('is_default', true);
+            ?? $priceLists->firstWhere('is_default', true)
+            ?? $priceLists->first()
+            ?? $tenant->defaultPriceList();
 
         $totalFixedCosts = $tenant->totalFixedCosts();
         $productiveHours = $tenant->productive_hours_month ?? 0;

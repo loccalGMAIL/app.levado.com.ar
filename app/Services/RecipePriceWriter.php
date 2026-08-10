@@ -14,22 +14,23 @@ class RecipePriceWriter
      */
     public function set(Recipe $recipe, PriceList $priceList, ?float $price): ?RecipePrice
     {
-        $existing = RecipePrice::where('price_list_id', $priceList->id)
-            ->where('recipe_id', $recipe->id)
-            ->first();
+        $recipePrice = RecipePrice::firstOrNew([
+            'price_list_id' => $priceList->id,
+            'recipe_id' => $recipe->id,
+        ]);
 
         if ($price === null) {
-            $existing?->delete();
+            if ($recipePrice->exists) {
+                $recipePrice->delete();
+            }
 
             return null;
         }
 
-        $priceChanged = $existing === null || (float) $existing->price !== $price;
+        $recipePrice->fill(['tenant_id' => $recipe->tenant_id, 'price' => $price]);
+        $priceChanged = ! $recipePrice->exists || $recipePrice->isDirty('price');
 
-        $recipePrice = RecipePrice::updateOrCreate(
-            ['price_list_id' => $priceList->id, 'recipe_id' => $recipe->id],
-            ['tenant_id' => $recipe->tenant_id, 'price' => $price],
-        );
+        $recipePrice->save();
 
         if ($priceChanged) {
             $recipe->priceLogs()->create([

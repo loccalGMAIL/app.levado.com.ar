@@ -53,7 +53,7 @@
                 <button @click="tab = 'users'"
                     :class="tab === 'users' ? 'border-b-2 border-horno text-horno' : 'text-masa-madre hover:text-corteza'"
                     class="pb-3 text-sm font-medium transition-colors">
-                    Usuarios ({{ $tenant->tenantUsers->count() }})
+                    Usuarios ({{ $tenant->total_users }})
                 </button>
                 <button @click="tab = 'metrics'"
                     :class="tab === 'metrics' ? 'border-b-2 border-horno text-horno' : 'text-masa-madre hover:text-corteza'"

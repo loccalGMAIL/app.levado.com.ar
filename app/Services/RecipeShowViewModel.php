@@ -37,6 +37,8 @@ class RecipeShowViewModel
 
         $costs = $this->calculator->calculate($recipe);
 
+        // defaultPriceList() debe correr ANTES del get(): priceLists se renderiza
+        // completa (selector de listas) y tiene que incluir la recién creada.
         $defaultPriceList = $tenant->defaultPriceList();
         $priceLists = $tenant->priceLists()
             ->active()
@@ -141,13 +143,16 @@ class RecipeShowViewModel
      */
     private function availableSemiElaborates(Recipe $recipe, Tenant $tenant): Collection
     {
+        // Cierre de ancestros calculado una sola vez (no candidata por candidata)
+        // y el descarte ocurre en SQL, no filtrando una colección ya hidratada.
+        $ancestorIds = $this->propagator->ancestorIdsOf($recipe->id, $tenant->id);
+
         return $tenant->recipes()
             ->where('is_semi_elaborate', true)
             ->active()
             ->where('id', '!=', $recipe->id)
+            ->whereNotIn('id', $ancestorIds)
             ->orderBy('name')
-            ->get()
-            ->filter(fn ($candidate) => ! $this->propagator->isAncestor($candidate->id, $recipe->id, $tenant->id))
-            ->values();
+            ->get();
     }
 }

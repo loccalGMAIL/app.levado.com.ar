@@ -30,8 +30,8 @@ class VariableExpense extends Model
 
     public function scopeBetween(Builder $query, ?string $from, ?string $to): void
     {
-        $query->when($from, fn ($q, $date) => $q->whereDate('expense_date', '>=', $date))
-            ->when($to, fn ($q, $date) => $q->whereDate('expense_date', '<=', $date));
+        $query->when($from, fn ($q, $date) => $q->where('expense_date', '>=', $date))
+            ->when($to, fn ($q, $date) => $q->where('expense_date', '<=', $date));
     }
 
     public function tenant(): BelongsTo

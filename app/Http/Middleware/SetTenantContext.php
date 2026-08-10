@@ -36,19 +36,26 @@ class SetTenantContext
             return null;
         }
 
+        // Sin nested .tenant a propósito: el objeto Tenant queda cacheado en la
+        // relación en memoria del modelo User, que puede sobrevivir más de un
+        // request (tests, workers de larga vida) y quedar desactualizado frente
+        // a cambios escritos por otra instancia de Tenant. Tenant::find() abajo
+        // siempre lee fresco.
+        $user->loadMissing('tenantUsers');
+
         // Super admins pueden impersonar otro tenant desde el backoffice
         if ($user->isSuperAdmin() && $request->session()->has('impersonating_tenant_id')) {
             return Tenant::find($request->session()->get('impersonating_tenant_id'));
         }
 
-        // orderBy garantiza un resultado determinista si el usuario pertenece
+        // sortBy garantiza un resultado determinista si el usuario pertenece
         // a más de un tenant (el selector de tenant aún no existe).
-        $tenantId = $user->tenantUsers()->where('active', true)->orderBy('tenant_id')->value('tenant_id');
+        $tenantId = $user->tenantUsers
+            ->where('active', true)
+            ->sortBy('tenant_id')
+            ->first()
+            ?->tenant_id;
 
-        if ($tenantId === null) {
-            return null;
-        }
-
-        return Tenant::find($tenantId);
+        return $tenantId !== null ? Tenant::find($tenantId) : null;
     }
 }

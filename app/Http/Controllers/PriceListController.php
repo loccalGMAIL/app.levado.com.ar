@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePriceListRequest;
 use App\Http\Requests\UpdatePriceListRequest;
 use App\Models\PriceList;
+use App\Models\Recipe;
 use App\Models\RecipePrice;
+use App\Models\RecipePriceLog;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
-use App\Services\RecipePriceWriter;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -17,7 +19,6 @@ class PriceListController extends Controller
 {
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
-        private readonly RecipePriceWriter $writer,
     ) {}
 
     public function index(): View
@@ -48,6 +49,8 @@ class PriceListController extends Controller
     public function matrix(): View
     {
         $tenant = app(Tenant::class);
+        // defaultPriceList() debe correr ANTES del get(): $priceLists se renderiza
+        // completa (una columna por lista) y tiene que incluir la recién creada.
         $tenant->defaultPriceList();
 
         $priceLists = $tenant->priceLists()
@@ -162,23 +165,9 @@ class PriceListController extends Controller
 
         $defaultList = $tenant->defaultPriceList();
         $recipes = $tenant->recipes()->active()->where('is_semi_elaborate', false)->get();
-        $recipeIds = $recipes->pluck('id');
-        $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
-        $existing = RecipePrice::where('price_list_id', $priceList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
+        $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipes->pluck('id'))->pluck('price', 'recipe_id');
 
-        $applied = DB::transaction(function () use ($recipes, $existing, $basePrices, $priceList): int {
-            $count = 0;
-            foreach ($recipes as $recipe) {
-                if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
-                    continue;
-                }
-                $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $priceList->adjustment_pct / 100), 2);
-                $this->writer->set($recipe, $priceList, $suggested);
-                $count++;
-            }
-
-            return $count;
-        });
+        $applied = $this->applySuggestionsBulk(collect([$priceList]), $recipes, $basePrices);
 
         return back(fallback: route('price-lists.index'))
             ->with('status', "Se aplicaron {$applied} sugerencia(s) en la lista \"{$priceList->name}\".");
@@ -190,27 +179,80 @@ class PriceListController extends Controller
         $lists = $tenant->priceLists()->active()->where('is_default', false)->whereNotNull('adjustment_pct')->get();
         $defaultList = $tenant->defaultPriceList();
         $recipes = $tenant->recipes()->active()->where('is_semi_elaborate', false)->get();
-        $recipeIds = $recipes->pluck('id');
-        $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
+        $basePrices = RecipePrice::where('price_list_id', $defaultList->id)->whereIn('recipe_id', $recipes->pluck('id'))->pluck('price', 'recipe_id');
 
-        $applied = DB::transaction(function () use ($lists, $recipes, $recipeIds, $basePrices): int {
-            $count = 0;
-            foreach ($lists as $list) {
-                $existing = RecipePrice::where('price_list_id', $list->id)->whereIn('recipe_id', $recipeIds)->pluck('price', 'recipe_id');
-                foreach ($recipes as $recipe) {
-                    if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
-                        continue;
-                    }
-                    $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $list->adjustment_pct / 100), 2);
-                    $this->writer->set($recipe, $list, $suggested);
-                    $count++;
-                }
-            }
-
-            return $count;
-        });
+        $applied = $this->applySuggestionsBulk($lists, $recipes, $basePrices);
 
         return back(fallback: route('price-lists.matrix'))
             ->with('status', "Se aplicaron {$applied} sugerencia(s) en todas las listas.");
+    }
+
+    /**
+     * Aplica en lote las sugerencias de $recipes para cada lista de $lists,
+     * escribiendo con upsert()/insert() en vez de un RecipePriceWriter::set()
+     * por receta (Q9+Q13). Solo escribe donde no había precio ya cargado.
+     *
+     * @param  Collection<int, PriceList>  $lists
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Recipe>  $recipes
+     * @param  Collection<int, string>  $basePrices
+     */
+    private function applySuggestionsBulk($lists, $recipes, $basePrices): int
+    {
+        $recipeIds = $recipes->pluck('id');
+
+        // Existentes de TODAS las listas en una sola query, agrupadas por lista,
+        // en vez de una query por lista dentro del loop.
+        $existingByList = RecipePrice::whereIn('price_list_id', $lists->pluck('id'))
+            ->whereIn('recipe_id', $recipeIds)
+            ->get()
+            ->groupBy('price_list_id')
+            ->map(fn ($group) => $group->pluck('price', 'recipe_id'));
+
+        $now = now();
+        $rows = [];
+        $logRows = [];
+
+        foreach ($lists as $list) {
+            $existing = $existingByList->get($list->id, collect());
+
+            foreach ($recipes as $recipe) {
+                if ($existing->has($recipe->id) || ! $basePrices->has($recipe->id)) {
+                    continue;
+                }
+
+                $suggested = round((float) $basePrices->get($recipe->id) * (1 + (float) $list->adjustment_pct / 100), 2);
+
+                $rows[] = [
+                    'tenant_id' => $recipe->tenant_id,
+                    'price_list_id' => $list->id,
+                    'recipe_id' => $recipe->id,
+                    'price' => $suggested,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+                $logRows[] = [
+                    'recipe_id' => $recipe->id,
+                    'price_list_id' => $list->id,
+                    'price' => $suggested,
+                    'recorded_at' => $now,
+                ];
+            }
+        }
+
+        if ($rows === []) {
+            return 0;
+        }
+
+        DB::transaction(function () use ($rows, $logRows) {
+            foreach (array_chunk($rows, 500) as $chunk) {
+                RecipePrice::upsert($chunk, ['price_list_id', 'recipe_id'], ['price', 'tenant_id']);
+            }
+
+            foreach (array_chunk($logRows, 500) as $chunk) {
+                RecipePriceLog::insert($chunk);
+            }
+        });
+
+        return count($rows);
     }
 }

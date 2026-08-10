@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
  * Cache derivado del ledger stock_movements: cantidad actual por ítem y sucursal.
@@ -43,14 +45,9 @@ class StockLevel extends Model
         return $this->belongsTo(Location::class);
     }
 
-    public function ingredient(): BelongsTo
+    public function stockable(): MorphTo
     {
-        return $this->belongsTo(Ingredient::class, 'stockable_id');
-    }
-
-    public function packaging(): BelongsTo
-    {
-        return $this->belongsTo(Packaging::class, 'stockable_id');
+        return $this->morphTo();
     }
 
     public function hasAlert(): bool
@@ -60,6 +57,19 @@ class StockLevel extends Model
         }
 
         return $this->min_quantity !== null && (float) $this->quantity <= (float) $this->min_quantity;
+    }
+
+    /**
+     * Equivalente en SQL de hasAlert(), para filtrar en la BD en vez de traer
+     * todo el stock del tenant y descartar en PHP. Mantener ambas en sync.
+     */
+    public function scopeInAlert(Builder $query): void
+    {
+        $query->where(fn ($q) => $q
+            ->where('quantity', '<', 0)
+            ->orWhere(fn ($q2) => $q2
+                ->whereNotNull('min_quantity')
+                ->whereColumn('quantity', '<=', 'min_quantity')));
     }
 
     public function isNegative(): bool

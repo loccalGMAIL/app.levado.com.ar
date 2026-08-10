@@ -193,7 +193,7 @@ class StockService
      */
     private function reverseMovement(StockMovement $original, ?User $user): StockMovement
     {
-        $item = $original->stockable();
+        $item = $original->stockable;
         abort_unless($item !== null, 422, 'El ítem del movimiento a revertir ya no existe.');
 
         return $this->registerMovement(

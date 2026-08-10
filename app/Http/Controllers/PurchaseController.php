@@ -8,6 +8,7 @@ use App\Http\Requests\StorePurchaseLineRequest;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseLineRequest;
 use App\Http\Requests\UpdatePurchaseRequest;
+use App\Models\Ingredient;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Tenant;
@@ -15,6 +16,7 @@ use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceImagePreparer;
 use App\Services\ProductLinkMemory;
 use App\Services\PurchaseLineRecorder;
+use App\Services\RecipeCostPropagator;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +43,7 @@ class PurchaseController extends Controller
         private readonly StockService $stock,
         private readonly InvoiceImagePreparer $imagePreparer,
         private readonly ProductLinkMemory $linkMemory,
+        private readonly RecipeCostPropagator $propagator,
     ) {}
 
     public function index(): View
@@ -232,6 +235,8 @@ class PurchaseController extends Controller
     public function updateLinePrice(Request $request, Purchase $purchase, PurchaseLine $line): JsonResponse
     {
         $this->authorize('update', $purchase);
+        // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
+        $line->setRelation('purchase', $purchase->loadMissing('tenant'));
 
         $validated = $request->validate([
             'unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
@@ -257,10 +262,14 @@ class PurchaseController extends Controller
             tenantId: $purchase->tenant_id,
         );
 
-        $purchase->load('lines');
-        $totalSubtotal = $purchase->lines->sum(fn ($l) => (float) $l->subtotal);
-        $totalIva = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * (float) $l->iva_rate);
-        $totalPercepcion = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * ((float) ($l->percepcion_rate ?? 0) / 100));
+        $totals = $purchase->lines()
+            ->selectRaw('coalesce(sum(subtotal), 0) as total_subtotal')
+            ->selectRaw('coalesce(sum(subtotal * iva_rate), 0) as total_iva')
+            ->selectRaw('coalesce(sum(subtotal * coalesce(percepcion_rate, 0) / 100), 0) as total_percepcion')
+            ->first();
+        $totalSubtotal = (float) $totals->total_subtotal;
+        $totalIva = (float) $totals->total_iva;
+        $totalPercepcion = (float) $totals->total_percepcion;
 
         return response()->json([
             'unit_price' => (float) $line->unit_price,
@@ -340,6 +349,8 @@ class PurchaseController extends Controller
     public function updateLine(UpdatePurchaseLineRequest $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
         $this->authorize('update', $purchase);
+        // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
+        $line->setRelation('purchase', $purchase->loadMissing('tenant'));
 
         $this->lineRecorder->recompute($line, $request->validated());
 
@@ -447,6 +458,8 @@ class PurchaseController extends Controller
     public function matchLine(Request $request, Purchase $purchase, PurchaseLine $line): RedirectResponse
     {
         $this->authorize('update', $purchase);
+        // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
+        $line->setRelation('purchase', $purchase->loadMissing('tenant'));
 
         $validated = $request->validate([
             'match' => ['nullable', 'string'],
@@ -580,6 +593,8 @@ class PurchaseController extends Controller
         $applied = 0;
         $skipped = 0;
         $failed = 0;
+        $touchedIngredientIds = [];
+        $touchedPackagingIds = [];
 
         $pending = $purchase->lines()
             ->whereNotNull('purchaseable_id')
@@ -588,10 +603,18 @@ class PurchaseController extends Controller
             ->get();
 
         foreach ($pending as $line) {
-            $line->setRelation('purchase', $purchase);
+            // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
+            $line->setRelation('purchase', $purchase->loadMissing('tenant'));
             try {
-                DB::transaction(function () use ($line) {
-                    $this->lineRecorder->apply($line);
+                DB::transaction(function () use ($line, &$touchedIngredientIds, &$touchedPackagingIds) {
+                    $item = $this->lineRecorder->apply($line, propagate: false);
+
+                    if ($item instanceof Ingredient) {
+                        $touchedIngredientIds[] = $item->id;
+                    } else {
+                        $touchedPackagingIds[] = $item->id;
+                    }
+
                     // Aceptar en masa también es una decisión humana. Sin esto la
                     // memoria sólo aprendería de las correcciones una por una, y
                     // el camino más usado no enseñaría nada.
@@ -605,6 +628,17 @@ class PurchaseController extends Controller
                     $failed++;
                 }
             }
+        }
+
+        // Propagar UNA vez con los ítems tocados de todo el lote (N8): un
+        // ancestro compartido por varias líneas se recalcula una sola vez en
+        // vez de una vez por línea que lo afecta.
+        if ($touchedIngredientIds !== [] || $touchedPackagingIds !== []) {
+            $recipeIds = array_merge(
+                $this->propagator->recipeIdsUsingIngredients(array_values(array_unique($touchedIngredientIds))),
+                $this->propagator->recipeIdsUsingPackagings(array_values(array_unique($touchedPackagingIds))),
+            );
+            $this->propagator->propagateManyFrom($recipeIds);
         }
 
         $message = match (true) {

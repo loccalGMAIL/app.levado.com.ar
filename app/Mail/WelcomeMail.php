@@ -15,14 +15,28 @@ class WelcomeMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    private ?MailTemplate $template = null;
+
+    private bool $templateResolved = false;
+
     public function __construct(
         public readonly User $user,
         public readonly Tenant $tenant,
     ) {}
 
+    private function template(): ?MailTemplate
+    {
+        if (! $this->templateResolved) {
+            $this->template = MailTemplate::forType('welcome');
+            $this->templateResolved = true;
+        }
+
+        return $this->template;
+    }
+
     public function envelope(): Envelope
     {
-        $tpl = MailTemplate::forType('welcome');
+        $tpl = $this->template();
         $subject = $tpl?->subject ?? "Bienvenido/a a {$this->tenant->name} en Levado";
 
         return new Envelope(subject: $subject);
@@ -30,7 +44,7 @@ class WelcomeMail extends Mailable
 
     public function content(): Content
     {
-        $tpl = MailTemplate::forType('welcome');
+        $tpl = $this->template();
 
         return new Content(
             view: 'emails.welcome',

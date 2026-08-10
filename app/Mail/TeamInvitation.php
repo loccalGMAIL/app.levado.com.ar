@@ -14,11 +14,25 @@ class TeamInvitation extends Mailable
 {
     use Queueable, SerializesModels;
 
+    private ?MailTemplate $template = null;
+
+    private bool $templateResolved = false;
+
     public function __construct(public readonly Invitation $invitation) {}
+
+    private function template(): ?MailTemplate
+    {
+        if (! $this->templateResolved) {
+            $this->template = MailTemplate::forType('team-invitation');
+            $this->templateResolved = true;
+        }
+
+        return $this->template;
+    }
 
     public function envelope(): Envelope
     {
-        $tpl = MailTemplate::forType('team-invitation');
+        $tpl = $this->template();
         $subject = $tpl?->subject ?? "Invitación a {$this->invitation->tenant->name} en Levado";
 
         return new Envelope(subject: $subject);
@@ -26,7 +40,7 @@ class TeamInvitation extends Mailable
 
     public function content(): Content
     {
-        $tpl = MailTemplate::forType('team-invitation');
+        $tpl = $this->template();
 
         return new Content(
             view: 'emails.team-invitation',

@@ -82,10 +82,19 @@ class BackfillProductLinks extends Command
         }
 
         // Los vínculos que ya existen mandan: son decisiones posteriores al backfill.
+        // Solo lectura, sin escritura entrelazada: cursor() es seguro acá (a
+        // diferencia del bucle de abajo, que si actualizara filas necesitaría
+        // chunkById/lazyById en su lugar).
+        // collect() al final: $existing se usa para lookups repetidos (has() por
+        // candidata), así que tiene que ser una Collection materializada, no un
+        // generador de un solo uso — cursor() sólo abarata la lectura y la
+        // hidratación de camino hacia ahí.
         $existing = SupplierProductLink::query()
             ->withoutGlobalScopes()
-            ->get()
+            ->select('tenant_id', 'supplier_id', 'raw_name_normalized')
+            ->cursor()
             ->map(fn (SupplierProductLink $link) => "{$link->tenant_id}|{$link->supplier_id}|{$link->raw_name_normalized}")
+            ->collect()
             ->flip();
 
         $new = collect($candidates)->reject(fn (array $row, string $key) => $existing->has($key));
