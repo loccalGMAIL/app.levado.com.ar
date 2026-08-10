@@ -27,6 +27,52 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 - `DataTableComponentsTest` afirmaba lo contrario de lo que ahora se quiere (`assertSeeInOrder` del nombre dos veces, «card + fila de tabla»). Reescrito: cuenta celdas de título, verifica que el nombre aparezca una sola vez como texto y que el editor de stock no se duplique. Las anclas se probaron contra un revert: 5 de 6 fallan sin el arreglo.
 - Se realinean las cuatro fuentes de la versión, que venían desincronizadas desde 0.12.9 (`config/app.php` marcaba 0.12.8).
 
+### Auditoría de acceso a datos: fin de los N+1 en costeo, alertas y compras
+
+Implementación del plan de corrección de `AUDITORIA_ACCESO_DATOS.md` (04/08/2026): 41 hallazgos de rendimiento sobre acceso a datos, en tres fases de riesgo creciente más el ítem de mayor alcance estructural. Ningún cambio altera el comportamiento observable — cada fase se verificó completa contra la suite de tests antes de pasar a la siguiente, y las tres corren en commits separados para poder revertir una sin la otra.
+
+#### Fase 1 — correcciones rápidas, sin cambios de esquema
+
+- **`isSuperAdmin()`/`roleInTenant()` dejan de consultar la BD en cada `@can`/`authorize()`.** Antes cada verificación de permisos emitía una query — una vista con 18 `@can` (como `/recipes/{id}`) hacía 18 queries idénticas solo para decidir qué botones pintar. Ahora leen de la relación `tenantUsers` ya cargada en memoria por request.
+- **`SetTenantContext` resuelve el tenant con 1 query en vez de 3** por cada request autenticada, reusando esa misma carga de `tenantUsers`.
+- **El view composer de onboarding** pasa de hasta 6 `COUNT` a un solo `EXISTS` agrupado (`withExists`), y a 0 queries una vez completado el onboarding.
+- **`RecipePriceWriter::set()`** dejó de hacer un `SELECT` de más por cada precio guardado, y evita el `UPDATE` cuando el precio no cambió.
+- **El filtro de fechas de Gastos variables volvió a usar su índice**: filtraba con `whereDate()`, que envuelve la columna en una función y le impide a MySQL usar el índice `(tenant_id, expense_date)`.
+- Memoización por instancia de `defaultLocation()` y `totalFixedCosts()` (mismo patrón que ya usaba `getSetting()`).
+- **Nueva migración con 12 índices compuestos** que faltaban para las consultas del dashboard, la matriz de precios, el centro de alertas y el ledger de stock — reejecutable, verifica con `Schema::getIndexes()` antes de crear cada uno.
+- Además: `Purchase::totalAmount()` reusa la relación si ya está cargada; `Admin\TenantController::show` pasa de 3 `count()` sueltos a un `loadCount()`; `preventLazyLoading()` queda activo en producción (antes solo en desarrollo), logueando en vez de tirar; y la plantilla de mail y la invitación se resuelven una sola vez por request en vez de dos.
+
+#### Fase 2 — consultas agrupadas y reconciliación en lote
+
+- **El centro de alertas (`NotificationService`) reconcilia sus tres tipos de aviso en lote.** Antes cada alerta hacía su propio `SELECT` + `UPDATE`/`INSERT`; ahora se lee una vez el estado vivo del tipo y se escribe con `insert()` masivo, saltando el `UPDATE` cuando el texto no cambió. El chequeo de stock bajo pasa a filtrar en SQL (antes traía *todo* el stock del tenant para descartar en PHP) y agrupa la búsqueda del ítem por tipo en vez de una por fila; el de costo desactualizado usa `leftJoinSub` en vez de traer todos los ingredientes activos.
+- **El selector de sub-recetas de `/recipes/{id}`** (evitar ciclos al agregar una sub-receta) calculaba el árbol de ancestros una vez *por candidata*. Ahora se calcula una sola vez y el descarte ocurre en SQL.
+- **Aplicar sugerencias de precio en lote** (una lista o todas) pasó de una escritura por receta a `upsert()` + `insert()` por chunks.
+- Comandos de mantenimiento (`purchases:backfill-product-links`, `ingredients:fix-subdivision-costs`) usan `cursor()`/`lazyById()` en vez de cargar la tabla completa en memoria.
+- **Mitigación de una condición de carrera real**: el autosave de `/recipes/{id}` dispara varios `PATCH` casi simultáneos (uno por línea editada), y dos propagaciones de costo superpuestas podían calcular el costo de un ancestro compartido con el valor viejo de un hijo. Se agregó un lock por receta en el backend y un `AbortController` + contador de versión en el frontend para descartar respuestas que lleguen fuera de orden.
+
+#### Fase 3 — reescritura del propagador de costos (la más invasiva)
+
+- **`RecipeCostPropagator::propagateFrom()` dejó de ser un recorrido con I/O por nodo.** Actualizar el costo de un ingrediente usado en varias recetas anidadas podía disparar cientos de queries — una carga completa de la receta *por cada nodo visitado* del árbol de ancestros. Ahora el recorrido se separa en tres pasos: calcular qué recetas hay que tocar, cargarlas todas de una vez, y recalcular en memoria en el orden correcto (de las sub-recetas hacia arriba). Una actualización que tocaba un árbol de 20 recetas pasa de ~140 queries a ~10.
+- **Un ingrediente usado en 15 recetas ya no recalcula 15 veces los ancestros que comparten** — se resuelve una sola vez el conjunto completo de recetas afectadas.
+- **Aplicar todas las sugerencias pendientes de una factura** (`applyLineSuggestions`) difiere la propagación al final del lote en vez de una vez por renglón: un ancestro compartido por varias líneas de la misma factura se recalcula una sola vez.
+- El lock por receta de la Fase 2 ahora protege el árbol completo que se está recalculando, no solo la receta editada, y los locks se piden siempre en el mismo orden para que dos actualizaciones que se superponen no se bloqueen mutuamente.
+
+#### Morph map real para stock y compras
+
+- **`StockLevel`, `StockMovement` y `PurchaseLine`** usaban un discriminador polimórfico escrito a mano (`stockable_type`/`purchaseable_type` + un método que simulaba la resolución con un `match()`), lo que hacía imposible pedirle a Eloquent que precargue el ítem asociado. Ahora es un morph map real de Eloquent, verificado antes contra producción para confirmar que esas columnas no tienen valores fuera de `ingredient`/`packaging`.
+
+#### Qué quedó pendiente, a propósito
+
+- **Mover la propagación de costos y la reconciliación de alertas a colas**, y cachear los agregados del dashboard — la Fase 4 del informe. No se implementa: cambia una garantía visible al usuario (el costo queda al día en el mismo request) por una de "eventualmente al día", y esa es una decisión de producto, no técnica.
+- Un ítem de bajo valor (`PurchaseScanController` trayendo el catálogo dos veces) se dejó afuera: la forma segura de resolverlo agrega más complejidad de la que ahorra en un endpoint ya dominado por la llamada a la IA.
+
+#### Técnico
+
+- Cuatro commits, uno por fase: `perf(auditoria): correcciones rapidas de acceso a datos - Fase 1`, `- Fase 2`, `perf(auditoria): reescritura del propagador de costos - Fase 3`, `perf(auditoria): morph map real para stockable/purchaseable - N5`.
+- `RecipeCostPropagatorTest` y `RecipeCostCalculatorSubrecipeTest` no se tocaron: cubren la invariante central de la Fase 3 (una receta padre tiene que leer el `unit_cost` ya recalculado de su sub-receta, no el que tenía en base de datos antes de empezar).
+- Sin backfill ni migración de datos más allá de los 12 índices nuevos, que se agregan con `IF NOT EXISTS` a mano (verificando con `Schema::getIndexes()`) para poder reejecutar la migración sin romper.
+- 550 tests, todos verdes.
+
 ---
 
 ## [0.12.9] — 2026-08-02
