@@ -13,8 +13,23 @@
 
         <div class="mt-4">
             <x-input-label for="password" value="Contraseña" />
-            <x-text-input id="password" class="block mt-1 w-full" type="password"
-                name="password" required autocomplete="current-password" />
+            {{-- El type real lo maneja Alpine; el type="password" del markup es el
+                 fallback si el JS todavía no montó (o está deshabilitado). --}}
+            <div class="relative mt-1" x-data="{ show: false }">
+                <x-text-input id="password" class="block w-full pe-10" type="password"
+                    x-bind:type="show ? 'text' : 'password'"
+                    name="password" required autocomplete="current-password" />
+                <button type="button" @click="show = ! show"
+                    class="absolute inset-y-0 end-0 flex items-center px-3 text-masa-madre hover:text-corteza focus:outline-none focus:text-corteza"
+                    aria-label="Mostrar contraseña"
+                    x-bind:aria-label="show ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                    x-bind:aria-pressed="show ? 'true' : 'false'">
+                    <x-icon name="eye" class="w-5 h-5" x-show="! show" />
+                    {{-- display:none inline para que no parpadee antes de que Alpine monte
+                         (el proyecto no define CSS para [x-cloak]). --}}
+                    <x-icon name="eye-off" class="w-5 h-5" x-show="show" style="display: none" />
+                </button>
+            </div>
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 

@@ -371,6 +371,60 @@ test('re-asociar la línea a otro insumo mueve el stock del viejo al nuevo', fun
         ->and((float) $correct->stockLevels()->first()->quantity)->toBe(2000.0);
 });
 
+// --- Kardex: link a la compra de origen ---
+
+test('el kardex linkea la entrada de compra a la factura que la generó', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo]);
+    $supplier = Supplier::factory()->for($tenant)->create(['name' => 'Molinos del Sur']);
+    $purchase = $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-07-07',
+        'invoice_number' => 'A-0001-00012345',
+    ]);
+    $line = stockLineFor($purchase, ['purchaseable_type' => 'ingredient', 'purchaseable_id' => $ingredient->id]);
+
+    lineRecorder()->apply($line);
+
+    $this->actingAs($user)
+        ->get(route('stock.show', ['ingredient', $ingredient->id]))
+        ->assertOk()
+        ->assertSee(route('purchases.show', $purchase))
+        ->assertSee('A-0001-00012345')
+        ->assertSee('Molinos del Sur');
+});
+
+test('el kardex no linkea los movimientos que no vienen de una compra', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo]);
+
+    app(StockService::class)->registerAdjustment($ingredient, $tenant->defaultLocation(), 500, 'Rotura', $user);
+
+    $this->actingAs($user)
+        ->get(route('stock.show', ['ingredient', $ingredient->id]))
+        ->assertOk()
+        ->assertSee('Rotura')
+        ->assertDontSee('/purchases/');
+});
+
+test('el contramovimiento de una compra no linkea a la factura', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo]);
+    $purchase = stockPurchaseFor($tenant);
+    $line = stockLineFor($purchase, ['purchaseable_type' => 'ingredient', 'purchaseable_id' => $ingredient->id]);
+
+    lineRecorder()->apply($line);
+    app(StockService::class)->reversePurchaseLineEntry($line, $user);
+
+    $html = $this->actingAs($user)
+        ->get(route('stock.show', ['ingredient', $ingredient->id]))
+        ->assertOk()
+        ->getContent();
+
+    // La entrada original sigue linkeada; la reversa no agrega un segundo link.
+    expect(substr_count($html, route('purchases.show', $purchase)))->toBe(1);
+});
+
 test('las líneas de otro tenant no afectan el stock propio', function () {
     [, $tenantA] = stockPurchaseOwner();
     [, $tenantB] = stockPurchaseOwner();

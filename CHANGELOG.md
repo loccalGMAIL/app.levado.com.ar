@@ -5,6 +5,35 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.13] — 2026-08-11
+
+### Dos fricciones chicas: entrar a ciegas y no saber de qué factura vino el stock
+
+Nada roto acá, dos molestias del día a día. Al ingresar no había forma de chequear lo tecleado y el único diagnóstico ante un error era volver a escribir la contraseña entera —peor en el celular del local, con las manos ocupadas—. Y en el kardex, cuando una entrada venía de una compra, la columna «Motivo» decía *«Compra (renglón #834)»*: un número interno que no lleva a ningún lado. Para ver de qué factura salían esos 25 kg de harina había que ir a Compras y buscarla a mano por fecha y proveedor.
+
+#### Agregado
+
+- **Ojito para ver la contraseña en el login.** Botón dentro del campo que alterna entre puntos y texto. El ícono cambia según el estado y es alcanzable con el teclado.
+- **El kardex linkea a la factura que originó el stock.** Las entradas por compra ahora muestran **«Compra #A-0001-00012345 · Molinos del Sur»** como link directo a esa compra, en vez del número de renglón. Un clic desde el movimiento a la factura.
+
+#### Cómo se comporta
+
+- El link aparece **sólo** en las entradas que vienen de un renglón de compra. Ajustes, recuentos y contramovimientos siguen mostrando su motivo, sin link: no tienen factura de origen que mostrar.
+- Un contramovimiento de compra tampoco linkea, aunque revierta una entrada que sí lo hace. El ledger guarda la referencia a la factura únicamente en la entrada original.
+- Si la factura o el renglón se borraron después, el movimiento cae al texto de siempre. El ledger es append-only: el movimiento sobrevive al borrado de la compra, y el kardex no puede quedar con un link roto.
+- La factura se abre con los permisos de siempre: `purchases.show` está en el mismo grupo que el kardex, así que quien ve uno ve la otra, y el scope de tenant corta cualquier cruce entre cuentas.
+
+#### Técnico
+
+- `StockMovement::purchaseLine()` (relación sobre `reference_id`) e `isFromPurchaseLine()`, que encapsula la comparación contra el string `'purchase_line'` que estaba suelta en la vista.
+- `StockController::show()` eager-loadea `purchaseLine.purchase.supplier`. Sin eso el kardex sumaba dos queries por cada renglón de compra de la página.
+- El toggle del login es Alpine inline (`x-data` + `x-bind:type`) y reusa los íconos `eye`/`eye-off` de `<x-icon>`, el mismo par que ya usan los listados de insumos y mano de obra. El `type="password"` del markup queda como fallback si el JS no montó, y el ícono oculto arranca con `display:none` inline porque el proyecto no define CSS para `[x-cloak]`.
+- Tres tests nuevos en `StockPurchaseIntegrationTest`: link presente en la entrada de compra, ausente en un ajuste manual, y **uno solo** cuando la entrada tiene contramovimiento.
+- Los otros seis campos de contraseña de la app (registro, reset, invitación, perfil) siguen sin ojito. Se tocó sólo el login a propósito; si se generaliza, conviene extraer un `<x-password-input>` en vez de repetir el bloque.
+- `package-lock.json` había quedado en 0.12.11 mientras `config/app.php` y `package.json` iban en 0.12.12. Realineados los cuatro en 0.12.13.
+
+---
+
 ## [0.12.12] — 2026-08-11
 
 ### Cambiar la unidad de un renglón dejaba el precio en la unidad vieja

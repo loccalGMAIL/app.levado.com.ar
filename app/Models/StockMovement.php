@@ -79,6 +79,21 @@ class StockMovement extends Model
         return $this->morphTo();
     }
 
+    /**
+     * Renglón de compra que originó el movimiento. Sólo tiene valor cuando
+     * reference_type es 'purchase_line' (hoy el único tipo de referencia);
+     * queda null si el renglón o su factura se borraron.
+     */
+    public function purchaseLine(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseLine::class, 'reference_id');
+    }
+
+    public function isFromPurchaseLine(): bool
+    {
+        return $this->reference_type === 'purchase_line';
+    }
+
     public function isIngredient(): bool
     {
         return $this->stockable_type === CatalogItemType::Ingredient->value;
