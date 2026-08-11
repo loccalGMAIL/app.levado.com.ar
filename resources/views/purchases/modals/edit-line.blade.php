@@ -1,17 +1,7 @@
 <x-crud-modal name="line-edit" title="Editar ítem" :show="$errorsInEditLine">
     <form method="POST" :action="'/purchases/{{ $purchase->id }}/lines/' + editingLine?.id" class="space-y-4"
-        x-data="{
-            qty: 0,
-            price: 0,
-            ivaRate: parseFloat(editingLine?.iva_rate ?? 0.21),
-            percepcionRate: parseFloat(editingLine?.percepcion_rate ?? 0),
-            get net()              { return this.qty * this.price; },
-            get ivaAmount()        { return this.net * this.ivaRate; },
-            get percepcionAmount() { return this.net * (this.percepcionRate / 100); },
-            get subtotalTotal()    { return this.net * (1 + this.ivaRate + this.percepcionRate / 100); },
-            fmt(n) { return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-        }"
-        x-effect="qty = parseFloat(editingLine?.quantity_purchased) || 0; price = parseFloat(editingLine?.unit_price) || 0; ivaRate = parseFloat(editingLine?.iva_rate ?? 0.21); percepcionRate = parseFloat(editingLine?.percepcion_rate ?? 0);">
+        x-data="purchaseLine()"
+        x-effect="seedLine(editingLine)">
         @csrf
         @method('PATCH')
         <input type="hidden" name="_form" value="edit-line">
@@ -32,14 +22,14 @@
                     step="0.01" min="0.01"
                     data-maxdecimals="2"
                     class="mt-1 block w-full"
-                    x-bind:value="editingLine?.quantity_purchased"
-                    @input="qty = parseFloat($event.target.value) || 0"
+                    x-model.number="qty"
                     required />
                 <x-input-error :messages="$errors->get('quantity_purchased')" class="mt-1" />
             </div>
             <div>
                 <x-input-label value="Unidad" />
                 <select name="purchase_unit" required
+                    @change="onUnitChange($event.target.value)"
                     class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
                     @foreach($units as $unit)
                         <option value="{{ $unit->value }}"
@@ -53,17 +43,17 @@
         </div>
 
         <div>
-            <x-input-label value="Precio por unidad de compra" />
+            <x-input-label>Precio por <span class="font-semibold" x-text="unitLabel"></span></x-input-label>
             <div class="relative mt-1">
                 <span class="absolute inset-y-0 left-3 flex items-center text-masa-madre text-sm">$</span>
                 <x-text-input name="unit_price" type="number"
-                    step="0.01" min="0"
-                    data-maxdecimals="2"
+                    step="0.0001" min="0"
+                    data-maxdecimals="4"
                     class="block w-full pl-7"
-                    x-bind:value="editingLine?.unit_price"
-                    @input="price = parseFloat($event.target.value) || 0"
+                    x-model.number="price"
                     required />
             </div>
+            <x-unit-price-hint />
             <x-input-error :messages="$errors->get('unit_price')" class="mt-1" />
         </div>
 
@@ -101,7 +91,7 @@
             </template>
             <div class="flex items-center justify-between text-sm border-t border-miga pt-2">
                 <span class="font-medium text-corteza" x-text="percepcionRate > 0 ? 'Total c/IVA+Perc.' : 'Subtotal c/IVA'"></span>
-                <span class="font-mono font-medium text-corteza" x-text="'$ ' + fmt(subtotalTotal)"></span>
+                <span class="font-mono font-medium text-corteza" x-text="'$ ' + fmt(lineTotal)"></span>
             </div>
         </div>
 

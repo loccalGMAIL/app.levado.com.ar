@@ -224,20 +224,19 @@
                                             } elseif (($line['matched_type'] ?? null) === 'packaging') {
                                                 $suggLabel = $packagingNames[$line['matched_id']] ?? null;
                                             }
-                                            $initQty   = is_numeric($line['quantity'])   ? (float) $line['quantity']   : 0;
-                                            $initPrice = is_numeric($line['unit_price']) ? (float) $line['unit_price'] : 0;
+                                            $rawQty   = old("lines.$i.quantity_purchased", $line['quantity']);
+                                            $rawPrice = old("lines.$i.unit_price", $line['unit_price']);
+                                            $initQty   = is_numeric($rawQty)   ? (float) $rawQty   : 0;
+                                            $initPrice = is_numeric($rawPrice) ? (float) $rawPrice : 0;
+                                            // Sin unidad no hay desde dónde convertir el precio, y el select caería
+                                            // en 'gr' (el primer caso del enum) sin que el estado lo sepa.
+                                            $initUnit  = old("lines.$i.purchase_unit", $line['unit']) ?: \App\Enums\Unit::Kilogramo->value;
                                         @endphp
-                                        <tr x-data="{
-                                            qty:             {{ $initQty }},
-                                            price:           {{ $initPrice }},
-                                            ivaRate:         0.21,
-                                            percepcionRate:  0,
-                                            get net()              { return this.qty * this.price; },
-                                            get ivaAmount()        { return this.net * this.ivaRate; },
-                                            get percepcionAmount() { return this.net * (this.percepcionRate / 100); },
-                                            get lineTotal()        { return this.net * (1 + this.ivaRate + this.percepcionRate / 100); },
-                                            fmt(n) { return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-                                        }"
+                                        <tr x-data="purchaseLine({
+                                            unit:  @js($initUnit),
+                                            qty:   {{ $initQty }},
+                                            price: {{ $initPrice }},
+                                        })"
                                         @apply-tax-defaults.window="
                                             ivaRate = parseFloat($event.detail.ivaRate) || 0;
                                             percepcionRate = parseFloat($event.detail.percepcionRate) || 0;
@@ -272,10 +271,11 @@
 
                                             <td class="px-3 py-3 align-top">
                                                 <select name="lines[{{ $i }}][purchase_unit]"
+                                                    @change="onUnitChange($event.target.value)"
                                                     class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
                                                     @foreach($units as $unit)
                                                         <option value="{{ $unit->value }}"
-                                                            @selected(old("lines.$i.purchase_unit", $line['unit']) === $unit->value)>
+                                                            @selected($initUnit === $unit->value)>
                                                             {{ $unit->short() }}
                                                         </option>
                                                     @endforeach
@@ -287,11 +287,15 @@
                                                     <span class="absolute inset-y-0 left-2 flex items-center text-masa-madre text-xs">$</span>
                                                     <input type="number" name="lines[{{ $i }}][unit_price]"
                                                         x-model.number="price"
-                                                        step="0.01" min="0"
-                                                        data-maxdecimals="2"
+                                                        step="0.0001" min="0"
+                                                        data-maxdecimals="4"
                                                         value="{{ old("lines.$i.unit_price", $line['unit_price']) }}"
                                                         class="block w-28 pl-5 border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm text-right">
                                                 </div>
+                                                <p class="mt-1 text-[11px] text-masa-madre text-right">
+                                                    por <span x-text="unitLabel"></span>
+                                                </p>
+                                                <x-unit-price-hint compact class="w-40 text-left" />
                                             </td>
 
                                             <td class="px-3 py-3 align-top text-center">

@@ -206,6 +206,39 @@ tres estados.
 confirmó). Ante textos repetidos gana la imputación más reciente. Deja `pkg_qty` en null: no
 está persistido en ningún lado y derivarlo sería recrear el fallback que ya existe.
 
+## Unidad y precio unitario en la carga (v0.12.12)
+
+`unit_price` se guarda **por `purchase_unit`**. El select de unidad estaba desconectado del
+resto del formulario en las tres pantallas de carga, así que cambiarlo dejaba el precio en la
+unidad vieja sin ninguna señal — y `PurchaseLineRecorder::apply()` propaga eso al costo del
+insumo con el factor de conversión encima (kg→gr son 1000×).
+
+### Piezas
+
+| Archivo | Rol |
+|---|---|
+| `resources/js/units.js` | `UNIT_CONV` / `UNIT_ALIASES` + `convertAmount()`, `convertUnitPrice()`, `compatibleUnits()`. Salieron de `purchases/match.js`, que ahora importa de acá |
+| `resources/js/purchases/line-form.js` | `window.purchaseLine()`: unidad, cantidad, precio, IVA, percepción y totales del renglón |
+| `resources/views/components/unit-price-hint.blade.php` | El cartel de conversión |
+| `tests/Unit/UnitConverterJsParityTest.php` | Ancla PHP↔JS |
+
+Las tres vistas que lo usan: `modals/add-line`, `modals/edit-line`, `scan/review`. En
+`match.blade.php` **no** hay selector de unidad (`match.js` recibe `purchaseUnit` fijo).
+
+### Decisiones que no se deducen solas
+
+- **La conversión no se aplica sola.** Cambiar la unidad puede significar «me equivoqué de
+  unidad» (el número está bien) o «reexpreso la medida» (el número tiene que cambiar). Se
+  ofrece y decide el usuario; automatizarlo rompe uno de los dos casos.
+- **Sólo se convierte el precio, nunca la cantidad**, por lo mismo.
+- **`purchaseLine()` reemplazó tres copias** del mismo objeto Alpine. Antes de tocar el
+  cálculo de IVA de una vista, mirar que ahora es compartido.
+- **La tabla JS duplica `UnitConverter` a propósito** (el form convierte sin ida y vuelta al
+  servidor). El test de paridad es lo único que evita que se desincronice al crecer el enum
+  `Unit`; si se agrega una unidad, hay que tocar los dos lados.
+- El default de unidad en el alta manual es **kg**. Antes ninguna opción estaba marcada y el
+  browser caía en `gr`, el primer caso del enum.
+
 ## Renglones no imputables — consumo personal (v0.12.4)
 
 Feedback real de Confitería Orfano: el dueño mete compras personales en la misma factura del proveedor de insumos. Antes esos renglones sólo podían quedar «— sin asociar —», que **es** el estado pendiente, así que la factura nunca llegaba a verde.

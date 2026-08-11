@@ -5,6 +5,34 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.12] — 2026-08-11
+
+### Cambiar la unidad de un renglón dejaba el precio en la unidad vieja
+
+Cargando tomates: se compraron 800 gramos, se pasa la unidad a `gr` y el precio sigue siendo el del kilo. El formulario no decía en ninguna parte en qué unidad esperaba el precio, así que nada avisaba del problema. No es sólo un renglón mal: ese precio se imputa al insumo, y $2000 el kilo tomados como $2000 el gramo son **mil veces de más** propagándose a recetas y precios de venta.
+
+#### Corregido
+
+- **El campo de precio ahora dice en qué unidad está.** El rótulo pasó de «Precio unitario» a **«Precio por kg»**, y cambia solo al cambiar el select de unidad. Es lo que faltaba para que el error se vea antes de guardar.
+- **Al cambiar la unidad se ofrece convertir el precio.** Si ya había un precio cargado y la unidad nueva es compatible (kg↔gr, L↔ml↔cc), aparece *«¿El precio era por kg? Convertir a $2 por gr»*. Se aplica con un clic o se ignora. **No se convierte solo**: cambiar la unidad puede significar «me equivoqué de unidad» (el número está bien) o «reexpreso la medida» (el número tiene que cambiar), y elegir mal por el usuario rompe una de las dos.
+- **El total del renglón no se calculaba nunca en «Agregar renglón».** El campo de cantidad no estaba conectado al bloque de IVA, así que el neto quedaba siempre en cero y el recuadro con subtotal, IVA y total no llegaba a aparecer. Ahora sí, y funciona como la red de seguridad del punto anterior.
+- **La revisión del escaneo perdía lo tipeado si fallaba la validación.** Cantidad y precio volvían a los valores que había leído la IA en vez de conservar lo corregido a mano.
+- **El precio admite 4 decimales.** Con `step="0.01"` un precio por gramo o mililitro se redondeaba al cargarlo, aunque la base guarda cuatro.
+
+#### Cambiado
+
+- La unidad por defecto al agregar un renglón a mano pasa a ser **kg**. Antes no había ninguna marcada y el navegador caía en `gr` —el primer caso del enum—, que es justo la unidad en la que los precios casi nunca vienen.
+
+#### Técnico
+
+- `resources/js/units.js` (nuevo) concentra `UNIT_CONV` y `UNIT_ALIASES`, que hasta ahora vivían sueltos dentro de `purchases/match.js`, más los helpers `convertAmount()`, `convertUnitPrice()` y `compatibleUnits()`. El precio por unidad se mueve al revés que la cantidad: se divide por el mismo factor con el que se multiplica la cantidad.
+- `resources/js/purchases/line-form.js` (nuevo) expone `window.purchaseLine()`, el estado del renglón —unidad, cantidad, precio, IVA, percepción y totales—. Reemplaza **tres copias** del mismo objeto Alpine que estaban escritas a mano en `add-line`, `edit-line` y `scan/review`, con un `subtotalTotal` que en una de ellas se llamaba distinto.
+- `resources/views/components/unit-price-hint.blade.php` (nuevo) es el cartel de conversión, compartido por las tres vistas.
+- `tests/Unit/UnitConverterJsParityTest.php` (nuevo) parsea `units.js` y compara par por par contra `UnitConverter`. La tabla JS es una duplicación deliberada —el formulario tiene que convertir sin ida y vuelta al servidor— y sin ancla se desincroniza en silencio la próxima vez que crezca el enum `Unit`: el cartel dejaría de aparecer y volvería el bug de origen.
+- No hubo cambios de backend. `UnitConverter` y `PurchaseLineRecorder::apply()` ya convertían bien; lo que estaba mal era el precio que les llegaba.
+
+---
+
 ## [0.12.11] — 2026-08-10
 
 ### La app quedaba cargando para siempre y solo se destrababa borrando la cache a mano
