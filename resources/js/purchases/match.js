@@ -1,21 +1,4 @@
-// ingredient_units per 1 purchase_unit (for auto-conversion between compatible units).
-const UNIT_CONV = {
-    'gr': { 'gr': 1, 'kg': 0.001 },
-    'kg': { 'kg': 1, 'gr': 1000 },
-    'ml': { 'ml': 1, 'L': 0.001, 'cc': 1 },
-    'L':  { 'L': 1,  'ml': 1000, 'cc': 1000 },
-    'cc': { 'cc': 1, 'ml': 1,    'L': 0.001 },
-    'u':  { 'u': 1 },
-};
-
-// Normalize text units from product descriptions to Unit enum values.
-const UNIT_ALIASES = {
-    'kg': 'kg', 'kgs': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogramo': 'kg', 'kilogramos': 'kg',
-    'gr': 'gr', 'grs': 'gr', 'g': 'gr', 'gramo': 'gr', 'gramos': 'gr', 'gram': 'gr', 'grams': 'gr',
-    'l': 'L', 'lt': 'L', 'lts': 'L', 'litro': 'L', 'litros': 'L', 'litre': 'L', 'liter': 'L',
-    'ml': 'ml', 'mls': 'ml', 'mililitro': 'ml', 'mililitros': 'ml',
-    'cc': 'cc', 'cm3': 'cc',
-};
+import { UNIT_ALIASES, UNIT_CONV } from '../units.js';
 
 // `remembered` viene de ProductLinkMemory: { selection: 'ingredient:42', pkgQty: 25 }.
 // Va atado a la selección porque el divisor es del ítem, no del renglón.
