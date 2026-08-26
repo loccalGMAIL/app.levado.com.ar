@@ -114,6 +114,7 @@
                     class="mt-1 block w-full"
                     x-model="editing.barcode" />
                 <x-input-error :messages="$errors->get('barcode')" class="mt-2" />
+                <p class="text-xs text-masa-madre mt-1">Si lo dejás vacío, se asigna un código interno automático (para el lector / punto de venta).</p>
             </div>
         </div>
 

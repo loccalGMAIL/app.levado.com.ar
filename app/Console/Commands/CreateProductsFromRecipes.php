@@ -6,6 +6,7 @@ use App\Enums\ProductType;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\Recipe;
+use App\Services\ProductCodeAssigner;
 use Illuminate\Console\Command;
 
 use function Laravel\Prompts\confirm;
@@ -35,7 +36,7 @@ class CreateProductsFromRecipes extends Command
 
     protected $description = 'Crea un Producto elaborado por cada receta vendible con precio que aún no lo tenga, para producirla.';
 
-    public function handle(): int
+    public function handle(ProductCodeAssigner $codeAssigner): int
     {
         $includeUnpriced = (bool) $this->option('all');
         $tenantId = $this->option('tenant');
@@ -109,7 +110,7 @@ class CreateProductsFromRecipes extends Command
                 )->id;
             }
 
-            Product::create([
+            $product = Product::create([
                 'tenant_id' => $recipe->tenant_id,
                 'name' => $recipe->name,
                 'type' => ProductType::Manufactured->value,
@@ -119,6 +120,7 @@ class CreateProductsFromRecipes extends Command
                 'cost_per_unit' => null,
                 'active' => true,
             ]);
+            $codeAssigner->assignIfMissing($product);
             $created++;
         }
 

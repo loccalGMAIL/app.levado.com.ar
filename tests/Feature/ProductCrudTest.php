@@ -6,6 +6,7 @@ use App\Enums\Unit;
 use App\Models\Product;
 use App\Models\Recipe;
 use App\Models\Tenant;
+use App\Services\Ean13Generator;
 
 // tenantUserAs() es un helper global de la suite (definido en IngredientCrudTest).
 
@@ -53,6 +54,25 @@ test('owner puede crear un producto de reventa con costo propio', function () {
         ->and($product->recipe_id)->toBeNull()
         ->and((float) $product->cost_per_unit)->toBe(120.5)
         ->and($product->barcode)->toBe('7790001234567');
+});
+
+test('crear un artículo sin código le asigna un EAN-13 interno', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+
+    $this->actingAs($user)
+        ->post(route('products.store'), [
+            'name' => 'Alfajor artesanal',
+            'type' => ProductType::Resale->value,
+            'unit' => Unit::Unidad->value,
+            'cost_per_unit' => '80',
+        ])
+        ->assertRedirect(route('products.index'));
+
+    $product = $tenant->products()->where('name', 'Alfajor artesanal')->first();
+
+    expect($product->barcode)->not->toBeNull()
+        ->and($product->barcode[0])->toBe('2')
+        ->and(app(Ean13Generator::class)->isValid($product->barcode))->toBeTrue();
 });
 
 test('crear un producto de reventa sin costo falla', function () {

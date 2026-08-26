@@ -9,12 +9,16 @@ use App\Models\Product;
 use App\Models\ProductPrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\ProductCodeAssigner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+    public function __construct(
+        private readonly AdminActivityRecorder $recorder,
+        private readonly ProductCodeAssigner $codeAssigner,
+    ) {}
 
     public function index(): View
     {
@@ -122,6 +126,7 @@ class ProductController extends Controller
         $data = $this->normalizeByType($request->validated());
 
         $product = $tenant->products()->create($data);
+        $this->codeAssigner->assignIfMissing($product);
 
         $this->recorder->record(
             actor: $request->user(),
@@ -140,6 +145,7 @@ class ProductController extends Controller
         $this->authorize('update', $product);
 
         $product->update($this->normalizeByType($request->validated()));
+        $this->codeAssigner->assignIfMissing($product);
 
         $this->recorder->record(
             actor: $request->user(),
