@@ -102,10 +102,27 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   el módulo de ventas). El filtro es solo del select; `produce()` no lo revalida (no es un guard duro). `ProductCategoryTest`
   (10) + filtro en `ProductionControllerTest` (3). **570 tests verdes.** Los 131 productos de Orfano quedaron sin categoría
   → hay que clasificarlos para producirlos.
+- **P3 · UI de política de precio (paso 3 ✅)**: factory compartido `Alpine.data('priceCell')`
+  (`resources/js/pricing/price-cell.js`, registrado en `app.js` antes de `Alpine.start()`) + componente
+  `<x-price-cell-editor>` — popover **teletransportado a `body`** con posición `fixed` calculada en JS (`startEdit`
+  computa `popTop/popLeft`) para no quedar recortado por el `overflow-x-auto` del contenedor de tablas. Selector
+  Manual/Margen/Recargo + badge en las **5 superficies** (catálogo, dashboard, /recipes card+tabla, matriz, y detalle
+  de receta **in-place** con `recomputePreview()`). Escribir a mano vuelve a Manual. Los 5 controllers/viewmodels pasan
+  `policy_type`/`policy_value` (helper `ProductPrice::policyPayload()`). Backend/enum en [[domain-model-articulos]] (P3).
+
+## ⚠️ Deploy de v0.13.0 — ORDEN (o las listas de precios se ven vacías)
+El precio vive en `product_prices` (**fuente única** de toda la UI de precios). La migración de backfill (`000004`)
+corre dentro de `migrate` con la tabla `products` recién creada (vacía) → copia **0 precios**. Hay que copiarlos
+**después** de crear los productos. **Secuencia**: `migrate` → `npm run build` → `products:from-recipes` →
+**`products:backfill-prices`** (idempotente, copia `recipe_prices→product_prices`; `BackfillProductPricesTest` 6) →
+`products:refresh-prices` → clasificar elaborados por categoría "se produce". Los precios **nunca se pierden**: quedan
+en `recipe_prices` (latente) hasta que `backfill-prices` los copia. Detectado el 26/08/2026 al ensayar el deploy con
+la BD de producción (`recipe_prices`: 460, `product_prices` sin poblar tras `migrate`).
 
 ## Convenciones nuevas del módulo
 - `barcode` unique por tenant, nullable (varios NULL conviven; el mismo código puede repetirse en otro tenant).
-- Toda superficie de pricing reusa el patrón de celda inline Alpine de `price-lists/matrix` (fetch PATCH → JSON con margen/color).
+- La edición de precio de las 5 superficies usa el **factory compartido `priceCell`** + `<x-price-cell-editor>` (reemplazó
+  al patrón de celda inline duplicado que copiaba a `price-lists/matrix`). PATCH → JSON con precio efectivo + margen + política.
 - Tests reusan el helper global `tenantUserAs(TenantUserRole)` (definido en `IngredientCrudTest`).
 
 ## Tests (512 verdes al cierre de 1c)

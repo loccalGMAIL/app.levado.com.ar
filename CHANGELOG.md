@@ -80,6 +80,30 @@ Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Product
 
 - `php artisan migrate` (tablas `product_categories` + columna en `products`). Luego, para producir: clasificar los elaborados con una categoría marcada "se produce" (o correr `products:from-recipes --category=…`).
 
+### Políticas de precio y costeo de reventa (P3)
+
+#### Agregado
+
+- **Política de precio por artículo × lista**: cada precio de venta puede ser **Manual**, **Margen %** (precio = costo ÷ (1 − margen)) o **Recargo %** (precio = costo × (1 + recargo)), calculado sobre el costo total con overhead. Se edita desde un popover en las **5 superficies** de precio (catálogo, Dashboard, `/recipes`, detalle de receta y matriz), con un badge que muestra la política vigente. Escribir un precio a mano vuelve la celda a **Manual**. Los precios con política se recalculan solos cuando cambia el costo del artículo (compra de reventa, costo de receta u overhead).
+- **Método de costeo de reventa configurable** (último costo / promedio ponderado): default por negocio (Mi negocio) con override por artículo. El promedio se recalcula al momento de comprar.
+
+#### Técnico
+
+- Enum `PricingPolicy` (manual|margin|markup) + columnas `product_prices.policy_type`/`policy_value` (`price` pasó a NULLABLE = precio efectivo cacheado). `ProductPriceWriter::setPolicy` computa y cachea; `ArticlePriceRecalculator` mantiene el cache al día (triggers: compra de reventa, propagación de costo de receta, cambio de overhead); comando `products:refresh-prices`. Enum `CostingMethod` (last|average) + `products.costing_method` + setting `resale.costing_method`.
+- **UI compartida**: factory `Alpine.data('priceCell')` (`resources/js/pricing/price-cell.js`) + componente `<x-price-cell-editor>` (popover **teletransportado a `body`** para no quedar recortado por el `overflow` de las tablas). Los 5 controllers/viewmodels pasan la política junto al precio; el endpoint `PATCH products.prices.update` acepta `policy_type`/`policy_value` y devuelve el precio efectivo + margen.
+- **`ProductCostingTest` (9) + `ProductPricingPolicyTest` (7) + `BackfillProductPricesTest` (6)**.
+
+#### Al deployar (⚠️ orden importante)
+
+El precio de venta vive en `product_prices`, **fuente única de toda la UI de precios**. En un deploy nuevo la tabla `products` se crea vacía, así que la migración de backfill copia **cero** precios: hay que copiarlos **después** de crear los productos, o las listas se ven sin valores (los precios siguen intactos en `recipe_prices`, solo no llegaron a `product_prices`). Secuencia:
+
+1. `php artisan migrate`
+2. `npm run build`
+3. `php artisan products:from-recipes` (crea los artículos elaborados de las recetas vendibles)
+4. **`php artisan products:backfill-prices`** (copia los precios de receta a los artículos — idempotente; **sin este paso las listas de precios aparecen vacías**)
+5. `php artisan products:refresh-prices` (recalcula las celdas con política; no-op si todas son manual)
+6. Clasificar los elaborados con una categoría "se produce" (o `products:from-recipes --category=…`)
+
 ---
 
 ## [0.12.13] — 2026-08-11

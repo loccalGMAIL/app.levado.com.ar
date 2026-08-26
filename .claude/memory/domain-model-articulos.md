@@ -42,7 +42,7 @@ información sin duplicar reglas.
   `selling_price` de forms/requests, y la escritura de precio en `RecipeController` store/update/copy. `recipe_prices`
   (tabla + modelo + factory) queda **latente** (dato preservado). `ProductPriceTest` reemplaza `RecipePriceUpdateTest`.
   Commits: catálogo → dashboard → /recipes → detalle → matriz → limpieza. **561 tests verdes.**
-- **P3 🔶 (en curso, 2 de 4 pasos hechos)**: políticas de precio (manual/margen/recargo) + métodos de costeo de
+- **P3 🔶 (en curso, 3 de 4 pasos hechos)**: políticas de precio (manual/margen/recargo) + métodos de costeo de
   reventa (último/promedio) configurables. **Decisiones**: ambos features juntos; política de precio **por
   artículo × lista**; método de costeo **default por negocio (tenant_settings) + override por artículo**;
   promedio ponderado **al momento de comprar** (MVP; editar/revertir compras viejas no recalcula histórico).
@@ -57,8 +57,19 @@ información sin duplicar reglas.
     overhead (`FixedCostController` + `BusinessController`); comando `products:refresh-prices`; `ProductPriceController::update`
     acepta `policy_type`+`policy_value` (retrocompat: sin policy → manual) y devuelve `policy_type`/`policy_value`+precio+margen.
     `ProductPricingPolicyTest` (7). **575 tests verdes.** Migraciones aplicadas.
-  - **Paso 3 🔲 (UI, NO empezado)**: exponer la edición de política en las celdas de precio. Ver [[p3-ui-pendiente]].
-  - **Paso 4 🔲**: correr `products:refresh-prices` sobre la base, cerrar memoria + CHANGELOG.
+  - **Paso 3 ✅** UI de política en las **5 superficies**: factory `Alpine.data('priceCell')`
+    (`resources/js/pricing/price-cell.js`) + componente `<x-price-cell-editor>` (popover **teletransportado a `body`**
+    para no recortarse en el `overflow` de las tablas — se posiciona con coords `fixed` calculadas en JS). Selector
+    Manual/Margen/Recargo + badge; escribir a mano vuelve a Manual; los 5 controllers/viewmodels pasan `policy_type`/
+    `policy_value` (helper `ProductPrice::policyPayload()`). Detalle de receta (`recipes/show`) in-place con preview
+    en vivo del precio efectivo (`recomputePreview()`). Factory + contrato de `save()` verificados en el bundle real.
+  - **Paso 4 🔶 (deploy)**: correr `products:refresh-prices` sobre la base + cerrar CHANGELOG. **⚠️ Bug de deploy
+    encontrado y corregido**: en un deploy nuevo la migración de backfill (`000004`) corre dentro de `migrate` con la
+    tabla `products` recién creada (vacía) → copia **0 precios** → las listas quedan sin valores (los precios siguen
+    intactos en `recipe_prices`; solo no llegan a `product_prices`, la fuente única de la UI). Nuevo comando
+    **`products:backfill-prices`** (idempotente; `BackfillProductPricesTest` 6) copia `recipe_prices → product_prices`
+    **después** de `products:from-recipes`. **Orden de deploy correcto**: `migrate` → `npm run build` →
+    `products:from-recipes` → **`products:backfill-prices`** → `products:refresh-prices`. Ver [[feature-articulos-produccion]].
 - **P4 🔲**: reestructuración del Módulo de Producción sobre este modelo. Luego Ventas.
 
 ## Notas de diseño
