@@ -102,7 +102,9 @@ class StockController extends Controller
 
         $movements = $item->stockMovements()
             ->where('location_id', $location->id)
-            ->with('user')
+            // purchaseLine.purchase alimenta el link a la factura de origen: sin el
+            // eager load el kardex haría dos queries por renglón de compra.
+            ->with(['user', 'purchaseLine.purchase.supplier'])
             ->latest('id')
             ->paginate(20)
             ->withQueryString();

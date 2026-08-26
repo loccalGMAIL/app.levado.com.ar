@@ -44,15 +44,22 @@ class NotificationService
             return;
         }
 
-        $levels = StockLevel::where('tenant_id', $tenant->id)->get()
-            ->filter(fn (StockLevel $level) => $level->hasAlert());
+        // scopeInAlert() (equivalente en SQL de hasAlert()): solo trae lo que
+        // está en alerta, no todo el stock del tenant para descartar en PHP.
+        $levels = StockLevel::where('tenant_id', $tenant->id)->inAlert()->get();
 
+        // find() por fila → 2 queries agrupadas por tipo (ingredient/packaging).
+        $byType = $levels->groupBy('stockable_type');
+        $items = [
+            'ingredient' => Ingredient::whereIn('id', $byType->get('ingredient', collect())->pluck('stockable_id'))->get()->keyBy('id'),
+            'packaging' => Packaging::whereIn('id', $byType->get('packaging', collect())->pluck('stockable_id'))->get()->keyBy('id'),
+        ];
+
+        $candidates = [];
         $activeKeys = [];
 
         foreach ($levels as $level) {
-            $item = $level->stockable_type === 'ingredient'
-                ? Ingredient::find($level->stockable_id)
-                : Packaging::find($level->stockable_id);
+            $item = $items[$level->stockable_type][$level->stockable_id] ?? null;
 
             if (! $item) {
                 continue;
@@ -67,18 +74,17 @@ class NotificationService
                 ? "Stock negativo: {$this->num($qty)} {$unit}."
                 : "Quedan {$this->num($qty)} {$unit} (mínimo {$this->num((float) $level->min_quantity)} {$unit}).";
 
-            $this->raise(
-                tenant: $tenant,
-                type: $type,
-                dedupeKey: $key,
-                title: "Stock bajo: {$item->name}",
-                body: $body,
-                actionUrl: route('stock.show', ['type' => $level->stockable_type, 'id' => $level->stockable_id]),
-                subjectType: $level->stockable_type,
-                subjectId: $level->stockable_id,
-            );
+            $candidates[] = [
+                'dedupe_key' => $key,
+                'title' => "Stock bajo: {$item->name}",
+                'body' => $body,
+                'action_url' => route('stock.show', ['type' => $level->stockable_type, 'id' => $level->stockable_id]),
+                'subject_type' => $level->stockable_type,
+                'subject_id' => $level->stockable_id,
+            ];
         }
 
+        $this->raiseMany($tenant, $type, $candidates);
         $this->resolveMissing($tenant, $type, $activeKeys);
     }
 
@@ -95,40 +101,37 @@ class NotificationService
         $days = max(1, (int) $tenant->getSetting('alerts.stale_cost.days', '60'));
         $threshold = now()->subDays($days);
 
-        $ingredients = Ingredient::where('tenant_id', $tenant->id)
-            ->where('active', true)
+        // leftJoinSub: la agregación max(recorded_at) se hace una vez sobre el
+        // log completo, y el descarte de "no está vencido" ocurre en la BD en
+        // vez de traer todos los ingredientes activos para filtrar en PHP.
+        $lastLogs = IngredientPriceLog::selectRaw('ingredient_id, max(recorded_at) as last_cost_at')
+            ->groupBy('ingredient_id');
+
+        $ingredients = Ingredient::where('ingredients.tenant_id', $tenant->id)
+            ->where('ingredients.active', true)
             ->select('ingredients.*')
-            ->selectSub(
-                IngredientPriceLog::selectRaw('max(recorded_at)')
-                    ->whereColumn('ingredient_id', 'ingredients.id'),
-                'last_cost_at',
-            )
+            ->leftJoinSub($lastLogs, 'l', 'l.ingredient_id', '=', 'ingredients.id')
+            ->whereRaw('coalesce(l.last_cost_at, ingredients.created_at) < ?', [$threshold])
             ->get();
 
+        $candidates = [];
         $activeKeys = [];
 
         foreach ($ingredients as $ingredient) {
-            $lastCostAt = $ingredient->last_cost_at ?? $ingredient->created_at;
-
-            if ($lastCostAt >= $threshold) {
-                continue;
-            }
-
             $key = "stale_cost:ingredient:{$ingredient->id}";
             $activeKeys[] = $key;
 
-            $this->raise(
-                tenant: $tenant,
-                type: $type,
-                dedupeKey: $key,
-                title: "Costo sin actualizar: {$ingredient->name}",
-                body: "El costo no se actualiza hace más de {$days} días.",
-                actionUrl: route('ingredients.index', ['search' => $ingredient->name]),
-                subjectType: 'ingredient',
-                subjectId: $ingredient->id,
-            );
+            $candidates[] = [
+                'dedupe_key' => $key,
+                'title' => "Costo sin actualizar: {$ingredient->name}",
+                'body' => "El costo no se actualiza hace más de {$days} días.",
+                'action_url' => route('ingredients.index', ['search' => $ingredient->name]),
+                'subject_type' => 'ingredient',
+                'subject_id' => $ingredient->id,
+            ];
         }
 
+        $this->raiseMany($tenant, $type, $candidates);
         $this->resolveMissing($tenant, $type, $activeKeys);
     }
 
@@ -144,14 +147,21 @@ class NotificationService
 
         // Los renglones marcados como consumo personal están resueltos: no imputan
         // costo, pero tampoco quedan pendientes, así que no deben mantener viva la alerta.
-        $unresolved = fn ($q) => $q->whereNull('cost_applied_at')->whereNull('excluded_at');
+        // joinSub agrupado: filtra (INNER JOIN) y cuenta a la vez, en una sola
+        // pasada sobre purchase_lines en vez de dos subconsultas correlacionadas.
+        $pendingLines = PurchaseLine::query()
+            ->selectRaw('purchase_id, count(*) as pending_lines_count')
+            ->whereNull('cost_applied_at')
+            ->whereNull('excluded_at')
+            ->groupBy('purchase_id');
 
-        $purchases = Purchase::where('tenant_id', $tenant->id)
-            ->whereHas('lines', $unresolved)
-            ->withCount(['lines as pending_lines_count' => $unresolved])
+        $purchases = Purchase::where('purchases.tenant_id', $tenant->id)
+            ->joinSub($pendingLines, 'pl', 'pl.purchase_id', '=', 'purchases.id')
+            ->select('purchases.*', 'pl.pending_lines_count')
             ->with('supplier')
             ->get();
 
+        $candidates = [];
         $activeKeys = [];
 
         foreach ($purchases as $purchase) {
@@ -161,20 +171,19 @@ class NotificationService
             $pending = (int) $purchase->pending_lines_count;
             $label = trim(($purchase->supplier?->name ?? 'Compra').' '.($purchase->invoice_number ? "#{$purchase->invoice_number}" : ''));
 
-            $this->raise(
-                tenant: $tenant,
-                type: $type,
-                dedupeKey: $key,
-                title: "Compra sin imputar: {$label}",
-                body: $pending === 1
+            $candidates[] = [
+                'dedupe_key' => $key,
+                'title' => "Compra sin imputar: {$label}",
+                'body' => $pending === 1
                     ? '1 renglón pendiente de asociar o imputar.'
                     : "{$pending} renglones pendientes de asociar o imputar.",
-                actionUrl: route('purchases.match', $purchase),
-                subjectType: 'purchase',
-                subjectId: $purchase->id,
-            );
+                'action_url' => route('purchases.match', $purchase),
+                'subject_type' => 'purchase',
+                'subject_id' => $purchase->id,
+            ];
         }
 
+        $this->raiseMany($tenant, $type, $candidates);
         $this->resolveMissing($tenant, $type, $activeKeys);
     }
 
@@ -288,6 +297,71 @@ class NotificationService
             'dedupe_key' => $dedupeKey,
             'meta' => $meta ?: null,
         ]);
+    }
+
+    /**
+     * Versión en lote de raise(), para los tres reconciliadores de estado que
+     * la llaman dentro de un foreach: una lectura de las alertas vivas del
+     * tipo + un insert() para las nuevas, en vez de un SELECT y un
+     * UPDATE/INSERT por candidata. No revive alertas resueltas: si no hay una
+     * viva con esa dedupe_key, se inserta una nueva.
+     *
+     * @param  array<int, array{dedupe_key: string, title: string, body?: ?string, action_url?: ?string, subject_type?: ?string, subject_id?: ?int, meta?: array<string, mixed>}>  $candidates
+     */
+    private function raiseMany(Tenant $tenant, NotificationType $type, array $candidates): void
+    {
+        if ($candidates === []) {
+            return;
+        }
+
+        $live = Notification::where('tenant_id', $tenant->id)
+            ->where('type', $type->value)
+            ->whereNull('resolved_at')
+            ->get()
+            ->keyBy('dedupe_key');
+
+        $toInsert = [];
+        $now = now();
+
+        foreach ($candidates as $candidate) {
+            $meta = $candidate['meta'] ?? [];
+            $existing = $live->get($candidate['dedupe_key']);
+
+            if ($existing === null) {
+                $toInsert[] = [
+                    'tenant_id' => $tenant->id,
+                    'type' => $type->value,
+                    'severity' => $type->severity(),
+                    'title' => $candidate['title'],
+                    'body' => $candidate['body'] ?? null,
+                    'action_url' => $candidate['action_url'] ?? null,
+                    'subject_type' => $candidate['subject_type'] ?? null,
+                    'subject_id' => $candidate['subject_id'] ?? null,
+                    'dedupe_key' => $candidate['dedupe_key'],
+                    'meta' => $meta !== [] ? json_encode($meta) : null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+
+                continue;
+            }
+
+            $existing->fill([
+                'title' => $candidate['title'],
+                'body' => $candidate['body'] ?? null,
+                'action_url' => $candidate['action_url'] ?? null,
+                'meta' => $meta ?: null,
+            ]);
+
+            // Evita un UPDATE cuando el texto no cambió — en la práctica, casi siempre.
+            if ($existing->isDirty()) {
+                $existing->save();
+            }
+        }
+
+        if ($toInsert !== []) {
+            Notification::insert($toInsert);
+        }
     }
 
     /**

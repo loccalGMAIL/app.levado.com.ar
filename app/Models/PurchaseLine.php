@@ -8,6 +8,7 @@ use Database\Factories\PurchaseLineFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class PurchaseLine extends Model
 {
@@ -49,14 +50,9 @@ class PurchaseLine extends Model
         return $this->belongsTo(Purchase::class);
     }
 
-    public function ingredient(): BelongsTo
+    public function purchaseable(): MorphTo
     {
-        return $this->belongsTo(Ingredient::class, 'purchaseable_id');
-    }
-
-    public function packaging(): BelongsTo
-    {
-        return $this->belongsTo(Packaging::class, 'purchaseable_id');
+        return $this->morphTo();
     }
 
     public function product(): BelongsTo

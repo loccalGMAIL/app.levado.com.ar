@@ -55,6 +55,8 @@ class Purchase extends Model
 
     public function totalAmount(): float
     {
-        return (float) $this->lines()->sum('subtotal');
+        return (float) ($this->relationLoaded('lines')
+            ? $this->lines->sum('subtotal')
+            : $this->lines()->sum('subtotal'));
     }
 }

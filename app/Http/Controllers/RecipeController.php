@@ -111,6 +111,7 @@ class RecipeController extends Controller
         $this->authorize('update', $recipe);
 
         $recipe->update($request->validated());
+        $this->propagator->propagateFrom($recipe);
 
         $this->recorder->record(
             actor: $request->user(),

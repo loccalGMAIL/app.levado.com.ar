@@ -118,6 +118,31 @@ test('owner puede editar info de receta', function () {
     expect($recipe->fresh()->name)->toBe('Actualizada');
 });
 
+test('editar el rendimiento de una receta recalcula el unit_cost cacheado', function () {
+    [$user, $tenant] = ownerForRecipe();
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 1]);
+    $ingredient = Ingredient::factory()->for($tenant)->create(['unit' => 'u', 'cost_per_unit' => 100]);
+    $recipe->ingredientLines()->create([
+        'ingredient_id' => $ingredient->id,
+        'quantity' => 1,
+        'unit' => 'u',
+    ]);
+    propagateRecipeCosts($recipe);
+    expect((float) $recipe->fresh()->unit_cost)->toBe(100.0);
+
+    $this->actingAs($user)
+        ->put(route('recipes.update', $recipe), [
+            'name' => $recipe->name,
+            'yield_quantity' => '4',
+            'yield_unit' => $recipe->yield_unit->value,
+        ])
+        ->assertRedirect(route('recipes.show', $recipe));
+
+    // Mismo costo total (100), repartido en el nuevo rendimiento (4): 25 por unidad.
+    // Antes de este fix el cache quedaba en 100 porque update() no repropagaba.
+    expect((float) $recipe->fresh()->unit_cost)->toBe(25.0);
+});
+
 test('owner puede desactivar una receta', function () {
     [$user, $tenant] = ownerForRecipe();
     $recipe = Recipe::factory()->for($tenant)->create(['active' => true]);

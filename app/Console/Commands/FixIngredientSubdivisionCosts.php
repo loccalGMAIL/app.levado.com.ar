@@ -6,7 +6,6 @@ use App\Models\Ingredient;
 use App\Models\Packaging;
 use App\Services\RecipeCostPropagator;
 use Illuminate\Console\Command;
-use Illuminate\Database\Eloquent\Collection;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\info;
@@ -38,12 +37,16 @@ class FixIngredientSubdivisionCosts extends Command
 
         $items = collect();
 
+        // lazyById en vez de get(): memoria acotada al clasificar catálogos grandes.
+        // La clasificación es de solo lectura (candidates() no escribe nada); las
+        // actualizaciones de abajo corren después, sobre $items ya filtrado y
+        // materializado, no sobre este cursor.
         if (in_array($type, ['all', 'ingredient'])) {
-            $items = $items->concat($this->candidates(Ingredient::query()->whereNotNull('subdivisions')->get(), 'Ingrediente'));
+            $items = $items->concat($this->candidates(Ingredient::query()->whereNotNull('subdivisions')->lazyById(200), 'Ingrediente'));
         }
 
         if (in_array($type, ['all', 'packaging'])) {
-            $items = $items->concat($this->candidates(Packaging::query()->whereNotNull('subdivisions')->get(), 'Envase'));
+            $items = $items->concat($this->candidates(Packaging::query()->whereNotNull('subdivisions')->lazyById(200), 'Envase'));
         }
 
         if ($items->isEmpty()) {
@@ -106,10 +109,10 @@ class FixIngredientSubdivisionCosts extends Command
     /**
      * Clasifica cada ítem con subdivisión y devuelve sólo los que hay que corregir.
      *
-     * @param  Collection<int, Ingredient|Packaging>  $rows
+     * @param  iterable<int, Ingredient|Packaging>  $rows
      * @return list<array{item: Ingredient|Packaging, kind: string, reason: string, costPerUnit: float, costPerPackage: float}>
      */
-    private function candidates(Collection $rows, string $kind): array
+    private function candidates(iterable $rows, string $kind): array
     {
         $candidates = [];
 

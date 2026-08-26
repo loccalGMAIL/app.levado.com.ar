@@ -1,6 +1,25 @@
 {
+  "node_modules/apexcharts/dist/apexcharts.common.js": {
+    "file": "assets/apexcharts.common-qcGzKcbb.js",
+    "name": "apexcharts.common",
+    "src": "node_modules/apexcharts/dist/apexcharts.common.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js"
+    ]
+  },
+  "node_modules/shepherd.js/dist/css/shepherd.css": {
+    "file": "assets/shepherd-64KBNxT1.css",
+    "src": "node_modules/shepherd.js/dist/css/shepherd.css"
+  },
+  "node_modules/shepherd.js/dist/js/shepherd.mjs": {
+    "file": "assets/shepherd-D2jzxwqC.js",
+    "name": "shepherd",
+    "src": "node_modules/shepherd.js/dist/js/shepherd.mjs",
+    "isDynamicEntry": true
+  },
   "resources/css/app.css": {
-    "file": "assets/app-BM931EQi.css",
+    "file": "assets/app-B8DJbuWr.css",
     "name": "app",
     "names": [
       "app.css"
@@ -9,12 +28,13 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-ojg-0MyO.js",
+    "file": "assets/app-4Li3tupz.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
-    "css": [
-      "assets/app-64KBNxT1.css"
+    "dynamicImports": [
+      "node_modules/shepherd.js/dist/js/shepherd.mjs",
+      "node_modules/apexcharts/dist/apexcharts.common.js"
     ]
   }
 }

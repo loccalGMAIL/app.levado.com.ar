@@ -42,6 +42,19 @@ Route::get('/', function () {
         : redirect()->route('login');
 });
 
+// El service worker se sirve por ruta y no como archivo en public/ para que
+// config('app.version') viaje en el cuerpo: el browser solo lo reinstala —y
+// solo entonces se purgan las caches viejas— cuando cambian sus bytes.
+// Service-Worker-Allowed permite alcance '/' aunque el script no sea un
+// estático en la raíz.
+Route::get('/sw.js', function () {
+    return response()
+        ->view('sw', ['version' => config('app.version')])
+        ->header('Content-Type', 'application/javascript')
+        ->header('Service-Worker-Allowed', '/')
+        ->header('Cache-Control', 'no-cache');
+})->name('service-worker');
+
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'tenant'])
     ->name('dashboard');

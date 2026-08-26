@@ -76,12 +76,18 @@ class TenantController extends Controller
 
     public function show(Tenant $tenant): View
     {
-        $tenant->load(['tenantUsers.user']);
+        $tenant->load(['tenantUsers.user'])
+            ->loadCount([
+                'tenantUsers as total_users',
+                'tenantUsers as active_users' => fn ($q) => $q->where('active', true),
+                'invitations as pending_invitations' => fn ($q) => $q
+                    ->whereNull('accepted_at')->where('expires_at', '>', now()),
+            ]);
 
         $metrics = [
-            'active_users' => $tenant->tenantUsers()->where('active', true)->count(),
-            'total_users' => $tenant->tenantUsers()->count(),
-            'pending_invitations' => $tenant->invitations()->whereNull('accepted_at')->where('expires_at', '>', now())->count(),
+            'active_users' => $tenant->active_users,
+            'total_users' => $tenant->total_users,
+            'pending_invitations' => $tenant->pending_invitations,
         ];
 
         return view('admin.tenants.show', compact('tenant', 'metrics'));

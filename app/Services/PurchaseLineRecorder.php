@@ -77,8 +77,13 @@ class PurchaseLineRecorder
      * For ingredient lines where units don't share a dimension (e.g. u → kg),
      * falls back to parsing the product description for a quantity hint
      * (same logic as the JS parseDesc() + pkgQty in match.blade.php).
+     *
+     * $propagate = false difiere la propagación del costo (N8): el llamador
+     * es responsable de propagar una sola vez con los ítems tocados de todo
+     * el lote, en vez de una vez por línea. El ítem tocado se devuelve para
+     * que el llamador pueda acumularlo.
      */
-    public function apply(PurchaseLine $line): void
+    public function apply(PurchaseLine $line, bool $propagate = true): Ingredient|Packaging|Product
     {
         abort_unless($line->isMatched(), 422, 'La línea no tiene un ítem asociado.');
 
@@ -113,7 +118,7 @@ class PurchaseLineRecorder
                 $item->cost_per_package = null;
             }
 
-            $this->applyIngredientCost($item, $costPerUnit, $line);
+            $this->applyIngredientCost($item, $costPerUnit, $line, $propagate);
         } elseif ($line->isProduct()) {
             $item = Product::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id && $item->isResale(), 422, 'Producto de reventa no válido.');
@@ -147,7 +152,7 @@ class PurchaseLineRecorder
                 $stockQuantity = (float) $line->quantity_purchased;
             }
 
-            $this->applyPackagingCost($item, $costPerUnit, $line);
+            $this->applyPackagingCost($item, $costPerUnit, $line, $propagate);
         }
 
         if ($stockQuantity !== null && $stockQuantity > 0) {
@@ -155,6 +160,8 @@ class PurchaseLineRecorder
         }
 
         $line->update(['cost_applied_at' => now()]);
+
+        return $item;
     }
 
     /**
@@ -255,21 +262,25 @@ class PurchaseLineRecorder
         $this->stock->syncPurchaseLineEntry($line, $item, $stockQuantity, $unitCost, auth()->user());
     }
 
-    private function applyIngredientCost(Ingredient $item, float $costPerUnit, PurchaseLine $line): void
+    private function applyIngredientCost(Ingredient $item, float $costPerUnit, PurchaseLine $line, bool $propagate = true): void
     {
         $oldCost = (float) $item->cost_per_unit;
         $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
         $item->update(['cost_per_unit' => $costPerUnit, 'cost_per_package' => $item->cost_per_package]);
-        $this->propagator->propagateFromIngredient($item->id);
+        if ($propagate) {
+            $this->propagator->propagateFromIngredient($item->id);
+        }
         $this->notifications->raiseCostSpike($line, $item, $oldCost, $costPerUnit);
     }
 
-    private function applyPackagingCost(Packaging $item, float $costPerUnit, PurchaseLine $line): void
+    private function applyPackagingCost(Packaging $item, float $costPerUnit, PurchaseLine $line, bool $propagate = true): void
     {
         $oldCost = (float) $item->cost_per_unit;
         $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
         $item->update(['cost_per_unit' => $costPerUnit, 'cost_per_package' => $item->cost_per_package]);
-        $this->propagator->propagateFromPackaging($item->id);
+        if ($propagate) {
+            $this->propagator->propagateFromPackaging($item->id);
+        }
         $this->notifications->raiseCostSpike($line, $item, $oldCost, $costPerUnit);
     }
 

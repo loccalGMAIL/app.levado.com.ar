@@ -82,6 +82,194 @@ Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Product
 
 ---
 
+## [0.12.13] — 2026-08-11
+
+### Dos fricciones chicas: entrar a ciegas y no saber de qué factura vino el stock
+
+Nada roto acá, dos molestias del día a día. Al ingresar no había forma de chequear lo tecleado y el único diagnóstico ante un error era volver a escribir la contraseña entera —peor en el celular del local, con las manos ocupadas—. Y en el kardex, cuando una entrada venía de una compra, la columna «Motivo» decía *«Compra (renglón #834)»*: un número interno que no lleva a ningún lado. Para ver de qué factura salían esos 25 kg de harina había que ir a Compras y buscarla a mano por fecha y proveedor.
+
+#### Agregado
+
+- **Ojito para ver la contraseña en el login.** Botón dentro del campo que alterna entre puntos y texto. El ícono cambia según el estado y es alcanzable con el teclado.
+- **El kardex linkea a la factura que originó el stock.** Las entradas por compra ahora muestran **«Compra #A-0001-00012345 · Molinos del Sur»** como link directo a esa compra, en vez del número de renglón. Un clic desde el movimiento a la factura.
+
+#### Cómo se comporta
+
+- El link aparece **sólo** en las entradas que vienen de un renglón de compra. Ajustes, recuentos y contramovimientos siguen mostrando su motivo, sin link: no tienen factura de origen que mostrar.
+- Un contramovimiento de compra tampoco linkea, aunque revierta una entrada que sí lo hace. El ledger guarda la referencia a la factura únicamente en la entrada original.
+- Si la factura o el renglón se borraron después, el movimiento cae al texto de siempre. El ledger es append-only: el movimiento sobrevive al borrado de la compra, y el kardex no puede quedar con un link roto.
+- La factura se abre con los permisos de siempre: `purchases.show` está en el mismo grupo que el kardex, así que quien ve uno ve la otra, y el scope de tenant corta cualquier cruce entre cuentas.
+
+#### Técnico
+
+- `StockMovement::purchaseLine()` (relación sobre `reference_id`) e `isFromPurchaseLine()`, que encapsula la comparación contra el string `'purchase_line'` que estaba suelta en la vista.
+- `StockController::show()` eager-loadea `purchaseLine.purchase.supplier`. Sin eso el kardex sumaba dos queries por cada renglón de compra de la página.
+- El toggle del login es Alpine inline (`x-data` + `x-bind:type`) y reusa los íconos `eye`/`eye-off` de `<x-icon>`, el mismo par que ya usan los listados de insumos y mano de obra. El `type="password"` del markup queda como fallback si el JS no montó, y el ícono oculto arranca con `display:none` inline porque el proyecto no define CSS para `[x-cloak]`.
+- Tres tests nuevos en `StockPurchaseIntegrationTest`: link presente en la entrada de compra, ausente en un ajuste manual, y **uno solo** cuando la entrada tiene contramovimiento.
+- Los otros seis campos de contraseña de la app (registro, reset, invitación, perfil) siguen sin ojito. Se tocó sólo el login a propósito; si se generaliza, conviene extraer un `<x-password-input>` en vez de repetir el bloque.
+- `package-lock.json` había quedado en 0.12.11 mientras `config/app.php` y `package.json` iban en 0.12.12. Realineados los cuatro en 0.12.13.
+
+---
+
+## [0.12.12] — 2026-08-11
+
+### Cambiar la unidad de un renglón dejaba el precio en la unidad vieja
+
+Cargando tomates: se compraron 800 gramos, se pasa la unidad a `gr` y el precio sigue siendo el del kilo. El formulario no decía en ninguna parte en qué unidad esperaba el precio, así que nada avisaba del problema. No es sólo un renglón mal: ese precio se imputa al insumo, y $2000 el kilo tomados como $2000 el gramo son **mil veces de más** propagándose a recetas y precios de venta.
+
+#### Corregido
+
+- **El campo de precio ahora dice en qué unidad está.** El rótulo pasó de «Precio unitario» a **«Precio por kg»**, y cambia solo al cambiar el select de unidad. Es lo que faltaba para que el error se vea antes de guardar.
+- **Al cambiar la unidad se ofrece convertir el precio.** Si ya había un precio cargado y la unidad nueva es compatible (kg↔gr, L↔ml↔cc), aparece *«¿El precio era por kg? Convertir a $2 por gr»*. Se aplica con un clic o se ignora. **No se convierte solo**: cambiar la unidad puede significar «me equivoqué de unidad» (el número está bien) o «reexpreso la medida» (el número tiene que cambiar), y elegir mal por el usuario rompe una de las dos.
+- **El total del renglón no se calculaba nunca en «Agregar renglón».** El campo de cantidad no estaba conectado al bloque de IVA, así que el neto quedaba siempre en cero y el recuadro con subtotal, IVA y total no llegaba a aparecer. Ahora sí, y funciona como la red de seguridad del punto anterior.
+- **La revisión del escaneo perdía lo tipeado si fallaba la validación.** Cantidad y precio volvían a los valores que había leído la IA en vez de conservar lo corregido a mano.
+- **El precio admite 4 decimales.** Con `step="0.01"` un precio por gramo o mililitro se redondeaba al cargarlo, aunque la base guarda cuatro.
+
+#### Cambiado
+
+- La unidad por defecto al agregar un renglón a mano pasa a ser **kg**. Antes no había ninguna marcada y el navegador caía en `gr` —el primer caso del enum—, que es justo la unidad en la que los precios casi nunca vienen.
+
+#### Técnico
+
+- `resources/js/units.js` (nuevo) concentra `UNIT_CONV` y `UNIT_ALIASES`, que hasta ahora vivían sueltos dentro de `purchases/match.js`, más los helpers `convertAmount()`, `convertUnitPrice()` y `compatibleUnits()`. El precio por unidad se mueve al revés que la cantidad: se divide por el mismo factor con el que se multiplica la cantidad.
+- `resources/js/purchases/line-form.js` (nuevo) expone `window.purchaseLine()`, el estado del renglón —unidad, cantidad, precio, IVA, percepción y totales—. Reemplaza **tres copias** del mismo objeto Alpine que estaban escritas a mano en `add-line`, `edit-line` y `scan/review`, con un `subtotalTotal` que en una de ellas se llamaba distinto.
+- `resources/views/components/unit-price-hint.blade.php` (nuevo) es el cartel de conversión, compartido por las tres vistas.
+- `tests/Unit/UnitConverterJsParityTest.php` (nuevo) parsea `units.js` y compara par por par contra `UnitConverter`. La tabla JS es una duplicación deliberada —el formulario tiene que convertir sin ida y vuelta al servidor— y sin ancla se desincroniza en silencio la próxima vez que crezca el enum `Unit`: el cartel dejaría de aparecer y volvería el bug de origen.
+- No hubo cambios de backend. `UnitConverter` y `PurchaseLineRecorder::apply()` ya convertían bien; lo que estaba mal era el precio que les llegaba.
+
+---
+
+## [0.12.11] — 2026-08-10
+
+### La app quedaba cargando para siempre y solo se destrababa borrando la cache a mano
+
+Dos clientes reportaron que el dashboard y compras se quedaban cargando sin terminar nunca. No era del servidor: el back no registró una sola excepción en trece días y la misma cuenta andaba bien desde otro navegador. Era el service worker de la PWA, que servía archivos viejos guardados en el equipo del cliente. La única salida era pedirle a la persona que abriera la consola del navegador y borrara la cache.
+
+#### Corregido
+
+- **El navegador ahora se actualiza solo en cada release.** El service worker no volvía a instalarse nunca, así que la limpieza de archivos viejos que ya tenía programada jamás llegaba a ejecutarse: un cliente podía arrastrar los archivos del día que instaló la app, deploy tras deploy. Ahora cada versión nueva se detecta en la siguiente visita y borra lo anterior sin que nadie tenga que hacer nada. **Los clientes ya afectados se destraban solos al entrar**, sin instrucciones ni soporte.
+- **Una conexión que se cuelga ya no deja la página cargando indefinidamente.** Al pedir el HTML no había límite de espera, y como el service worker se interpone, el navegador tampoco aplicaba el suyo: si la red no cortaba sino que quedaba colgada, la pantalla se quedaba en blanco para siempre. Ahora espera 10 segundos y muestra la página offline.
+- **Los íconos y el favicon vuelven a actualizarse.** Quedaban congelados en la primera versión que el navegador hubiera guardado, porque su dirección no cambia al cambiar el contenido.
+
+#### Técnico
+
+- `public/sw.js` (estático) pasa a `resources/views/sw.blade.php`, servido por la ruta `service-worker` en `/sw.js` con `Content-Type: application/javascript`, `Service-Worker-Allowed: /` y `Cache-Control: no-cache`. El browser solo dispara `install`/`activate` cuando cambian los bytes del script; con `CACHE_NAME` fijo en `'levado-v1'` dentro de un archivo que ningún deploy tocaba, el filtro de `activate` —que borra las caches cuyo nombre no coincide con el actual— nunca borraba nada. Ahora `CACHE_NAME` deriva de `config('app.version')`.
+- El precacheo pasa de `cache.addAll()` a `Promise.allSettled()` sobre `cache.add()`: `addAll` es atómico, así que un solo 404 en la lista abortaba el `install` y dejaba al service worker viejo sirviendo para siempre. El precacheo es una mejora, no un requisito para activar una versión nueva.
+- La navegación corre contra un `Promise.race` con timeout de 10 s en vez de un `fetch` pelado. No se usa `AbortController` porque pasarle un `init` a `fetch()` reconstruye el `Request` y un request de modo `navigate` no se puede reconstruir con ese modo.
+- Se separa la estrategia por tipo de asset: `/build/` sigue cache-first —lleva hash de Vite, el nombre cambia con el contenido— y `/icons/` + `/favicon` pasan a stale-while-revalidate, que es lo que corresponde a una URL estable. Antes los tres iban por la misma rama cache-first permanente.
+- `ServiceWorkerTest` cubre los headers, que la versión viaje en el cuerpo, y que no reaparezca un `public/sw.js` estático —el servidor web sirve `public/` antes que Laravel, así que un archivo que sobreviva a un deploy tapa la ruta y deja el arreglo sin efecto—. Incluye además un ancla contra la desincronización de versiones entre `config/app.php` y `package.json`, que ya había pasado en 0.12.9.
+
+#### Nota de despliegue
+
+Verificar que `public/sw.js` no exista en el servidor después del deploy. Si el despliegue no borra archivos eliminados del repo, hay que sacarlo a mano o el service worker versionado nunca se entrega.
+
+---
+
+## [0.12.10] — 2026-08-08
+
+### Los listados mandaban cada fila dos veces al navegador
+
+#### Cambiado
+
+- **Un listado ahora se escribe una sola vez.** Cada pantalla de lista tenía dos recorridos: uno armaba las tarjetas del celular y otro las filas de la tabla de escritorio, con los mismos datos escritos dos veces. Ahora la fila se escribe una sola vez y **el CSS decide** si se ve como fila o como tarjeta. La página además viaja más liviana porque deja de mandar las dos copias.
+- **Las dos vistas ya no pueden quedar distintas.** En Ingredientes la tabla mostraba 8 columnas y la tarjeta se comía «Por envase» y fusionaba Marca y Proveedor: cualquier columna nueva entraba de un lado y faltaba del otro. Con una sola fuente eso deja de ser posible.
+- **En el celular ahora se puede editar el stock desde la tarjeta**, sin pasar a «Ver tabla completa»: la edición inline existía sólo en la copia de tabla.
+- El toggle «Ver tabla completa ↓» / «← Volver a cards» funciona igual que antes, pero ahora cambia la presentación del mismo marcado en vez de esconder una copia y mostrar la otra.
+
+#### Técnico
+
+- Componentes nuevos `x-data-table` / `x-data-table.row` / `x-data-table.cell`: la celda declara su rol (`title`, `subtitle`, `figure`, `badge`, `meta`, `actions`) y el CSS de `@layer components` arma la tarjeta con `flex-wrap` + `order` por rol. Con `grid-template-areas` dos celdas del mismo rol caerían en la misma área y se pisarían.
+- `data-cards="hide"` saca del modo tarjeta las columnas de baja prioridad. Una celda sin valor se marca `data-empty`: la tabla le pone «—» y la tarjeta la omite, como hacía el marcado duplicado. No se usa `:empty` de CSS porque el whitespace de Blade lo vuelve inservible.
+- `x-data-table` trae su propio `x-data="{ mobileExpanded: false }"`. `x-responsive-table` dependía de que lo declarara el `x-data` de la página y se rompía en silencio si faltaba.
+- `.dt-card-only` es el mecanismo de fuente única para el texto que sólo tiene sentido en la tarjeta (el label de un botón de acción, la unidad de un importe que en la tabla ya dice el `<th>`).
+- `x-icon`, `x-list-header` y `x-list-filters` absorben los SVG de editar/activar pegados crudos, el encabezado con «+ Nuevo» y el formulario de filtros. El pie de paginación y la línea de total pasan a vivir dentro de `x-data-table`.
+- Migradas `ingredients/index` (356 → 230 líneas) y `labor-types/index` (207 → 128). `x-responsive-table` sigue en pie para las 7 vistas restantes, que se migran en tandas siguientes.
+- `DataTableComponentsTest` afirmaba lo contrario de lo que ahora se quiere (`assertSeeInOrder` del nombre dos veces, «card + fila de tabla»). Reescrito: cuenta celdas de título, verifica que el nombre aparezca una sola vez como texto y que el editor de stock no se duplique. Las anclas se probaron contra un revert: 5 de 6 fallan sin el arreglo.
+- Se realinean las cuatro fuentes de la versión, que venían desincronizadas desde 0.12.9 (`config/app.php` marcaba 0.12.8).
+
+### Auditoría de acceso a datos: fin de los N+1 en costeo, alertas y compras
+
+Implementación del plan de corrección de `AUDITORIA_ACCESO_DATOS.md` (04/08/2026): 41 hallazgos de rendimiento sobre acceso a datos, en tres fases de riesgo creciente más el ítem de mayor alcance estructural. Ningún cambio altera el comportamiento observable — cada fase se verificó completa contra la suite de tests antes de pasar a la siguiente, y las tres corren en commits separados para poder revertir una sin la otra.
+
+#### Fase 1 — correcciones rápidas, sin cambios de esquema
+
+- **`isSuperAdmin()`/`roleInTenant()` dejan de consultar la BD en cada `@can`/`authorize()`.** Antes cada verificación de permisos emitía una query — una vista con 18 `@can` (como `/recipes/{id}`) hacía 18 queries idénticas solo para decidir qué botones pintar. Ahora leen de la relación `tenantUsers` ya cargada en memoria por request.
+- **`SetTenantContext` resuelve el tenant con 1 query en vez de 3** por cada request autenticada, reusando esa misma carga de `tenantUsers`.
+- **El view composer de onboarding** pasa de hasta 6 `COUNT` a un solo `EXISTS` agrupado (`withExists`), y a 0 queries una vez completado el onboarding.
+- **`RecipePriceWriter::set()`** dejó de hacer un `SELECT` de más por cada precio guardado, y evita el `UPDATE` cuando el precio no cambió.
+- **El filtro de fechas de Gastos variables volvió a usar su índice**: filtraba con `whereDate()`, que envuelve la columna en una función y le impide a MySQL usar el índice `(tenant_id, expense_date)`.
+- Memoización por instancia de `defaultLocation()` y `totalFixedCosts()` (mismo patrón que ya usaba `getSetting()`).
+- **Nueva migración con 12 índices compuestos** que faltaban para las consultas del dashboard, la matriz de precios, el centro de alertas y el ledger de stock — reejecutable, verifica con `Schema::getIndexes()` antes de crear cada uno.
+- Además: `Purchase::totalAmount()` reusa la relación si ya está cargada; `Admin\TenantController::show` pasa de 3 `count()` sueltos a un `loadCount()`; `preventLazyLoading()` queda activo en producción (antes solo en desarrollo), logueando en vez de tirar; y la plantilla de mail y la invitación se resuelven una sola vez por request en vez de dos.
+
+#### Fase 2 — consultas agrupadas y reconciliación en lote
+
+- **El centro de alertas (`NotificationService`) reconcilia sus tres tipos de aviso en lote.** Antes cada alerta hacía su propio `SELECT` + `UPDATE`/`INSERT`; ahora se lee una vez el estado vivo del tipo y se escribe con `insert()` masivo, saltando el `UPDATE` cuando el texto no cambió. El chequeo de stock bajo pasa a filtrar en SQL (antes traía *todo* el stock del tenant para descartar en PHP) y agrupa la búsqueda del ítem por tipo en vez de una por fila; el de costo desactualizado usa `leftJoinSub` en vez de traer todos los ingredientes activos.
+- **El selector de sub-recetas de `/recipes/{id}`** (evitar ciclos al agregar una sub-receta) calculaba el árbol de ancestros una vez *por candidata*. Ahora se calcula una sola vez y el descarte ocurre en SQL.
+- **Aplicar sugerencias de precio en lote** (una lista o todas) pasó de una escritura por receta a `upsert()` + `insert()` por chunks.
+- Comandos de mantenimiento (`purchases:backfill-product-links`, `ingredients:fix-subdivision-costs`) usan `cursor()`/`lazyById()` en vez de cargar la tabla completa en memoria.
+- **Mitigación de una condición de carrera real**: el autosave de `/recipes/{id}` dispara varios `PATCH` casi simultáneos (uno por línea editada), y dos propagaciones de costo superpuestas podían calcular el costo de un ancestro compartido con el valor viejo de un hijo. Se agregó un lock por receta en el backend y un `AbortController` + contador de versión en el frontend para descartar respuestas que lleguen fuera de orden.
+
+#### Fase 3 — reescritura del propagador de costos (la más invasiva)
+
+- **`RecipeCostPropagator::propagateFrom()` dejó de ser un recorrido con I/O por nodo.** Actualizar el costo de un ingrediente usado en varias recetas anidadas podía disparar cientos de queries — una carga completa de la receta *por cada nodo visitado* del árbol de ancestros. Ahora el recorrido se separa en tres pasos: calcular qué recetas hay que tocar, cargarlas todas de una vez, y recalcular en memoria en el orden correcto (de las sub-recetas hacia arriba). Una actualización que tocaba un árbol de 20 recetas pasa de ~140 queries a ~10.
+- **Un ingrediente usado en 15 recetas ya no recalcula 15 veces los ancestros que comparten** — se resuelve una sola vez el conjunto completo de recetas afectadas.
+- **Aplicar todas las sugerencias pendientes de una factura** (`applyLineSuggestions`) difiere la propagación al final del lote en vez de una vez por renglón: un ancestro compartido por varias líneas de la misma factura se recalcula una sola vez.
+- El lock por receta de la Fase 2 ahora protege el árbol completo que se está recalculando, no solo la receta editada, y los locks se piden siempre en el mismo orden para que dos actualizaciones que se superponen no se bloqueen mutuamente.
+
+#### Morph map real para stock y compras
+
+- **`StockLevel`, `StockMovement` y `PurchaseLine`** usaban un discriminador polimórfico escrito a mano (`stockable_type`/`purchaseable_type` + un método que simulaba la resolución con un `match()`), lo que hacía imposible pedirle a Eloquent que precargue el ítem asociado. Ahora es un morph map real de Eloquent, verificado antes contra producción para confirmar que esas columnas no tienen valores fuera de `ingredient`/`packaging`.
+
+#### Qué quedó pendiente, a propósito
+
+- **Mover la propagación de costos y la reconciliación de alertas a colas**, y cachear los agregados del dashboard — la Fase 4 del informe. No se implementa: cambia una garantía visible al usuario (el costo queda al día en el mismo request) por una de "eventualmente al día", y esa es una decisión de producto, no técnica.
+- Un ítem de bajo valor (`PurchaseScanController` trayendo el catálogo dos veces) se dejó afuera: la forma segura de resolverlo agrega más complejidad de la que ahorra en un endpoint ya dominado por la llamada a la IA.
+
+#### Técnico
+
+- Cuatro commits, uno por fase: `perf(auditoria): correcciones rapidas de acceso a datos - Fase 1`, `- Fase 2`, `perf(auditoria): reescritura del propagador de costos - Fase 3`, `perf(auditoria): morph map real para stockable/purchaseable - N5`.
+- `RecipeCostPropagatorTest` y `RecipeCostCalculatorSubrecipeTest` no se tocaron: cubren la invariante central de la Fase 3 (una receta padre tiene que leer el `unit_cost` ya recalculado de su sub-receta, no el que tenía en base de datos antes de empezar).
+- Sin backfill ni migración de datos más allá de los 12 índices nuevos, que se agregan con `IF NOT EXISTS` a mano (verificando con `Schema::getIndexes()`) para poder reejecutar la migración sin romper.
+- 550 tests, todos verdes.
+
+---
+
+## [0.12.9] — 2026-08-02
+
+### El JS inicial pesaba 690 kB porque dos librerías pesadas viajaban en todas las páginas
+
+#### Cambiado
+
+- **ApexCharts y Shepherd (el tour de onboarding) ahora se cargan bajo demanda.** Antes se importaban de forma estática en el bundle principal, así que cualquier página los descargaba y parseaba aunque no los usara — sólo el dashboard usa gráficos, y el tour corre una única vez por usuario. Ahora cada uno se trae con `import()` dinámico justo cuando hace falta.
+- **TomSelect sigue siendo estático.** Alcanzaba con los dos cambios de arriba para bajar el bundle principal muy por debajo del límite de 500 kB de Vite, así que no hizo falta tocar `app.js` ni los blades que instancian `TomSelect` desde Alpine.
+
+#### Técnico
+
+- `dashboard-charts.js`: `initDashboardCharts()` pasa a `async` y hace `await import('apexcharts')` recién después del guard que confirma que estamos en el dashboard. `wireMarginFilter()` no depende de ApexCharts y sigue llamándose sin esperar ese import.
+- `onboarding-tour.js`: el cuerpo del módulo (ya condicionado a `window.levadoOnboarding`) pasa a un IIFE `async` que importa `shepherd.js` y su CSS de forma dinámica, así ambos salen del bundle principal.
+- Bundle principal: de 689.97 kB (191.96 kB gzip) a 117.62 kB (39.86 kB gzip). `apexcharts` y `shepherd` quedan como chunks separados que sólo se piden desde el dashboard y el onboarding respectivamente.
+
+---
+
+## [0.12.8] — 2026-08-02
+
+### En mobile el botón «Crear» de una categoría nueva quedaba tapado por la fecha
+
+#### Corregido
+
+- **No se podía crear una categoría desde el celular.** En Gastos variables → Nuevo gasto, al tocar «+ Nueva categoría» aparecía el campo de nombre, pero el botón **«Crear» quedaba por debajo del campo de fecha y el tap no le llegaba nunca**: la categoría no se podía crear sin cambiar a una pantalla grande. Ahora en mobile Categoría y Fecha van uno debajo del otro, a lo ancho, y el botón queda entero y tocable.
+- **Pasaba en los cuatro modales con el mismo layout**, no sólo en el que se reportó: crear y editar gasto variable, y crear y editar costo fijo (ahí la fecha se llama «Vigente desde»). Se corrigieron los cuatro.
+- El modal de administración de categorías tenía el mismo riesgo de desborde en pantallas muy angostas, aunque su fila ocupa el ancho completo. Se blindó igual.
+
+#### Detalle técnico
+
+- La fila del alta inline vivía en una columna `col-span-2` de un `grid-cols-3` **fijo**: nunca se apilaba. El input con `flex-1` conserva `min-width: auto`, así que no podía achicarse por debajo del ancho de su placeholder; la fila se desbordaba de su columna y el botón caía sobre el campo de fecha. Como la fecha es un item **posterior** del grid, se pintaba encima y se comía el click.
+- Dos cambios por modal: el grid pasa a `grid-cols-1 sm:grid-cols-3` con `sm:col-span-2`, y el input suma `min-w-0` para que la fila no se desborde a ningún ancho, ni siquiera con el grid apilado.
+- **No hace falta recompilar assets**: las cuatro utilidades (`grid-cols-1`, `sm:grid-cols-3`, `sm:col-span-2`, `min-w-0`) ya están en el CSS compilado que sirve el manifest.
+
+---
+
 ## [0.12.7] — 2026-07-30
 
 ### La vinculación de productos se recuerda para las próximas facturas

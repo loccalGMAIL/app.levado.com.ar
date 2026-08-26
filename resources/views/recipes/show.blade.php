@@ -185,38 +185,48 @@
                     this.savingPrice = false;
                 }
             },
+            // Cancela el PATCH en vuelo de esta línea (si lo hay) y descarta
+            // respuestas que lleguen fuera de orden: dos ediciones rápidas de la
+            // misma línea no deben dejar el estado con la respuesta de la primera
+            // pisando a la segunda (R13 — ver AUDITORIA_ACCESO_DATOS.md).
+            async patchLine(url, line, body) {
+                line._version = (line._version || 0) + 1;
+                const version = line._version;
+                if (line._abort) line._abort.abort();
+                const controller = new AbortController();
+                line._abort = controller;
+
+                let res;
+                try {
+                    res = await fetch(url, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                        body: JSON.stringify(body),
+                        signal: controller.signal,
+                    });
+                } catch (e) {
+                    if (e.name === 'AbortError') return null;
+                    throw e;
+                }
+
+                if (line._version !== version || !res.ok) return null;
+                return res.json();
+            },
             async saveIngredientLine(line) {
-                const res = await fetch('/recipes/{{ $recipe->id }}/ingredient-lines/' + line.id, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                    body: JSON.stringify({ quantity: line.quantity, unit: line.unit }),
-                });
-                if (res.ok) {
-                    const data = await res.json();
+                const data = await this.patchLine('/recipes/{{ $recipe->id }}/ingredient-lines/' + line.id, line, { quantity: line.quantity, unit: line.unit });
+                if (data) {
                     line.unitLabel = data.unitLabel;
                     line.costPerLineUnit = data.costPerLineUnit;
                 }
             },
             async savePackagingLine(line) {
-                await fetch('/recipes/{{ $recipe->id }}/packaging-lines/' + line.id, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                    body: JSON.stringify({ quantity: line.quantity }),
-                });
+                await this.patchLine('/recipes/{{ $recipe->id }}/packaging-lines/' + line.id, line, { quantity: line.quantity });
             },
             async saveLaborLine(line) {
-                await fetch('/recipes/{{ $recipe->id }}/labor-lines/' + line.id, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                    body: JSON.stringify({ hours: line.hours }),
-                });
+                await this.patchLine('/recipes/{{ $recipe->id }}/labor-lines/' + line.id, line, { hours: line.hours });
             },
             async saveSubrecipeLine(line) {
-                await fetch('/recipes/{{ $recipe->id }}/subrecipe-lines/' + line.id, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                    body: JSON.stringify({ quantity_used: line.quantity }),
-                });
+                await this.patchLine('/recipes/{{ $recipe->id }}/subrecipe-lines/' + line.id, line, { quantity_used: line.quantity });
             },
         }">
 

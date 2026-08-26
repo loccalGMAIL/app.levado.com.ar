@@ -77,7 +77,9 @@ class InvitationController extends Controller
 
     public function accept(AcceptInvitationRequest $request, string $token): RedirectResponse
     {
-        $invitation = Invitation::where('token', $token)->firstOrFail();
+        $invitation = $request->invitation();
+
+        abort_if($invitation === null, 404);
 
         if ($invitation->isExpired() || $invitation->isAccepted()) {
             return redirect()->route('login')->withErrors(['email' => 'La invitación no es válida.']);

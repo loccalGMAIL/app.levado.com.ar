@@ -125,9 +125,24 @@
                                         $ {{ number_format($movement->unit_cost, 2, ',', '.') }}
                                     </td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">
-                                        @if($movement->reason)
+                                        @php
+                                            // Sólo las entradas por compra tienen factura de origen; el resto
+                                            // (ajustes, recuentos, contramovimientos) no lleva link.
+                                            $purchase = $movement->isFromPurchaseLine()
+                                                ? $movement->purchaseLine?->purchase
+                                                : null;
+                                        @endphp
+                                        @if($purchase)
+                                            <a href="{{ route('purchases.show', $purchase) }}"
+                                                class="text-corteza underline hover:text-horno transition-colors">
+                                                Compra{{ $purchase->invoice_number ? ' #'.$purchase->invoice_number : '' }}
+                                                @if($purchase->supplier)
+                                                    · {{ $purchase->supplier->name }}
+                                                @endif
+                                            </a>
+                                        @elseif($movement->reason)
                                             {{ $movement->reason }}
-                                        @elseif($movement->reference_type === 'purchase_line')
+                                        @elseif($movement->isFromPurchaseLine())
                                             Compra (renglón #{{ $movement->reference_id }})
                                         @else
                                             —
