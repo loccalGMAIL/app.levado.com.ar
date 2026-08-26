@@ -101,8 +101,21 @@ El precio de venta vive en `product_prices`, **fuente única de toda la UI de pr
 2. `npm run build`
 3. `php artisan products:from-recipes` (crea los artículos elaborados de las recetas vendibles)
 4. **`php artisan products:backfill-prices`** (copia los precios de receta a los artículos — idempotente; **sin este paso las listas de precios aparecen vacías**)
-5. `php artisan products:refresh-prices` (recalcula las celdas con política; no-op si todas son manual)
-6. Clasificar los elaborados con una categoría "se produce" (o `products:from-recipes --category=…`)
+5. `php artisan products:assign-codes` (asigna un código EAN-13 interno a los artículos sin código de barras — idempotente)
+6. `php artisan products:refresh-prices` (recalcula las celdas con política; no-op si todas son manual)
+7. Clasificar los elaborados con una categoría "se produce" (o `products:from-recipes --category=…`)
+
+### Artículos como hub de precios e identidad (Fase A + B)
+
+#### Agregado
+
+- **La matriz de precios ahora vive dentro de Artículos** (pestañas **Catálogo | Matriz de precios**), es product-céntrica y muestra **todos** los artículos —elaborados y de reventa— con su costo y el precio de cada lista, editable en el lugar. Se sacó "Lista de precios" del menú de Costos; la **gestión de las listas** (crear, % de ajuste, default) pasó a **Administración**.
+- **Código único para todos los artículos**: los que traen código de barras real lo usan; a los demás (elaborados y reventa sin código) se les asigna automáticamente un **EAN-13 interno** válido y escaneable (prefijo 2, reservado para códigos de tienda). Queda como identificador único por negocio, base del futuro lector / punto de venta. Se asigna solo al crear un artículo desde el catálogo (si dejás el campo vacío) y al correr `products:from-recipes`.
+
+#### Técnico
+
+- `ProductController::matrix` product-céntrico (reusa el editor `priceCell`); vistas `products/matrix` + `products/tabs`. Se eliminó la matriz receta-céntrica de `PriceListController`. `Ean13Generator` (genera y valida EAN-13 con dígito verificador) + `ProductCodeAssigner` (código único por negocio, reintenta ante colisión). Comando `products:assign-codes` (backfill idempotente, `--tenant`, `--dry-run`).
+- **`Ean13GeneratorTest` (3) + `AssignProductCodesTest` (6) + matriz product-céntrica reescrita + store con auto-código**. **665 tests, todos verdes.**
 
 ---
 
