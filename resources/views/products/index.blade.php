@@ -53,6 +53,8 @@
                 </div>
             </div>
 
+            @include('products.tabs')
+
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <input type="hidden" name="sort" value="{{ request('sort') }}">
                 <input type="hidden" name="dir" value="{{ request('dir') }}">

@@ -76,6 +76,10 @@
                 } elseif (request()->routeIs('purchases.*')) {
                     $crumbs[] = ['label' => 'Existencias', 'href' => null];
                     $crumbs[] = ['label' => 'Compras', 'href' => null];
+                } elseif (request()->routeIs('products.matrix')) {
+                    $crumbs[] = ['label' => 'Existencias', 'href' => null];
+                    $crumbs[] = ['label' => 'Artículos', 'href' => route('products.index')];
+                    $crumbs[] = ['label' => 'Matriz de precios', 'href' => null];
                 } elseif (request()->routeIs('products.*')) {
                     $crumbs[] = ['label' => 'Existencias', 'href' => null];
                     $crumbs[] = ['label' => 'Artículos', 'href' => null];
@@ -100,8 +104,8 @@
                 } elseif (request()->routeIs('notifications.*')) {
                     $crumbs[] = ['label' => 'Alertas', 'href' => null];
                 } elseif (request()->routeIs('price-lists.*')) {
-                    $crumbs[] = ['label' => 'Costos', 'href' => null];
-                    $crumbs[] = ['label' => 'Listas de Precios', 'href' => null];
+                    $crumbs[] = ['label' => 'Administración', 'href' => null];
+                    $crumbs[] = ['label' => 'Listas de precios', 'href' => null];
                 } elseif (request()->routeIs('profile.*')) {
                     $crumbs[] = ['label' => 'Mi perfil', 'href' => null];
                 } elseif (request()->routeIs('admin.*')) {

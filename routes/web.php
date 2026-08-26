@@ -79,7 +79,6 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('variable-expenses/{variableExpense}/receipt', [VariableExpenseController::class, 'receipt'])->name('variable-expenses.receipt');
     Route::get('labor-types', [LaborTypeController::class, 'index'])->name('labor-types.index');
     Route::get('price-lists', [PriceListController::class, 'index'])->name('price-lists.index');
-    Route::get('price-lists/matrix', [PriceListController::class, 'matrix'])->name('price-lists.matrix');
 
     Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
@@ -96,6 +95,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('purchases/{purchase}/invoice', [PurchaseController::class, 'invoiceImage'])->name('purchases.invoice');
 
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
+    Route::get('products/matrix', [ProductController::class, 'matrix'])->name('products.matrix');
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::get('stock/{type}/{id}', [StockController::class, 'show'])

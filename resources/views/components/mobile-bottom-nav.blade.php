@@ -103,15 +103,6 @@
                 </svg>
                 Gastos
             </a>
-
-            <a href="{{ route('price-lists.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('price-lists.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                Listas de Precios
-            </a>
         </div>
 
         @canany(['edit-settings', 'manage-team'])
@@ -159,6 +150,17 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 Sucursales
+            </a>
+            @endcan
+
+            @can('edit-settings')
+            <a href="{{ route('price-lists.index') }}" @click="open = false"
+                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
+                    {{ request()->routeIs('price-lists.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                Listas de precios
             </a>
             @endcan
         </div>

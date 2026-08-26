@@ -48,61 +48,6 @@ class PriceListController extends Controller
         return view('price-lists.index', compact('priceLists'));
     }
 
-    public function matrix(): View
-    {
-        $tenant = app(Tenant::class);
-        $tenant->defaultPriceList();
-
-        $priceLists = $tenant->priceLists()
-            ->active()
-            ->orderByDesc('is_default')
-            ->orderBy('name')
-            ->get();
-        $defaultList = $priceLists->firstWhere('is_default', true);
-
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
-
-        $recipes = $tenant->recipes()
-            ->active()
-            ->where('is_semi_elaborate', false)
-            ->with('manufacturedProduct')
-            ->when(request('search'), function ($q, $search) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
-
-                return $q->where('name', 'like', "%{$escaped}%");
-            })
-            ->orderBy('name', $dir)
-            ->paginate(20)
-            ->withQueryString();
-
-        // Costo total por unidad (con overhead), consistente con el margen del artículo.
-        $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
-        $costsPerUnit = collect($recipes->items())
-            ->mapWithKeys(function ($recipe) use ($overheadPerHour) {
-                if ($recipe->unit_cost === null || (float) $recipe->yield_quantity <= 0) {
-                    return [$recipe->id => null];
-                }
-                $overheadPerUnit = (float) ($recipe->labor_hours ?? 0) * $overheadPerHour / (float) $recipe->yield_quantity;
-
-                return [$recipe->id => (float) $recipe->unit_cost + $overheadPerUnit];
-            });
-
-        // El precio vive en el artículo elaborado (product_prices); se indexa por recipe_id para la vista.
-        /** @var array<int, Collection<int, string>> $prices [recipe_id][price_list_id] => price */
-        $priceRows = ProductPrice::query()
-            ->join('products', 'products.id', '=', 'product_prices.product_id')
-            ->where('products.type', ProductType::Manufactured->value)
-            ->whereIn('products.recipe_id', collect($recipes->items())->pluck('id'))
-            ->whereIn('product_prices.price_list_id', $priceLists->pluck('id'))
-            ->get(['products.recipe_id', 'product_prices.price_list_id', 'product_prices.price', 'product_prices.policy_type', 'product_prices.policy_value'])
-            ->groupBy('recipe_id');
-        $prices = $priceRows->map(fn ($group) => $group->pluck('price', 'price_list_id'));
-        /** @var array<int, Collection<int, array{type: string, value: float|null}>> $policies [recipe_id][price_list_id] => policy */
-        $policies = $priceRows->map(fn ($group) => $group->mapWithKeys(fn (ProductPrice $row) => [$row->price_list_id => $row->policyPayload()]));
-
-        return view('price-lists.matrix', compact('priceLists', 'defaultList', 'recipes', 'costsPerUnit', 'prices', 'policies'));
-    }
-
     public function store(StorePriceListRequest $request): RedirectResponse
     {
         $tenant = app(Tenant::class);
@@ -225,7 +170,7 @@ class PriceListController extends Controller
             return $count;
         });
 
-        return back(fallback: route('price-lists.matrix'))
+        return back(fallback: route('products.matrix'))
             ->with('status', "Se aplicaron {$applied} sugerencia(s) en todas las listas.");
     }
 

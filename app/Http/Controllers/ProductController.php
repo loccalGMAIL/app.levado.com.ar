@@ -65,6 +65,57 @@ class ProductController extends Controller
         return view('products.index', compact('products', 'recipes', 'categories', 'showCategories', 'priceLists', 'priceList', 'overheadPerHour', 'priceMap', 'policyMap'));
     }
 
+    /**
+     * Matriz de precios artículo × lista: la vista comparativa de todas las listas
+     * para cada artículo (elaborado y de reventa), dentro de Artículos. Edita el
+     * mismo `product_prices` que el catálogo, vía el editor `priceCell`.
+     */
+    public function matrix(): View
+    {
+        $tenant = app(Tenant::class);
+        $tenant->defaultPriceList();
+
+        $priceLists = $tenant->priceLists()->active()->orderByDesc('is_default')->orderBy('name')->get();
+        $defaultList = $priceLists->firstWhere('is_default', true);
+        $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
+        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+
+        $products = $tenant->products()
+            ->with(['recipe', 'category'])
+            ->active()
+            ->when(request('search'), function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                return $q->where(function ($sub) use ($escaped) {
+                    $sub->where('name', 'like', "%{$escaped}%")
+                        ->orWhere('sku', 'like', "%{$escaped}%")
+                        ->orWhere('barcode', 'like', "%{$escaped}%");
+                });
+            })
+            ->when(request('type') === ProductType::Manufactured->value, fn ($q) => $q->where('type', ProductType::Manufactured->value))
+            ->when(request('type') === ProductType::Resale->value, fn ($q) => $q->where('type', ProductType::Resale->value))
+            ->when(request('category'), fn ($q, $category) => $q->where('product_category_id', $category))
+            ->orderBy('name', $dir)
+            ->paginate(30)
+            ->withQueryString();
+
+        $productIds = collect($products->items())->pluck('id');
+
+        $costsPerUnit = collect($products->items())
+            ->mapWithKeys(fn (Product $product) => [$product->id => $product->fullCost($overheadPerHour)]);
+
+        $priceRows = ProductPrice::whereIn('product_id', $productIds)
+            ->whereIn('price_list_id', $priceLists->pluck('id'))
+            ->get()
+            ->groupBy('product_id');
+        $prices = $priceRows->map(fn ($group) => $group->pluck('price', 'price_list_id'));
+        $policies = $priceRows->map(fn ($group) => $group->mapWithKeys(fn (ProductPrice $row) => [$row->price_list_id => $row->policyPayload()]));
+
+        $categories = $tenant->productCategories()->orderBy('name')->get();
+
+        return view('products.matrix', compact('products', 'priceLists', 'defaultList', 'costsPerUnit', 'prices', 'policies', 'categories', 'overheadPerHour'));
+    }
+
     public function store(StoreProductRequest $request): RedirectResponse
     {
         $tenant = app(Tenant::class);

@@ -33,11 +33,11 @@
 
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-base font-semibold text-corteza">Listas de Precios</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Definí distintas listas (mostrador, mayorista, etc.) con un precio por receta en cada una.</p>
+                    <h2 class="text-base font-semibold text-corteza">Listas de precios</h2>
+                    <p class="text-sm text-masa-madre mt-0.5">Definí distintas listas (mostrador, mayorista, etc.). Los precios de cada lista se cargan en la matriz de Artículos.</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <a href="{{ route('price-lists.matrix') }}"
+                    <a href="{{ route('products.matrix') }}"
                         class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
                         Matriz de precios →
                     </a>
