@@ -13,7 +13,10 @@ Alpine.data('priceCell', (init = {}) => ({
     url: init.url ?? '',
     canEdit: (init.url ?? '') !== '',
 
-    editing: false,
+    // El estado abierto/cerrado del popover. Se llama popoverOpen (no editing) a
+    // propósito: la página del catálogo tiene su propio `editing` (el artículo del
+    // modal) en un x-data padre, y un `editing` acá lo taparía desde el botón editar.
+    popoverOpen: false,
     saving: false,
 
     // Estado mostrado (lo pisa la respuesta del endpoint tras guardar).
@@ -93,7 +96,7 @@ Alpine.data('priceCell', (init = {}) => ({
             ? parseFloat(this.price).toFixed(2)
             : (this.suggested !== null ? parseFloat(this.suggested).toFixed(2) : '');
         this.draftValue = this.policyValue !== null ? String(this.policyValue) : '';
-        this.editing = true;
+        this.popoverOpen = true;
         this.$nextTick(() => {
             const el = this.draftType === 'manual' ? this.$refs.priceInput : this.$refs.valueInput;
             if (el) {
@@ -104,7 +107,7 @@ Alpine.data('priceCell', (init = {}) => ({
     },
 
     cancel() {
-        this.editing = false;
+        this.popoverOpen = false;
     },
 
     async save() {
@@ -126,7 +129,7 @@ Alpine.data('priceCell', (init = {}) => ({
         }
 
         this.saving = true;
-        this.editing = false;
+        this.popoverOpen = false;
         try {
             const res = await fetch(this.url, {
                 method: 'PATCH',

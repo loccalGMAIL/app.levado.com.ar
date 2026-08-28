@@ -18,6 +18,21 @@
             'sku'                 => old('sku'),
             'barcode'             => old('barcode'),
         ] : $editingDefault;
+
+        // Payload de edición en un solo lugar: los tres disparadores (card, nombre e
+        // ícono) lo reusan para que no se desincronicen y borren campos al guardar.
+        $editPayload = fn ($product) => [
+            'id'                  => $product->id,
+            'name'                => $product->name,
+            'type'                => $product->type->value,
+            'recipe_id'           => $product->recipe_id ?? '',
+            'product_category_id' => $product->product_category_id ?? '',
+            'unit'                => $product->unit->value,
+            'cost_per_unit'       => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
+            'costing_method'      => $product->costing_method?->value ?? '',
+            'sku'                 => $product->sku ?? '',
+            'barcode'             => $product->barcode ?? '',
+        ];
     @endphp
 
     <div class="py-8 px-6 lg:px-8"
@@ -165,18 +180,7 @@
                             @can('manage-costs')
                                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
                                     <button type="button"
-                                        @click="openEdit({{ Js::from([
-                                            'id'            => $product->id,
-                                            'name'          => $product->name,
-                                            'type'          => $product->type->value,
-                                            'recipe_id'     => $product->recipe_id ?? '',
-                                            'product_category_id' => $product->product_category_id ?? '',
-                                            'unit'          => $product->unit->value,
-                                            'cost_per_unit' => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
-                                            'costing_method' => $product->costing_method?->value ?? '',
-                                            'sku'           => $product->sku ?? '',
-                                            'barcode'       => $product->barcode ?? '',
-                                        ]) }})"
+                                        @click="openEdit({{ Js::from($editPayload($product)) }})"
                                         class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
                                         Editar
                                     </button>
@@ -235,18 +239,7 @@
                                 <td class="px-4 py-3 font-medium text-corteza">
                                     @can('manage-costs')
                                         <button type="button"
-                                            @click="openEdit({{ Js::from([
-                                                'id'            => $product->id,
-                                                'name'          => $product->name,
-                                                'type'          => $product->type->value,
-                                                'recipe_id'     => $product->recipe_id ?? '',
-                                                'product_category_id' => $product->product_category_id ?? '',
-                                                'unit'          => $product->unit->value,
-                                                'cost_per_unit' => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
-                                                'costing_method' => $product->costing_method?->value ?? '',
-                                                'sku'           => $product->sku ?? '',
-                                                'barcode'       => $product->barcode ?? '',
-                                            ]) }})"
+                                            @click="openEdit({{ Js::from($editPayload($product)) }})"
                                             class="hover:underline text-left">
                                             {{ $product->name }}
                                         </button>
@@ -305,16 +298,7 @@
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-1">
                                             <button type="button"
-                                                @click="openEdit({{ Js::from([
-                                                    'id'            => $product->id,
-                                                    'name'          => $product->name,
-                                                    'type'          => $product->type->value,
-                                                    'recipe_id'     => $product->recipe_id ?? '',
-                                                    'unit'          => $product->unit->value,
-                                                    'cost_per_unit' => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
-                                                    'sku'           => $product->sku ?? '',
-                                                    'barcode'       => $product->barcode ?? '',
-                                                ]) }})"
+                                                @click="openEdit({{ Js::from($editPayload($product)) }})"
                                                 aria-label="Editar artículo" title="Editar artículo"
                                                 class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">

@@ -6,7 +6,7 @@
     factory (draftType/draftPrice/draftValue) y llama a save().
 --}}
 <template x-teleport="body">
-    <div x-show="editing" style="display: none;" @keydown.escape.window="cancel()">
+    <div x-show="popoverOpen" style="display: none;" @keydown.escape.window="cancel()">
         {{-- Backdrop: cierra al hacer clic fuera; captura el clic sin tapar visualmente. --}}
         <div class="fixed inset-0 z-40" @click="cancel()"></div>
 
