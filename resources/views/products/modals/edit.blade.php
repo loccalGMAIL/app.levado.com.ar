@@ -61,7 +61,7 @@
                     <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                 @endforeach
             </select>
-            <p class="mt-1 text-xs text-masa-madre">Gestioná las categorías y su flag «se produce» con el botón Categorías.</p>
+            <!-- <p class="mt-1 text-xs text-masa-madre">Gestioná las categorías y su flag «se produce» con el botón Categorías.</p> -->
             <x-input-error :messages="$errors->get('product_category_id')" class="mt-2" />
         </div>
 
@@ -114,7 +114,7 @@
                     class="mt-1 block w-full"
                     x-model="editing.barcode" />
                 <x-input-error :messages="$errors->get('barcode')" class="mt-2" />
-                <p class="text-xs text-masa-madre mt-1">Si lo dejás vacío, se asigna un código interno automático (para el lector / punto de venta).</p>
+                <!-- <p class="text-xs text-masa-madre mt-1">Si lo dejás vacío, se asigna un código interno automático (para el lector / punto de venta).</p> -->
             </div>
         </div>
 

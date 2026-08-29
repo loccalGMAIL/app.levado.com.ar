@@ -102,7 +102,7 @@
                     </button>
                 </div>
                 <p x-show="newCatError" x-text="newCatError" class="mt-1 text-xs text-red-500"></p>
-                <p class="mt-1 text-xs text-masa-madre">La categoría nueva se crea con «se produce» activado; ajustalo en Categorías.</p>
+                <!-- <p class="mt-1 text-xs text-masa-madre">La categoría nueva se crea con «se produce» activado; ajustalo en Categorías.</p> -->
             </div>
 
             <select id="create_product_category" name="product_category_id"
@@ -167,7 +167,7 @@
                     class="mt-1 block w-full"
                     :value="old('barcode')" />
                 <x-input-error :messages="$errors->get('barcode')" class="mt-2" />
-                <p class="text-xs text-masa-madre mt-1">Si lo dejás vacío, se asigna un código interno automático (para el lector / punto de venta).</p>
+                <!-- <p class="text-xs text-masa-madre mt-1">Si lo dejás vacío, se asigna un código interno automático (para el lector / punto de venta).</p> -->
             </div>
         </div>
 
