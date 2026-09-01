@@ -22,6 +22,12 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - **Último deploy anotado acá:** 0.11.0 — **mergeada (PR #43) y desplegada en producción el 17/07/2026**. Producción venía de 0.9.x, así que ese deploy le trajo de una v0.10.0 (gastos variables), v0.10.1 (auditoría) y v0.11.0. Se corrió `invoices:relocate`: **165 comprobantes movidos al disco privado**. Los deploys de la serie 0.12.x no quedaron registrados en esta memoria: **no asumir qué versión corre en producción a partir de este archivo.**
 - **Al subir una base corregida a producción, el orden es: respaldo → subir la base → desplegar código → `migrate` → `invoices:relocate` → `optimize:clear`.** Si se despliega el código y se corre `migrate` antes de subir la base, la migración del índice único aborta contra los duplicados viejos. Con la base ya subida, `migrate` saltea lo que viene registrado y sólo corre lo que falta. Ojo: el import pisa `sessions` y cierra todas las sesiones.
 
+## Trabajo actual — v0.13.0 Artículos y Producción (rama `v0.13.0/articulos-produccion`, act. 01/09/2026)
+Rama **no mergeada a master** (34 commits sobre master; master es ancestro; historia lineal tras un rebase + un merge de master). Módulo **product-céntrico**: el **Artículo** (`Product`) es el SKU vendible/stockeable y dueño de costo+precio; la **Receta** es su BOM. **Todo el detalle vive en [[feature-articulos-produccion]], [[domain-model-articulos]] y [[decision-multi-sucursal]]** — este bloque es solo el índice para retomar.
+- **Hecho:** etapas 1–3 (catálogo de Productos, stock, compra de reventa, **Producción** backend+UI), P1/P2/P3 del modelo de dominio (costo y precio en el Artículo; políticas manual/margen/recargo), **Fase A** (matriz de precios dentro de Artículos + gestión de listas a Administración), **Fase B** (código EAN-13 interno para todos los artículos). Working tree limpio, **665 tests verdes**.
+- **Comandos de deploy nuevos** (orden importa): `products:from-recipes` → `products:backfill-prices` → `products:assign-codes` → `products:refresh-prices`. Ver la sección de deploy en [[feature-articulos-produccion]].
+- **Próximo:** **P4 — reestructurar Producción** (alcance **sin definir**; direcciones candidatas anotadas en [[feature-articulos-produccion]]). Después: Ventas/POS.
+
 ## Todo lo que está hecho
 
 ### v0.12.10 — Los listados mandaban cada fila dos veces (rama `v0.12.10-FIXCodigoDuplicado`)
@@ -194,4 +200,4 @@ D:\DESARROLLO\CoDiGo\levado.com.ar\
 - Deploy a producción (Hostinger) — configurar `ANTHROPIC_API_KEY` y queue/mail settings
 - Importación CSV de ingredientes/packaging/gastos fijos
 - Panel administrativo completo nuevo (reemplaza el backoffice actual; ver `project-backoffice.md`) — prerequisito para apertura pública; resuelve S3 de la auditoría por diseño
-- Etapa 3: Productos y Stock
+- **Etapa 3 (Artículos/Producción) ✅ hecha** en la rama v0.13.0 (ver el bloque "Trabajo actual" arriba). Sigue: **P4 (reestructurar Producción)** y luego **Ventas/POS**.

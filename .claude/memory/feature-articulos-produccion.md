@@ -123,6 +123,22 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   backfill `products:assign-codes` (`--tenant`, `--dry-run`). `Ean13GeneratorTest` (3) + `AssignProductCodesTest` (6).
   Queda como base del futuro POS/lector (decisión: código compartido por negocio, ver [[decision-multi-sucursal]]).
 
+## P4 — reestructurar Producción (PRÓXIMO, sin spec definida)
+Etapas 1–3 (catálogo, stock, compra reventa, **Producción 3A/3B**) + Fases A/B **cerradas**. P4 quedó como titular
+"reestructurar Producción sobre el modelo article-céntrico" pero **sin alcance concreto**. Al plantearlo (01/09/2026)
+el usuario **no eligió** todavía (dejó la decisión para la próxima sesión). Direcciones candidatas surgidas (se pueden
+combinar):
+1. **Valuación del elaborado por producción** — que fabricar alimente el costo del artículo (promedio ponderado
+   producido + comprado). Cierra la inconsistencia actual: `ProductionService::produce()` calcula `productions.unit_cost`
+   (= costo del BOM explotado / cantidad) y lo pone en el movimiento, pero **NO pisa `stock_levels.unit_cost`** (solo las
+   compras lo hacen). Es lo más alineado con "el Artículo es dueño del costo".
+2. **Semi-elaborados stockeables** — hoy las sub-recetas son **siempre phantom** (`RecipeExploder` las explota al vuelo).
+   Poder producir/stockear intermedios (ej. masa madre) y consumirlos en otras producciones → BOM multinivel real.
+   (Ya anotado como "mejora futura" en las decisiones de diseño.)
+3. **Órdenes de producción / planificación** — pasar de "producir ahora" a planificar/batchear con ciclo de estados.
+4. **Mermas / rendimiento real** — registrar rendimiento real vs teórico y ajustar el costo del lote.
+Después de P4: **Ventas / POS** (usará el EAN-13 y la política de precio).
+
 ## ⚠️ Deploy de v0.13.0 — ORDEN (o las listas de precios se ven vacías)
 El precio vive en `product_prices` (**fuente única** de toda la UI de precios). La migración de backfill (`000004`)
 corre dentro de `migrate` con la tabla `products` recién creada (vacía) → copia **0 precios**. Hay que copiarlos

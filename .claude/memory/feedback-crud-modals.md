@@ -45,6 +45,18 @@ x-data="{
 - PHP en index detecta `old('_form')` y pasa `:show="$errorsInCreate"` o `:show="$errorsInEdit"` al modal
 - `$editingOnError` reconstruye el objeto editing desde `old()` para re-popular el formulario de edición
 
+## Gotchas (aprendidos en Artículos, sesión 01/09/2026)
+- **Un solo `$editPayload($product)`, no arrays inline duplicados.** Si hay varios disparadores de edición (card, nombre,
+  ícono), el payload del `@click` debe salir de UNA closure `$editPayload = fn ($x) => [...]` reusada por todos. En
+  Artículos el botón ícono había quedado con menos campos (le faltaban `product_category_id` y `costing_method`): al
+  editar por ahí y guardar, esos campos se mandaban vacíos y **se borraban** (los `<select>` sin valor caen en "" y el
+  controller los nulea). Un solo payload elimina la deriva.
+- **Cuidado con colisiones de nombre entre `editing` y x-data anidados.** Si un x-data hijo dentro de la fila (ej.
+  `priceCell` en `<tr x-data="priceCell(...)">`) define una propiedad llamada `editing`, los botones de editar que viven
+  DENTRO de esa fila hacen `this.editing = record` sobre el scope del hijo, **no** sobre el del modal → el modal queda
+  vacío y los `x-show` por tipo no ocultan nada. Se resolvió renombrando la propiedad del hijo (`editing` → `popoverOpen`).
+  Regla: el `editing` del modal debe tener nombre único respecto de cualquier x-data anidado en la lista.
+
 ## Rutas
 Solo `index` (GET), `store` (POST), `update` (PUT), `toggleActive` (PATCH). Sin rutas GET para `/create` o `/{id}/edit`.
 
