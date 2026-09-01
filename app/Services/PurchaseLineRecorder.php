@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\StockMovementType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
@@ -32,7 +33,7 @@ class PurchaseLineRecorder
     /**
      * Create a line and impute its cost immediately (manual line form).
      *
-     * @param  array{purchaseable_type: string, purchaseable_id: int|string, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string}  $data
+     * @param  array{purchaseable_type: string, purchaseable_id: int|string, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string, is_bonus?: bool}  $data
      */
     public function record(Purchase $purchase, array $data): PurchaseLine
     {
@@ -48,7 +49,7 @@ class PurchaseLineRecorder
      * Capture a line as read from the invoice, without imputing any cost.
      * The match (purchaseable_*) is optional — it can be a suggestion or null.
      *
-     * @param  array{raw_name?: ?string, purchaseable_type?: ?string, purchaseable_id?: int|string|null, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string}  $data
+     * @param  array{raw_name?: ?string, purchaseable_type?: ?string, purchaseable_id?: int|string|null, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string, is_bonus?: bool}  $data
      */
     public function storePending(Purchase $purchase, array $data): PurchaseLine
     {
@@ -64,7 +65,22 @@ class PurchaseLineRecorder
             'iva_rate' => $data['iva_rate'] ?? 0.21,
             'percepcion_rate' => isset($data['percepcion_rate']) && $data['percepcion_rate'] !== '' ? $data['percepcion_rate'] : null,
             'subtotal' => $subtotal,
+            'is_bonus' => $this->resolveBonus($data, (float) $data['unit_price']),
         ]);
+    }
+
+    /**
+     * ¿El renglón es sin cargo? Lo que diga el formulario manda; si no dice nada,
+     * un precio unitario en cero es la firma de un obsequio o una promoción, y se
+     * pre-marca para que llegue así a la pantalla de asociación.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveBonus(array $data, float $unitPrice): bool
+    {
+        return array_key_exists('is_bonus', $data)
+            ? (bool) $data['is_bonus']
+            : $unitPrice === 0.0;
     }
 
     /**
@@ -79,11 +95,22 @@ class PurchaseLineRecorder
      * es responsable de propagar una sola vez con los ítems tocados de todo
      * el lote, en vez de una vez por línea. El ítem tocado se devuelve para
      * que el llamador pueda acumularlo.
+     *
+     * $pkgQtyOverride fuerza el divisor de unidades incompatibles en vez de
+     * recordarlo o adivinarlo de la descripción. Es lo que hace viable el
+     * renglón bonificado: como su precio es $0, el divisor no puede derivarse
+     * del costo (el camino de applyWithCost()) y tiene que venir del formulario.
+     *
+     * Renglón bonificado (is_bonus): entra al stock valuado al costo vigente del
+     * ítem, pero no imputa precio alguno al catálogo. Sin price log, sin
+     * propagación a recetas y sin alerta de salto de costo — un obsequio de la
+     * distribuidora no significa que el insumo ahora valga cero.
      */
-    public function apply(PurchaseLine $line, bool $propagate = true): Ingredient|Packaging
+    public function apply(PurchaseLine $line, bool $propagate = true, ?float $pkgQtyOverride = null): Ingredient|Packaging
     {
         abort_unless($line->isMatched(), 422, 'La línea no tiene un ítem asociado.');
 
+        $isBonus = $line->isBonus();
         $purchaseUnit = $line->purchase_unit;
 
         if ($line->isIngredient()) {
@@ -98,7 +125,8 @@ class PurchaseLineRecorder
                 // adivina de la descripción: alguien ya lo confirmó a mano. Es lo que
                 // permite que "Aplicar N sugerencias" resuelva renglones de unidades
                 // incompatibles, que antes salteaba siempre.
-                $pkgQty = $this->rememberedPkgQty($line)
+                $pkgQty = $pkgQtyOverride
+                    ?? $this->rememberedPkgQty($line)
                     ?? $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
                 abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del ingrediente.');
                 $costPerUnit = (float) $line->unit_price / $pkgQty;
@@ -108,14 +136,19 @@ class PurchaseLineRecorder
             // When ingredient tracks sub-units (subdivisions), the stored cost_per_unit must
             // represent the sub-unit price so that recipes can multiply directly without division.
             if ($item->subdivisions && $purchaseUnit === Unit::Unidad && $item->unit === Unit::Unidad) {
-                $item->cost_per_package = $costPerUnit;
+                $packagePrice = $costPerUnit;
                 $costPerUnit = $costPerUnit / $item->subdivisions;
                 $stockQuantity = (float) $line->quantity_purchased * $item->subdivisions;
             } else {
-                $item->cost_per_package = null;
+                $packagePrice = null;
             }
 
-            $this->applyIngredientCost($item, $costPerUnit, $line, $propagate);
+            // La bonificación no imputa precio: ni toca el ítem en memoria ni escribe
+            // price log, costo o propagación. Solo entra al stock, más abajo.
+            if (! $isBonus) {
+                $item->cost_per_package = $packagePrice;
+                $this->applyIngredientCost($item, $costPerUnit, $line, $propagate);
+            }
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
@@ -123,20 +156,32 @@ class PurchaseLineRecorder
 
             $packagePrice = (float) $line->unit_price;
             if ($item->subdivisions) {
-                $item->cost_per_package = $packagePrice;
                 $costPerUnit = $packagePrice / $item->subdivisions;
                 $stockQuantity = (float) $line->quantity_purchased * $item->subdivisions;
             } else {
-                $item->cost_per_package = null;
-                $costPerUnit = $packagePrice;
+                $packagePrice = null;
+                $costPerUnit = (float) $line->unit_price;
                 $stockQuantity = (float) $line->quantity_purchased;
             }
 
-            $this->applyPackagingCost($item, $costPerUnit, $line, $propagate);
+            if (! $isBonus) {
+                $item->cost_per_package = $packagePrice;
+                $this->applyPackagingCost($item, $costPerUnit, $line, $propagate);
+            }
         }
 
         if ($stockQuantity !== null && $stockQuantity > 0) {
-            $this->stock->syncPurchaseLineEntry($line, $item, $stockQuantity, $costPerUnit, auth()->user());
+            $this->stock->syncPurchaseLineEntry(
+                line: $line,
+                item: $item,
+                quantityInItemUnits: $stockQuantity,
+                // La bonificación se valúa al costo vigente del ítem, no al $0 de la
+                // factura: la mercadería en el depósito vale lo mismo la haya pagado
+                // o no, y así la valuación de existencias sigue siendo real.
+                unitCost: $isBonus ? (float) $item->cost_per_unit : $costPerUnit,
+                user: auth()->user(),
+                type: $isBonus ? StockMovementType::Bonus : StockMovementType::Purchase,
+            );
         }
 
         $line->update(['cost_applied_at' => now()]);
@@ -147,7 +192,7 @@ class PurchaseLineRecorder
     /**
      * Update an existing line (description + amounts) and re-impute its cost.
      *
-     * @param  array{raw_name?: ?string, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string}  $data
+     * @param  array{raw_name?: ?string, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string, is_bonus?: bool}  $data
      */
     public function recompute(PurchaseLine $line, array $data): void
     {
@@ -165,6 +210,7 @@ class PurchaseLineRecorder
                 ? (isset($data['percepcion_rate']) && $data['percepcion_rate'] !== '' ? $data['percepcion_rate'] : null)
                 : $line->percepcion_rate,
             'subtotal' => $subtotal,
+            'is_bonus' => $this->resolveBonus($data, (float) $data['unit_price']),
         ]);
 
         // Re-impute only if the line had already been applied; a still-pending

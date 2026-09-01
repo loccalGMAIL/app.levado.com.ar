@@ -70,7 +70,8 @@ class StockService
             $updates = ['quantity' => (float) $level->quantity + $quantity];
 
             // El último costo de compra solo lo pisan las entradas reales de compra,
-            // no los contramovimientos ni los movimientos manuales.
+            // no los contramovimientos, los movimientos manuales ni las bonificaciones
+            // (un obsequio no dice nada sobre lo que cuesta reponer el ítem).
             if ($type === StockMovementType::Purchase && $reverses === null) {
                 $updates['unit_cost'] = $unitCost;
             }
@@ -125,11 +126,21 @@ class StockService
      * Entrada de stock por línea de compra aplicada, en la sucursal default del tenant.
      *
      * Idempotente: si la línea ya tiene una entrada activa idéntica (mismo ítem,
-     * cantidad y costo) no hace nada. Si difiere (cambió cantidad/precio o se
-     * re-asoció a otro ítem), revierte la entrada anterior y registra la nueva.
+     * tipo, cantidad y costo) no hace nada. Si difiere (cambió cantidad/precio, se
+     * re-asoció a otro ítem, o pasó de compra a bonificación), revierte la entrada
+     * anterior y registra la nueva.
+     *
+     * $type distingue la compra normal de la bonificación (renglón sin cargo): la
+     * bonificación entra al stock igual, pero no pisa el último costo del cache.
      */
-    public function syncPurchaseLineEntry(PurchaseLine $line, Ingredient|Packaging $item, float $quantityInItemUnits, float $unitCost, ?User $user = null): ?StockMovement
-    {
+    public function syncPurchaseLineEntry(
+        PurchaseLine $line,
+        Ingredient|Packaging $item,
+        float $quantityInItemUnits,
+        float $unitCost,
+        ?User $user = null,
+        StockMovementType $type = StockMovementType::Purchase,
+    ): ?StockMovement {
         $active = $this->activePurchaseEntryFor($line);
 
         if ($active !== null) {
@@ -137,7 +148,7 @@ class StockService
             $sameAmounts = abs((float) $active->quantity - $quantityInItemUnits) < self::QUANTITY_TOLERANCE
                 && abs((float) $active->unit_cost - $unitCost) < self::QUANTITY_TOLERANCE;
 
-            if ($sameStockable && $sameAmounts) {
+            if ($sameStockable && $sameAmounts && $active->type === $type) {
                 return null;
             }
 
@@ -147,7 +158,7 @@ class StockService
         return $this->registerMovement(
             item: $item,
             location: $item->tenant->defaultLocation(),
-            type: StockMovementType::Purchase,
+            type: $type,
             quantity: $quantityInItemUnits,
             unitCost: $unitCost,
             user: $user,
@@ -209,15 +220,18 @@ class StockService
     }
 
     /**
-     * Entrada de compra vigente de una línea: movimiento purchase referenciado a la
-     * línea, que no es contramovimiento y no fue revertido por otro movimiento.
+     * Entrada vigente de una línea de compra: movimiento de compra o bonificación
+     * referenciado a la línea, que no es contramovimiento y no fue revertido por
+     * otro movimiento. Contempla los dos tipos para que un renglón que pasa de
+     * compra a bonificación (o al revés) revierta su entrada anterior en vez de
+     * duplicarla.
      */
     private function activePurchaseEntryFor(PurchaseLine $line): ?StockMovement
     {
         return StockMovement::query()
             ->where('reference_type', 'purchase_line')
             ->where('reference_id', $line->id)
-            ->where('type', StockMovementType::Purchase)
+            ->whereIn('type', [StockMovementType::Purchase->value, StockMovementType::Bonus->value])
             ->whereNull('reverses_movement_id')
             ->whereNotExists(function ($query) {
                 $query->selectRaw('1')

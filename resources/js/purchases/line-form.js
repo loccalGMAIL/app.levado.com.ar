@@ -34,6 +34,12 @@ window.purchaseLine = function purchaseLine(initial = {}) {
         percepcionRate: Number(initial.percepcionRate ?? 0),
         priceConversion: null,
 
+        // Renglón sin cargo: obsequio, promo o muestra de la distribuidora. Suma
+        // stock pero no imputa costo. Se propone solo cuando el precio es $0, y
+        // el usuario lo confirma o lo destilda.
+        isBonus: Boolean(initial.isBonus ?? false),
+        bonusTouched: false,
+
         /** Sufijo del label del campo de precio: «Precio por kg». */
         get unitLabel() {
             return this.unit || 'unidad';
@@ -56,6 +62,17 @@ window.purchaseLine = function purchaseLine(initial = {}) {
         },
 
         /**
+         * Un precio en cero es la firma de un obsequio, así que se pre-marca el
+         * tilde mientras el usuario no lo haya tocado. Una vez que decide a mano,
+         * su elección manda aunque después cambie el precio.
+         */
+        onPriceInput() {
+            if (! this.bonusTouched) {
+                this.isBonus = Number(this.price) === 0;
+            }
+        },
+
+        /**
          * Reposiciona el estado sin ofrecer conversión. Lo usa el modal de edición,
          * que recarga el renglón cada vez que se abre.
          */
@@ -67,6 +84,8 @@ window.purchaseLine = function purchaseLine(initial = {}) {
             this.ivaRate = parseFloat(line?.iva_rate ?? 0.21);
             this.percepcionRate = parseFloat(line?.percepcion_rate ?? 0);
             this.priceConversion = null;
+            this.isBonus = Boolean(line?.is_bonus ?? false);
+            this.bonusTouched = false;
         },
 
         onUnitChange(newUnit) {

@@ -5,6 +5,43 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.14] — 2026-09-01
+
+### Los productos sin cargo obligaban a elegir entre el stock y el costo
+
+Las distribuidoras mandan seguido mercadería de regalo: un obsequio por volumen, una promo, una muestra del producto nuevo. En la factura viene como un renglón más, pero a **$0**. Y ahí empezaba el problema: si se lo asociaba al insumo, el sistema hacía lo de siempre —tomar el precio del renglón como el costo nuevo— y le ponía **cero** al ingrediente. Ese cero se propagaba a todas las recetas que lo usan y les tiraba abajo el precio de venta.
+
+La salida que encontró el cliente fue dejar esos renglones **sin asociar**. Funciona para el costo, pero deja un agujero del otro lado: la mercadería está en el depósito y el sistema no la ve. El stock queda corto justo en los productos que más rotan, que son los que las distribuidoras bonifican.
+
+#### Agregado
+
+- **Tilde «Sin cargo» al asociar un renglón.** En *Asociar renglones* aparece junto al insumo elegido. Marcado, el renglón **suma al stock y no toca ningún costo**: ni el del insumo, ni el historial de precios, ni los precios de las recetas.
+- **Se propone solo cuando el precio es $0.** El renglón llega a la pantalla de asociación con el tilde ya puesto y un aviso *«Precio $0 — se propone como sin cargo»*. Siempre se puede destildar: hay facturas que ponen el precio y después descuentan el 100%, y ahí el precio real sí sirve.
+- **El mismo tilde en «Agregar renglón» y en el modal de edición.** Para cargar un obsequio a mano, o para corregir un renglón que ya estaba cargado sin tener que desasociarlo y volver a asociarlo.
+- **Badge violeta «Sin cargo»** en el detalle de la compra, en la tabla y en las tarjetas del celular, en lugar del check verde de «Aplicado». Verde significa *«se imputó un costo»*, y acá justamente no se imputó ninguno.
+- **Tipo de movimiento «Bonificación» en el kardex.** La ficha del insumo distingue de un vistazo lo que entró comprado de lo que entró de regalo.
+
+#### Cómo se comporta
+
+- **La entrada se valúa al costo vigente del insumo, no a cero.** Si entran 5 kg de harina de regalo y la harina vale $1.200 el kilo, la valuación de existencias sube $6.000. La mercadería en el depósito vale lo mismo se haya pagado o no; valuarla en cero haría que el total de existencias mienta hacia abajo.
+- **No pisa el «último costo de compra»** que muestra la ficha de existencias. Un obsequio no dice nada sobre lo que cuesta reponer el insumo.
+- **El total de la factura no cambia.** Un renglón a $0 aporta $0, como corresponde.
+- Si el renglón viene por unidad y el insumo se lleva en kilos o litros (*«ACEITE X 5 LTS»*), sigue pidiendo el divisor: sin saber cuánto trae el bulto no hay forma de saber cuánto stock entra. Es el único dato que hay que completar a mano.
+- Desasociar un renglón sin cargo revierte su entrada de stock y le saca la marca, igual que con cualquier otro renglón. Marcarlo como consumo personal también.
+- Un renglón que ya se había aplicado con precio y después se pasa a sin cargo **contramueve su entrada anterior** y registra la nueva como bonificación: no quedan dos entradas sumando la misma mercadería. El costo que se había imputado antes no se revierte, igual que al desasociar.
+
+#### Técnico
+
+- `purchase_lines.is_bonus` (boolean, default false). **No es un cuarto estado del renglón**: los tres de siempre —pendiente, consumo personal, aplicado— quedan intactos, y un renglón bonificado es un renglón *aplicado* cuya aplicación no imputó costo. Mantenerlo así evitó reescribir el índice de compras, el contador de completitud y `isResolved()`.
+- `StockMovementType::Bonus`. Tener tipo propio hace que `StockService::registerMovement()` **no** pise `stock_levels.unit_cost` sin tocar el servicio: esa escritura ya estaba condicionada a `Purchase`. `activePurchaseEntryFor()` pasó a buscar por los dos tipos, para que un renglón que cambia de compra a bonificación revierta su entrada en vez de duplicarla.
+- `PurchaseLineRecorder::apply()` ramifica sobre `is_bonus`: saltea el price log, el `update` del costo, la propagación a recetas y la alerta de salto de costo, y valúa el movimiento al `cost_per_unit` vigente del ítem. La aritmética de conversión de unidades y subdivisiones es la misma de siempre — depende de las cantidades, no del precio.
+- Nuevo parámetro `pkgQtyOverride` en `apply()`. Sin él las bonificaciones de unidades incompatibles quedaban sin stock: el camino que las resolvía (`applyWithCost()`) deriva cuánto trae el bulto como `precio ÷ costo`, y con precio $0 eso da cero.
+- La inferencia por precio cero vive en `storePending()`, que es por donde pasan los tres caminos de alta (escaneo con IA, alta manual y revisión previa). Lo que mande el formulario siempre gana sobre la inferencia.
+- `applyLineSuggestions()` no acumula los ítems bonificados en la lista de tocados: sin costo nuevo no hay nada que propagar, y acumularlos hacía recalcular recetas al pedo.
+- `tests/Feature/PurchaseLineBonusTest.php` (nuevo, 13 casos): stock sin costo, sin price log, sin propagación, valuación al costo vigente, el `unit_cost` del cache intacto, divisor explícito y su rechazo cuando falta, subdivisiones, inferencia por precio cero y su override, y los tres caminos de HTTP (asociar, desasociar, consumo personal, y el pasaje de aplicado a sin cargo).
+
+---
+
 ## [0.12.13] — 2026-08-11
 
 ### Dos fricciones chicas: entrar a ciegas y no saber de qué factura vino el stock

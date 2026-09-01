@@ -466,6 +466,7 @@ class PurchaseController extends Controller
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
             'pkg_qty' => ['nullable', 'numeric', 'min:0.001'],
             'exclusion_note' => ['nullable', 'string', 'max:255'],
+            'is_bonus' => ['nullable', 'boolean'],
         ]);
 
         $match = $validated['match'] ?? null;
@@ -492,6 +493,7 @@ class PurchaseController extends Controller
                     'cost_applied_at' => null,
                     'excluded_at' => null,
                     'exclusion_note' => null,
+                    'is_bonus' => false,
                 ]);
 
                 // Sin esto la próxima factura volvería a sugerir justo lo que
@@ -517,6 +519,7 @@ class PurchaseController extends Controller
                     'cost_applied_at' => null,
                     'excluded_at' => now(),
                     'exclusion_note' => $validated['exclusion_note'] ?? null,
+                    'is_bonus' => false,
                 ]);
 
                 // Se olvida el vínculo, pero NO se recuerda la exclusión: la tabla
@@ -548,16 +551,24 @@ class PurchaseController extends Controller
             : $tenant->packagings()->whereKey($id)->exists();
         abort_unless($belongs, 422);
 
+        $isBonus = $request->boolean('is_bonus');
+
         try {
-            DB::transaction(function () use ($line, $type, $id, $unitCost, $pkgQty) {
+            DB::transaction(function () use ($line, $type, $id, $unitCost, $pkgQty, $isBonus) {
                 // Asociar saca al renglón del estado "consumo personal", si venía de ahí.
                 $line->update([
                     'purchaseable_type' => $type,
                     'purchaseable_id' => (int) $id,
                     'excluded_at' => null,
                     'exclusion_note' => null,
+                    'is_bonus' => $isBonus,
                 ]);
-                if ($unitCost !== null) {
+                if ($isBonus) {
+                    // Sin cargo: no hay costo que imputar, pero sí cantidad que sumar.
+                    // El divisor viaja explícito porque con precio $0 no puede
+                    // derivarse del costo, que es lo que hace applyWithCost().
+                    $this->lineRecorder->apply($line, pkgQtyOverride: $pkgQty);
+                } elseif ($unitCost !== null) {
                     $this->lineRecorder->applyWithCost($line, $unitCost);
                 } else {
                     $this->lineRecorder->apply($line);
@@ -576,11 +587,13 @@ class PurchaseController extends Controller
             targetType: 'purchase_line',
             targetId: $line->id,
             action: 'purchase_line.matched',
-            payload: ['type' => $type, 'id' => (int) $id],
+            payload: ['type' => $type, 'id' => (int) $id, 'bonus' => $isBonus],
             tenantId: $purchase->tenant_id,
         );
 
-        return back()->with('status', 'Renglón asociado y costo actualizado.');
+        return back()->with('status', $isBonus
+            ? 'Renglón sin cargo: entró al stock sin modificar el costo.'
+            : 'Renglón asociado y costo actualizado.');
     }
 
     /**
@@ -609,10 +622,14 @@ class PurchaseController extends Controller
                 DB::transaction(function () use ($line, &$touchedIngredientIds, &$touchedPackagingIds) {
                     $item = $this->lineRecorder->apply($line, propagate: false);
 
-                    if ($item instanceof Ingredient) {
-                        $touchedIngredientIds[] = $item->id;
-                    } else {
-                        $touchedPackagingIds[] = $item->id;
+                    // Una bonificación no imputa costo, así que no hay nada que
+                    // propagar: acumularla haría recalcular recetas al pedo.
+                    if (! $line->isBonus()) {
+                        if ($item instanceof Ingredient) {
+                            $touchedIngredientIds[] = $item->id;
+                        } else {
+                            $touchedPackagingIds[] = $item->id;
+                        }
                     }
 
                     // Aceptar en masa también es una decisión humana. Sin esto la

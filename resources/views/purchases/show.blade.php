@@ -207,6 +207,11 @@
                                                 @if($line->exclusion_note) title="{{ $line->exclusion_note }}" @endif>
                                                 Personal
                                             </span>
+                                        @elseif($line->isApplied() && $line->isBonus())
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-700"
+                                                title="Obsequio o promoción: entró al stock el {{ $line->cost_applied_at->format('d/m/Y') }} sin modificar el costo del insumo.">
+                                                Sin cargo
+                                            </span>
                                         @elseif($line->isApplied())
                                             <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
                                                 <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -245,6 +250,7 @@
                                                 'unit_price' => round((float) $line->unit_price, 2),
                                                 'iva_rate' => $line->iva_rate,
                                                 'percepcion_rate' => $line->percepcion_rate,
+                                                'is_bonus' => $line->isBonus(),
                                             ]) }})"
                                             class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-corteza border border-corteza/30 rounded-md hover:bg-miga transition-colors">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
@@ -426,6 +432,13 @@
                                                     title="{{ $line->exclusion_note ?: 'Consumo personal — no es del negocio' }}">
                                                     Personal
                                                 </span>
+                                            @elseif($line->isApplied() && $line->isBonus())
+                                                {{-- Violeta y no verde: el renglón está resuelto pero no imputó ningún
+                                                     costo, que es justo lo que el verde significa en esta columna. --}}
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-700"
+                                                    title="Obsequio o promoción: entró al stock el {{ $line->cost_applied_at->format('d/m/Y') }} sin modificar el costo del insumo.">
+                                                    Sin cargo
+                                                </span>
                                             @elseif($line->isApplied())
                                                 <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium"
                                                     title="Costo imputado el {{ $line->cost_applied_at->format('d/m/Y') }}">
@@ -458,6 +471,7 @@
                                                             'unit_price' => round((float) $line->unit_price, 2),
                                                             'iva_rate' => $line->iva_rate,
                                                             'percepcion_rate' => $line->percepcion_rate,
+                                                'is_bonus' => $line->isBonus(),
                                                         ]) }})"
                                                         class="p-1 text-masa-madre hover:text-corteza transition-colors"
                                                         title="Editar todos los campos">
