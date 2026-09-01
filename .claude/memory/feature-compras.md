@@ -1,6 +1,6 @@
 ---
 name: feature-compras
-description: "Módulo de compras — tablas, flujos, servicios y estado de las fases"
+description: "Módulo de compras — tablas, flujos, servicios, estado de las fases y renglones sin cargo"
 metadata:
   node_type: memory
   type: project
@@ -24,6 +24,7 @@ Rama: `feature/compras` — versión 0.7.1
 - `purchaseable_type/id`: match con `ingredient` o `packaging` del catálogo (nullable = pendiente)
 - `iva_rate`: alícuota de IVA almacenada por renglón (0, 0.105, 0.21)
 - `cost_applied_at`: null = pendiente de imputar; filled = costo ya aplicado al insumo
+- `is_bonus` (boolean, default false, v0.12.14): renglón sin cargo — obsequio, promo o muestra. **No es un cuarto estado**: es un matiz del renglón *aplicado* (ver «Renglones sin cargo»)
 - **Precision fix:** `unit_price` y `subtotal` cambiados de `decimal(10,4)` a `decimal(14,4)` para soportar subtotales > $999.999 (ej.: 200 bolsas × $13.891 = $2.778.280)
 
 ## Servicios
@@ -288,3 +289,39 @@ Tabla de alias para autosugerir renglones personales recurrentes; reporte mensua
 **Ojo:** la memoria de vinculación de la v0.12.7 **no** cubre el primer punto. Recuerda a qué
 ítem del catálogo corresponde un texto, no que un texto sea consumo personal — `matchLine()`
 *olvida* el vínculo al excluir. Autosugerir exclusiones sigue siendo trabajo aparte.
+
+## Renglones sin cargo / bonificaciones (v0.12.14)
+
+**El problema:** las distribuidoras mandan mercadería de regalo, que en la factura viene a $0. Asociarla al insumo hacía que `apply()` imputara ese $0 como costo nuevo, lo propagara a todas las recetas y les tirara abajo el precio de venta. El cliente lo esquivaba dejando esos renglones **sin asociar**, y así la mercadería nunca entraba al stock.
+
+**La solución** es el espejo de «consumo personal»: aquel resuelve el renglón sin imputar **nada**; éste **sí suma stock y no toca el costo**.
+
+### Modelo
+
+`is_bonus` convive con `purchaseable_id` y `cost_applied_at`, y nunca con `excluded_at`. Los tres estados del renglón (pendiente / personal / aplicado) **no cambiaron**: un renglón bonificado es un renglón *aplicado* cuya aplicación no imputó costo. Mantenerlo así evitó reescribir el índice, el contador de resueltos y `isResolved()`. `PurchaseLine::isBonus()`.
+
+### Imputación
+
+`PurchaseLineRecorder::apply()` ramifica sobre `is_bonus`: saltea `applyIngredientCost()`/`applyPackagingCost()` completos (price log, `update` de `cost_per_unit`/`cost_per_package`, propagación y `raiseCostSpike`) y tampoco toca el ítem en memoria. La aritmética de conversión de unidades y subdivisiones es la misma de siempre: depende de las cantidades, no del precio.
+
+El movimiento se registra con `StockMovementType::Bonus` y se valúa al `cost_per_unit` **vigente del ítem**, no al $0 de la factura. Ver [[feature-existencias]].
+
+### El divisor tiene que venir del formulario
+
+Con unidades incompatibles (`u` → `kg`, «ACEITE X 5 LTS»), el camino normal es `applyWithCost()`, que deriva cuánto trae el bulto como `unit_price / unitCost`. **Con precio $0 eso da cero y la línea no registraba stock.** Por eso `apply()` tiene el parámetro `pkgQtyOverride`, que gana sobre el divisor recordado y sobre el parseado de la descripción; `matchLine()` se lo pasa desde el `pkg_qty` que el form ya enviaba. Las bonificaciones nunca pasan por `applyWithCost()`.
+
+### Auto-detección
+
+Vive en `storePending()` (`resolveBonus()`), que es por donde pasan los tres caminos de alta — escaneo con IA, alta manual y revisión previa —: un `unit_price` en cero pre-marca el renglón. **Lo que mande el formulario siempre gana** (hay facturas que ponen el precio y descuentan el 100%). En los modales el checkbox va precedido de un `<input type="hidden" name="is_bonus" value="0">`, porque un checkbox destildado no viaja y sin el 0 explícito el servidor volvería a inferir por precio.
+
+### UI
+
+- `purchases/match.blade.php`: tilde «Sin cargo» dentro del bloque de cálculo. El costo unitario se deshabilita, el divisor **sigue visible** cuando hace falta, y el `:disabled` del botón pasó a `(!isBonus && unitCost <= 0)` — una bonificación tiene costo 0 legítimamente. El campo viaja como hidden bindeado (`(isBonus && !isExcluded) ? 1 : 0`), no como checkbox con `name`: el bloque se oculta con `x-show` pero sigue en el DOM.
+- Badge **violeta** «Sin cargo» en `purchases/show` (tabla y cards) y en el renglón aplicado de `match`, en lugar del check verde. El verde significa «se imputó un costo», y acá no se imputó ninguno. Mismo violeta que el badge del kardex.
+- `add-line` y `edit-line` tienen el mismo tilde, con `onPriceInput()` en `purchaseLine()` (`resources/js/purchases/line-form.js`) que pre-marca mientras el usuario no lo haya tocado a mano.
+
+### Lo que NO hace
+
+- No revierte el costo ya imputado si un renglón aplicado pasa a sin cargo (sí contramueve su entrada de stock). Misma política que «Desasociar».
+- `applyLineSuggestions()` no acumula los ítems bonificados en la lista de tocados: sin costo nuevo no hay nada que propagar.
+- No hay backfill de los renglones históricos que el cliente dejó sin asociar. Se resuelven a mano desde la pantalla de asociación, que ahora los propone sola como sin cargo por venir a $0.

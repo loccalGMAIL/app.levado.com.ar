@@ -5,6 +5,7 @@ namespace App\Enums;
 enum StockMovementType: string
 {
     case Purchase = 'purchase';
+    case Bonus = 'bonus';
     case Adjustment = 'adjustment';
     case Count = 'count';
 
@@ -17,6 +18,7 @@ enum StockMovementType: string
     {
         return match ($this) {
             self::Purchase => 'Compra',
+            self::Bonus => 'Bonificación',
             self::Adjustment => 'Ajuste',
             self::Count => 'Recuento',
             self::Production => 'Producción',

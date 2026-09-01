@@ -134,12 +134,21 @@
                                             @endif
                                         </td>
                                         <td class="px-4 py-3">
-                                            <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
-                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                                </svg>
-                                                Aplicado {{ $line->cost_applied_at->format('d/m H:i') }}
-                                            </span>
+                                            @if($line->isBonus())
+                                                {{-- Violeta como en el kardex: el renglón está resuelto, pero no
+                                                     imputó costo, así que no le corresponde el verde de "aplicado". --}}
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700"
+                                                    title="Entró al stock el {{ $line->cost_applied_at->format('d/m/Y H:i') }} sin modificar el costo del insumo.">
+                                                    Sin cargo
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
+                                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    </svg>
+                                                    Aplicado {{ $line->cost_applied_at->format('d/m H:i') }}
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3">
                                             <form method="POST"
@@ -161,7 +170,8 @@
                                         {{ (float) $line->unit_price }},
                                         {{ Js::from($line->purchase_unit->value) }},
                                         {{ Js::from($line->raw_name ?? '') }},
-                                        {{ Js::from($rememberedPkgQty[$line->id] ?? null) }}
+                                        {{ Js::from($rememberedPkgQty[$line->id] ?? null) }},
+                                        {{ Js::from($line->isBonus()) }}
                                     )">
                                         <td class="px-4 py-3 align-top">
                                             <span class="text-xs text-corteza" title="{{ $line->raw_name }}">
@@ -177,6 +187,9 @@
                                                 @endif
                                             @elseif($line->isMatched())
                                                 <span class="block text-xs text-amber-600 mt-0.5">Sugerido por IA</span>
+                                            @endif
+                                            @if($line->isBonus())
+                                                <span class="block text-xs text-violet-600 mt-0.5">Precio $0 — se propone como sin cargo</span>
                                             @endif
                                         </td>
                                         <td class="px-4 py-3 text-right font-mono text-xs text-corteza align-top whitespace-nowrap">
@@ -194,6 +207,9 @@
                                                 <input type="hidden" name="unit_cost" x-bind:value="unitCost > 0 ? unitCost.toFixed(4) : ''">
                                                 {{-- Se recuerda para las próximas facturas de este proveedor. --}}
                                                 <input type="hidden" name="pkg_qty" x-bind:value="needsPkgQty && pkgQty > 0 ? pkgQty : ''">
+                                                {{-- Hidden y no un checkbox con name: el bloque de cálculo se oculta con
+                                                     x-show pero sigue en el DOM, y un tilde escondido no debe viajar. --}}
+                                                <input type="hidden" name="is_bonus" x-bind:value="(isBonus && !isExcluded) ? 1 : 0">
 
                                                 <div class="flex items-start gap-3 flex-wrap">
                                                     {{-- Select de insumo/descartable --}}
@@ -275,13 +291,15 @@
                                                         </template>
 
                                                         {{-- Costo por unidad del catálogo (siempre editable) --}}
-                                                        <div class="flex items-center gap-1 text-xs text-masa-madre">
+                                                        <div class="flex items-center gap-1 text-xs text-masa-madre"
+                                                            :class="{ 'opacity-40': isBonus }">
                                                             <span>=&nbsp;$</span>
                                                             <input type="number"
                                                                 x-model.number="unitCost"
+                                                                :disabled="isBonus"
                                                                 min="0" step="0.01"
                                                                 data-maxdecimals="4"
-                                                                class="w-28 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1 text-right font-mono">
+                                                                class="w-28 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1 text-right font-mono disabled:bg-miga disabled:cursor-not-allowed">
                                                             <span>/</span>
                                                             <span x-text="displayUnit || catalogUnit" class="font-medium text-corteza"></span>
                                                             <template x-if="subdivisions">
@@ -291,9 +309,17 @@
                                                             </template>
                                                         </div>
 
+                                                        {{-- Sin cargo: obsequio, promo o muestra de la distribuidora --}}
+                                                        <label class="flex items-center gap-1.5 text-xs text-masa-madre cursor-pointer select-none"
+                                                            title="Suma la mercadería al stock sin tocar el costo del insumo ni los precios de las recetas.">
+                                                            <input type="checkbox" x-model="isBonus"
+                                                                class="rounded border-gray-300 text-corteza focus:ring-horno">
+                                                            <span :class="{ 'text-corteza font-medium': isBonus }">Sin cargo</span>
+                                                        </label>
+
                                                         {{-- Botón --}}
                                                         <button type="submit"
-                                                            :disabled="!selected || incompatiblePkg || unitCost <= 0"
+                                                            :disabled="!selected || incompatiblePkg || (!isBonus && unitCost <= 0)"
                                                             class="px-3 py-1.5 bg-corteza text-white text-sm rounded hover:bg-horno transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
                                                             {{ $line->isMatched() ? 'Aplicar sugerencia' : 'Asociar' }}
                                                         </button>

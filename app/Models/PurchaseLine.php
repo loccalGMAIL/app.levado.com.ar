@@ -26,6 +26,7 @@ class PurchaseLine extends Model
         'iva_rate',
         'percepcion_rate',
         'subtotal',
+        'is_bonus',
         'cost_applied_at',
         'excluded_at',
         'exclusion_note',
@@ -39,6 +40,7 @@ class PurchaseLine extends Model
             'iva_rate' => 'decimal:4',
             'percepcion_rate' => 'decimal:2',
             'subtotal' => 'decimal:4',
+            'is_bonus' => 'boolean',
             'purchase_unit' => Unit::class,
             'cost_applied_at' => 'datetime',
             'excluded_at' => 'datetime',
@@ -73,6 +75,19 @@ class PurchaseLine extends Model
     public function isApplied(): bool
     {
         return $this->cost_applied_at !== null;
+    }
+
+    /**
+     * Renglón sin cargo: obsequio, promoción o muestra de la distribuidora.
+     *
+     * No es un cuarto estado sino un matiz del renglón aplicado: entra al stock
+     * como cualquier compra, pero no imputa precio al catálogo (ni price log,
+     * ni propagación a recetas, ni alerta de salto de costo). Por eso convive
+     * con purchaseable_id y cost_applied_at, y nunca con excluded_at.
+     */
+    public function isBonus(): bool
+    {
+        return (bool) $this->is_bonus;
     }
 
     /**

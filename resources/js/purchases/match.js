@@ -2,13 +2,19 @@ import { UNIT_ALIASES, UNIT_CONV } from '../units.js';
 
 // `remembered` viene de ProductLinkMemory: { selection: 'ingredient:42', pkgQty: 25 }.
 // Va atado a la selección porque el divisor es del ítem, no del renglón.
-window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, description, remembered = null) {
+window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, description, remembered = null, isBonus = false) {
     return {
         selected,
         unitPrice,
         purchaseUnit,
         description,
         remembered,
+
+        // Renglón sin cargo (obsequio/promo de la distribuidora): suma stock pero
+        // no imputa costo. Lo decide el usuario con el tilde; viene pre-marcado
+        // cuando el precio de la factura es $0. Sobrevive a onSelect() a propósito:
+        // cambiar de insumo no cambia el hecho de que el renglón fue gratis.
+        isBonus,
 
         catalogUnit: '',
         displayUnit: '',
