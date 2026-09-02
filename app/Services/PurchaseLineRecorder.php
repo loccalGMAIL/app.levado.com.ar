@@ -140,7 +140,7 @@ class PurchaseLineRecorder
                 $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
             }
 
-            $this->applyProductCost($item, $costPerUnit, (float) $stockQuantity);
+            $this->applyProductCost($item, $costPerUnit, (float) $stockQuantity, $line);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
@@ -218,7 +218,7 @@ class PurchaseLineRecorder
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id && $item->isResale(), 422, 'Producto de reventa no válido.');
             // Cantidad comprada en unidades del producto (mismo divisor que syncStockFromExplicitCost).
             $purchasedQty = $unitCost > 0 ? (float) $line->quantity_purchased * ((float) $line->unit_price / $unitCost) : 0.0;
-            $this->applyProductCost($item, $unitCost, $purchasedQty);
+            $this->applyProductCost($item, $unitCost, $purchasedQty, $line);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
@@ -291,32 +291,37 @@ class PurchaseLineRecorder
 
     /**
      * Un producto de reventa no interviene en el costo de ninguna receta, así que
-     * comprarlo solo actualiza su cost_per_unit (sin price log ni propagación ni alerta).
+     * comprarlo solo actualiza su cost_per_unit (sin price log ni propagación).
      * Según el método de costeo efectivo: último costo, o promedio ponderado entre el
      * stock existente (a su costo vigente) y lo comprado. El promedio se calcula ANTES
      * del alta de stock de esta compra (que ocurre después).
      */
-    private function applyProductCost(Product $item, float $costPerUnit, float $purchasedQty): void
+    private function applyProductCost(Product $item, float $costPerUnit, float $purchasedQty, PurchaseLine $line): void
     {
         $item->loadMissing('tenant');
         $tenant = $item->tenant;
         $default = CostingMethod::tryFrom((string) $tenant->getSetting('resale.costing_method', CostingMethod::LastCost->value))
             ?? CostingMethod::LastCost;
 
+        $oldCost = (float) $item->cost_per_unit;
         $newCost = $costPerUnit;
 
         if ($item->effectiveCostingMethod($default) === CostingMethod::WeightedAverage && $purchasedQty > 0) {
             $qty = (float) ($this->stock->levelFor($item, $tenant->defaultLocation())?->quantity ?? 0);
             if ($qty > 0) {
-                $oldCost = (float) $item->cost_per_unit;
                 $newCost = ($qty * $oldCost + $purchasedQty * $costPerUnit) / ($qty + $purchasedQty);
             }
         }
 
-        $item->update(['cost_per_unit' => round($newCost, 4)]);
+        $newCost = round($newCost, 4);
+        $item->update(['cost_per_unit' => $newCost]);
 
         // Cambió el costo → recomputar los precios del artículo que tengan política.
         $this->priceRecalculator->recompute($item);
+
+        // Se alerta contra el costo FINAL almacenado, no contra el de la factura:
+        // un promedio ponderado que amortigua el salto no es un salto de costo.
+        $this->notifications->raiseCostSpike($line, $item, $oldCost, $newCost);
     }
 
     /**

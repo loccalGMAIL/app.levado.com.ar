@@ -1,10 +1,12 @@
 <?php
 
 use App\Enums\CatalogItemType;
+use App\Enums\CostingMethod;
 use App\Enums\NotificationType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Notification;
+use App\Models\Product;
 use App\Models\StockLevel;
 use App\Models\Supplier;
 use App\Models\Tenant;
@@ -65,6 +67,87 @@ test('una compra que sube el costo por encima del umbral registra un salto de co
     $spike = Notification::where('tenant_id', $tenant->id)->where('type', NotificationType::CostSpike->value)->first();
     expect($spike)->not->toBeNull()
         ->and($spike->title)->toContain($ingredient->name);
+});
+
+test('comprar un artículo de reventa mucho más caro registra un salto de costo', function () {
+    [$user, $tenant] = ownerForAlerts();
+    $product = Product::factory()->for($tenant)->resale()->create([
+        'unit' => Unit::Unidad->value,
+        'cost_per_unit' => 100,
+    ]);
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create(['supplier_id' => $supplier->id, 'invoice_date' => '2026-07-19']);
+
+    $this->actingAs($user);
+    app(PurchaseLineRecorder::class)->record($purchase, [
+        'purchaseable_type' => CatalogItemType::Product->value,
+        'purchaseable_id' => $product->id,
+        'quantity_purchased' => 1,
+        'purchase_unit' => Unit::Unidad->value,
+        'unit_price' => 150, // +50% sobre 100
+    ]);
+
+    $spike = Notification::where('tenant_id', $tenant->id)->where('type', NotificationType::CostSpike->value)->first();
+
+    expect($spike)->not->toBeNull()
+        ->and($spike->title)->toContain($product->name)
+        // Antes el ternario dejaba a la reventa como 'packaging' y el enlace
+        // de la alerta llevaba al descartable con el mismo id.
+        ->and($spike->subject_type)->toBe(CatalogItemType::Product->value)
+        ->and($spike->subject_id)->toBe($product->id);
+});
+
+test('el promedio ponderado que amortigua el salto no registra alerta', function () {
+    [$user, $tenant] = ownerForAlerts();
+    $product = Product::factory()->for($tenant)->resale()->create([
+        'unit' => Unit::Unidad->value,
+        'cost_per_unit' => 100,
+        'costing_method' => CostingMethod::WeightedAverage->value,
+    ]);
+    StockLevel::create([
+        'tenant_id' => $tenant->id,
+        'location_id' => $tenant->defaultLocation()->id,
+        'stockable_type' => CatalogItemType::Product->value,
+        'stockable_id' => $product->id,
+        'quantity' => 90,
+        'unit_cost' => 100,
+    ]);
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create(['supplier_id' => $supplier->id, 'invoice_date' => '2026-07-19']);
+
+    $this->actingAs($user);
+    app(PurchaseLineRecorder::class)->record($purchase, [
+        'purchaseable_type' => CatalogItemType::Product->value,
+        'purchaseable_id' => $product->id,
+        'quantity_purchased' => 10,
+        'purchase_unit' => Unit::Unidad->value,
+        'unit_price' => 200, // +100% en la factura, pero diluido contra 90 u a $100
+    ]);
+
+    // (90 × 100 + 10 × 200) / 100 = 110 → +10%, bajo el umbral de 15%.
+    expect((float) $product->fresh()->cost_per_unit)->toBe(110.0)
+        ->and(Notification::where('type', NotificationType::CostSpike->value)->count())->toBe(0);
+});
+
+test('el primer costo de un artículo de reventa no dispara salto de costo', function () {
+    [$user, $tenant] = ownerForAlerts();
+    $product = Product::factory()->for($tenant)->resale()->create([
+        'unit' => Unit::Unidad->value,
+        'cost_per_unit' => 0,
+    ]);
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create(['supplier_id' => $supplier->id, 'invoice_date' => '2026-07-19']);
+
+    $this->actingAs($user);
+    app(PurchaseLineRecorder::class)->record($purchase, [
+        'purchaseable_type' => CatalogItemType::Product->value,
+        'purchaseable_id' => $product->id,
+        'quantity_purchased' => 1,
+        'purchase_unit' => Unit::Unidad->value,
+        'unit_price' => 100,
+    ]);
+
+    expect(Notification::where('type', NotificationType::CostSpike->value)->count())->toBe(0);
 });
 
 test('una compra por debajo del umbral no registra salto de costo', function () {

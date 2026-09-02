@@ -7,6 +7,7 @@ use App\Models\Ingredient;
 use App\Models\IngredientPriceLog;
 use App\Models\Notification;
 use App\Models\Packaging;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\StockLevel;
@@ -191,7 +192,7 @@ class NotificationService
      * Alerta de evento: el costo de un ítem subió por encima del umbral al
      * imputar una compra. Dedup por línea para no duplicar al re-imputar.
      */
-    public function raiseCostSpike(PurchaseLine $line, Ingredient|Packaging $item, float $oldCost, float $newCost): void
+    public function raiseCostSpike(PurchaseLine $line, Ingredient|Packaging|Product $item, float $oldCost, float $newCost): void
     {
         if ($oldCost <= 0) {
             return; // sin baseline previo no hay "salto"
@@ -217,7 +218,10 @@ class NotificationService
             title: "Salto de costo: {$item->name}",
             body: 'El costo subió '.$this->num($pct, 1)."% (de \${$this->num($oldCost)} a \${$this->num($newCost)}).",
             actionUrl: route('purchases.show', $line->purchase),
-            subjectType: $line->isIngredient() ? 'ingredient' : 'packaging',
+            // purchaseable_type ya guarda los tres valores de CatalogItemType, que
+            // es lo que espera stock.show. El ternario dejaba a la reventa como
+            // 'packaging' y el enlace de la alerta llevaba a otro ítem.
+            subjectType: $line->purchaseable_type,
             subjectId: $item->id,
             meta: ['old_cost' => $oldCost, 'new_cost' => $newCost, 'pct' => round($pct, 2)],
         );
