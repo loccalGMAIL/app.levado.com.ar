@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductPrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\ArticlePriceRecalculator;
 use App\Services\ProductCodeAssigner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -18,6 +19,7 @@ class ProductController extends Controller
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly ProductCodeAssigner $codeAssigner,
+        private readonly ArticlePriceRecalculator $priceRecalculator,
     ) {}
 
     public function index(): View
@@ -145,7 +147,23 @@ class ProductController extends Controller
         $this->authorize('update', $product);
 
         $product->update($this->normalizeByType($request->validated()));
+
+        // Se lee antes de assignIfMissing(): ese save() del código de barras
+        // reemplaza el changeset y wasChanged() dejaría de ver el costo.
+        // `type` y `recipe_id` entran porque normalizeByType() nulea cost_per_unit
+        // al pasar a elaborado: el costo cambia de origen aunque la columna no.
+        $costChanged = $product->wasChanged(['cost_per_unit', 'type', 'recipe_id']);
+
         $this->codeAssigner->assignIfMissing($product);
+
+        // Todo otro camino que mueve el costo ya recomputa los precios con política
+        // (Compras, el propagador de recetas, gastos fijos). La edición a mano era
+        // el único que no, y dejaba las celdas de margen/recargo desactualizadas.
+        if ($costChanged) {
+            // refresh() recarga también las relaciones ya cargadas: si cambió
+            // recipe_id, `recipe` en memoria todavía apunta a la anterior.
+            $this->priceRecalculator->recompute($product->refresh());
+        }
 
         $this->recorder->record(
             actor: $request->user(),
