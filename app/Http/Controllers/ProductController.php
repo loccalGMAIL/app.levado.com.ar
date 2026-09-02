@@ -31,7 +31,7 @@ class ProductController extends Controller
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
         $products = $tenant->products()
-            ->with(['recipe', 'category'])
+            ->with(['recipe', 'category', 'latestCostLog'])
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 

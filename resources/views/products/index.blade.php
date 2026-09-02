@@ -42,6 +42,22 @@
             openEdit(record) {
                 this.editing = record;
                 $dispatch('open-modal', 'product-edit');
+            },
+            // El historial se trae a demanda: son N filas por artículo y viajar en
+            // el payload del listado inflaría el HTML para algo que casi no se abre.
+            costHistory: { name: '', loading: false, failed: false, rows: [] },
+            async openCostHistory(url, name) {
+                this.costHistory = { name, loading: true, failed: false, rows: [] };
+                $dispatch('open-modal', 'product-cost-history');
+                try {
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (!res.ok) throw new Error(res.status);
+                    this.costHistory.rows = (await res.json()).rows;
+                } catch (e) {
+                    this.costHistory.failed = true;
+                } finally {
+                    this.costHistory.loading = false;
+                }
             }
         }">
 
@@ -158,7 +174,10 @@
                             </div>
                             <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
                                 <div>
-                                    <div class="text-masa-madre text-[11px]">Costo/u</div>
+                                    <div class="text-masa-madre text-[11px] flex items-center gap-1">
+                                        Costo/u
+                                        <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" />
+                                    </div>
                                     <div class="font-mono text-corteza">{{ $cost !== null ? '$ '.number_format($cost, 2, ',', '.') : '—' }}</div>
                                 </div>
                                 <div>
@@ -266,7 +285,10 @@
                                     {{ $product->unit->short() }}
                                 </td>
                                 <td class="px-4 py-3 text-right text-corteza font-mono">
-                                    {{ $cost !== null ? number_format($cost, 2, ',', '.') : '—' }}
+                                    <span class="inline-flex items-center gap-1.5 justify-end">
+                                        <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" class="font-sans" />
+                                        {{ $cost !== null ? number_format($cost, 2, ',', '.') : '—' }}
+                                    </span>
                                 </td>
                                 <td class="px-4 py-3 text-right text-corteza font-mono">
                                     @can('manage-costs')
@@ -347,6 +369,7 @@
         @can('manage-costs')
             @include('products.modals.create')
             @include('products.modals.edit')
+            @include('products.modals.cost-history')
 
             <x-product-categories-modal
                 name="product-categories"

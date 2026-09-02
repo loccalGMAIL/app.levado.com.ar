@@ -93,9 +93,10 @@ class StockController extends Controller
         $item = $this->resolveStockable($type, $id);
         $this->authorize('view', $item);
 
-        // El elaborado valúa con Product::currentCost() (deriva de la receta): eager-load para no lazy-loadear.
+        // El elaborado valúa con Product::currentCost() (deriva de la receta) y la
+        // etiqueta de origen mira el último log de costo: eager-load para no lazy-loadear.
         if ($item instanceof Product) {
-            $item->loadMissing('recipe');
+            $item->loadMissing('recipe', 'latestCostLog');
         }
 
         $location = $this->resolveLocation($tenant);

@@ -21,6 +21,7 @@ use App\Http\Controllers\PackagingCostController;
 use App\Http\Controllers\PriceListController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductCostHistoryController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
@@ -96,6 +97,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::get('products/matrix', [ProductController::class, 'matrix'])->name('products.matrix');
+    Route::get('products/{product}/cost-history', [ProductCostHistoryController::class, 'index'])->name('products.cost-history');
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::get('stock/{type}/{id}', [StockController::class, 'show'])

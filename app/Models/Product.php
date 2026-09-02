@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Product extends Model
 {
@@ -148,6 +149,12 @@ class Product extends Model
     public function costLogs(): HasMany
     {
         return $this->hasMany(ProductCostLog::class);
+    }
+
+    /** Última entrada del historial de costo, para etiquetar la procedencia sin N+1. */
+    public function latestCostLog(): HasOne
+    {
+        return $this->hasOne(ProductCostLog::class)->latestOfMany('recorded_at');
     }
 
     public function stockLevels(): HasMany
