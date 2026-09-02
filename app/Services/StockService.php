@@ -84,6 +84,23 @@ class StockService
     }
 
     /**
+     * Costo unitario vigente del ítem, para valuar un movimiento manual.
+     *
+     * Un artículo ELABORADO tiene cost_per_unit en null (su costo vive en la
+     * receta): leer la columna directo asentaba cada recuento y cada ajuste en
+     * el ledger a $0. Product::currentCost() es la única puerta al costo del
+     * artículo; los insumos no la tienen y siguen leyendo su columna.
+     */
+    private function unitCostOf(Ingredient|Packaging|Product $item): float
+    {
+        return $item instanceof Product
+            // Carga explícita: StockController resuelve el ítem sin eager-loadear
+            // la receta y preventLazyLoading() haría estallar la lectura.
+            ? ($item->loadMissing('recipe')->currentCost() ?? 0.0)
+            : (float) $item->cost_per_unit;
+    }
+
+    /**
      * Recuento físico: registra la diferencia entre lo contado y el cache.
      * Devuelve null si no hay diferencia.
      */
@@ -101,7 +118,7 @@ class StockService
             location: $location,
             type: StockMovementType::Count,
             quantity: $delta,
-            unitCost: (float) $item->cost_per_unit,
+            unitCost: $this->unitCostOf($item),
             reason: 'Recuento físico '.now()->format('d/m/Y'),
             user: $user,
         );
@@ -117,7 +134,7 @@ class StockService
             location: $location,
             type: StockMovementType::Adjustment,
             quantity: $signedQuantity,
-            unitCost: (float) $item->cost_per_unit,
+            unitCost: $this->unitCostOf($item),
             reason: $reason,
             user: $user,
         );
