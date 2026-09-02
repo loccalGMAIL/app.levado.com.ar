@@ -1,7 +1,9 @@
 <?php
 
 use App\Enums\StockMovementType;
+use App\Models\Packaging;
 use App\Models\Product;
+use App\Models\Recipe;
 use App\Models\Tenant;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -140,6 +142,66 @@ test('el match muestra el optgroup de productos de reventa', function () {
     expect($html)->toContain('Productos (reventa)')
         ->toContain('GaseosaMatch')
         ->not->toContain('PanNoComprable');
+});
+
+// --- Aplicar en masa: la reventa no interviene en recetas ---
+
+test('aplicar sugerencias en masa con un renglón de reventa no propaga recetas', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+
+    // Descartable y artículo comparten id (tablas distintas, ambas arrancan en 1).
+    $packaging = Packaging::factory()->for($tenant)->create(['cost_per_unit' => 50]);
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'u', 'cost_per_unit' => 0]);
+    expect($product->id)->toBe($packaging->id);
+
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 10]);
+    $recipe->packagingLines()->create(['packaging_id' => $packaging->id, 'quantity' => 1]);
+    // Centinela: si la receta se propaga, el cache se recalcula y pisa este valor.
+    $recipe->updateQuietly(['unit_cost' => 999]);
+
+    $purchase = stockPurchaseFor($tenant);
+    stockLineFor($purchase, [
+        'purchaseable_type' => 'product',
+        'purchaseable_id' => $product->id,
+        'purchase_unit' => 'u',
+        'quantity_purchased' => 4,
+        'unit_price' => 25,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('purchases.apply-suggestions', $purchase))
+        ->assertRedirect();
+
+    expect((float) $product->refresh()->cost_per_unit)->toBe(25.0)
+        ->and((float) $recipe->refresh()->unit_cost)->toBe(999.0);
+});
+
+test('la vista de match muestra el artículo de reventa aplicado, no un descartable ajeno', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+
+    $packaging = Packaging::factory()->for($tenant)->create([
+        'name' => 'MapleAjeno',
+        'cost_per_unit' => 50,
+        'subdivisions' => 12,
+        'subdivision_label' => 'huevo',
+    ]);
+    $product = Product::factory()->for($tenant)->resale()->create(['name' => 'GaseosaAplicada', 'unit' => 'u']);
+    expect($product->id)->toBe($packaging->id);
+
+    $purchase = stockPurchaseFor($tenant);
+    $line = stockLineFor($purchase, [
+        'purchaseable_type' => 'product',
+        'purchaseable_id' => $product->id,
+        'purchase_unit' => 'u',
+        'quantity_purchased' => 4,
+        'unit_price' => 25,
+    ]);
+    lineRecorder()->apply($line);
+
+    $html = $this->actingAs($user)->get(route('purchases.match', $purchase))->assertOk()->getContent();
+
+    expect($html)->toContain('GaseosaAplicada')
+        ->not->toContain('12 huevo / envase');
 });
 
 // --- Aislamiento ---

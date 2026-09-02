@@ -102,23 +102,21 @@
                                         $line->isMatched()  => "{$line->purchaseable_type}:{$line->purchaseable_id}",
                                         default             => '',
                                     };
-                                    $matchedName = null;
-                                    if ($line->purchaseable_type === 'ingredient') {
-                                        $matchedName = $ingredients->firstWhere('id', $line->purchaseable_id)?->name;
-                                    } elseif ($line->purchaseable_type === 'packaging') {
-                                        $matchedName = $packagings->firstWhere('id', $line->purchaseable_id)?->name;
-                                    } elseif ($line->purchaseable_type === 'product') {
-                                        $matchedName = $products->firstWhere('id', $line->purchaseable_id)?->name;
-                                    }
+                                    // Una sola resolución para las tres colecciones: los ids se repiten
+                                    // entre tablas, así que elegir la colección por tipo no es opcional.
+                                    $matchedItem = match ($line->purchaseable_type) {
+                                        'ingredient' => $ingredients->firstWhere('id', $line->purchaseable_id),
+                                        'packaging'  => $packagings->firstWhere('id', $line->purchaseable_id),
+                                        'product'    => $products->firstWhere('id', $line->purchaseable_id),
+                                        default      => null,
+                                    };
+                                    $matchedName = $matchedItem?->name;
+                                    // La reventa no se subdivide: se compra y se vende en la misma unidad.
+                                    $matchedSubdivisions = $line->isProduct() ? null : $matchedItem?->subdivisions;
                                 @endphp
 
                                 @if($line->isApplied())
                                     {{-- Renglón ya aplicado — estático --}}
-                                    @php
-                                        $appliedItem = $line->isIngredient()
-                                            ? $ingredients->firstWhere('id', $line->purchaseable_id)
-                                            : $packagings->firstWhere('id', $line->purchaseable_id);
-                                    @endphp
                                     <tr class="bg-green-50/40">
                                         <td class="px-4 py-3 text-corteza text-xs" title="{{ $line->raw_name }}">
                                             {{ \Illuminate\Support\Str::limit($line->raw_name ?? '—', 65) }}
@@ -129,9 +127,9 @@
                                         </td>
                                         <td class="px-4 py-3 font-medium text-corteza text-sm">
                                             {{ $matchedName ?? '—' }}
-                                            @if($appliedItem?->subdivisions)
+                                            @if($matchedSubdivisions)
                                                 <span class="block text-[11px] font-normal text-masa-madre">
-                                                    {{ $appliedItem->subdivisions }} {{ $appliedItem->subdivision_label ?? 'u' }} / envase
+                                                    {{ $matchedSubdivisions }} {{ $matchedItem->subdivision_label ?? 'u' }} / envase
                                                 </span>
                                             @endif
                                         </td>

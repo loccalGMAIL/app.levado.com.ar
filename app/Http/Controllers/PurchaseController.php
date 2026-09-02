@@ -10,6 +10,7 @@ use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseLineRequest;
 use App\Http\Requests\UpdatePurchaseRequest;
 use App\Models\Ingredient;
+use App\Models\Packaging;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Tenant;
@@ -630,9 +631,12 @@ class PurchaseController extends Controller
 
                     if ($item instanceof Ingredient) {
                         $touchedIngredientIds[] = $item->id;
-                    } else {
+                    } elseif ($item instanceof Packaging) {
                         $touchedPackagingIds[] = $item->id;
                     }
+                    // Un artículo de reventa no interviene en ninguna receta: no
+                    // se acumula en ninguna lista. Antes caía en el else y su id
+                    // se propagaba como si fuera el del descartable homónimo.
 
                     // Aceptar en masa también es una decisión humana. Sin esto la
                     // memoria sólo aprendería de las correcciones una por una, y

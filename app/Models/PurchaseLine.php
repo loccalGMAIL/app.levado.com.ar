@@ -55,11 +55,6 @@ class PurchaseLine extends Model
         return $this->morphTo();
     }
 
-    public function product(): BelongsTo
-    {
-        return $this->belongsTo(Product::class, 'purchaseable_id');
-    }
-
     public function isIngredient(): bool
     {
         return $this->purchaseable_type === CatalogItemType::Ingredient->value;

@@ -129,7 +129,12 @@ class PurchaseLineRecorder
             $stockQuantity = $this->converter->convert((float) $line->quantity_purchased, $purchaseUnit, $item->unit);
 
             if ($costPerUnit === null) {
-                $pkgQty = $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
+                // Mismo orden que la rama de ingrediente: el divisor confirmado a
+                // mano en una factura anterior gana sobre el que se adivina de la
+                // descripción. Sin esto, "Aplicar N sugerencias" saltea siempre los
+                // renglones de reventa de unidades incompatibles.
+                $pkgQty = $this->rememberedPkgQty($line)
+                    ?? $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
                 abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del producto.');
                 $costPerUnit = (float) $line->unit_price / $pkgQty;
                 $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
