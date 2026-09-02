@@ -138,9 +138,16 @@ class Product extends Model
         return $this->hasMany(ProductPrice::class);
     }
 
+    /** Historial del precio de VENTA. Ojo: costLogs() es el del costo. */
     public function priceLogs(): HasMany
     {
         return $this->hasMany(ProductPriceLog::class);
+    }
+
+    /** Historial del COSTO (sólo reventa: el del elaborado vive en la receta). */
+    public function costLogs(): HasMany
+    {
+        return $this->hasMany(ProductCostLog::class);
     }
 
     public function stockLevels(): HasMany

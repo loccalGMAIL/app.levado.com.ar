@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CostLogSource;
 use App\Enums\ProductType;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
@@ -129,6 +130,7 @@ class ProductController extends Controller
 
         $product = $tenant->products()->create($data);
         $this->codeAssigner->assignIfMissing($product);
+        $this->logManualCost($product);
 
         $this->recorder->record(
             actor: $request->user(),
@@ -153,8 +155,13 @@ class ProductController extends Controller
         // `type` y `recipe_id` entran porque normalizeByType() nulea cost_per_unit
         // al pasar a elaborado: el costo cambia de origen aunque la columna no.
         $costChanged = $product->wasChanged(['cost_per_unit', 'type', 'recipe_id']);
+        $costValueChanged = $product->wasChanged('cost_per_unit');
 
         $this->codeAssigner->assignIfMissing($product);
+
+        if ($costValueChanged) {
+            $this->logManualCost($product);
+        }
 
         // Todo otro camino que mueve el costo ya recomputa los precios con política
         // (Compras, el propagador de recetas, gastos fijos). La edición a mano era
@@ -196,6 +203,25 @@ class ProductController extends Controller
         $label = $product->active ? 'activado' : 'desactivado';
 
         return back()->with('status', "Producto {$label}.");
+    }
+
+    /**
+     * Deja rastro de un costo tipeado a mano. Sólo para reventa: el costo del
+     * elaborado vive en la receta y su historial se reconstruye desde los logs
+     * de precio de los insumos.
+     */
+    private function logManualCost(Product $product): void
+    {
+        if (! $product->isResale() || $product->cost_per_unit === null) {
+            return;
+        }
+
+        $product->costLogs()->create([
+            'tenant_id' => $product->tenant_id,
+            'cost_per_unit' => $product->cost_per_unit,
+            'source' => CostLogSource::Manual,
+            'recorded_at' => now(),
+        ]);
     }
 
     /**

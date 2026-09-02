@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Enums\CostingMethod;
+use App\Enums\CostLogSource;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
 use App\Models\Product;
+use App\Models\ProductCostLog;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use Illuminate\Support\Facades\DB;
@@ -291,7 +293,8 @@ class PurchaseLineRecorder
 
     /**
      * Un producto de reventa no interviene en el costo de ninguna receta, así que
-     * comprarlo solo actualiza su cost_per_unit (sin price log ni propagación).
+     * comprarlo actualiza su cost_per_unit sin propagar a ninguna receta, pero sí
+     * deja historial (product_cost_logs) y evalúa la alerta de salto de costo.
      * Según el método de costeo efectivo: último costo, o promedio ponderado entre el
      * stock existente (a su costo vigente) y lo comprado. El promedio se calcula ANTES
      * del alta de stock de esta compra (que ocurre después).
@@ -315,6 +318,22 @@ class PurchaseLineRecorder
 
         $newCost = round($newCost, 4);
         $item->update(['cost_per_unit' => $newCost]);
+
+        // Keyed por línea: apply() puede volver a correr sobre el mismo renglón
+        // (recompute() al reabrir una factura) y appendear duplicaría el historial.
+        // Mismo contrato de idempotencia que StockService::syncPurchaseLineEntry().
+        // tenant_id explícito: este servicio también corre en artisan y en tests,
+        // donde no hay Tenant bindeado y el trait dejaría la columna en null.
+        ProductCostLog::updateOrCreate(
+            ['purchase_line_id' => $line->id],
+            [
+                'tenant_id' => $item->tenant_id,
+                'product_id' => $item->id,
+                'cost_per_unit' => $newCost,
+                'source' => CostLogSource::Purchase,
+                'recorded_at' => now(),
+            ],
+        );
 
         // Cambió el costo → recomputar los precios del artículo que tengan política.
         $this->priceRecalculator->recompute($item);
