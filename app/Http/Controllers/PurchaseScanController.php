@@ -73,6 +73,7 @@ class PurchaseScanController extends Controller
                 $mime,
                 $ingredients,
                 $packagings,
+                $products,
             );
         } catch (\Throwable $e) {
             Storage::disk('local')->delete($path);
