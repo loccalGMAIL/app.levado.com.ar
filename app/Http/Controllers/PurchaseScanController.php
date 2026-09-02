@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CatalogItemType;
+use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Http\Requests\StoreScannedPurchaseRequest;
 use App\Models\Purchase;
@@ -50,9 +51,12 @@ class PurchaseScanController extends Controller
 
         $ingredients = $tenant->ingredients()->active()->orderBy('name')->get();
         $packagings = $tenant->packagings()->active()->orderBy('name')->get();
+        $products = $tenant->products()->active()->where('type', ProductType::Resale->value)->orderBy('name')->get();
 
-        if ($ingredients->isEmpty() && $packagings->isEmpty()) {
-            return back()->with('error', 'Primero cargá tus insumos o descartables para poder asociar los ítems de la factura.');
+        // Un negocio que sólo revende (kiosco) también tiene catálogo con el que
+        // asociar los renglones: antes el escaneo le quedaba vedado.
+        if ($ingredients->isEmpty() && $packagings->isEmpty() && $products->isEmpty()) {
+            return back()->with('error', 'Primero cargá tus insumos, descartables o artículos de reventa para poder asociar los ítems de la factura.');
         }
 
         $contents = (string) file_get_contents($file->getRealPath());
@@ -107,6 +111,7 @@ class PurchaseScanController extends Controller
             // inactivo), y sin su nombre el hint quedaría vacío.
             'ingredientNames' => $tenant->ingredients()->pluck('name', 'id'),
             'packagingNames' => $tenant->packagings()->pluck('name', 'id'),
+            'productNames' => $tenant->products()->where('type', ProductType::Resale->value)->pluck('name', 'id'),
         ]);
     }
 
@@ -120,6 +125,8 @@ class PurchaseScanController extends Controller
         $imagePath = $this->safeImagePath($data['invoice_image_path'] ?? null, $tenant);
         $ingredientIds = $tenant->ingredients()->pluck('id')->all();
         $packagingIds = $tenant->packagings()->pluck('id')->all();
+        // Sólo reventa: PurchaseLineRecorder::apply() rechaza los elaborados.
+        $productIds = $tenant->products()->where('type', ProductType::Resale->value)->pluck('id')->all();
 
         // Keep only the rows the user marked to import and that have amounts.
         $rows = collect($data['lines'] ?? [])
@@ -142,7 +149,7 @@ class PurchaseScanController extends Controller
             $rows->pluck('raw_name')->all(),
         );
 
-        $purchase = DB::transaction(function () use ($tenant, $data, $imagePath, $rows, $ingredientIds, $packagingIds, $recalled) {
+        $purchase = DB::transaction(function () use ($tenant, $data, $imagePath, $rows, $ingredientIds, $packagingIds, $productIds, $recalled) {
             $purchase = $tenant->purchases()->create([
                 'supplier_id' => $data['supplier_id'],
                 'invoice_number' => $data['invoice_number'] ?? null,
@@ -159,7 +166,7 @@ class PurchaseScanController extends Controller
 
                 [$type, $id] = $hit !== null
                     ? [$hit['purchaseable_type'], $hit['purchaseable_id']]
-                    : $this->validSuggestion($row, $ingredientIds, $packagingIds);
+                    : $this->validSuggestion($row, $ingredientIds, $packagingIds, $productIds);
 
                 $this->lineRecorder->storePending($purchase, [
                     'raw_name' => $row['raw_name'] ?? null,
@@ -228,15 +235,20 @@ class PurchaseScanController extends Controller
      * @param  array<string, mixed>  $row
      * @param  array<int, int>  $ingredientIds
      * @param  array<int, int>  $packagingIds
+     * @param  array<int, int>  $productIds  Sólo reventa: apply() rechaza los elaborados.
      * @return array{0: ?string, 1: ?int}
      */
-    private function validSuggestion(array $row, array $ingredientIds, array $packagingIds): array
+    private function validSuggestion(array $row, array $ingredientIds, array $packagingIds, array $productIds): array
     {
         $type = CatalogItemType::tryFrom((string) ($row['matched_type'] ?? ''));
         $id = is_numeric($row['matched_id'] ?? null) ? (int) $row['matched_id'] : null;
 
-        $valid = ($type === CatalogItemType::Ingredient && in_array($id, $ingredientIds, true))
-            || ($type === CatalogItemType::Packaging && in_array($id, $packagingIds, true));
+        $valid = match ($type) {
+            CatalogItemType::Ingredient => in_array($id, $ingredientIds, true),
+            CatalogItemType::Packaging => in_array($id, $packagingIds, true),
+            CatalogItemType::Product => in_array($id, $productIds, true),
+            null => false,
+        };
 
         return $valid ? [$type->value, $id] : [null, null];
     }

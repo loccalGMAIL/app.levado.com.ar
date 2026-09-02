@@ -218,12 +218,12 @@
                                 <tbody class="divide-y divide-miga">
                                     @foreach($draft['lines'] as $i => $line)
                                         @php
-                                            $suggLabel = null;
-                                            if (($line['matched_type'] ?? null) === 'ingredient') {
-                                                $suggLabel = $ingredientNames[$line['matched_id']] ?? null;
-                                            } elseif (($line['matched_type'] ?? null) === 'packaging') {
-                                                $suggLabel = $packagingNames[$line['matched_id']] ?? null;
-                                            }
+                                            $suggLabel = match ($line['matched_type'] ?? null) {
+                                                'ingredient' => $ingredientNames[$line['matched_id']] ?? null,
+                                                'packaging'  => $packagingNames[$line['matched_id']] ?? null,
+                                                'product'    => $productNames[$line['matched_id']] ?? null,
+                                                default      => null,
+                                            };
                                             $rawQty   = old("lines.$i.quantity_purchased", $line['quantity']);
                                             $rawPrice = old("lines.$i.unit_price", $line['unit_price']);
                                             $initQty   = is_numeric($rawQty)   ? (float) $rawQty   : 0;
