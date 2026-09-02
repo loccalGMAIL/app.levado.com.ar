@@ -123,21 +123,49 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   backfill `products:assign-codes` (`--tenant`, `--dry-run`). `Ean13GeneratorTest` (3) + `AssignProductCodesTest` (6).
   Queda como base del futuro POS/lector (decisión: código compartido por negocio, ver [[decision-multi-sucursal]]).
 
-## P4 — reestructurar Producción (PRÓXIMO, sin spec definida)
-Etapas 1–3 (catálogo, stock, compra reventa, **Producción 3A/3B**) + Fases A/B **cerradas**. P4 quedó como titular
-"reestructurar Producción sobre el modelo article-céntrico" pero **sin alcance concreto**. Al plantearlo (01/09/2026)
-el usuario **no eligió** todavía (dejó la decisión para la próxima sesión). Direcciones candidatas surgidas (se pueden
-combinar):
-1. **Valuación del elaborado por producción** — que fabricar alimente el costo del artículo (promedio ponderado
-   producido + comprado). Cierra la inconsistencia actual: `ProductionService::produce()` calcula `productions.unit_cost`
-   (= costo del BOM explotado / cantidad) y lo pone en el movimiento, pero **NO pisa `stock_levels.unit_cost`** (solo las
-   compras lo hacen). Es lo más alineado con "el Artículo es dueño del costo".
-2. **Semi-elaborados stockeables** — hoy las sub-recetas son **siempre phantom** (`RecipeExploder` las explota al vuelo).
-   Poder producir/stockear intermedios (ej. masa madre) y consumirlos en otras producciones → BOM multinivel real.
-   (Ya anotado como "mejora futura" en las decisiones de diseño.)
-3. **Órdenes de producción / planificación** — pasar de "producir ahora" a planificar/batchear con ciclo de estados.
-4. **Mermas / rendimiento real** — registrar rendimiento real vs teórico y ajustar el costo del lote.
-Después de P4: **Ventas / POS** (usará el EAN-13 y la política de precio).
+## P4 — origen del costo + la reventa de primera clase ✅ (02/09/2026)
+P4 **no** terminó siendo "reestructurar Producción". Al revisar el código con el usuario quedó claro que el problema
+real era otro: **el costo vive en dos columnas con dos escritores, y el lado de la reventa nunca se completó**.
+
+**Decisiones tomadas** (no re-litigar):
+1. **Dos columnas, una puerta.** `recipes.unit_cost` (elaborado, lo escribe `RecipeCostPropagator`) y
+   `products.cost_per_unit` (reventa, lo escribe `PurchaseLineRecorder` + el form) **se quedan como están**: no se
+   consolidan ni se migran. `Product::currentCost()` es la única lectura del costo de un artículo.
+2. **Alcance completo en compras de reventa**, incluido el extractor de IA.
+3. **Valuación por producción FUERA de alcance.** `StockService:76` no se tocó: `ProductionService` sigue escribiendo
+   su propio `unit_cost` sin pisar `stock_levels.unit_cost`.
+
+**Lo que se hizo** (8 commits, `7eab2bf`→`3453b56`, 708 tests verdes):
+- **La reventa era ciudadano de segunda en toda la plomería de Compras** — el código estaba escrito para dos tipos y
+  el producto caía en el `else`: `ProductLinkMemory::ownedIds()` validaba ids de producto contra `packagings`;
+  `apply()` no consultaba `rememberedPkgQty()` en la rama de producto; `applyLineSuggestions()` lo acumulaba en
+  `$touchedPackagingIds` y propagaba recetas ajenas; `match.blade` mostraba el envase de un descartable homónimo.
+- `product_cost_logs` + `CostLogSource` + `x-cost-source-badge` + endpoint `products.cost-history`.
+- Alerta de salto de costo para reventa (`raiseCostSpike` acepta `Product`; `subjectType` sale de `purchaseable_type`).
+- El escaneo acepta reventa (regla del request desde el enum, `validSuggestion` de tres ramas, guard de `scan()`).
+- La IA sugiere reventa **sólo si el negocio tiene** artículos de reventa (catálogo condicional + fail-closed).
+- **Bug encontrado de paso**: `applyCount()`/`registerAdjustment()` valuaban con `$item->cost_per_unit`, que en un
+  elaborado es NULL → cada recuento y ajuste se asentaba en el ledger **a $0**. Mismo bug que P1 arregló del lado de
+  la lectura y dejó vivo del lado de la escritura. Helper `StockService::unitCostOf()`.
+
+**Gotchas que costaron tiempo** (ver [[feedback-crud-modals]] para los del modal):
+- `wasChanged()` refleja el **último** save: en `ProductController::update()` hay que leerlo **antes** de
+  `assignIfMissing()`, que guarda el EAN-13 y reemplaza el changeset.
+- `Product::priceLogs()` ya existía y es el precio de **VENTA**. El historial de costo va como `costLogs()`.
+- `currentCostSource()` responde "de qué columna" (derivado del `type`), **no** la procedencia: para una reventa con
+  costo tipeado a mano igual dice `'compra'`. La procedencia sale del último `ProductCostLog`. Son dos preguntas.
+- El promedio ponderado contra `defaultLocation()` **no es un bug**: es coherente con dónde cae el stock de la compra
+  y con [[decision-multi-sucursal]] (costo por-negocio). Tiene comentario en el código para que no lo "arreglen".
+
+## Próximo — Producción (las direcciones siguen sobre la mesa)
+Ninguna se implementó; siguen siendo candidatas y se pueden combinar:
+1. **Valuación del elaborado por producción** — que fabricar alimente el costo del artículo. `productions.unit_cost`
+   ya se calcula y se snapshotea en el movimiento; falta propagarlo. Ojo: hoy `stock_levels.unit_cost` **no lo lee
+   nadie**, así que sin un lector el trabajo no cambia ninguna pantalla.
+2. **Semi-elaborados stockeables** — las sub-recetas son siempre phantom (`RecipeExploder`). BOM multinivel real.
+3. **Órdenes de producción / planificación** — ciclo de estados en vez de "producir ahora".
+4. **Mermas / rendimiento real** — depende de que exista (1) para tener dónde impactar el ajuste.
+Después: **Ventas / POS** (usará el EAN-13 y la política de precio).
 
 ## ⚠️ Deploy de v0.13.0 — ORDEN (o las listas de precios se ven vacías)
 El precio vive en `product_prices` (**fuente única** de toda la UI de precios). La migración de backfill (`000004`)
@@ -145,7 +173,8 @@ corre dentro de `migrate` con la tabla `products` recién creada (vacía) → co
 **después** de crear los productos. **Secuencia**: `migrate` → `npm run build` → `products:from-recipes` →
 **`products:backfill-prices`** (idempotente, copia `recipe_prices→product_prices`; `BackfillProductPricesTest` 6) →
 `products:assign-codes` (EAN-13 interno a los que no tengan código; idempotente) → `products:refresh-prices` →
-clasificar elaborados por categoría "se produce". Los precios **nunca se pierden**: quedan
+clasificar elaborados por categoría "se produce". (P4 sumó la tabla `product_cost_logs`: la crea el mismo `migrate`
+y arranca vacía, no necesita backfill — se puebla desde la primera compra o edición de costo posterior.) Los precios **nunca se pierden**: quedan
 en `recipe_prices` (latente) hasta que `backfill-prices` los copia. Detectado el 26/08/2026 al ensayar el deploy con
 la BD de producción (`recipe_prices`: 460, `product_prices` sin poblar tras `migrate`).
 

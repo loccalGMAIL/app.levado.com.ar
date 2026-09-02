@@ -30,10 +30,16 @@ OPERATIVO" del dashboard (ahora **"Alertas"**) y agrega un menú **Administraci�
 ## Detección de cada tipo
 - **LowStock**: recorre `stock_levels` con `hasAlert()` (bajo mínimo o negativo, ya existía en
   [[feature-existencias]]). action_url → kardex (`stock.show`).
-- **CostSpike**: hook en `PurchaseLineRecorder::applyIngredientCost/applyPackagingCost` — captura
+- **CostSpike**: hook en `PurchaseLineRecorder::applyIngredientCost/applyPackagingCost/applyProductCost` — captura
   `$oldCost = $item->cost_per_unit` ANTES del update; si `$oldCost > 0` (hay baseline; el primer costo
   NO dispara) y el aumento ≥ umbral (`alerts.cost_spike.threshold_pct`, default 15), llama
   `raiseCostSpike`. El servicio se inyecta en el constructor del recorder.
+  - **Reventa (P4, 02/09/2026)**: `raiseCostSpike` acepta `Ingredient|Packaging|Product` y el `subject_type` sale de
+    `$line->purchaseable_type` (ya guarda los tres valores de `CatalogItemType`, que es lo que espera `stock.show`);
+    el ternario anterior registraba la reventa como `'packaging'` y el enlace llevaba al descartable con el mismo id.
+    La alerta se evalúa contra el **costo final almacenado**, no el de la factura: con promedio ponderado, una compra
+    cara diluida contra el stock existente **no** es un salto de costo. No hizo falta enum, migración ni tocar la
+    pantalla de config. Ver [[feature-articulos-produccion]].
 - **StaleCost**: ingredientes activos cuyo último `ingredient_price_logs.recorded_at` (o `created_at`
   si no hay log) es anterior a `now()-N` días (`alerts.stale_cost.days`, default 60). Query con
   `selectSub(max(recorded_at))`.

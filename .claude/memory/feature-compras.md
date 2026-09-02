@@ -199,6 +199,29 @@ tres estados.
   incompatibles (`apply()` abortaba 422). Con divisor recordado los resuelve. Es el mayor
   ahorro de clicks de la feature.
 
+### La reventa era ciudadano de segunda (arreglado en P4, 02/09/2026)
+
+Toda esta plomería se escribió para **dos** tipos de ítem y el artículo de reventa caía en el `else`.
+El camino núcleo (`PurchaseLineRecorder::apply()` rama producto) siempre estuvo bien; lo que fallaba
+era todo lo que lo rodea. Si aparece un tipo nuevo de ítem, **revisar estos cinco puntos**:
+
+| Lugar | Qué estaba mal |
+|---|---|
+| `ProductLinkMemory::ownedIds()` | ternario `Ingredient ? ingredients() : packagings()` → los ids de producto se validaban contra la tabla de **descartables**. El vínculo se caía siempre (re-vincular en cada factura) o se daba por bueno si un descartable compartía el id. Ahora `match` de tres ramas, y la de producto filtra **sólo reventa**: un vínculo a un elaborado pre-seleccionaría un renglón que `apply()` rechaza con 422. |
+| `PurchaseLineRecorder::apply()` rama producto | no consultaba `rememberedPkgQty()`, sólo `parseDescPkgQty()` → un renglón de reventa por bulto con divisor confirmado a mano no se podía aplicar en masa |
+| `PurchaseController::applyLineSuggestions()` | `if (Ingredient) {...} else { $touchedPackagingIds[] }` → el id del producto propagaba las recetas del descartable homónimo. La reventa **no interviene en ninguna receta**: no se acumula en ninguna lista |
+| `match.blade.php` | `$appliedItem` con el mismo ternario de dos ramas → mostraba el envase de un descartable ajeno bajo el nombre correcto |
+| `StoreScannedPurchaseRequest` + `validSuggestion()` | regla `in:ingredient,packaging` escrita a mano → `applyMemory()` copia el tipo recordado al hidden y producía un **422 irresoluble desde la pantalla**. Ahora `Rule::enum(CatalogItemType::class)` |
+
+También: `scan()` bloqueaba al negocio sin insumos ni descartables (un kiosco que sólo revende no podía escanear), y
+`InvoiceExtractor` no conocía el catálogo de reventa. El bloque de reventa y el tipo `"product"` del esquema JSON se
+emiten **sólo si el negocio tiene** artículos de reventa — es la mitigación más fuerte contra la sobre-sugerencia
+porque no depende de que el modelo obedezca el prompt; abajo, `normalize()` es fail-closed contra el catálogo.
+Se borró `PurchaseLine::product()` (un `belongsTo` sin guard de tipo y sin un solo llamador).
+
+Comprar reventa ahora también deja **historial** (`product_cost_logs`) y evalúa la **alerta de salto de costo**
+— ver [[feature-articulos-produccion]] y [[feature-alertas]].
+
 ### Backfill
 
 `php artisan purchases:backfill-product-links [--dry-run]` — sólo renglones con

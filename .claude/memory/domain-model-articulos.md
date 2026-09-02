@@ -70,7 +70,18 @@ información sin duplicar reglas.
     **`products:backfill-prices`** (idempotente; `BackfillProductPricesTest` 6) copia `recipe_prices → product_prices`
     **después** de `products:from-recipes`. **Orden de deploy correcto**: `migrate` → `npm run build` →
     `products:from-recipes` → **`products:backfill-prices`** → `products:refresh-prices`. Ver [[feature-articulos-produccion]].
-- **P4 🔲**: reestructuración del Módulo de Producción sobre este modelo. Luego Ventas.
+- **P4 ✅ (02/09/2026)**: **no** fue "reestructurar Producción" sino cerrar el origen del costo. Decisión: **dos
+  columnas, una puerta** — `recipes.unit_cost` y `products.cost_per_unit` se quedan con su escritor natural (no se
+  consolidan ni se migran) y `Product::currentCost()` es la **única lectura** del costo de un artículo. Se sumó
+  `product_cost_logs` (historial de la reventa con procedencia y vínculo a la factura), la etiqueta de origen
+  Receta/Compra/Manual en catálogo y stock, la alerta de salto de costo para reventa, y se completó la compra de
+  reventa en toda la plomería (memoria de vínculos, aplicar en lote, escaneo, extractor de IA). **La valuación por
+  producción quedó explícitamente fuera**: `StockService:76` sin tocar. Ver [[feature-articulos-produccion]].
+  - **Distinción que hay que respetar**: `currentCostSource()` responde *de qué columna* sale el costo (derivado del
+    `type`); la **procedencia** del valor vigente sale del último `ProductCostLog`. Para una reventa con costo tipeado
+    a mano, la regla igual dice `'compra'`. No unificar los dos conceptos en un método.
+- **Próximo 🔲**: Módulo de Producción (valuación por producción / semi-elaborados stockeables / órdenes / mermas,
+  sin elegir todavía). Luego Ventas.
 
 ## Notas de diseño
 - `currentCost()` es el **costo estándar** del artículo (para valuar existencias); el costo del **evento** de

@@ -117,6 +117,37 @@ El precio de venta vive en `product_prices`, **fuente única de toda la UI de pr
 - `ProductController::matrix` product-céntrico (reusa el editor `priceCell`); vistas `products/matrix` + `products/tabs`. Se eliminó la matriz receta-céntrica de `PriceListController`. `Ean13Generator` (genera y valida EAN-13 con dígito verificador) + `ProductCodeAssigner` (código único por negocio, reintenta ante colisión). Comando `products:assign-codes` (backfill idempotente, `--tenant`, `--dry-run`).
 - **`Ean13GeneratorTest` (3) + `AssignProductCodesTest` (6) + matriz product-céntrica reescrita + store con auto-código**. **665 tests, todos verdes.**
 
+### Origen del costo del artículo y la reventa de primera clase (P4)
+
+#### Agregado
+
+- **El origen del costo, visible**: una etiqueta junto al Costo/u del catálogo y en la valuación de la ficha de stock dice de dónde sale — **Receta**, **Compra** o **Manual**.
+- **Historial de costo de los artículos de reventa**: cada vez que cambia el costo queda registrado con su procedencia y, si vino de una factura, el enlace a esa compra. Se abre desde la etiqueta del catálogo.
+- **Alerta de salto de costo también para reventa**: comprar un artículo mucho más caro levanta la misma alerta que ya existía para insumos y descartables. Con promedio ponderado la alerta se evalúa contra el costo final, así que una compra cara diluida contra el stock existente no alerta.
+- **La IA sugiere artículos de reventa** al escanear una factura, cuando el negocio los tiene. Un negocio que sólo revende (sin insumos ni descartables) ya puede escanear.
+
+#### Corregido
+
+- **La memoria de vínculos ya recuerda los artículos de reventa**: validaba sus ids contra la tabla de descartables, así que el vínculo se perdía y había que re-asociar el mismo artículo en cada factura. Con divisor confirmado a mano, ahora también se puede aplicar en masa.
+- **Aplicar sugerencias en masa** ya no propaga las recetas del descartable que compartía id con el artículo de reventa.
+- **La vista de vinculación** ya no muestra los datos de envase de un descartable ajeno bajo el nombre del artículo aplicado.
+- **Confirmar una factura escaneada con un renglón de reventa** ya no da un error de validación irresoluble.
+- **Editar el costo de un artículo de reventa a mano** ahora recalcula los precios con política de margen/recargo, como ya hacía cualquier otro cambio de costo.
+- **El recuento físico y el ajuste manual de un elaborado** ya no se asientan en el kardex valuados a $0.
+
+#### Técnico
+
+- Tabla `product_cost_logs` (tenant_id, product_id, purchase_line_id nullable, cost_per_unit 14,4, source, recorded_at) + modelo `ProductCostLog` + enum `CostLogSource`. Rompe el precedente de `*_price_logs` en tenant_id y el vínculo a la factura porque **esta tabla sí se lee desde la UI**; mantiene filas inmutables sin `timestamps()`. Escritura idempotente por `purchase_line_id` (`updateOrCreate`), espejando el contrato de `StockService::syncPurchaseLineEntry()`.
+- `Product::costLogs()` y `latestCostLog()` (`latestOfMany`, eager-loadeado por el catálogo y `StockController::show`). Ojo: `priceLogs()` ya existía y es el precio de **venta**.
+- `ProductCostHistoryController` + ruta `products.cost-history` (JSON a demanda, precedente `ProductionController::preview`); componente `x-cost-source-badge`. La **regla** sigue en `currentCostSource()` y la **procedencia** sale del último log: son dos preguntas distintas.
+- `ProductLinkMemory::ownedIds()` y `PurchaseScanController::validSuggestion()` pasan a `match` de tres ramas (la de producto filtra reventa); `StoreScannedPurchaseRequest` usa `Rule::enum(CatalogItemType::class)` como fuente única. `InvoiceExtractor::extract()` recibe el catálogo de reventa y emite el bloque y el tipo `"product"` **sólo si el negocio tiene artículos de reventa** (fail-closed en `normalize()`, no en el prompt). Se borró `PurchaseLine::product()` (belongsTo sin guard de tipo y sin llamadores).
+- `StockService::unitCostOf()`: los movimientos manuales sobre un `Product` pasan por `currentCost()`. No es valuación de producción — `StockService:76` no se toca.
+- **`ProductCostLogTest` (9) + `ProductCostSourceTest` (8) + regresiones en `ProductLinkMemoryTest` (6), `ProductPurchaseTest` (2), `PurchaseScanTest` (4), `InvoiceExtractorTest` (5), `NotificationAlertsTest` (3), `ProductPricingPolicyTest` (3) y `StockServiceTest` (4)**. **708 tests, todos verdes.**
+
+#### Al deployar
+
+- `php artisan migrate` (tabla `product_cost_logs`) y `npm run build`. El historial arranca vacío: se puebla desde la primera compra o edición de costo posterior.
+
 ---
 
 ## [0.12.13] — 2026-08-11
