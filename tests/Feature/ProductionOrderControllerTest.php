@@ -1,0 +1,206 @@
+<?php
+
+use App\Enums\ProductionOrderStatus;
+use App\Enums\TenantUserRole;
+use App\Models\DeliveryPerson;
+use App\Models\Product;
+use App\Models\ProductionOrder;
+use App\Models\ProductionOrderRequest;
+use App\Models\Tenant;
+
+// tenantUserAs() (IngredientCrudTest) y productionSetup() (ProductionControllerTest) son helpers globales.
+
+test('el índice de órdenes se renderiza', function () {
+    [$user, $tenant] = productionSetup();
+    ProductionOrder::factory()->for($tenant)->create();
+
+    $this->actingAs($user)->get(route('production-orders.index'))->assertOk()->assertSee('Órdenes de producción');
+});
+
+test('el índice de órdenes no lista plantillas', function () {
+    [$user, $tenant] = productionSetup();
+    ProductionOrder::factory()->for($tenant)->template()->create(['name' => 'Plantilla del lunes']);
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertDontSee('Plantilla del lunes');
+});
+
+test('owner puede crear una orden', function () {
+    [$user, $tenant] = productionSetup();
+
+    $response = $this->actingAs($user)->post(route('production-orders.store'), [
+        'type' => 'daily',
+        'scheduled_for' => now()->toDateString(),
+    ]);
+
+    $order = $tenant->productionOrders()->first();
+    $response->assertRedirect(route('production-orders.show', $order));
+    expect($order->status)->toBe(ProductionOrderStatus::Draft);
+});
+
+test('armar un pedido con un artículo y verlo en el detalle', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)->post(route('production-orders.requests.store', $order), [
+        'destination_type' => 'location',
+        'destination_id' => $tenant->defaultLocation()->id,
+    ])->assertRedirect();
+
+    $request = $order->fresh()->productionOrderRequests()->first();
+
+    $this->actingAs($user)->post(route('production-orders.requests.lines.store', [$order, $request]), [
+        'product_id' => $product->id,
+        'quantity' => 5,
+    ])->assertRedirect();
+
+    $this->actingAs($user)
+        ->get(route('production-orders.show', $order))
+        ->assertOk()
+        ->assertSee($product->name)
+        ->assertSee('5,00');
+});
+
+test('una línea de artículo no producible se rechaza', function () {
+    [$user, $tenant] = productionSetup();
+    $notProducible = Product::factory()->for($tenant)->resale()->create();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $request = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $order->id]);
+
+    $this->actingAs($user)
+        ->post(route('production-orders.requests.lines.store', [$order, $request]), [
+            'product_id' => $notProducible->id,
+            'quantity' => 1,
+        ])
+        ->assertStatus(422);
+});
+
+test('el pedido admite un repartidor como destino', function () {
+    [$user, $tenant] = productionSetup();
+    $deliveryPerson = DeliveryPerson::factory()->for($tenant)->create(['name' => 'Juan Reparto']);
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)->post(route('production-orders.requests.store', $order), [
+        'destination_type' => 'delivery_person',
+        'destination_id' => $deliveryPerson->id,
+    ])->assertRedirect();
+
+    $this->actingAs($user)
+        ->get(route('production-orders.show', $order))
+        ->assertOk()
+        ->assertSee('Juan Reparto');
+});
+
+test('producir la orden confirmada la marca Done y redirige a su detalle', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->confirmed()->create(['location_id' => $tenant->defaultLocation()->id]);
+    $request = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $order->id]);
+    $request->lines()->create(['product_id' => $product->id, 'quantity' => 2, 'unit' => $product->unit->value]);
+
+    $this->actingAs($user)
+        ->post(route('production-orders.produce', $order))
+        ->assertRedirect(route('production-orders.show', $order));
+
+    expect($order->fresh()->status)->toBe(ProductionOrderStatus::Done);
+});
+
+test('anular la orden la marca Cancelled', function () {
+    [$user, $tenant] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)
+        ->patch(route('production-orders.cancel', $order))
+        ->assertRedirect();
+
+    expect($order->fresh()->status)->toBe(ProductionOrderStatus::Cancelled);
+});
+
+test('confirmar la orden vía transition', function () {
+    [$user, $tenant] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)
+        ->patch(route('production-orders.transition', $order), ['status' => 'confirmed'])
+        ->assertRedirect();
+
+    expect($order->fresh()->status)->toBe(ProductionOrderStatus::Confirmed);
+});
+
+test('viewer no puede crear una orden', function () {
+    [$user] = tenantUserAs(TenantUserRole::Viewer);
+
+    $this->actingAs($user)
+        ->post(route('production-orders.store'), ['type' => 'daily'])
+        ->assertForbidden();
+});
+
+test('viewer puede ver el índice y el detalle de una orden', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Viewer);
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)->get(route('production-orders.index'))->assertOk();
+    $this->actingAs($user)->get(route('production-orders.show', $order))->assertOk();
+});
+
+test('aislamiento: owner no puede ver una orden de otro tenant', function () {
+    [$user] = productionSetup();
+
+    $otherTenant = Tenant::factory()->create();
+    $otherOrder = ProductionOrder::factory()->for($otherTenant)->create(['location_id' => $otherTenant->defaultLocation()->id]);
+
+    $this->actingAs($user)
+        ->get(route('production-orders.show', $otherOrder))
+        ->assertNotFound();
+});
+
+test('repetir una orden crea una copia en borrador y redirige a su detalle', function () {
+    [$user, $tenant] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->confirmed()->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $response = $this->actingAs($user)->post(route('production-orders.duplicate', $order), [
+        'scheduled_for' => '2026-10-01',
+    ]);
+
+    $copy = $tenant->productionOrders()->where('id', '!=', $order->id)->first();
+    $response->assertRedirect(route('production-orders.show', $copy));
+    expect($copy->status)->toBe(ProductionOrderStatus::Draft);
+});
+
+test('guardar una orden como plantilla y usarla crea una nueva orden', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $request = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $order->id]);
+    $request->lines()->create(['product_id' => $product->id, 'quantity' => 1, 'unit' => $product->unit->value]);
+
+    $this->actingAs($user)
+        ->post(route('production-orders.save-as-template', $order), ['name' => 'Plantilla test'])
+        ->assertRedirect();
+
+    $this->actingAs($user)
+        ->get(route('production-order-templates.index'))
+        ->assertOk()
+        ->assertSee('Plantilla test');
+
+    $template = ProductionOrder::onlyTemplates()->firstWhere('name', 'Plantilla test');
+
+    $response = $this->actingAs($user)->post(route('production-order-templates.use', $template->id), [
+        'scheduled_for' => now()->toDateString(),
+    ]);
+
+    $newOrder = $tenant->productionOrders()->where('id', '!=', $order->id)->first();
+    $response->assertRedirect(route('production-orders.show', $newOrder));
+    expect($newOrder->productionOrderRequests()->first()->lines()->count())->toBe(1);
+});
+
+test('aislamiento: un pedido de otra orden no se puede eliminar cruzado', function () {
+    [$user, $tenant] = productionSetup();
+    $orderA = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $orderB = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $requestOfB = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $orderB->id]);
+
+    $this->actingAs($user)
+        ->delete(route('production-orders.requests.destroy', [$orderA, $requestOfB]))
+        ->assertNotFound();
+});

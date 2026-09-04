@@ -188,15 +188,90 @@ Lo que haría falta, si se retoma:
 ~25 son reventa real — el resto (semillas, premezclas, chocolates, mermeladas) son insumos que todavía no entraron en
 una receta. **La lista hay que revisarla con el usuario, no automatizarla.**
 
-## Próximo — Producción (las direcciones siguen sobre la mesa)
-Ninguna se implementó; siguen siendo candidatas y se pueden combinar:
+## P5 — Órdenes de producción, pedidos y destino ✅ (04/09/2026)
+De las cuatro direcciones que quedaron abiertas al cerrar P4, el usuario eligió **órdenes de producción** — pero no
+en el sentido "ciclo de estados sobre producir uno a la vez" que se había anotado: la idea central resultó ser
+**órdenes que agrupan pedidos con destino** (sucursales y repartidores), pensando ya en reparto y, más adelante,
+facturación/cuentas de clientes. Plan completo en la sesión; ver [[decision-multi-sucursal]] para el encuadre
+de qué es por-sucursal.
+
+**Decisiones tomadas** (no re-litigar):
+1. **Tres niveles**: Orden (`production_orders`) → Pedidos (`production_order_requests`, uno por destino) → Líneas
+   (`production_order_lines`, artículo + cantidad).
+2. **El stock producido entra al obrador** (Casa Central), como ya hacía "producir ahora". El destino es
+   **informativo** (arma la planilla de reparto) — **no genera movimientos de stock todavía**. Transferencias
+   entre sucursales y salida por reparto quedan para la fase siguiente.
+3. **Repartidor = entidad propia simple** (`delivery_people`: nombre, teléfono, notas, activo), con
+   **`user_id` nullable sin usar** desde ya: a futuro el repartidor va a tener login para ver su estado de cuenta,
+   modificar los pedidos de sus clientes y su propia administración. El rol no se agrega hasta que haya pantallas
+   que lo justifiquen.
+4. **Las sub-recetas siguen phantom** — no se tocó nada de semi-elaborados.
+
+**Lo que se hizo** (708→755 tests verdes):
+- `ProductionOrderService`: `aggregate()` (suma cantidad por artículo a través de todos los pedidos — el mismo pan
+  pedido por dos destinos se suma), `preview()` (consumo de insumos **combinado** de todos los artículos de la
+  orden), `produce()` (una `Production` por artículo, todas atadas a `production_order_id`, en una transacción) y
+  `cancel()` (revierte cada producción vía `ProductionService::cancel()`, que ya era idempotente).
+- **Reuso del motor, no duplicación**: `ProductionService` se partió en `baseConsumption()` (guardProducible +
+  factorFor + explode, sin escribir) y `summarize()` (arma las líneas de preview desde un consumo base) — su
+  propio `preview()` pasó a ser `summarize(baseConsumption(...))`. `ProductionOrderService::preview()` llama
+  `baseConsumption()` por cada artículo agregado y **suma por insumo entre artículos distintos** (`mergeBase()`,
+  misma idea que la agregación interna de `RecipeExploder::add()` pero a otro nivel) antes de pasarlo a `summarize()`.
+- `ProductionOrderStatus`: `Draft → Confirmed → (InProduction) → Done`, más `Cancelled`. **`canTransitionTo()`
+  es el dueño único de las transiciones.** `Done` y `Cancelled` tienen puerta propia: sólo se llega vía
+  `produce()`/`cancel()` (que mueven o revierten stock), nunca por el `transitionTo()` genérico — evita que un
+  cambio de estado a mano deje el stock desincronizado del status. `Done → Cancelled` es válido (anular algo ya
+  producido revierte el stock).
+- **Plantillas sin tablas espejo**: viven en `production_orders` con `is_template=true` + `scheduled_for=null`.
+  `ProductionOrder` lleva un **global scope** (`ExcludeTemplatesScope`) que las excluye de cualquier query por
+  defecto, con `withTemplates()`/`onlyTemplates()` para optar explícito — evita a propósito la trampa que hoy paga
+  `is_semi_elaborate` (6 `where` sueltos, sin scope). El route-model-binding implícito de Eloquent también respeta
+  ese scope, así que **una plantilla nunca resuelve por `{productionOrder}`**: `ProductionOrderTemplateController`
+  toma el id como `int` plano y resuelve a mano con `onlyTemplates()->findOrFail()` (sigue siendo tenant-safe: el
+  scope de `BelongsToTenant` es aparte y sigue activo).
+- `ProductionOrderDuplicator::duplicate()`: una sola operación cubre **repetir** una orden (copia fechada, normal)
+  e **instanciar una plantilla** (mismo código, `templateName` en vez de `scheduledFor`). Ojo pagado: al crear las
+  `production_order_requests` de la copia hay que pasar `tenant_id` **a mano** — la relación `HasMany::create()`
+  sólo llena la FK que conoce (`production_order_id`), y el auto-fill de `BelongsToTenant` depende de que haya un
+  `Tenant` bound en el container, que no está garantizado fuera de un request HTTP (ej. tests de servicio).
+- **Destino polimórfico a propósito** (`DeliveryDestinationType`: `location`/`delivery_person`), no dos FK
+  nullables: el repartidor va a tener clientes propios (ver más abajo) y sumar `Customer` es un `case` más +
+  una entrada más en el morph map, sin re-modelar `production_order_requests`. Fusionado con `CatalogItemType`
+  en el **mismo** `Relation::enforceMorphMap()` de `AppServiceProvider` — llamarlo dos veces pisa el primero.
+- `Product::scopeProducible()`: se extrajo el filtro que antes vivía inline sólo en `ProductionController::create`
+  (activo + manufactured + con receta + categoría "se produce"). Ahora lo comparten esa pantalla y las líneas de
+  un pedido de orden.
+- Rutas anidadas a 3 niveles con `scopeBindings()`
+  (`production-orders/{productionOrder}/requests/{productionOrderRequest}/lines/{line}`): la relación en
+  `ProductionOrder` se llama **`productionOrderRequests()`**, no `requests()` — Laravel busca el método por el
+  **plural del nombre del parámetro de ruta**, mismo mecanismo que ya usa `RecipeLineController`
+  (`{ingredientLine}` → `Recipe::ingredientLines()`). `production_order_lines` no tiene `tenant_id` propio y aun
+  así queda tenant-safe: el scoping de 3 niveles pasa siempre por `ProductionOrderRequest` (que sí es
+  `BelongsToTenant`), así que un `{line}` ajeno nunca resuelve.
+- **Planilla de reparto** imprimible: `<style>@media print{...}</style>` embebido en la propia vista (oculta
+  `nav`/`aside` por tag, sin tocar el layout compartido) — sin librería nueva.
+
+## Diseño con vista al futuro (P5, no construido — condiciona el modelo)
+1. **Movimientos de stock por destino**: el pedido ya tiene todo lo necesario (`tenant_id`, destino, líneas). La
+   plomería es genérica y ya existe (`StockService::registerMovement`/`reverseMovementsFor` toman
+   `referenceType`/`referenceId` desde la etapa 3A) — un futuro despacho emitiría con
+   `reference_type='production_order_request'` sin tocar `StockService`. Falta: distinguir Sucursal-tiene-stock
+   de Repartidor-no (gancho: `DeliveryDestinationType::holdsStock()`, ya escrito, sin uso), y separar "pedido" de
+   "despachado" (`dispatched_quantity` en `production_order_lines`, aditivo).
+2. **Repartidor con login**: `delivery_people.user_id` nace nullable sin usar. El rol propio y las pantallas de
+   estado de cuenta/pedidos de clientes quedan para cuando existan — las policies de esta fase ya comparan sólo
+   `tenant_id` y delegan el rol a la ruta, así que sumarlo después es tocar rutas, no reescribir policies.
+3. **Facturación/cuentas corrientes**: horizonte reconocido, nada construido; el *pedido* es la unidad natural
+   donde colgaría la factura futura.
+
+## Próximo — lo que sigue sobre la mesa
 1. **Valuación del elaborado por producción** — que fabricar alimente el costo del artículo. `productions.unit_cost`
    ya se calcula y se snapshotea en el movimiento; falta propagarlo. Ojo: hoy `stock_levels.unit_cost` **no lo lee
    nadie**, así que sin un lector el trabajo no cambia ninguna pantalla.
 2. **Semi-elaborados stockeables** — las sub-recetas son siempre phantom (`RecipeExploder`). BOM multinivel real.
-3. **Órdenes de producción / planificación** — ciclo de estados en vez de "producir ahora".
+3. **Movimientos de stock por destino** de P5 (transferencias/reparto) — ver la sección de arriba.
 4. **Mermas / rendimiento real** — depende de que exista (1) para tener dónde impactar el ajuste.
-Después: **Ventas / POS** (usará el EAN-13 y la política de precio).
+Después: **Ventas / POS** (usará el EAN-13 y la política de precio; probablemente se cruce con clientes/reparto).
 
 ## ⚠️ Deploy de v0.13.0 — ORDEN (o las listas de precios se ven vacías)
 El precio vive en `product_prices` (**fuente única** de toda la UI de precios). La migración de backfill (`000004`)

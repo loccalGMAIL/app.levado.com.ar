@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ProductType;
 use App\Http\Requests\StoreProductionRequest;
 use App\Models\Production;
 use App\Models\Tenant;
@@ -40,10 +39,7 @@ class ProductionController extends Controller
         // Solo elaborados activos con receta y en una categoría marcada "se produce":
         // los sin categoría o en categorías no-producibles quedan fuera de Producción.
         $products = $tenant->products()
-            ->active()
-            ->where('type', ProductType::Manufactured->value)
-            ->whereNotNull('recipe_id')
-            ->whereHas('category', fn ($query) => $query->where('producible', true))
+            ->producible()
             ->with('recipe')
             ->orderBy('name')
             ->get();

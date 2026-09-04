@@ -6,10 +6,14 @@ use App\Enums\CatalogItemType;
 use App\Enums\ProductionStatus;
 use App\Enums\StockMovementType;
 use App\Enums\Unit;
+use App\Models\Ingredient;
+use App\Models\Location;
+use App\Models\Packaging;
 use App\Models\Product;
 use App\Models\Production;
 use App\Models\Recipe;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -36,11 +40,38 @@ class ProductionService
      */
     public function preview(Product $product, float $quantity): array
     {
-        $recipe = $this->guardProducible($product, $quantity);
-        $factor = $this->factorFor($product, $recipe, $quantity);
         $location = $product->tenant->defaultLocation();
 
-        $lines = $this->exploder->explode($recipe, $factor)->map(function (array $entry) use ($location) {
+        return $this->summarize($this->baseConsumption($product, $quantity), $location);
+    }
+
+    /**
+     * Insumos base (sin resumir) que consumiría fabricar $quantity unidades de
+     * $product, sin escribir nada. Expone lo que preview()/produce() ya
+     * calculaban internamente para que ProductionOrderService pueda combinar
+     * el consumo de varios artículos en una sola orden.
+     *
+     * @return Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>
+     */
+    public function baseConsumption(Product $product, float $quantity): Collection
+    {
+        $recipe = $this->guardProducible($product, $quantity);
+        $factor = $this->factorFor($product, $recipe, $quantity);
+
+        return $this->exploder->explode($recipe, $factor);
+    }
+
+    /**
+     * Arma las líneas de preview (con disponibilidad y costo) a partir de un
+     * consumo base ya calculado — compartido por preview() y por el preview
+     * combinado de una orden de producción.
+     *
+     * @param  Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>  $base
+     * @return array{lines: array<int, array{type: CatalogItemType, id: int, name: string, quantity: float, available: float, shortfall: float, unit_cost: float, line_cost: float}>, total_cost: float}
+     */
+    public function summarize(Collection $base, Location $location): array
+    {
+        $lines = $base->map(function (array $entry) use ($location) {
             $item = $entry['item'];
             $available = (float) ($this->stock->levelFor($item, $location)?->quantity ?? 0);
             $unitCost = (float) $item->cost_per_unit;

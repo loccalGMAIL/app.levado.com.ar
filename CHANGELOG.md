@@ -148,6 +148,61 @@ El precio de venta vive en `product_prices`, **fuente única de toda la UI de pr
 
 - `php artisan migrate` (tabla `product_cost_logs`) y `npm run build`. El historial arranca vacío: se puebla desde la primera compra o edición de costo posterior.
 
+### Órdenes de producción, pedidos y destino (P5)
+
+El siguiente paso natural tras tener Producción: el obrador no fabrica "un elaborado a la vez", arma **órdenes** —
+la del día (los pedidos normales que salen esa mañana) o **espontáneas** (lo que hay que hacer en el momento)— y
+cada orden agrupa **pedidos**, uno por destino.
+
+#### Agregado
+
+- **Órdenes de producción**: nueva sección (grupo Producción del menú) con órdenes **diarias** o **espontáneas**, un
+  ciclo de estados **Borrador → Confirmada → (En producción) → Terminada**, y **Anular** en cualquier momento
+  (revierte el stock si ya se había producido).
+- **Pedidos con destino**: dentro de una orden se arman uno o más pedidos, cada uno con un destino — una
+  **sucursal** o un **repartidor**— y sus artículos con cantidad. El destino es informativo por ahora (organiza la
+  planilla), no mueve stock entre sucursales.
+- **Resumen agregado y producir de una**: la pantalla suma la cantidad pedida de cada artículo a través de todos
+  los pedidos (si dos destinos piden el mismo pan, se suma) y muestra el consumo combinado de insumos con
+  faltantes, igual que la pantalla de producir. **Producir la orden** genera una `Production` por artículo, todas
+  atadas a la orden, en una sola operación.
+- **Repartidores**: nueva entidad simple en Administración (nombre, teléfono, notas, activo) — CRUD en modales.
+- **Repetir una orden** (copia sus pedidos a una fecha nueva) y **plantillas preestablecidas** ("Guardar como
+  plantilla" desde una orden, "Usar" desde una pantalla de Plantillas para instanciarla como orden del día).
+- **Planilla de reparto**: vista imprimible de una orden, agrupada por destino.
+
+#### Técnico
+
+- Tablas `production_orders`, `production_order_requests` (el pedido; **tenant_id propio** — se lee desde la UI
+  por fuera de su orden, precedente `product_cost_logs`) y `production_order_lines` (artículo + cantidad, sin
+  tenant_id, hereda por el pedido). Columna `productions.production_order_id` nullable — las producciones ad-hoc
+  de "producir ahora" (sin cambios) siguen con NULL.
+- Enums `ProductionOrderType` (daily/spontaneous), `ProductionOrderStatus` (con `canTransitionTo()` como dueño
+  único de las transiciones válidas: `Done`/`Cancelled` tienen su propia puerta — sólo se llega vía producir/anular,
+  nunca por el cambio de estado genérico) y `DeliveryDestinationType` (location/delivery_person, polimórfico,
+  pensado para sumar `Customer` el día que el repartidor tenga clientes propios). Fusionado en el mismo
+  `Relation::enforceMorphMap()` que `CatalogItemType` (llamarlo dos veces pisaría el primero).
+- **Plantillas en la misma tabla** (`is_template`, sin tablas espejo): `ProductionOrder` lleva un **global scope**
+  (`ExcludeTemplatesScope`) que las excluye por defecto de cualquier listado, con `withTemplates()`/`onlyTemplates()`
+  para optar explícito — la misma trampa que paga hoy `is_semi_elaborate` sin scope, evitada acá a propósito.
+- **`ProductionOrderService`**: `aggregate()` (suma por artículo), `preview()` (combina el consumo de varios
+  artículos — insumo repetido entre recetas se suma), `produce()` (una `Production` por artículo, ordenadas por
+  `product_id` para el mismo orden de locks entre órdenes concurrentes que ya usa `ProductionService::produce()`) y
+  `cancel()` (revierte cada producción vía `ProductionService::cancel()`, ya idempotente). Reusa el motor existente
+  sin duplicarlo: `ProductionService` expone `baseConsumption()` y `summarize()` (refactor de su propio `preview()`)
+  para que el preview combinado arme sus líneas con el mismo código.
+- `ProductionOrderDuplicator`: una sola operación de copia profunda cubre "repetir" e "instanciar una plantilla".
+- `Product::scopeProducible()`: el filtro compartido (activo + elaborado + con receta + categoría "se produce") que
+  antes vivía sólo inline en `ProductionController::create` — ahora también lo usan las líneas de una orden.
+- **`DeliveryPersonCrudTest` (8) + `ProductionOrderModelTest` (7) + `ProductionOrderTest` (10, servicio) +
+  `ProductionOrderControllerTest` (15, HTTP) + `ProductionOrderDuplicatorTest` (3) + `DeliverySheetTest` (3)**.
+  `ProductionTest`/`ProductionControllerTest` (la pantalla "producir ahora") siguen verdes **sin cambios de
+  comportamiento** — el refactor de reuso no le movió el contrato. **755 tests, todos verdes.**
+
+#### Al deployar
+
+- `php artisan migrate` (4 tablas/columnas nuevas) y `npm run build` (vistas y componentes nuevos).
+
 ---
 
 ## [0.12.13] — 2026-08-11

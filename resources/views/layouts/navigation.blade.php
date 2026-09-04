@@ -53,6 +53,11 @@
                     $crumbs[] = ['label' => 'Producir', 'href' => null];
                 } elseif (request()->routeIs('production.*')) {
                     $crumbs[] = ['label' => 'Producción', 'href' => null];
+                } elseif (request()->routeIs('production-orders.show')) {
+                    $crumbs[] = ['label' => 'Órdenes de producción', 'href' => route('production-orders.index')];
+                    $crumbs[] = ['label' => 'Orden', 'href' => null];
+                } elseif (request()->routeIs('production-orders.*')) {
+                    $crumbs[] = ['label' => 'Órdenes de producción', 'href' => null];
                 } elseif (request()->routeIs('ingredients.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Ingredientes', 'href' => null];
@@ -98,6 +103,9 @@
                 } elseif (request()->routeIs('locations.*')) {
                     $crumbs[] = ['label' => 'Administración', 'href' => null];
                     $crumbs[] = ['label' => 'Sucursales', 'href' => null];
+                } elseif (request()->routeIs('delivery-people.*')) {
+                    $crumbs[] = ['label' => 'Administración', 'href' => null];
+                    $crumbs[] = ['label' => 'Repartidores', 'href' => null];
                 } elseif (request()->routeIs('alerts.*')) {
                     $crumbs[] = ['label' => 'Administración', 'href' => null];
                     $crumbs[] = ['label' => 'Alertas', 'href' => null];

@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AlertSettingsController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeliveryPersonController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\IngredientController;
@@ -23,6 +24,10 @@ use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductCostHistoryController;
 use App\Http\Controllers\ProductionController;
+use App\Http\Controllers\ProductionOrderController;
+use App\Http\Controllers\ProductionOrderLineController;
+use App\Http\Controllers\ProductionOrderRequestController;
+use App\Http\Controllers\ProductionOrderTemplateController;
 use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
@@ -111,6 +116,12 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         ->middleware('role:super_admin,owner,admin')
         ->name('production.create');
     Route::get('production/{production}', [ProductionController::class, 'show'])->name('production.show');
+
+    Route::get('production-orders', [ProductionOrderController::class, 'index'])->name('production-orders.index');
+    Route::get('production-orders/{productionOrder}', [ProductionOrderController::class, 'show'])->name('production-orders.show');
+    Route::get('production-orders/{productionOrder}/preview', [ProductionOrderController::class, 'preview'])->name('production-orders.preview');
+    Route::get('production-order-templates', [ProductionOrderTemplateController::class, 'index'])->name('production-order-templates.index');
+    Route::get('production-orders/{productionOrder}/delivery-sheet', [ProductionOrderController::class, 'deliverySheet'])->name('production-orders.delivery-sheet');
 
     // Centro de alertas (feed) — visible y accionable para todos los roles con tenant.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -213,6 +224,28 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('production', [ProductionController::class, 'store'])->name('production.store');
     Route::patch('production/{production}/cancel', [ProductionController::class, 'cancel'])->name('production.cancel');
 
+    Route::post('production-orders', [ProductionOrderController::class, 'store'])->name('production-orders.store');
+    Route::patch('production-orders/{productionOrder}/transition', [ProductionOrderController::class, 'transition'])->name('production-orders.transition');
+    Route::post('production-orders/{productionOrder}/produce', [ProductionOrderController::class, 'produce'])->name('production-orders.produce');
+    Route::patch('production-orders/{productionOrder}/cancel', [ProductionOrderController::class, 'cancel'])->name('production-orders.cancel');
+
+    Route::post('production-orders/{productionOrder}/requests', [ProductionOrderRequestController::class, 'store'])->name('production-orders.requests.store');
+    Route::delete('production-orders/{productionOrder}/requests/{productionOrderRequest}', [ProductionOrderRequestController::class, 'destroy'])
+        ->scopeBindings()->name('production-orders.requests.destroy');
+
+    Route::post('production-orders/{productionOrder}/requests/{productionOrderRequest}/lines', [ProductionOrderLineController::class, 'store'])
+        ->scopeBindings()->name('production-orders.requests.lines.store');
+    Route::delete('production-orders/{productionOrder}/requests/{productionOrderRequest}/lines/{line}', [ProductionOrderLineController::class, 'destroy'])
+        ->scopeBindings()->name('production-orders.requests.lines.destroy');
+
+    Route::post('production-orders/{productionOrder}/duplicate', [ProductionOrderController::class, 'duplicate'])->name('production-orders.duplicate');
+    Route::post('production-orders/{productionOrder}/save-as-template', [ProductionOrderController::class, 'saveAsTemplate'])->name('production-orders.save-as-template');
+
+    Route::post('production-order-templates/{template}/use', [ProductionOrderTemplateController::class, 'use'])
+        ->whereNumber('template')->name('production-order-templates.use');
+    Route::delete('production-order-templates/{template}', [ProductionOrderTemplateController::class, 'destroy'])
+        ->whereNumber('template')->name('production-order-templates.destroy');
+
     Route::post('stock/{type}/{id}/adjustments', [StockController::class, 'storeAdjustment'])
         ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.adjustments.store');
     Route::post('stock/{type}/{id}/counts', [StockController::class, 'storeCount'])
@@ -243,6 +276,11 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner'])->gro
     Route::post('locations', [LocationController::class, 'store'])->name('locations.store');
     Route::put('locations/{location}', [LocationController::class, 'update'])->name('locations.update');
     Route::patch('locations/{location}/toggle-active', [LocationController::class, 'toggleActive'])->name('locations.toggle-active');
+
+    Route::get('delivery-people', [DeliveryPersonController::class, 'index'])->name('delivery-people.index');
+    Route::post('delivery-people', [DeliveryPersonController::class, 'store'])->name('delivery-people.store');
+    Route::put('delivery-people/{deliveryPerson}', [DeliveryPersonController::class, 'update'])->name('delivery-people.update');
+    Route::patch('delivery-people/{deliveryPerson}/toggle-active', [DeliveryPersonController::class, 'toggleActive'])->name('delivery-people.toggle-active');
 });
 
 // Mi equipo (requiere auth + tenant resuelto + rol manage-team)

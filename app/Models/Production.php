@@ -27,6 +27,7 @@ class Production extends Model
         'location_id',
         'product_id',
         'recipe_id',
+        'production_order_id',
         'quantity',
         'unit',
         'unit_cost',
@@ -79,6 +80,12 @@ class Production extends Model
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
+    }
+
+    /** Null si nació de la pantalla "producir ahora" (ad-hoc, sin orden). */
+    public function productionOrder(): BelongsTo
+    {
+        return $this->belongsTo(ProductionOrder::class);
     }
 
     public function user(): BelongsTo

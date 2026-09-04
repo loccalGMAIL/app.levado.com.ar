@@ -59,6 +59,20 @@ class Product extends Model
         $query->where('active', true);
     }
 
+    /**
+     * Elaborados que se pueden producir hoy: activos, con receta, y en una
+     * categoría marcada "se produce" (sin categoría o no-producible quedan
+     * fuera). Único filtro compartido por la pantalla de Producción y por
+     * las órdenes de producción — no repetir la cadena en dos lugares.
+     */
+    public function scopeProducible(Builder $query): void
+    {
+        $query->active()
+            ->where('type', ProductType::Manufactured->value)
+            ->whereNotNull('recipe_id')
+            ->whereHas('category', fn (Builder $q) => $q->where('producible', true));
+    }
+
     public function isManufactured(): bool
     {
         return $this->type === ProductType::Manufactured;

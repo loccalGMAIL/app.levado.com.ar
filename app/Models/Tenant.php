@@ -46,6 +46,16 @@ class Tenant extends Model
         return $this->hasMany(Location::class);
     }
 
+    public function deliveryPeople(): HasMany
+    {
+        return $this->hasMany(DeliveryPerson::class);
+    }
+
+    public function productionOrders(): HasMany
+    {
+        return $this->hasMany(ProductionOrder::class);
+    }
+
     /** @var Location|null Cache por instancia: defaultLocation() se llama una vez por ítem en los bucles de compra */
     private ?Location $cachedDefaultLocation = null;
 
