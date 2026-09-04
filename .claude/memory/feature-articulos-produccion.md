@@ -157,6 +157,37 @@ real era otro: **el costo vive en dos columnas con dos escritores, y el lado de 
 - El promedio ponderado contra `defaultLocation()` **no es un bug**: es coherente con dónde cae el stock de la compra
   y con [[decision-multi-sucursal]] (costo por-negocio). Tiene comentario en el código para que no lo "arreglen".
 
+## Pendiente — pasar insumos mal clasificados a artículos de reventa (consultado 03/09/2026)
+El usuario tiene insumos que en realidad son **reventa** (gaseosas, aguas, jugos: CC Zero id 254, Sprite, Levite,
+Powerade, Cepita, Schweps, aguas Villavicencio, leche chocolatada…). Quiere pasarlos a Artículos para ponerles margen
+y que Compras los tome como reventa. **Decisión postergada a propósito: se resuelve cuando el módulo esté terminado.**
+
+**⚠️ El blocker no es mover datos, es que falta la feature.** Casi todos esos ítems tienen `subdivisions` (6, 8, 12):
+se compran por bulto y se venden por unidad. `products` **no tiene** `subdivisions`/`subdivision_label`/`cost_per_package`,
+y la rama de producto de `PurchaseLineRecorder::apply()` **no hace matemática de bulto** (el comentario lo dice:
+"se compra como un ingrediente sin subdivisiones"). Caso real medido sobre la BD de dev (tenant 3):
+
+| | Hoy como insumo | Si se convierte hoy |
+|---|---|---|
+| `CC ZERO 600MLX6`, qty 5 u, unit_price $9.622,50 | costo **$1.603,75**/botella · ingresan **30** | costo **$9.622,50**/botella · ingresan **5** |
+
+Costo 6× inflado que alimenta directo el margen. **No convertir nada hasta agregar subdivisiones a la reventa.**
+
+Lo que haría falta, si se retoma:
+1. `subdivisions` + `subdivision_label` + `cost_per_package` en `products`, y espejar en la rama de producto de
+   `apply()` la cuenta que ya hace la de ingrediente (`if ($item->subdivisions && purchaseUnit === u && item->unit === u)`).
+2. Comando `ingredients:to-resale {ids} --dry-run`: crea el artículo y **re-apunta** `supplier_product_links` (para que
+   Compras lo sugiera como reventa de ahí en más), `stock_levels`, `stock_movements`, `purchase_lines` e
+   `ingredient_price_logs` → `product_cost_logs`. Desactiva el insumo viejo.
+   - **Punto delicado**: `StockMovement` es ledger inmutable (`booted()` tira `LogicException` en update/delete).
+     Re-apuntar el `stockable_type` exige escritura cruda y una decisión explícita del usuario. Sólo cambia el TIPO
+     al que apunta la fila, no cantidades ni costos, así que la historia sigue siendo cierta.
+3. Decidir si se migra todo (stock + kardex + compras), sólo el stock, o se arranca de cero recontando.
+
+**Cómo identificar candidatos**: insumos sin ninguna fila en `recipe_ingredient_lines`. En tenant 3 son 84, pero sólo
+~25 son reventa real — el resto (semillas, premezclas, chocolates, mermeladas) son insumos que todavía no entraron en
+una receta. **La lista hay que revisarla con el usuario, no automatizarla.**
+
 ## Próximo — Producción (las direcciones siguen sobre la mesa)
 Ninguna se implementó; siguen siendo candidatas y se pueden combinar:
 1. **Valuación del elaborado por producción** — que fabricar alimente el costo del artículo. `productions.unit_cost`
