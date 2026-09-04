@@ -14,7 +14,7 @@ use App\Models\Tenant;
 
 // --- Etiqueta de origen en el catálogo ---
 
-test('el catálogo etiqueta al elaborado como Receta y a la reventa como Compra', function () {
+test('el catálogo etiqueta el origen de la reventa y no el del elaborado', function () {
     [$user, $tenant] = stockPurchaseOwner();
     $recipe = Recipe::factory()->for($tenant)->create(['unit_cost' => 30, 'yield_quantity' => 1]);
     Product::factory()->for($tenant)->manufactured()->create(['name' => 'BudinElaborado', 'recipe_id' => $recipe->id]);
@@ -22,8 +22,10 @@ test('el catálogo etiqueta al elaborado como Receta y a la reventa como Compra'
 
     $html = $this->actingAs($user)->get(route('products.index'))->assertOk()->getContent();
 
-    expect($html)->toContain('El costo lo calcula la receta')
-        ->toContain('El costo lo alimentan las compras');
+    // El elaborado no lleva etiqueta de origen: su badge de tipo ya dice que el
+    // costo sale de la receta, y repetirlo sólo gasta espacio en la fila.
+    expect($html)->toContain('El costo lo alimentan las compras')
+        ->not->toContain('El costo lo calcula la receta');
 });
 
 test('un costo tipeado a mano se etiqueta Manual, no Compra', function () {
@@ -119,7 +121,22 @@ test('el historial exige estar autenticado', function () {
 
 // --- Stock ---
 
-test('la ficha de stock de un elaborado muestra el origen Receta', function () {
+test('la ficha de stock de una reventa muestra el origen del costo', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $product = Product::factory()->for($tenant)->resale()->create([
+        'unit' => Unit::Unidad->value,
+        'cost_per_unit' => 100,
+    ]);
+
+    $html = $this->actingAs($user)
+        ->get(route('stock.show', ['type' => 'product', 'id' => $product->id]))
+        ->assertOk()
+        ->getContent();
+
+    expect($html)->toContain('El costo lo alimentan las compras');
+});
+
+test('la ficha de stock de un elaborado no lleva etiqueta de origen', function () {
     [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
     $recipe = Recipe::factory()->for($tenant)->create(['unit_cost' => 30, 'yield_quantity' => 1]);
     $product = Product::factory()->for($tenant)->manufactured()->create([
@@ -132,5 +149,5 @@ test('la ficha de stock de un elaborado muestra el origen Receta', function () {
         ->assertOk()
         ->getContent();
 
-    expect($html)->toContain('El costo lo calcula la receta');
+    expect($html)->not->toContain('El costo lo calcula la receta');
 });
