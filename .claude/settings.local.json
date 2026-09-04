@@ -38,7 +38,8 @@
       "Bash(echo \"EXIT:$?\")",
       "PowerShell(git rebase *)",
       "Bash(git cherry-pick *)",
-      "Bash(sed -n '182,197p' CHANGELOG.md)"
+      "Bash(sed -n '182,197p' CHANGELOG.md)",
+      "Bash(git ls-tree *)"
     ]
   },
   "enableAllProjectMcpServers": true,
