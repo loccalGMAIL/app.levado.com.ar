@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="title">Producción</x-slot>
 
-    <div class="py-8 px-6 lg:px-8">
+    <div class="py-8 px-6 lg:px-8" x-data="{ mobileExpanded: false }">
         <div class="space-y-6">
 
             <div class="flex items-center justify-between">
