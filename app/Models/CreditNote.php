@@ -3,38 +3,32 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
-use Database\Factories\PurchaseFactory;
+use Database\Factories\CreditNoteFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Purchase extends Model
+class CreditNote extends Model
 {
     use BelongsToTenant;
 
-    /** @use HasFactory<PurchaseFactory> */
+    /** @use HasFactory<CreditNoteFactory> */
     use HasFactory;
 
     protected $fillable = [
         'tenant_id',
         'supplier_id',
-        'invoice_number',
-        'invoice_date',
-        'invoice_total',
-        'default_iva_rate',
-        'default_percepcion_rate',
+        'purchase_id',
+        'note_number',
+        'note_date',
         'notes',
-        'invoice_image_path',
     ];
 
     protected function casts(): array
     {
         return [
-            'invoice_date' => 'date',
-            'invoice_total' => 'decimal:2',
-            'default_iva_rate' => 'decimal:4',
-            'default_percepcion_rate' => 'decimal:2',
+            'note_date' => 'date',
         ];
     }
 
@@ -48,14 +42,14 @@ class Purchase extends Model
         return $this->belongsTo(Supplier::class);
     }
 
-    public function lines(): HasMany
+    public function purchase(): BelongsTo
     {
-        return $this->hasMany(PurchaseLine::class);
+        return $this->belongsTo(Purchase::class);
     }
 
-    public function creditNotes(): HasMany
+    public function lines(): HasMany
     {
-        return $this->hasMany(CreditNote::class);
+        return $this->hasMany(CreditNoteLine::class);
     }
 
     public function totalAmount(): float

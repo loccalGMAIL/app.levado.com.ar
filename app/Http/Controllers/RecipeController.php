@@ -65,7 +65,11 @@ class RecipeController extends Controller
             ->whereIn('recipe_id', $recipes->pluck('id'))
             ->pluck('price', 'recipe_id');
 
-        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices'));
+        // Lista completa de sub-recetas para el select del modal de reemplazo
+        // masivo: el sustituto tiene que ser un semielaborado, activo o no.
+        $semiElaborateRecipes = $tenant->recipes()->where('is_semi_elaborate', true)->orderBy('name')->get();
+
+        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices', 'semiElaborateRecipes'));
     }
 
     public function show(Recipe $recipe): View

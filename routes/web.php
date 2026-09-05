@@ -8,6 +8,8 @@ use App\Http\Controllers\Admin\TenantController as AdminTenantController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AlertSettingsController;
 use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\CatalogReplacementController;
+use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
@@ -92,6 +94,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('purchases/{purchase}/match', [PurchaseController::class, 'match'])->name('purchases.match');
     Route::get('purchases/{purchase}/invoice', [PurchaseController::class, 'invoiceImage'])->name('purchases.invoice');
 
+    Route::get('credit-notes', [CreditNoteController::class, 'index'])->name('credit-notes.index');
+    Route::get('credit-notes/{creditNote}', [CreditNoteController::class, 'show'])->name('credit-notes.show');
+
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::get('stock/{type}/{id}', [StockController::class, 'show'])
         ->whereIn('type', ['ingredient', 'packaging'])
@@ -107,9 +112,12 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
 // Costos — escritura (owner y admin)
 Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
+    Route::get('catalog/replacement-preview', [CatalogReplacementController::class, 'preview'])->name('catalog.replacement-preview');
+
     Route::post('ingredients', [IngredientController::class, 'store'])->name('ingredients.store');
     Route::put('ingredients/{ingredient}', [IngredientController::class, 'update'])->name('ingredients.update');
     Route::patch('ingredients/{ingredient}/toggle-active', [IngredientController::class, 'toggleActive'])->name('ingredients.toggle-active');
+    Route::post('ingredients/{ingredient}/replace', [CatalogReplacementController::class, 'replaceIngredient'])->name('ingredients.replace');
 
     Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
     Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
@@ -119,6 +127,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::put('packaging/{packaging}', [PackagingController::class, 'update'])->name('packaging.update');
     Route::patch('packaging/{packaging}/cost', [PackagingCostController::class, 'update'])->name('packaging.cost.update');
     Route::patch('packaging/{packaging}/toggle-active', [PackagingController::class, 'toggleActive'])->name('packaging.toggle-active');
+    Route::post('packaging/{packaging}/replace', [CatalogReplacementController::class, 'replacePackaging'])->name('packaging.replace');
 
     Route::post('fixed-costs', [FixedCostController::class, 'store'])->name('fixed-costs.store');
     Route::put('fixed-costs/{fixedCost}', [FixedCostController::class, 'update'])->name('fixed-costs.update');
@@ -150,6 +159,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::put('recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
     Route::patch('recipes/{recipe}/prices/{priceList}', [RecipePriceController::class, 'update'])->name('recipes.prices.update');
     Route::patch('recipes/{recipe}/toggle-active', [RecipeController::class, 'toggleActive'])->name('recipes.toggle-active');
+    Route::post('recipes/{recipe}/replace', [CatalogReplacementController::class, 'replaceRecipe'])->name('recipes.replace');
 
     // Los parámetros de línea ({ingredientLine}, {line}, etc.) usan scoped bindings:
     // Laravel resuelve la línea DENTRO de la relación del padre (404 si no pertenece),
@@ -185,6 +195,13 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->scopeBindings()->name('purchases.lines.destroy');
     Route::post('purchases/{purchase}/lines/{line}/match', [PurchaseController::class, 'matchLine'])->scopeBindings()->name('purchases.lines.match');
     Route::post('purchases/{purchase}/apply-suggestions', [PurchaseController::class, 'applyLineSuggestions'])->name('purchases.apply-suggestions');
+
+    Route::post('credit-notes', [CreditNoteController::class, 'store'])->name('credit-notes.store');
+    Route::patch('credit-notes/{creditNote}', [CreditNoteController::class, 'update'])->name('credit-notes.update');
+    Route::delete('credit-notes/{creditNote}', [CreditNoteController::class, 'destroy'])->name('credit-notes.destroy');
+    Route::post('credit-notes/{creditNote}/lines', [CreditNoteController::class, 'storeLine'])->name('credit-notes.lines.store');
+    Route::patch('credit-notes/{creditNote}/lines/{line}', [CreditNoteController::class, 'updateLine'])->scopeBindings()->name('credit-notes.lines.update');
+    Route::delete('credit-notes/{creditNote}/lines/{line}', [CreditNoteController::class, 'destroyLine'])->scopeBindings()->name('credit-notes.lines.destroy');
 
     Route::post('stock/{type}/{id}/adjustments', [StockController::class, 'storeAdjustment'])
         ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.adjustments.store');

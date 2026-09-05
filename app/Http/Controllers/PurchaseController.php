@@ -185,7 +185,7 @@ class PurchaseController extends Controller
         $this->authorize('view', $purchase);
         $tenant = app(Tenant::class);
 
-        $purchase->load(['supplier', 'lines']);
+        $purchase->load(['supplier', 'lines', 'creditNotes.lines']);
 
         // Todos, no sólo los activos: el select de edición es `required`, así que si el
         // proveedor de la compra fue dado de baja su opción no existiría, el select caería

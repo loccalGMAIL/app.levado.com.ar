@@ -89,9 +89,23 @@ class StockMovement extends Model
         return $this->belongsTo(PurchaseLine::class, 'reference_id');
     }
 
+    /**
+     * Renglón de nota de crédito que originó una salida de devolución.
+     * Sólo tiene valor cuando reference_type es 'credit_note_line'.
+     */
+    public function creditNoteLine(): BelongsTo
+    {
+        return $this->belongsTo(CreditNoteLine::class, 'reference_id');
+    }
+
     public function isFromPurchaseLine(): bool
     {
         return $this->reference_type === 'purchase_line';
+    }
+
+    public function isFromCreditNoteLine(): bool
+    {
+        return $this->reference_type === 'credit_note_line';
     }
 
     public function isIngredient(): bool

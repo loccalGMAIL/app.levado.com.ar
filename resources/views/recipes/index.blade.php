@@ -6,7 +6,14 @@
         $showUrl = fn ($recipe) => route('recipes.show', array_filter(['recipe' => $recipe->id, 'volver' => request()->getQueryString()]));
     @endphp
 
-    <div class="py-8 px-6 lg:px-8" x-data="{ mobileExpanded: false }">
+    <div class="py-8 px-6 lg:px-8" x-data="{
+        mobileExpanded: false,
+        replacing: null,
+        openReplace(item) {
+            this.replacing = item;
+            $dispatch('open-modal', 'recipe-replace');
+        }
+    }">
         <div class="space-y-6">
 
             <div class="flex items-center justify-between">
@@ -168,6 +175,13 @@
                                             Copiar
                                         </button>
                                     </form>
+                                    @if($recipe->is_semi_elaborate)
+                                        <button type="button"
+                                            @click="openReplace({{ Js::from(['id' => $recipe->id, 'name' => $recipe->name]) }})"
+                                            class="py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">
+                                            Reemplazar
+                                        </button>
+                                    @endif
                                     <form method="POST" action="{{ route('recipes.toggle-active', $recipe) }}">
                                         @csrf
                                         @method('PATCH')
@@ -300,6 +314,14 @@
                                                         </svg>
                                                     </button>
                                                 </form>
+                                                @if($recipe->is_semi_elaborate)
+                                                    <button type="button"
+                                                        @click="openReplace({{ Js::from(['id' => $recipe->id, 'name' => $recipe->name]) }})"
+                                                        aria-label="Reemplazar en recetas" title="Reemplazar en recetas"
+                                                        class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
+                                                        <x-icon name="arrow-path" />
+                                                    </button>
+                                                @endif
                                                 <form method="POST" action="{{ route('recipes.toggle-active', $recipe) }}">
                                                     @csrf
                                                     @method('PATCH')
@@ -341,6 +363,7 @@
 
         @can('manage-costs')
             @include('recipes.modals.create')
+            @include('recipes.modals.replace')
         @endcan
 
     </div>
