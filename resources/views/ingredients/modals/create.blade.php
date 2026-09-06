@@ -86,13 +86,20 @@
 
         <div x-show="selectedUnit === 'u'" class="grid grid-cols-2 gap-4 border-t border-miga pt-4">
             <div>
-                <x-input-label for="create_subdivisions" value="Unidades por envase" />
+                <x-input-label for="create_subdivisions" value="Unidades por envase (opcional)" />
                 <x-text-input id="create_subdivisions" name="subdivisions" type="number"
-                    step="1" min="2"
+                    step="1"
                     class="mt-1 block w-full"
                     :value="old('subdivisions')"
                     x-model="createSubdivisions" />
-                <p class="mt-1 text-xs text-masa-madre">Ej.: 24 galletas por paquete.</p>
+                <p class="mt-1 text-xs text-masa-madre">
+                    Completar sólo si se subdivide el envase (ej.: 24 galletas por paquete).
+                </p>
+                <p class="mt-1 text-xs text-horno"
+                    x-show="createSubdivisions !== '' && parseInt(createSubdivisions) < 2">
+                    Si el envase no se subdivide, dejá este campo vacío.
+                    <button type="button" class="underline hover:no-underline" @click="createSubdivisions = ''">Vaciar</button>
+                </p>
                 <x-input-error :messages="$errors->get('subdivisions')" class="mt-2" />
             </div>
             <div>

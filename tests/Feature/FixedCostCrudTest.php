@@ -7,6 +7,8 @@ use App\Models\FixedCostLog;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
+use App\Services\FixedCostHistory;
+use Illuminate\Support\Carbon;
 
 function ownerForFixedCost(): array
 {
@@ -61,7 +63,7 @@ test('owner puede crear un gasto fijo', function () {
             'name' => 'Seguro',
             'fixed_cost_category_id' => $category->id,
             'monthly_amount' => '5000.00',
-            'valid_from' => '2024-01-01',
+            'period' => '2024-01',
         ])
         ->assertRedirect(route('fixed-costs.index'));
 
@@ -84,7 +86,7 @@ test('admin puede crear un gasto fijo', function () {
             'name' => 'Electricidad',
             'fixed_cost_category_id' => $category->id,
             'monthly_amount' => '12000.00',
-            'valid_from' => '2024-06-01',
+            'period' => '2024-06',
         ])
         ->assertRedirect(route('fixed-costs.index'));
 
@@ -107,7 +109,7 @@ test('viewer no puede crear gastos fijos', function () {
             'name' => 'Gas',
             'fixed_cost_category_id' => $category->id,
             'monthly_amount' => '3000',
-            'valid_from' => '2024-01-01',
+            'period' => '2024-01',
         ])
         ->assertForbidden();
 });
@@ -119,7 +121,7 @@ test('nombre es obligatorio al crear gasto fijo', function () {
         ->post(route('fixed-costs.store'), [
             'fixed_cost_category_id' => $category->id,
             'monthly_amount' => '1000',
-            'valid_from' => '2024-01-01',
+            'period' => '2024-01',
         ])
         ->assertSessionHasErrors('name');
 });
@@ -131,7 +133,7 @@ test('category es obligatoria al crear gasto fijo', function () {
         ->post(route('fixed-costs.store'), [
             'name' => 'Sin categoría',
             'monthly_amount' => '1000',
-            'valid_from' => '2024-01-01',
+            'period' => '2024-01',
         ])
         ->assertSessionHasErrors('fixed_cost_category_id');
 });
@@ -148,7 +150,7 @@ test('owner puede editar un gasto fijo', function () {
             'name' => 'Actualizado',
             'fixed_cost_category_id' => $category->id,
             'monthly_amount' => $fixedCost->monthly_amount,
-            'valid_from' => date('Y-m-d'),
+            'period' => date('Y-m'),
         ])
         ->assertRedirect(route('fixed-costs.index'));
 
@@ -179,14 +181,14 @@ test('al crear un gasto fijo se registra un log', function () {
             'name' => 'Alquiler',
             'fixed_cost_category_id' => $category->id,
             'monthly_amount' => '80000.00',
-            'valid_from' => '2024-01-01',
+            'period' => '2024-01',
         ]);
 
     $fixedCost = $tenant->fixedCosts()->where('name', 'Alquiler')->first();
 
     expect($fixedCost->logs()->count())->toBe(1);
     expect((float) $fixedCost->logs()->first()->monthly_amount)->toBe(80000.0);
-    expect($fixedCost->logs()->first()->valid_from->format('Y-m-d'))->toBe('2024-01-01');
+    expect($fixedCost->logs()->first()->period->format('Y-m-d'))->toBe('2024-01-01');
 });
 
 test('al actualizar el monto se registra un nuevo log', function () {
@@ -195,19 +197,19 @@ test('al actualizar el monto se registra un nuevo log', function () {
         'monthly_amount' => '10000.00',
         'fixed_cost_category_id' => $category->id,
     ]);
-    $fixedCost->logs()->create(['monthly_amount' => '10000.00', 'valid_from' => '2024-01-01']);
+    $fixedCost->logs()->create(['monthly_amount' => '10000.00', 'period' => '2024-01-01']);
 
     $this->actingAs($user)
         ->put(route('fixed-costs.update', $fixedCost), [
             'name' => $fixedCost->name,
             'fixed_cost_category_id' => $category->id,
             'monthly_amount' => '15000.00',
-            'valid_from' => '2024-06-01',
+            'period' => '2024-06',
         ]);
 
     expect($fixedCost->logs()->count())->toBe(2);
     expect((float) $fixedCost->logs()->orderByDesc('id')->first()->monthly_amount)->toBe(15000.0);
-    expect($fixedCost->logs()->orderByDesc('id')->first()->valid_from->format('Y-m-d'))->toBe('2024-06-01');
+    expect($fixedCost->logs()->orderByDesc('id')->first()->period->format('Y-m-d'))->toBe('2024-06-01');
 });
 
 test('al actualizar sin cambiar el monto no se genera un nuevo log', function () {
@@ -216,14 +218,14 @@ test('al actualizar sin cambiar el monto no se genera un nuevo log', function ()
         'monthly_amount' => '10000.00',
         'fixed_cost_category_id' => $category->id,
     ]);
-    $fixedCost->logs()->create(['monthly_amount' => '10000.00', 'valid_from' => '2024-01-01']);
+    $fixedCost->logs()->create(['monthly_amount' => '10000.00', 'period' => '2024-01-01']);
 
     $this->actingAs($user)
         ->put(route('fixed-costs.update', $fixedCost), [
             'name' => 'Nombre nuevo',
             'fixed_cost_category_id' => $category->id,
             'monthly_amount' => '10000.00',
-            'valid_from' => date('Y-m-d'),
+            'period' => date('Y-m'),
         ]);
 
     expect($fixedCost->logs()->count())->toBe(1);
@@ -314,7 +316,130 @@ test('aislamiento: no se puede editar gasto fijo de otro tenant', function () {
             'name' => 'Hack',
             'fixed_cost_category_id' => $category->id,
             'monthly_amount' => '1',
-            'valid_from' => date('Y-m-d'),
+            'period' => date('Y-m'),
         ])
         ->assertNotFound();
+});
+
+// --- Borrado ---
+
+test('owner puede eliminar un gasto fijo', function () {
+    [$user, $tenant, $category] = ownerForFixedCost();
+    $fixedCost = FixedCost::factory()->for($tenant)->create(['fixed_cost_category_id' => $category->id]);
+
+    $this->actingAs($user)
+        ->delete(route('fixed-costs.destroy', $fixedCost))
+        ->assertRedirect();
+
+    expect(FixedCost::find($fixedCost->id))->toBeNull();
+    expect(FixedCost::withTrashed()->find($fixedCost->id))->not->toBeNull();
+    expect(FixedCost::withTrashed()->find($fixedCost->id)->deleted_at)->not->toBeNull();
+});
+
+test('admin puede eliminar un gasto fijo', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create();
+    TenantUser::create([
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'role' => TenantUserRole::Admin->value,
+        'active' => true,
+    ]);
+    $category = $tenant->fixedCostCategories()->create(['name' => 'Servicios']);
+    $fixedCost = FixedCost::factory()->for($tenant)->create(['fixed_cost_category_id' => $category->id]);
+
+    $this->actingAs($user)
+        ->delete(route('fixed-costs.destroy', $fixedCost))
+        ->assertRedirect();
+
+    expect(FixedCost::find($fixedCost->id))->toBeNull();
+});
+
+test('viewer no puede eliminar gastos fijos', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create();
+    TenantUser::create([
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'role' => TenantUserRole::Viewer->value,
+        'active' => true,
+    ]);
+    $category = $tenant->fixedCostCategories()->create(['name' => 'Servicios']);
+    $fixedCost = FixedCost::factory()->for($tenant)->create(['fixed_cost_category_id' => $category->id]);
+
+    $this->actingAs($user)
+        ->delete(route('fixed-costs.destroy', $fixedCost))
+        ->assertForbidden();
+
+    expect(FixedCost::find($fixedCost->id))->not->toBeNull();
+});
+
+test('un gasto fijo eliminado no aparece en el listado', function () {
+    [$user, $tenant, $category] = ownerForFixedCost();
+    $fixedCost = FixedCost::factory()->for($tenant)->create(['name' => 'Alquiler Viejo', 'fixed_cost_category_id' => $category->id]);
+
+    $this->actingAs($user)->delete(route('fixed-costs.destroy', $fixedCost));
+
+    $this->actingAs($user)
+        ->get(route('fixed-costs.index'))
+        ->assertDontSee('Alquiler Viejo');
+});
+
+test('eliminar un gasto fijo activo baja el overhead por hora', function () {
+    [$user, $tenant, $category] = ownerForFixedCost();
+    $tenant->update(['productive_hours_month' => 160]);
+    $fixedCost = FixedCost::factory()->for($tenant)->create([
+        'fixed_cost_category_id' => $category->id,
+        'monthly_amount' => '16000.00',
+        'active' => true,
+    ]);
+    $fixedCost->logs()->create(['monthly_amount' => '16000.00', 'period' => Carbon::now()->startOfMonth()]);
+
+    $this->actingAs($user)->delete(route('fixed-costs.destroy', $fixedCost));
+
+    expect($tenant->fresh()->overheadPerHour())->toBe(0.0);
+});
+
+test('eliminar un gasto fijo no altera el monto historico de un mes anterior', function () {
+    [$user, $tenant, $category] = ownerForFixedCost();
+    $fixedCost = FixedCost::factory()->for($tenant)->create([
+        'fixed_cost_category_id' => $category->id,
+        'monthly_amount' => '5000.00',
+    ]);
+    $pastPeriod = Carbon::now()->subMonths(2)->startOfMonth();
+    $fixedCost->logs()->create(['monthly_amount' => '5000.00', 'period' => $pastPeriod]);
+
+    $this->actingAs($user)->delete(route('fixed-costs.destroy', $fixedCost));
+
+    $amounts = app(FixedCostHistory::class)->amountsForPeriod($tenant->fresh(), $pastPeriod);
+    expect($amounts->get($fixedCost->id)['amount'])->toBe(5000.0);
+
+    $amountsHoy = app(FixedCostHistory::class)->amountsForPeriod($tenant->fresh(), Carbon::now());
+    expect($amountsHoy->get($fixedCost->id)['amount'])->toBe(0.0);
+});
+
+test('aislamiento: no se puede eliminar un gasto fijo de otro tenant', function () {
+    [$user] = ownerForFixedCost();
+    $otherTenant = Tenant::factory()->create();
+    $otherCategory = $otherTenant->fixedCostCategories()->create(['name' => 'Ext']);
+    $other = FixedCost::factory()->for($otherTenant)->create(['fixed_cost_category_id' => $otherCategory->id]);
+
+    $this->actingAs($user)
+        ->delete(route('fixed-costs.destroy', $other))
+        ->assertNotFound();
+
+    expect(FixedCost::withoutGlobalScopes()->find($other->id)->deleted_at)->toBeNull();
+});
+
+test('una categoria con todos sus gastos eliminados pasa a poder borrarse', function () {
+    [$user, $tenant, $category] = ownerForFixedCost();
+    $fixedCost = FixedCost::factory()->for($tenant)->create(['fixed_cost_category_id' => $category->id]);
+
+    $this->actingAs($user)->delete(route('fixed-costs.destroy', $fixedCost));
+
+    $this->actingAs($user)
+        ->delete(route('fixed-cost-categories.destroy', $category))
+        ->assertRedirect(route('fixed-costs.index'));
+
+    expect(FixedCostCategory::find($category->id))->toBeNull();
 });

@@ -5,6 +5,117 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.17] — 2026-09-06
+
+### Histórico mensual de gastos fijos
+
+Los gastos fijos (alquiler, luz, gas, sueldos) cambian mes a mes, pero el sistema sólo guardaba
+el monto vigente: al editarlo se pisaba el valor anterior y no había forma de responder "¿cuánto
+pagué de luz en junio?" ni de ver cómo venían subiendo los costos operativos. La tabla que
+llevaba ese registro (`fixed_cost_logs`) ya existía desde el alta del módulo, pero era write-only
+— se escribía al crear o editar un gasto y ninguna pantalla la mostraba.
+
+#### Agregado
+
+- **Historial de gastos fijos.** Botón «Historial» en Gastos → Gastos Fijos y un link «historial»
+  por fila, hacia dos vistas nuevas:
+  - **Grilla mensual** (`/fixed-costs/history`): todos los gastos fijos de un mes en una sola
+    pantalla, para completarlo de una pasada en vez de abrir el modal gasto por gasto. Un gasto
+    sin monto propio ese mes muestra el último cargado, marcado «arrastrado» — nunca hay que
+    recargar un alquiler que no cambió. Guardar el **mes en curso** actualiza el monto vigente de
+    cada gasto (y por lo tanto el overhead por hora); guardar un **mes pasado** sólo lo registra,
+    sin tocar el costeo de hoy.
+  - **Línea de tiempo de un gasto** (`/fixed-costs/{id}/history`): un punto por mes con monto
+    propio, con la variación porcentual contra el registro anterior.
+- El campo «Vigente desde» de los modales de alta/edición de gastos fijos pasa a «Mes de
+  vigencia» (un select de meses en vez de una fecha suelta): un gasto fijo cambia por mes
+  calendario, no por día.
+- **Eliminar un gasto fijo.** Hasta ahora sólo se podía desactivar — la razón era que borrarlo
+  alteraría los costos históricos. Con el histórico ya separado en `fixed_cost_logs`, esa
+  objeción desaparece: el borrado es lógico (`deleted_at`), así que el gasto deja de listarse y
+  de contarse en el overhead de hoy, pero los meses en los que sí rigió conservan su monto real
+  en el historial. Mismo botón de confirmación (`confirm()`) que ya usan Gastos Variables y
+  Notas de Crédito.
+
+#### Técnico
+
+- `fixed_cost_logs` pasa de `valid_from` (fecha suelta) a `period` (primer día del mes,
+  `unique(fixed_cost_id, period)`). Migración con backfill: agrupa los logs existentes por
+  `(fixed_cost_id, mes de valid_from)` y conserva el de id más alto de cada grupo -el último
+  cambio del mes es el que rigió al cerrarlo- antes de imponer el unique. En MySQL el `unique`
+  nuevo se crea *antes* de borrar el índice viejo: `fixed_cost_id` sostiene la foreign key hacia
+  `fixed_costs`, y MySQL rechaza borrar el único índice que la respalda.
+- `App\Services\FixedCostHistory`: único dueño de la lectura por período (`amountsForPeriod`,
+  `totalForPeriod`, `timelineFor`, `record`). Deliberadamente separado de
+  `Tenant::totalFixedCosts()`/`overheadPerHour()`, que siguen siendo la única fórmula que
+  alimenta el costeo de recetas — el histórico no la reemplaza, sólo la consulta hacia atrás.
+  `amountsForPeriod` resuelve el arrastre con una subquery correlacionada (no window function,
+  corre igual en MySQL y en el SQLite de los tests).
+- `FixedCostLog::$dateFormat = 'Y-m-d'`: sin esto, `fromDateTime()` -lo que Eloquent usa para
+  serializar un atributo con cast `date` al guardar- ignora el formato del cast y guarda con hora
+  (`00:00:00`). MySQL la trunca porque la columna es `DATE`; SQLite (dynamic typing, los tests) la
+  guarda tal cual, y entonces cualquier comparación por string contra `'Y-m-d'` deja de matchear.
+- `FixedCostController::toggleActive()` ahora registra el período en curso al desactivar (monto
+  `0`, "no aplicó desde acá") y al reactivar (el monto vigente): sin esto, `totalForPeriod()`
+  seguiría contando el monto de un gasto ya desactivado, porque el histórico no tiene noción
+  propia de activo/inactivo. Invariante cubierto por test:
+  `FixedCostHistory::totalForPeriod($tenant, hoy) === $tenant->totalFixedCosts()`.
+- 12 tests nuevos (`FixedCostHistoryTest`): carry-forward, invariante con el total vigente, mes en
+  curso vs. mes pasado, idempotencia de `updateOrCreate` por `(fixed_cost_id, period)`,
+  activar/desactivar, aislamiento entre tenants y el gate `manage-costs` en la grilla. Los 4 tests
+  de `FixedCostCrudTest` sobre el log viejo se actualizaron a `period`; los otros 16 no se
+  tocaron.
+- `FixedCost` suma el trait `SoftDeletes` (`deleted_at`) — primer uso en el proyecto. Un solo
+  lugar consulta `fixed_costs`/`fixed_cost_logs` con query builder crudo
+  (`FixedCostHistory::amountsForPeriod`) y no hace falta tocarlo: no filtra por `deleted_at` a
+  propósito, así un gasto borrado sigue mostrando su monto real en los meses previos al borrado.
+  Todo lo demás (`Tenant::totalFixedCosts()`, el guard de
+  `FixedCostCategoryController::destroy()`, el `withExists(['fixedCosts'])` del onboarding) es
+  Eloquent puro y respeta el global scope de `SoftDeletes` sin cambios de código.
+  `FixedCostController::destroy()` registra un log en `0` para el mes en curso antes de borrar
+  -mismo mecanismo que `toggleActive()` al desactivar- para que
+  `totalForPeriod(hoy) === totalFixedCosts()` se mantenga sin importar si el gasto estaba activo.
+  8 tests nuevos en `FixedCostCrudTest` (permisos por rol, no aparece en el listado, baja el
+  overhead, no altera meses pasados, aislamiento, categoría que se libera al quedar sin gastos).
+
+---
+
+## [0.12.16] — 2026-09-06
+
+### Un insumo que se usa entero, sin subdividir
+
+Confitería Orfano reportó que no podía cargar la crema de leche (pote de 200 cc, se usa entero
+en la receta): el campo «Unidades por envase» exigía un mínimo de 2, y escribir `1` bloqueaba el
+formulario sin ninguna explicación — el navegador cancelaba el envío con su propio aviso
+genérico. El caso ya funcionaba dejando el campo vacío, pero nada en la pantalla lo decía.
+
+#### Arreglado
+
+- El campo «Unidades por envase» / «Unidades por presentación» ahora aclara que es opcional y
+  que sólo hay que completarlo si el envase se subdivide. Si de todas formas se escribe `1`,
+  aparece un aviso en el momento con un botón para vaciar el campo, en vez de depender del
+  bloqueo silencioso del navegador.
+- Un error de validación en «Unidades por envase» al crear o editar un ingrediente ya no cierra
+  el modal en silencio perdiendo lo cargado: ahora lo reabre con el mensaje y los datos intactos,
+  igual que ya pasaba en la pantalla de envases.
+- El mensaje de validación, si igual llega a mostrarse, ahora está en español y nombra el campo
+  correctamente en vez de mostrar el nombre interno de la columna.
+
+#### Técnico
+
+- `StoreIngredientRequest`, `UpdateIngredientRequest`, `StorePackagingRequest`,
+  `UpdatePackagingRequest`: agregan `attributes()`/`messages()` para el mensaje de
+  `subdivisions.min` en español. La regla de validación (`nullable`, `min:2`) no cambió — sigue
+  siendo la fuente de verdad de que `subdivisions` es la cantidad de subdivisiones, no un
+  booleano, y de que `1` no es un valor legítimo: `FixIngredientSubdivisionCosts` depende de ese
+  invariante para distinguir «nunca dividido» de «envase viejo».
+- `resources/views/ingredients/index.blade.php`: el `hasAny(...)` que decide si reabrir el modal
+  ahora incluye `subdivisions`/`subdivision_label`, igual que ya hacía `packaging/index.blade.php`.
+- Se quitó el `min="2"` HTML de los cuatro modales (create/edit de ingredientes y envases): era
+  lo que bloqueaba el envío del formulario antes de que el servidor pudiera responder nada.
+
+---
+
 ## [0.12.15] — 2026-09-05
 
 ### Devoluciones al proveedor y un insumo descontinuado en cien recetas

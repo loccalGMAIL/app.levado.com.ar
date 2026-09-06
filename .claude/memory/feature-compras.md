@@ -396,3 +396,17 @@ Igual que al desasociar un renglón de compra o marcarlo consumo personal: **la 
 ### UI
 
 Sección nueva en el sidebar (*Existencias*, debajo de Compras). `purchases/show.blade.php` lista las notas de crédito de esa compra con el total acreditado — **sin** alterar `invoice_total` ni el neto de la factura, que tiene que seguir cerrando contra el papel. El kardex (`stock/show.blade.php`) linkea el movimiento «Devolución» a la nota igual que ya linkea las entradas de compra a su factura.
+
+## `subdivisions` vacío ≠ `subdivisions = 1` (v0.12.16)
+
+Feedback real de Confitería Orfano: un insumo que se usa entero (crema de leche, pote de 200 cc, sin subdividir) no se podía cargar — el campo «Unidades por envase» tiene `min:2` y escribir `1` bloqueaba el formulario. El caso **ya funcionaba** dejando el campo vacío (`subdivisions = null`: `unit = u`, `cost_per_unit` = precio del envase, sin `cost_per_package`); el problema era sólo de interfaz, en tres capas:
+
+- `min="2"` **HTML nativo** en los cuatro modales (create/edit de `ingredients` y `packaging`) cancelaba el submit con el tooltip genérico del navegador, sin explicar la alternativa. Se sacó — la regla real sigue viviendo sólo en el FormRequest.
+- `resources/views/ingredients/index.blade.php` no incluía `subdivisions`/`subdivision_label` en el `hasAny(...)` que decide reabrir el modal con errores (`packaging/index.blade.php` sí lo hacía). Un error de validación en ese campo cerraba el modal en silencio, con los datos perdidos.
+- `lang/es/validation.php` tiene `'attributes' => []` global, así que el mensaje salía como *"El campo subdivisions debe ser al menos 2."* — se agregó `attributes()`/`messages()` en los cuatro FormRequests en vez de tocar el archivo global (evita pisar el rótulo distinto que usa cada pantalla: «envase» en ingredientes, «presentación» en envases).
+
+**Decisión: `1` sigue sin ser un valor válido.** No se bajó `min:2` a `min:1`. `subdivisions` significa "en cuántas partes se divide el envase" — `1` no es una subdivisión, es la ausencia de una. Además `app/Console/Commands/FixIngredientSubdivisionCosts.php:123-125,144-145` (`ingredients:fix-subdivision-costs`) depende del invariante `subdivisions >= 2` para distinguir el caso A ("nunca dividido", `cost_per_unit == cost_per_package`) del caso B ("envase viejo"): con `subdivisions = 1` esa igualdad sería legítima y rompería el diagnóstico. Ver [[project-architecture]].
+
+Los cuatro modales ahora rotulan el campo "(opcional)", explican en texto cuándo dejarlo vacío vs. cuándo completarlo, y muestran un aviso Alpine en vivo con botón "Vaciar" si el usuario tipea `0` o `1` — resuelve el caso antes del submit; el servidor queda como red de contención.
+
+Lo que **no** se tocó, detectado pero fuera de alcance: `IngredientController::store()`/`update()` no limpian `subdivisions`/`subdivision_label` cuando `unit` deja de ser `u` (sólo limpian `cost_per_package`) — un insumo en `kg` puede quedar con `subdivisions` colgado sin que ninguna validación lo impida.

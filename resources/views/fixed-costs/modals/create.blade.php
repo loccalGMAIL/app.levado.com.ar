@@ -86,12 +86,12 @@
                 <x-input-error :messages="$errors->get('fixed_cost_category_id')" class="mt-2" />
             </div>
             <div>
-                <x-input-label for="create_fc_valid_from" value="Vigente desde" />
-                <x-text-input id="create_fc_valid_from" name="valid_from" type="date"
-                    class="mt-1 block w-full"
-                    :value="old('valid_from', date('Y-m-d'))"
+                <x-input-label for="create_fc_period" value="Mes de vigencia" />
+                <x-month-select id="create_fc_period" name="period"
+                    class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm"
+                    :selected="old('period', now()->format('Y-m'))"
                     required />
-                <x-input-error :messages="$errors->get('valid_from')" class="mt-2" />
+                <x-input-error :messages="$errors->get('period')" class="mt-2" />
             </div>
         </div>
 

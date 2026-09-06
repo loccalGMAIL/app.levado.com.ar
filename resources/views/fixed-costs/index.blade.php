@@ -2,15 +2,15 @@
     <x-slot name="title">Gastos Fijos</x-slot>
 
     @php
-        $errorsInCreate = $errors->hasAny(['name', 'fixed_cost_category_id', 'monthly_amount', 'valid_from']) && old('_form') === 'create';
-        $errorsInEdit   = $errors->hasAny(['name', 'fixed_cost_category_id', 'monthly_amount', 'valid_from']) && old('_form') === 'edit';
-        $editingDefault = ['id' => null, 'name' => '', 'fixed_cost_category_id' => '', 'monthly_amount' => '', 'valid_from' => date('Y-m-d')];
+        $errorsInCreate = $errors->hasAny(['name', 'fixed_cost_category_id', 'monthly_amount', 'period']) && old('_form') === 'create';
+        $errorsInEdit   = $errors->hasAny(['name', 'fixed_cost_category_id', 'monthly_amount', 'period']) && old('_form') === 'edit';
+        $editingDefault = ['id' => null, 'name' => '', 'fixed_cost_category_id' => '', 'monthly_amount' => '', 'period' => now()->format('Y-m')];
         $editingOnError = $errorsInEdit ? [
             'id'                     => old('fixed_cost_id'),
             'name'                   => old('name'),
             'fixed_cost_category_id' => old('fixed_cost_category_id'),
             'monthly_amount'         => old('monthly_amount'),
-            'valid_from'             => old('valid_from'),
+            'period'                 => old('period'),
         ] : $editingDefault;
     @endphp
 
@@ -31,8 +31,12 @@
                     <h2 class="text-base font-semibold text-corteza">Gastos</h2>
                     <p class="text-sm text-masa-madre mt-0.5">Costos operativos mensuales del negocio: alquiler, servicios, personal y otros.</p>
                 </div>
-                @can('manage-costs')
-                    <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('fixed-costs.history') }}"
+                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        Historial
+                    </a>
+                    @can('manage-costs')
                         <button type="button"
                             @click="$dispatch('open-modal', 'fixed-cost-categories')"
                             class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
@@ -43,8 +47,8 @@
                             class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                             + Nuevo gasto
                         </button>
-                    </div>
-                @endcan
+                    @endcan
+                </div>
             </div>
 
             <x-expense-tabs />
@@ -95,7 +99,14 @@
                                     @if($fixedCost->category)
                                         <div class="text-xs text-masa-madre mt-0.5">{{ $fixedCost->category->name }}</div>
                                     @endif
-                                    <div class="text-sm font-mono text-corteza mt-1 [overflow-wrap:anywhere]">$ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }} / mes</div>
+                                    <div class="text-sm font-mono text-corteza mt-1 [overflow-wrap:anywhere] flex items-center gap-1.5">
+                                        $ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }} / mes
+                                        <a href="{{ route('fixed-costs.show-history', $fixedCost) }}"
+                                            class="text-masa-madre hover:text-corteza"
+                                            aria-label="Ver historial de montos" title="Ver historial de montos">
+                                            <x-icon name="clock" class="w-3.5 h-3.5" />
+                                        </a>
+                                    </div>
                                 </div>
                                 <x-status-badge :active="$fixedCost->active" />
                             </div>
@@ -107,7 +118,7 @@
                                             'name'                   => $fixedCost->name,
                                             'fixed_cost_category_id' => $fixedCost->fixed_cost_category_id ?? '',
                                             'monthly_amount'         => $fixedCost->monthly_amount,
-                                            'valid_from'             => date('Y-m-d'),
+                                            'period'                 => now()->format('Y-m'),
                                         ]) }})"
                                         class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
                                         Editar
@@ -121,6 +132,15 @@
                                         </button>
                                     </form>
                                 </div>
+                                <form method="POST" action="{{ route('fixed-costs.destroy', $fixedCost) }}" class="mt-2"
+                                    onsubmit="return confirm('¿Eliminar «{{ addslashes($fixedCost->name) }}»? Deja de contarse en los costos y no se va a listar más. Su historial se conserva.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                        class="w-full py-1.5 px-3 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
+                                        Eliminar
+                                    </button>
+                                </form>
                             @endcan
                         </div>
                     @endforeach
@@ -151,7 +171,7 @@
                                                     'name'                   => $fixedCost->name,
                                                     'fixed_cost_category_id' => $fixedCost->fixed_cost_category_id ?? '',
                                                     'monthly_amount'         => $fixedCost->monthly_amount,
-                                                    'valid_from'             => date('Y-m-d'),
+                                                    'period'                 => now()->format('Y-m'),
                                                 ]) }})"
                                                 class="hover:underline text-left">
                                                 {{ $fixedCost->name }}
@@ -163,6 +183,11 @@
                                     <td class="px-4 py-3 text-masa-madre text-xs">{{ $fixedCost->category?->name ?? '—' }}</td>
                                     <td class="px-4 py-3 text-right text-corteza font-mono">
                                         $ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }}
+                                        <a href="{{ route('fixed-costs.show-history', $fixedCost) }}"
+                                            class="ml-2 inline-flex items-center text-masa-madre hover:text-corteza"
+                                            aria-label="Ver historial de montos" title="Ver historial de montos">
+                                            <x-icon name="clock" class="w-3.5 h-3.5" />
+                                        </a>
                                     </td>
                                     <td class="px-4 py-3">
                                         <x-status-badge :active="$fixedCost->active" />
@@ -176,7 +201,7 @@
                                                         'name'                   => $fixedCost->name,
                                                         'fixed_cost_category_id' => $fixedCost->fixed_cost_category_id ?? '',
                                                         'monthly_amount'         => $fixedCost->monthly_amount,
-                                                        'valid_from'             => date('Y-m-d'),
+                                                        'period'                 => now()->format('Y-m'),
                                                     ]) }})"
                                                     aria-label="Editar gasto" title="Editar gasto"
                                                     class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
@@ -200,6 +225,16 @@
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                             </svg>
                                                         @endif
+                                                    </button>
+                                                </form>
+                                                <form method="POST" action="{{ route('fixed-costs.destroy', $fixedCost) }}"
+                                                    onsubmit="return confirm('¿Eliminar «{{ addslashes($fixedCost->name) }}»? Deja de contarse en los costos y no se va a listar más. Su historial se conserva.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                        aria-label="Eliminar gasto" title="Eliminar gasto"
+                                                        class="p-1.5 rounded text-masa-madre hover:text-red-600 hover:bg-red-50 transition-colors">
+                                                        <x-icon name="trash" class="w-4 h-4" />
                                                     </button>
                                                 </form>
                                             </div>
