@@ -44,6 +44,19 @@ Dos huecos que aparecieron con clientes reales. El primero: una distribuidora ma
 - **Trampa de Alpine:** `credit-notes/index.blade.php` y `credit-notes/show.blade.php` nacieron sin `x-data` en el `<div>` contenedor. Alpine sólo procesa `@click`/`$dispatch` dentro del árbol de un `x-data` ancestro, así que los botones de abrir modal (alta, editar, agregar renglón) no hacían nada — y ningún test HTTP lo detecta, porque no ejecutan JS del navegador. Se agregó `x-data="{}"` a ambas vistas más un test que verifica que el `x-data` precede al primer `open-modal` en el HTML servido.
 - Tests nuevos: `CreditNoteStockTest` (11 casos), `CreditNoteCrudTest` (16), `CatalogItemReplacementTest` (18), `IngredientToggleActiveGuardTest` (4).
 
+### El selector de «Consumo personal» no cubría otros conceptos de la factura
+
+Algunas facturas traen un renglón de "Servicios administrativos" u otro cargo del proveedor que tampoco es un insumo, pero que no es consumo personal del titular. No había dónde ponerlo: quedaba pendiente para siempre, sin costo posible de imputar.
+
+#### Cómo se comporta
+
+- El selector de vinculación (`purchases/match`) pasa a llamarse **«No es un insumo»**, en vez de «Consumo personal» — mismo mecanismo de siempre (no imputa costo, no mueve stock, queda resuelto), ahora sin forzar una etiqueta que no aplicaba a un servicio administrativo o cualquier otro concepto no catalogable. La nota opcional del renglón sigue estando para aclarar de qué se trata puntualmente.
+- Sin cambios de comportamiento ni de datos: es el mismo campo `excluded_at`/`exclusion_note` de siempre, sólo cambia cómo se lo nombra en toda la UI (badges, botón, mensajes flash, tooltips).
+
+#### Técnico
+
+- Renombrado en `purchases/match.blade.php`, `purchases/show.blade.php`, `PurchaseController`, `PurchaseLine`, `NotificationService`, `ProductLinkMemory` y `resources/js/purchases/match.js`. `PurchaseController::EXCLUDED_MATCH` y las columnas de BD no cambiaron.
+
 ---
 
 ## [0.12.14] — 2026-09-01

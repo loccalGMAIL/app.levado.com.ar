@@ -205,7 +205,7 @@
                                         @if($line->isExcluded())
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-miga text-masa-madre"
                                                 @if($line->exclusion_note) title="{{ $line->exclusion_note }}" @endif>
-                                                Personal
+                                                Sin insumo
                                             </span>
                                         @elseif($line->isApplied() && $line->isBonus())
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-700"
@@ -284,7 +284,7 @@
                         </div>
                         @if($excludedLines->isNotEmpty())
                             <div class="px-4 pb-3 -mt-1 flex items-center justify-between gap-4 bg-miga/30">
-                                <span class="text-xs text-masa-madre">Consumo personal (no imputado al negocio)</span>
+                                <span class="text-xs text-masa-madre">Sin insumo (no imputado al catálogo)</span>
                                 <span class="font-mono text-xs text-masa-madre whitespace-nowrap">
                                     $ {{ number_format($personalTotal, 2, ',', '.') }}
                                 </span>
@@ -429,8 +429,8 @@
                                         <td class="px-4 py-3 align-top text-center">
                                             @if($line->isExcluded())
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-miga text-masa-madre"
-                                                    title="{{ $line->exclusion_note ?: 'Consumo personal — no es del negocio' }}">
-                                                    Personal
+                                                    title="{{ $line->exclusion_note ?: 'No es un insumo del catálogo (consumo personal, servicio administrativo, etc.)' }}">
+                                                    Sin insumo
                                                 </span>
                                             @elseif($line->isApplied() && $line->isBonus())
                                                 {{-- Violeta y no verde: el renglón está resuelto pero no imputó ningún
@@ -519,7 +519,7 @@
                                 @if($excludedLines->isNotEmpty())
                                     <tr>
                                         <td colspan="6" class="px-4 py-2 text-xs text-masa-madre text-right">
-                                            Consumo personal (no imputado al negocio)
+                                            Sin insumo (no imputado al catálogo)
                                         </td>
                                         <td class="px-4 py-2 text-right font-mono text-masa-madre text-xs whitespace-nowrap">
                                             $ {{ number_format($personalTotal, 2, ',', '.') }}

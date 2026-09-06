@@ -290,6 +290,33 @@ Tabla de alias para autosugerir renglones personales recurrentes; reporte mensua
 ítem del catálogo corresponde un texto, no que un texto sea consumo personal — `matchLine()`
 *olvida* el vínculo al excluir. Autosugerir exclusiones sigue siendo trabajo aparte.
 
+### Renombrado a «No es un insumo» (v0.12.15)
+
+Facturas con un renglón de "Servicios administrativos" (u otro cargo del proveedor que tampoco
+es insumo, pero tampoco es consumo personal del titular) no tenían dónde ir: la única opción,
+«Consumo personal», mentía sobre el motivo.
+
+**No cambió nada de datos ni de comportamiento** — sigue siendo el mismo `excluded_at`/
+`exclusion_note`, el mismo centinela `PurchaseController::EXCLUDED_MATCH = 'excluded'`, la misma
+invariante de los tres estados. Sólo se renombró la etiqueta en toda la UI para que cubra
+cualquier concepto de la factura que no es un insumo, no sólo el personal:
+
+- Select/badge: «Consumo personal» → **«No es un insumo»** (`match.blade.php`, `show.blade.php`).
+- Badge compacto (tabla/card): «Personal» → **«Sin insumo»**.
+- Botón: «Marcar como personal» → **«Confirmar»**.
+- Mensaje flash: «Renglón marcado como consumo personal.» → **«Renglón marcado como "no es un
+  insumo".»**
+- Placeholder de la nota: ahora sugiere «servicios administrativos, consumo personal…» en vez de
+  sólo el ejemplo de consumo personal.
+- Comentarios actualizados en `PurchaseController`, `PurchaseLine::isExcluded()`,
+  `NotificationService`, `ProductLinkMemory` y `resources/js/purchases/match.js` — todos decían
+  literalmente "consumo personal" en el docblock, lo que habría confundido a quien lo lea después
+  de este cambio si no se tocaban.
+- Nombres de test **no** se tocaron (siguen diciendo "consumo personal" en varios `tests/Feature/
+  Purchase*`, `StockPurchaseIntegrationTest`, `ProductLinkMemoryTest`): describen el caso de uso
+  histórico que motivó la feature, no la etiqueta actual de la UI, y ningún test asertaba el
+  string exacto del label (se verificó antes de renombrar).
+
 ## Renglones sin cargo / bonificaciones (v0.12.14)
 
 **El problema:** las distribuidoras mandan mercadería de regalo, que en la factura viene a $0. Asociarla al insumo hacía que `apply()` imputara ese $0 como costo nuevo, lo propagara a todas las recetas y les tirara abajo el precio de venta. El cliente lo esquivaba dejando esos renglones **sin asociar**, y así la mercadería nunca entraba al stock.

@@ -79,7 +79,7 @@ class CreditNoteLineRecorder
         $purchaseLine = $line->purchaseLine;
         abort_unless($purchaseLine !== null, 422, 'El renglón de compra de origen ya no existe.');
         abort_unless($purchaseLine->isApplied(), 422, 'No se puede devolver un renglón que todavía no fue aplicado.');
-        abort_unless(! $purchaseLine->isExcluded(), 422, 'No se puede devolver un renglón marcado como consumo personal.');
+        abort_unless(! $purchaseLine->isExcluded(), 422, 'No se puede devolver un renglón marcado como "no es un insumo".');
 
         $entry = $this->stock->activePurchaseEntryFor($purchaseLine);
         abort_unless($entry !== null, 422, 'El renglón de compra de origen no tiene una entrada de stock vigente.');

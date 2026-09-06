@@ -91,8 +91,10 @@ class PurchaseLine extends Model
     }
 
     /**
-     * Renglón que no es del negocio (consumo personal del titular metido en la
-     * misma factura del proveedor). Está resuelto, pero no imputa costo ni stock.
+     * Renglón que no corresponde a ningún ítem del catálogo: consumo personal
+     * del titular metido en la misma factura del proveedor, un servicio
+     * administrativo cobrado junto con la mercadería, u otro concepto que no
+     * es un insumo. Está resuelto, pero no imputa costo ni stock.
      *
      * Los tres estados son mutuamente excluyentes: un renglón excluido nunca tiene
      * purchaseable_id ni cost_applied_at. Lo garantiza PurchaseController::matchLine(),
@@ -105,7 +107,7 @@ class PurchaseLine extends Model
 
     /**
      * Ya no hay nada que decidir sobre este renglón: o se imputó su costo, o se
-     * marcó como consumo personal. Es lo que cuenta el indicador de completitud
+     * marcó como "no es un insumo". Es lo que cuenta el indicador de completitud
      * de la factura (antes contaba sólo los aplicados).
      */
     public function isResolved(): bool

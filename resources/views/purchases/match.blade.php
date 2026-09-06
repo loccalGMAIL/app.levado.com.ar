@@ -70,7 +70,7 @@
                         </svg>
                         No queda ningún renglón por resolver.
                         @if($excludedCount > 0)
-                            <span class="text-masa-madre">({{ $excludedCount }} de consumo personal)</span>
+                            <span class="text-masa-madre">({{ $excludedCount }} sin insumo)</span>
                         @endif
                     </p>
                 @endif
@@ -180,7 +180,7 @@
                                             @if($line->isExcluded())
                                                 {{-- Neutro a propósito: el ámbar significa "pendiente" y este renglón ya está resuelto. --}}
                                                 <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-miga text-masa-madre">
-                                                    Consumo personal
+                                                    Sin insumo
                                                 </span>
                                                 @if($line->exclusion_note)
                                                     <span class="block text-xs text-masa-madre/60 mt-0.5">{{ $line->exclusion_note }}</span>
@@ -220,7 +220,7 @@
                                                         {{-- Aparte del catálogo para que no se mezcle con los ingredientes. --}}
                                                         <optgroup label="Otros destinos">
                                                             <option value="excluded" @selected($currentValue === 'excluded')>
-                                                                Consumo personal
+                                                                No es un insumo
                                                             </option>
                                                         </optgroup>
                                                         @if($ingredients->isNotEmpty())
@@ -325,16 +325,18 @@
                                                         </button>
                                                     </div>
 
-                                                    {{-- Consumo personal: sin cálculo de costo, sólo una nota opcional --}}
+                                                    {{-- No es un insumo: consumo personal, servicio administrativo u otro
+                                                         concepto de la factura que no es del catálogo. Sin cálculo de
+                                                         costo, sólo una nota opcional. --}}
                                                     <div x-show="isExcluded" x-cloak class="flex items-center gap-2 flex-wrap">
                                                         <input type="text" name="exclusion_note"
                                                             value="{{ $line->exclusion_note }}"
                                                             maxlength="255"
-                                                            placeholder="Ej: asado del domingo (no obligatorio)"
+                                                            placeholder="Ej: servicios administrativos, consumo personal… (no obligatorio)"
                                                             class="w-72 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1">
                                                         <button type="submit"
                                                             class="px-3 py-1.5 bg-corteza text-white text-sm rounded hover:bg-horno transition-colors whitespace-nowrap">
-                                                            Marcar como personal
+                                                            Confirmar
                                                         </button>
                                                     </div>
 

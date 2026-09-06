@@ -27,7 +27,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         subdivisions: null,
         subdivisionLabel: null,
 
-        // Centinela del select: el renglón no es del negocio (consumo personal).
+        // Centinela del select: el renglón no es un insumo del catálogo.
         get isExcluded() {
             return this.selected === 'excluded';
         },
@@ -56,7 +56,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
                 return;
             }
 
-            // Consumo personal: no hay costo que calcular. unitCost en 0 deja el hidden
+            // No es un insumo: no hay costo que calcular. unitCost en 0 deja el hidden
             // unit_cost vacío, y catalogUnit vacío mantiene oculto el bloque de cálculo.
             if (this.isExcluded) {
                 this.unitCost = 0;

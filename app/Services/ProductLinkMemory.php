@@ -144,7 +144,7 @@ class ProductLinkMemory
     }
 
     /**
-     * Olvidar: el usuario desasoció el renglón o lo marcó como consumo personal.
+     * Olvidar: el usuario desasoció el renglón o lo marcó como "no es un insumo".
      * Dejar el vínculo viejo haría que la próxima factura vuelva a sugerir
      * justo lo que se acaba de descartar.
      */
