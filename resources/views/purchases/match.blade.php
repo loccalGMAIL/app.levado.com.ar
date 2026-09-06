@@ -220,7 +220,7 @@
                                                         {{-- Aparte del catálogo para que no se mezcle con los ingredientes. --}}
                                                         <optgroup label="Otros destinos">
                                                             <option value="excluded" @selected($currentValue === 'excluded')>
-                                                                No es un insumo
+                                                                Consumo personal / No imputable
                                                             </option>
                                                         </optgroup>
                                                         @if($ingredients->isNotEmpty())
