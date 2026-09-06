@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\CatalogItemType;
 use App\Enums\StockMovementType;
+use App\Models\CreditNoteLine;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Packaging;
@@ -43,7 +44,7 @@ class StockService
         float $unitCost,
         ?string $reason = null,
         ?User $user = null,
-        ?PurchaseLine $reference = null,
+        PurchaseLine|CreditNoteLine|null $reference = null,
         ?StockMovement $reverses = null,
     ): StockMovement {
         abort_unless(! $type->requiresReason() || filled($reason), 422, 'El motivo es obligatorio para ajustes.');
@@ -61,7 +62,7 @@ class StockService
                 'quantity' => $quantity,
                 'unit_cost' => $unitCost,
                 'reason' => $reason,
-                'reference_type' => $reference ? 'purchase_line' : null,
+                'reference_type' => $this->referenceTypeFor($reference),
                 'reference_id' => $reference?->id,
                 'reverses_movement_id' => $reverses?->id,
                 'user_id' => $user?->id,
@@ -181,6 +182,64 @@ class StockService
         return $this->reverseMovement($active, $user);
     }
 
+    /**
+     * Salida de stock por línea de nota de crédito aplicada (devolución de
+     * mercadería), en la sucursal default del tenant. No es un contramovimiento
+     * de la entrada de compra: reverses_movement_id queda null a propósito, para
+     * que activePurchaseEntryFor() siga viendo la entrada original intacta y una
+     * edición posterior del renglón de compra no duplique stock.
+     *
+     * Idempotente igual que syncPurchaseLineEntry(): si la línea ya tiene una
+     * salida activa idéntica no hace nada; si difiere, la revierte y registra
+     * la nueva.
+     */
+    public function syncCreditNoteLineExit(
+        CreditNoteLine $line,
+        Ingredient|Packaging $item,
+        float $quantityInItemUnits,
+        float $unitCost,
+        ?User $user = null,
+    ): ?StockMovement {
+        $active = $this->activeCreditNoteExitFor($line);
+
+        if ($active !== null) {
+            $sameStockable = $active->stockable_type === $this->typeFor($item) && $active->stockable_id === $item->id;
+            $sameAmounts = abs((float) $active->quantity - (-$quantityInItemUnits)) < self::QUANTITY_TOLERANCE
+                && abs((float) $active->unit_cost - $unitCost) < self::QUANTITY_TOLERANCE;
+
+            if ($sameStockable && $sameAmounts) {
+                return null;
+            }
+
+            $this->reverseMovement($active, $user);
+        }
+
+        return $this->registerMovement(
+            item: $item,
+            location: $item->tenant->defaultLocation(),
+            type: StockMovementType::Return,
+            quantity: -$quantityInItemUnits,
+            unitCost: $unitCost,
+            user: $user,
+            reference: $line,
+        );
+    }
+
+    /**
+     * Revierte la salida activa de una línea de nota de crédito (contramovimiento
+     * exacto). No-op si la línea no tiene salida activa.
+     */
+    public function reverseCreditNoteLineExit(CreditNoteLine $line, ?User $user = null): ?StockMovement
+    {
+        $active = $this->activeCreditNoteExitFor($line);
+
+        if ($active === null) {
+            return null;
+        }
+
+        return $this->reverseMovement($active, $user);
+    }
+
     public function setMinQuantity(Ingredient|Packaging $item, Location $location, ?float $minQuantity): void
     {
         DB::transaction(function () use ($item, $location, $minQuantity) {
@@ -225,8 +284,12 @@ class StockService
      * otro movimiento. Contempla los dos tipos para que un renglón que pasa de
      * compra a bonificación (o al revés) revierta su entrada anterior en vez de
      * duplicarla.
+     *
+     * Pública: CreditNoteLineRecorder la usa para derivar la cantidad y el costo
+     * de una devolución proporcional a la entrada original, sin repetir la
+     * conversión de unidades de PurchaseLineRecorder.
      */
-    private function activePurchaseEntryFor(PurchaseLine $line): ?StockMovement
+    public function activePurchaseEntryFor(PurchaseLine $line): ?StockMovement
     {
         return StockMovement::query()
             ->where('reference_type', 'purchase_line')
@@ -240,6 +303,35 @@ class StockService
             })
             ->latest('id')
             ->first();
+    }
+
+    /**
+     * Salida vigente de una línea de nota de crédito: movimiento de devolución
+     * referenciado a la línea que no fue revertido por otro movimiento.
+     */
+    private function activeCreditNoteExitFor(CreditNoteLine $line): ?StockMovement
+    {
+        return StockMovement::query()
+            ->where('reference_type', 'credit_note_line')
+            ->where('reference_id', $line->id)
+            ->where('type', StockMovementType::Return->value)
+            ->whereNull('reverses_movement_id')
+            ->whereNotExists(function ($query) {
+                $query->selectRaw('1')
+                    ->from('stock_movements as reversals')
+                    ->whereColumn('reversals.reverses_movement_id', 'stock_movements.id');
+            })
+            ->latest('id')
+            ->first();
+    }
+
+    private function referenceTypeFor(PurchaseLine|CreditNoteLine|null $reference): ?string
+    {
+        return match (true) {
+            $reference instanceof PurchaseLine => 'purchase_line',
+            $reference instanceof CreditNoteLine => 'credit_note_line',
+            default => null,
+        };
     }
 
     /**

@@ -145,7 +145,7 @@ class NotificationService
             return;
         }
 
-        // Los renglones marcados como consumo personal están resueltos: no imputan
+        // Los renglones marcados como "no es un insumo" están resueltos: no imputan
         // costo, pero tampoco quedan pendientes, así que no deben mantener viva la alerta.
         // joinSub agrupado: filtra (INNER JOIN) y cuenta a la vez, en una sola
         // pasada sobre purchase_lines en vez de dos subconsultas correlacionadas.

@@ -1,6 +1,6 @@
 ---
 name: feature-compras
-description: "Módulo de compras — tablas, flujos, servicios, estado de las fases y renglones sin cargo"
+description: "Módulo de compras — tablas, flujos, servicios, estado de las fases, renglones sin cargo y notas de crédito"
 metadata:
   node_type: memory
   type: project
@@ -290,6 +290,33 @@ Tabla de alias para autosugerir renglones personales recurrentes; reporte mensua
 ítem del catálogo corresponde un texto, no que un texto sea consumo personal — `matchLine()`
 *olvida* el vínculo al excluir. Autosugerir exclusiones sigue siendo trabajo aparte.
 
+### Renombrado a «No es un insumo» (v0.12.15)
+
+Facturas con un renglón de "Servicios administrativos" (u otro cargo del proveedor que tampoco
+es insumo, pero tampoco es consumo personal del titular) no tenían dónde ir: la única opción,
+«Consumo personal», mentía sobre el motivo.
+
+**No cambió nada de datos ni de comportamiento** — sigue siendo el mismo `excluded_at`/
+`exclusion_note`, el mismo centinela `PurchaseController::EXCLUDED_MATCH = 'excluded'`, la misma
+invariante de los tres estados. Sólo se renombró la etiqueta en toda la UI para que cubra
+cualquier concepto de la factura que no es un insumo, no sólo el personal:
+
+- Select/badge: «Consumo personal» → **«No es un insumo»** (`match.blade.php`, `show.blade.php`).
+- Badge compacto (tabla/card): «Personal» → **«Sin insumo»**.
+- Botón: «Marcar como personal» → **«Confirmar»**.
+- Mensaje flash: «Renglón marcado como consumo personal.» → **«Renglón marcado como "no es un
+  insumo".»**
+- Placeholder de la nota: ahora sugiere «servicios administrativos, consumo personal…» en vez de
+  sólo el ejemplo de consumo personal.
+- Comentarios actualizados en `PurchaseController`, `PurchaseLine::isExcluded()`,
+  `NotificationService`, `ProductLinkMemory` y `resources/js/purchases/match.js` — todos decían
+  literalmente "consumo personal" en el docblock, lo que habría confundido a quien lo lea después
+  de este cambio si no se tocaban.
+- Nombres de test **no** se tocaron (siguen diciendo "consumo personal" en varios `tests/Feature/
+  Purchase*`, `StockPurchaseIntegrationTest`, `ProductLinkMemoryTest`): describen el caso de uso
+  histórico que motivó la feature, no la etiqueta actual de la UI, y ningún test asertaba el
+  string exacto del label (se verificó antes de renombrar).
+
 ## Renglones sin cargo / bonificaciones (v0.12.14)
 
 **El problema:** las distribuidoras mandan mercadería de regalo, que en la factura viene a $0. Asociarla al insumo hacía que `apply()` imputara ese $0 como costo nuevo, lo propagara a todas las recetas y les tirara abajo el precio de venta. El cliente lo esquivaba dejando esos renglones **sin asociar**, y así la mercadería nunca entraba al stock.
@@ -325,3 +352,47 @@ Vive en `storePending()` (`resolveBonus()`), que es por donde pasan los tres cam
 - No revierte el costo ya imputado si un renglón aplicado pasa a sin cargo (sí contramueve su entrada de stock). Misma política que «Desasociar».
 - `applyLineSuggestions()` no acumula los ítems bonificados en la lista de tocados: sin costo nuevo no hay nada que propagar.
 - No hay backfill de los renglones históricos que el cliente dejó sin asociar. Se resuelven a mano desde la pantalla de asociación, que ahora los propone sola como sin cargo por venir a $0.
+
+## Notas de crédito de compra (v0.12.15)
+
+**El problema:** dos casos reales del cliente sin forma de registrarse — una distribuidora facturó mercadería que nunca llegó, y en otro caso reconoció por escrito la rotura de insumos en el transporte. La única salida hasta acá era borrar la compra entera (se pierde la factura) o un ajuste de stock a mano sin documento de por medio.
+
+### Tablas nuevas
+
+`credit_notes`: `id, tenant_id, supplier_id, purchase_id (nullable, nullOnDelete), note_number (nullable), note_date, notes, timestamps`. Unique `(tenant_id, supplier_id, note_number)`, mismo criterio que `purchases_tenant_supplier_invoice_unique`.
+
+`credit_note_lines`: `id, credit_note_id, purchase_line_id (nullable, nullOnDelete), description (nullable), quantity, unit, unit_price, iva_rate (default 0.21), subtotal, affects_stock (boolean default true), stock_applied_at (nullable), timestamps`.
+
+- `purchase_line_id` null = renglón libre (reconocimiento económico puro, ej. la rotura ya ajustada por recuento). Con valor, ata la devolución al renglón que hizo entrar esa mercadería.
+- `CreditNoteLine::affectsStock()` exige **las dos cosas**: `affects_stock` tildado **y** `purchase_line_id` presente. Sin renglón de origen no hay entrada que revertir, aunque el tilde esté marcado — el modelo lo garantiza, no sólo la UI.
+
+### Cómo sale el stock — proporcional, no recalculado
+
+**Decisión clave:** la NC **no repite** la cascada de conversión de unidades de `PurchaseLineRecorder::apply()` (bultos, subdivisiones, `UnitConverter`). En vez de eso, deriva la salida **proporcional a la entrada vigente** del renglón de compra:
+
+```
+salida = |entradaVigente.quantity| × (nc.quantity ÷ purchaseLine.quantity_purchased)
+unitCost = entradaVigente.unit_cost   (snapshot, no el costo de hoy)
+```
+
+Sale gratis en corrección para bonificaciones y subdivisiones (una devolución de 1 de 2 maples de huevos devuelve exactamente 12 de los 24 huevos que entraron), y una devolución total deja el neto en cero exacto.
+
+`CreditNoteLineRecorder::applyStock()` resuelve la entrada vigente con `StockService::activePurchaseEntryFor()` (pública a propósito, para no duplicar esa query) y aborta 422 si el renglón de origen no está aplicado, está excluido, o si la cantidad devuelta supera lo comprado.
+
+### `StockMovementType::Return` — no es un contramovimiento
+
+Tipo propio, con `reverses_movement_id` **siempre null**. Si fuera un contramovimiento de la entrada de compra, `activePurchaseEntryFor()` (que sólo mira `Purchase`/`Bonus`, sin cambios) dejaría de ver la entrada original como "activa" apenas se creara la devolución, y una edición posterior del renglón de compra (`recompute()` → `syncPurchaseLineEntry()`) volvería a registrar stock desde cero en vez de partir del neto ya descontado — duplicando mercadería. Con la devolución como movimiento propio, la entrada de compra sigue intacta para `syncPurchaseLineEntry()`, y el nivel de stock simplemente acumula ambos movimientos por separado. Test-ancla: *"editar el renglón de compra después de una devolución no duplica stock"*.
+
+`StockService` generaliza `registerMovement()` a `PurchaseLine|CreditNoteLine|null $reference` (antes sólo `PurchaseLine`), con `referenceTypeFor()` mapeando la clase a `'purchase_line'`/`'credit_note_line'`. Métodos nuevos, espejo exacto de los de compra: `syncCreditNoteLineExit()` (idempotente igual que `syncPurchaseLineEntry()`) y `reverseCreditNoteLineExit()`.
+
+### Invariante: el costo NO se toca
+
+Igual que al desasociar un renglón de compra o marcarlo consumo personal: **la NC nunca imputa costo**. Sin price log, sin `update` de `cost_per_unit`, sin propagación a recetas. Una devolución no dice nada sobre lo que cuesta reponer el insumo.
+
+### Controller / rutas
+
+`CreditNoteController` calca la forma de `PurchaseController`: mismo patrón de `destroy()` (revertir el stock de las líneas aplicadas **antes** del `delete()`, dentro de `DB::transaction`, porque el cascade de la FK se lleva las líneas y con ellas la referencia). Rutas bajo `credit-notes.*`, mismos dos grupos de middleware que `purchases.*` (lectura para todos los roles, escritura para `role:super_admin,owner,admin`).
+
+### UI
+
+Sección nueva en el sidebar (*Existencias*, debajo de Compras). `purchases/show.blade.php` lista las notas de crédito de esa compra con el total acreditado — **sin** alterar `invoice_total` ni el neto de la factura, que tiene que seguir cerrando contra el papel. El kardex (`stock/show.blade.php`) linkea el movimiento «Devolución» a la nota igual que ya linkea las entradas de compra a su factura.

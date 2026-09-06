@@ -5,6 +5,60 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.15] — 2026-09-05
+
+### Devoluciones al proveedor y un insumo descontinuado en cien recetas
+
+Dos huecos que aparecieron con clientes reales. El primero: una distribuidora mandó una factura con mercadería que nunca llegó, y en otro caso reconoció por escrito la rotura de unos insumos en el transporte. En los dos casos el proveedor emite una nota de crédito, y el sistema no tenía dónde cargarla — la única salida era borrar la compra entera (perdiendo la factura) o hacer un ajuste de stock a mano sin ningún documento de por medio. El segundo: un insumo quedó discontinuado por el fabricante y estaba metido en decenas de recetas. Sin una forma de sustituirlo en bloque, la única opción era entrar receta por receta a borrar la línea vieja y cargar la nueva.
+
+#### Agregado
+
+- **Notas de crédito de compra.** Se accede desde *Compras*: un botón «Notas de crédito» junto a «Nueva compra» lleva al listado, y cada compra tiene su propia acción «Nota de crédito» (junto a «Vincular»/«Eliminar») que abre el alta ya con esa compra precargada — sin menú propio, para no sumar ruido a la navegación. Cada nota se liga a una compra (o queda suelta, para un reconocimiento puramente económico) y tiene sus propios renglones: cantidad, precio, IVA y un tilde **«Descuenta stock»**.
+  - Marcado (el caso *mercadería que no vino*): revierte proporcionalmente la entrada de stock del renglón de compra elegido, valuada al mismo costo con el que había entrado.
+  - Destildado (el caso *rotura ya ajustada por recuento*, o cualquier reconocimiento económico puro): no mueve un gramo de stock.
+  - En los dos casos, **el costo del insumo no se toca**: ni el histórico de precios, ni el costo vigente, ni los precios de las recetas. Misma regla que ya regía al desasociar un renglón de compra — una devolución no dice nada sobre lo que cuesta reponer el insumo.
+  - El detalle de la compra muestra sus notas de crédito y el total acreditado, sin alterar el total de la factura original.
+  - El listado de notas de crédito permite eliminar directo, sin entrar al detalle.
+  - El kardex del insumo linkea el movimiento de tipo **Devolución** a la nota que lo generó, igual que ya linkea las entradas de compra a su factura.
+- **Reemplazo masivo de un ingrediente, un descartable o una sub-receta.** Botón *Reemplazar* en el listado de ingredientes, descartables y sub-recetas. Elegís el sustituto, el sistema muestra una vista previa —en cuántas recetas se va a aplicar, cuáles ya tenían el destino y se van a fusionar, y si alguna línea tiene una unidad incompatible— y al confirmar reemplaza el ítem en todas las líneas de una sola vez, con la opción de desactivar el ítem viejo y (para ingredientes) migrar sus vínculos de proveedor al nuevo.
+  - Todo o nada: si una sola línea tiene una unidad incompatible con la del ítem destino, no se toca ninguna.
+  - Si una receta ya tenía una línea del ítem destino, las dos se fusionan en una sola (sumando la cantidad, convertida a la unidad de la que quedó) en vez de dejar dos líneas del mismo ítem.
+  - El costo de cada receta afectada —y el de sus recetas madre, en cascada— se recalcula una sola vez al final.
+
+#### Cómo se comporta
+
+- Una nota de crédito no puede devolver más cantidad de la que trajo el renglón de compra, ni devolver sobre un renglón que todavía no fue aplicado (nunca entró stock) o que se marcó como consumo personal.
+- Editar el renglón de compra original después de crear una nota de crédito sobre él sigue funcionando sin duplicar ni perder stock: la devolución es un movimiento propio (tipo «Devolución»), no un contramovimiento de la compra, así que no interfiere con la idempotencia de esta última.
+- Borrar una nota de crédito revierte el stock de todos sus renglones aplicados, igual que borrar una compra revierte el de sus renglones.
+- Desactivar ahora un ingrediente o un descartable que sigue en uso por una receta **activa** se bloquea con un aviso que nombra las recetas — antes se podía desactivar en silencio y la receta seguía costeando con un insumo dado de baja. Mismo guard que ya protegía a las sub-recetas.
+- Lo que un reemplazo masivo **nunca** toca: el historial de compras, el ledger de stock (inmutable) y el historial de precios del ítem viejo. Reescribirlos falsearía el pasado; por eso el ítem viejo no se borra, sólo se puede desactivar.
+
+#### Técnico
+
+- Tablas nuevas `credit_notes` y `credit_note_lines`, calcadas de `purchases`/`purchase_lines`. `StockMovementType::Return` (`'return'`), con label «Devolución».
+- `StockService::syncCreditNoteLineExit()` / `reverseCreditNoteLineExit()`, espejo de los métodos de compra pero con `reverses_movement_id` siempre en null: la devolución es una salida propia, no un contramovimiento, para no pisar `activePurchaseEntryFor()`. `registerMovement()` generaliza su `reference_type` a `PurchaseLine|CreditNoteLine`.
+- `CreditNoteLineRecorder::applyStock()` deriva la cantidad a devolver **proporcional** a la entrada vigente del renglón de compra (`entrada.quantity × nc.quantity ÷ purchaseLine.quantity_purchased`), en vez de repetir la cascada de conversión de unidades de `PurchaseLineRecorder::apply()` — sale gratis en corrección para subdivisiones y bultos, y una devolución total deja el neto exacto en cero.
+- `CatalogItemReplacer` (nuevo servicio): `replaceIngredient()` / `replacePackaging()` / `replaceSubrecipe()` + sus `preview*()`. Valida compatibilidad de unidad con `UnitConverter` antes de escribir nada, fusiona duplicados por receta, resuelve los ids afectados con `RecipeCostPropagator::recipeIdsUsingIngredients()/recipeIdsUsingPackagings()` y propaga una sola vez con `propagateManyFrom()` al final — mismo patrón que `PurchaseController::applyLineSuggestions()`. El reemplazo de sub-receta reusa `RecipeCostPropagator::isAncestor()` para rechazar ciclos, igual que el alta manual de una línea de sub-receta.
+- `recipe_ingredient_lines`/`recipe_packaging_lines`/`recipe_subrecipe_lines` no tienen `tenant_id`: el scoping del reemplazo masivo depende de que el ítem de origen ya esté acotado al tenant (`ingredient_id`/`packaging_id`/`child_recipe_id` sólo pueden apuntar a filas del mismo tenant por la validación de alta de línea).
+- `IngredientController::toggleActive()` y `PackagingController::toggleActive()` ganan el guard de `recipes.active` que antes sólo tenía `RecipeController::toggleActive()` para sub-recetas.
+- **Trampa de Alpine:** `credit-notes/index.blade.php` y `credit-notes/show.blade.php` nacieron sin `x-data` en el `<div>` contenedor. Alpine sólo procesa `@click`/`$dispatch` dentro del árbol de un `x-data` ancestro, así que los botones de abrir modal (alta, editar, agregar renglón) no hacían nada — y ningún test HTTP lo detecta, porque no ejecutan JS del navegador. Se agregó `x-data="{}"` a ambas vistas más un test que verifica que el `x-data` precede al primer `open-modal` en el HTML servido.
+- Tests nuevos: `CreditNoteStockTest` (11 casos), `CreditNoteCrudTest` (16), `CatalogItemReplacementTest` (18), `IngredientToggleActiveGuardTest` (4).
+
+### El selector de «Consumo personal» no cubría otros conceptos de la factura
+
+Algunas facturas traen un renglón de "Servicios administrativos" u otro cargo del proveedor que tampoco es un insumo, pero que no es consumo personal del titular. No había dónde ponerlo: quedaba pendiente para siempre, sin costo posible de imputar.
+
+#### Cómo se comporta
+
+- El selector de vinculación (`purchases/match`) pasa a llamarse **«No es un insumo»**, en vez de «Consumo personal» — mismo mecanismo de siempre (no imputa costo, no mueve stock, queda resuelto), ahora sin forzar una etiqueta que no aplicaba a un servicio administrativo o cualquier otro concepto no catalogable. La nota opcional del renglón sigue estando para aclarar de qué se trata puntualmente.
+- Sin cambios de comportamiento ni de datos: es el mismo campo `excluded_at`/`exclusion_note` de siempre, sólo cambia cómo se lo nombra en toda la UI (badges, botón, mensajes flash, tooltips).
+
+#### Técnico
+
+- Renombrado en `purchases/match.blade.php`, `purchases/show.blade.php`, `PurchaseController`, `PurchaseLine`, `NotificationService`, `ProductLinkMemory` y `resources/js/purchases/match.js`. `PurchaseController::EXCLUDED_MATCH` y las columnas de BD no cambiaron.
+
+---
+
 ## [0.12.14] — 2026-09-01
 
 ### Los productos sin cargo obligaban a elegir entre el stock y el costo

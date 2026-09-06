@@ -127,10 +127,14 @@
                                     </td>
                                     <td class="px-4 py-3 text-masa-madre text-xs">
                                         @php
-                                            // Sólo las entradas por compra tienen factura de origen; el resto
-                                            // (ajustes, recuentos, contramovimientos) no lleva link.
+                                            // Sólo las entradas por compra o las salidas por nota de crédito
+                                            // tienen documento de origen; el resto (ajustes, recuentos,
+                                            // contramovimientos) no lleva link.
                                             $purchase = $movement->isFromPurchaseLine()
                                                 ? $movement->purchaseLine?->purchase
+                                                : null;
+                                            $creditNote = $movement->isFromCreditNoteLine()
+                                                ? $movement->creditNoteLine?->creditNote
                                                 : null;
                                         @endphp
                                         @if($purchase)
@@ -141,10 +145,20 @@
                                                     · {{ $purchase->supplier->name }}
                                                 @endif
                                             </a>
+                                        @elseif($creditNote)
+                                            <a href="{{ route('credit-notes.show', $creditNote) }}"
+                                                class="text-corteza underline hover:text-horno transition-colors">
+                                                Nota de crédito{{ $creditNote->note_number ? ' #'.$creditNote->note_number : '' }}
+                                                @if($creditNote->supplier)
+                                                    · {{ $creditNote->supplier->name }}
+                                                @endif
+                                            </a>
                                         @elseif($movement->reason)
                                             {{ $movement->reason }}
                                         @elseif($movement->isFromPurchaseLine())
                                             Compra (renglón #{{ $movement->reference_id }})
+                                        @elseif($movement->isFromCreditNoteLine())
+                                            Nota de crédito (renglón #{{ $movement->reference_id }})
                                         @else
                                             —
                                         @endif

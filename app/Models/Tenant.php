@@ -138,6 +138,11 @@ class Tenant extends Model
         return $this->hasMany(Purchase::class);
     }
 
+    public function creditNotes(): HasMany
+    {
+        return $this->hasMany(CreditNote::class);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'tenant_users')
