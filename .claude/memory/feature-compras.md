@@ -399,7 +399,7 @@ Sección nueva en el sidebar (*Existencias*, debajo de Compras). `purchases/show
 
 ## `subdivisions` vacío ≠ `subdivisions = 1` (v0.12.16)
 
-Feedback real de Panadería Orfano: un insumo que se usa entero (crema de leche, pote de 200 cc, sin subdividir) no se podía cargar — el campo «Unidades por envase» tiene `min:2` y escribir `1` bloqueaba el formulario. El caso **ya funcionaba** dejando el campo vacío (`subdivisions = null`: `unit = u`, `cost_per_unit` = precio del envase, sin `cost_per_package`); el problema era sólo de interfaz, en tres capas:
+Feedback real de Confitería Orfano: un insumo que se usa entero (crema de leche, pote de 200 cc, sin subdividir) no se podía cargar — el campo «Unidades por envase» tiene `min:2` y escribir `1` bloqueaba el formulario. El caso **ya funcionaba** dejando el campo vacío (`subdivisions = null`: `unit = u`, `cost_per_unit` = precio del envase, sin `cost_per_package`); el problema era sólo de interfaz, en tres capas:
 
 - `min="2"` **HTML nativo** en los cuatro modales (create/edit de `ingredients` y `packaging`) cancelaba el submit con el tooltip genérico del navegador, sin explicar la alternativa. Se sacó — la regla real sigue viviendo sólo en el FormRequest.
 - `resources/views/ingredients/index.blade.php` no incluía `subdivisions`/`subdivision_label` en el `hasAny(...)` que decide reabrir el modal con errores (`packaging/index.blade.php` sí lo hacía). Un error de validación en ese campo cerraba el modal en silencio, con los datos perdidos.

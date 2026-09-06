@@ -17,9 +17,9 @@ genérico. El caso ya funcionaba dejando el campo vacío, pero nada en la pantal
 #### Arreglado
 
 - El campo «Unidades por envase» / «Unidades por presentación» ahora aclara que es opcional y
-  cuándo dejarlo vacío (envase que se usa entero) frente a cuándo completarlo (envase que trae
-  varias unidades). Si de todas formas se escribe `1`, aparece un aviso en el momento con un
-  botón para vaciar el campo, en vez de depender del bloqueo silencioso del navegador.
+  que sólo hay que completarlo si el envase se subdivide. Si de todas formas se escribe `1`,
+  aparece un aviso en el momento con un botón para vaciar el campo, en vez de depender del
+  bloqueo silencioso del navegador.
 - Un error de validación en «Unidades por envase» al crear o editar un ingrediente ya no cierra
   el modal en silencio perdiendo lo cargado: ahora lo reabre con el mensaje y los datos intactos,
   igual que ya pasaba en la pantalla de envases.
