@@ -5,6 +5,42 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.16] — 2026-09-06
+
+### Un insumo que se usa entero, sin subdividir
+
+Confitería Orfano reportó que no podía cargar la crema de leche (pote de 200 cc, se usa entero
+en la receta): el campo «Unidades por envase» exigía un mínimo de 2, y escribir `1` bloqueaba el
+formulario sin ninguna explicación — el navegador cancelaba el envío con su propio aviso
+genérico. El caso ya funcionaba dejando el campo vacío, pero nada en la pantalla lo decía.
+
+#### Arreglado
+
+- El campo «Unidades por envase» / «Unidades por presentación» ahora aclara que es opcional y
+  cuándo dejarlo vacío (envase que se usa entero) frente a cuándo completarlo (envase que trae
+  varias unidades). Si de todas formas se escribe `1`, aparece un aviso en el momento con un
+  botón para vaciar el campo, en vez de depender del bloqueo silencioso del navegador.
+- Un error de validación en «Unidades por envase» al crear o editar un ingrediente ya no cierra
+  el modal en silencio perdiendo lo cargado: ahora lo reabre con el mensaje y los datos intactos,
+  igual que ya pasaba en la pantalla de envases.
+- El mensaje de validación, si igual llega a mostrarse, ahora está en español y nombra el campo
+  correctamente en vez de mostrar el nombre interno de la columna.
+
+#### Técnico
+
+- `StoreIngredientRequest`, `UpdateIngredientRequest`, `StorePackagingRequest`,
+  `UpdatePackagingRequest`: agregan `attributes()`/`messages()` para el mensaje de
+  `subdivisions.min` en español. La regla de validación (`nullable`, `min:2`) no cambió — sigue
+  siendo la fuente de verdad de que `subdivisions` es la cantidad de subdivisiones, no un
+  booleano, y de que `1` no es un valor legítimo: `FixIngredientSubdivisionCosts` depende de ese
+  invariante para distinguir «nunca dividido» de «envase viejo».
+- `resources/views/ingredients/index.blade.php`: el `hasAny(...)` que decide si reabrir el modal
+  ahora incluye `subdivisions`/`subdivision_label`, igual que ya hacía `packaging/index.blade.php`.
+- Se quitó el `min="2"` HTML de los cuatro modales (create/edit de ingredientes y envases): era
+  lo que bloqueaba el envío del formulario antes de que el servidor pudiera responder nada.
+
+---
+
 ## [0.12.15] — 2026-09-05
 
 ### Devoluciones al proveedor y un insumo descontinuado en cien recetas

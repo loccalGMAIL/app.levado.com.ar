@@ -72,12 +72,19 @@
 
         <div class="grid grid-cols-2 gap-4 border-t border-miga pt-4">
             <div>
-                <x-input-label for="edit_pkg_subdivisions" value="Unidades por presentación" />
+                <x-input-label for="edit_pkg_subdivisions" value="Unidades por presentación (opcional)" />
                 <x-text-input id="edit_pkg_subdivisions" name="subdivisions" type="number"
-                    step="1" min="2"
+                    step="1"
                     class="mt-1 block w-full"
                     x-model="editing.subdivisions" />
-                <p class="mt-1 text-xs text-masa-madre">Ej.: 100 bolsas por caja.</p>
+                <p class="mt-1 text-xs text-masa-madre">
+                    Completar sólo si se subdivide (ej.: 100 bolsas por caja).
+                </p>
+                <p class="mt-1 text-xs text-horno"
+                    x-show="editing.subdivisions !== '' && editing.subdivisions !== null && parseInt(editing.subdivisions) < 2">
+                    Si no se subdivide, dejá este campo vacío.
+                    <button type="button" class="underline hover:no-underline" @click="editing.subdivisions = ''">Vaciar</button>
+                </p>
                 <x-input-error :messages="$errors->get('subdivisions')" class="mt-2" />
             </div>
             <div>
