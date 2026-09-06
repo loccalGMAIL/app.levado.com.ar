@@ -7,13 +7,18 @@ use App\Http\Requests\UpdateFixedCostRequest;
 use App\Models\FixedCost;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\FixedCostHistory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class FixedCostController extends Controller
 {
-    public function __construct(private readonly AdminActivityRecorder $recorder) {}
+    public function __construct(
+        private readonly AdminActivityRecorder $recorder,
+        private readonly FixedCostHistory $history,
+    ) {}
 
     public function index(): View
     {
@@ -46,12 +51,9 @@ class FixedCostController extends Controller
     {
         $data = $request->validated();
         $tenant = app(Tenant::class);
-        $fixedCost = $tenant->fixedCosts()->create(Arr::except($data, ['valid_from']));
+        $fixedCost = $tenant->fixedCosts()->create(Arr::except($data, ['period']));
 
-        $fixedCost->logs()->create([
-            'monthly_amount' => $fixedCost->monthly_amount,
-            'valid_from' => $data['valid_from'],
-        ]);
+        $this->history->record($fixedCost, Carbon::createFromFormat('Y-m', $data['period']), (float) $fixedCost->monthly_amount);
 
         $this->recorder->record(
             actor: $request->user(),
@@ -72,20 +74,17 @@ class FixedCostController extends Controller
         $data = $request->validated();
 
         if ((float) $fixedCost->monthly_amount !== (float) $data['monthly_amount']) {
-            $fixedCost->logs()->create([
-                'monthly_amount' => $data['monthly_amount'],
-                'valid_from' => $data['valid_from'],
-            ]);
+            $this->history->record($fixedCost, Carbon::createFromFormat('Y-m', $data['period']), (float) $data['monthly_amount']);
         }
 
-        $fixedCost->update(Arr::except($data, ['valid_from']));
+        $fixedCost->update(Arr::except($data, ['period']));
 
         $this->recorder->record(
             actor: $request->user(),
             targetType: 'fixed_cost',
             targetId: $fixedCost->id,
             action: 'fixed_cost.updated',
-            payload: ['name' => $fixedCost->name],
+            payload: ['name' => $fixedCost->name, 'monthly_amount' => (float) $fixedCost->monthly_amount],
             tenantId: $fixedCost->tenant_id,
         );
 
@@ -99,6 +98,12 @@ class FixedCostController extends Controller
         $fixedCost->update(['active' => ! $fixedCost->active]);
         $action = $fixedCost->active ? 'fixed_cost.activated' : 'fixed_cost.deactivated';
 
+        // El histórico no tiene noción de activo/inactivo propia: un 0 en el mes
+        // en curso significa "no aplicó desde acá", y el carry-forward lo
+        // arrastra hacia adelante. Sin este registro, `totalForPeriod()` seguiría
+        // contando el monto viejo de un gasto ya desactivado.
+        $this->history->record($fixedCost, Carbon::now(), $fixedCost->active ? (float) $fixedCost->monthly_amount : 0.0);
+
         $this->recorder->record(
             actor: request()->user(),
             targetType: 'fixed_cost',
@@ -111,5 +116,32 @@ class FixedCostController extends Controller
         $label = $fixedCost->active ? 'activado' : 'desactivado';
 
         return back()->with('status', "Gasto fijo {$label}.");
+    }
+
+    public function destroy(FixedCost $fixedCost): RedirectResponse
+    {
+        $this->authorize('delete', $fixedCost);
+
+        // Igual que toggleActive() al desactivar: un log en 0 para el mes en
+        // curso saca al gasto del histórico desde acá en adelante, sin tocar
+        // los meses pasados en que sí rigió (esos quedan en fixed_cost_logs
+        // y la query de FixedCostHistory no filtra por deleted_at). Va
+        // incondicional -no sólo si estaba activo- para que el invariante
+        // totalForPeriod(hoy) === totalFixedCosts() se mantenga sin importar
+        // el estado previo; record() ya es idempotente.
+        $this->history->record($fixedCost, Carbon::now(), 0.0);
+
+        $this->recorder->record(
+            actor: request()->user(),
+            targetType: 'fixed_cost',
+            targetId: $fixedCost->id,
+            action: 'fixed_cost.deleted',
+            payload: ['name' => $fixedCost->name],
+            tenantId: $fixedCost->tenant_id,
+        );
+
+        $fixedCost->delete();
+
+        return back(fallback: route('fixed-costs.index'))->with('status', 'Gasto fijo eliminado.');
     }
 }

@@ -13,6 +13,7 @@ use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
+use App\Http\Controllers\FixedCostHistoryController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LaborTypeController;
@@ -74,6 +75,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
     Route::get('packaging', [PackagingController::class, 'index'])->name('packaging.index');
     Route::get('fixed-costs', [FixedCostController::class, 'index'])->name('fixed-costs.index');
+    // Antes de fixed-costs/{fixedCost}/history para no ambigüedad con el binding.
+    Route::get('fixed-costs/history', [FixedCostHistoryController::class, 'index'])->name('fixed-costs.history');
+    Route::get('fixed-costs/{fixedCost}/history', [FixedCostHistoryController::class, 'show'])->name('fixed-costs.show-history');
     Route::get('variable-expenses', [VariableExpenseController::class, 'index'])->name('variable-expenses.index');
     Route::get('variable-expenses/{variableExpense}/receipt', [VariableExpenseController::class, 'receipt'])->name('variable-expenses.receipt');
     Route::get('labor-types', [LaborTypeController::class, 'index'])->name('labor-types.index');
@@ -130,8 +134,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('packaging/{packaging}/replace', [CatalogReplacementController::class, 'replacePackaging'])->name('packaging.replace');
 
     Route::post('fixed-costs', [FixedCostController::class, 'store'])->name('fixed-costs.store');
+    Route::post('fixed-costs/history', [FixedCostHistoryController::class, 'store'])->name('fixed-costs.history.store');
     Route::put('fixed-costs/{fixedCost}', [FixedCostController::class, 'update'])->name('fixed-costs.update');
     Route::patch('fixed-costs/{fixedCost}/toggle-active', [FixedCostController::class, 'toggleActive'])->name('fixed-costs.toggle-active');
+    Route::delete('fixed-costs/{fixedCost}', [FixedCostController::class, 'destroy'])->name('fixed-costs.destroy');
 
     // Antes de variable-expenses/{variableExpense} para que "scan" no se
     // interprete como un id de gasto (route-model binding). Mismo throttle que
