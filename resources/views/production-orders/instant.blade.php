@@ -3,19 +3,13 @@
 
     <div class="py-8 px-6 lg:px-8 max-w-3xl mx-auto"
         x-data="{
+            ...consumptionPreviewState(),
             destinationType: 'location',
             destinationId: '',
             rows: [{ product_id: '', quantity: '' }],
-            lines: [],
-            materialCost: 0,
-            laborCost: 0,
-            totalCost: 0,
-            loading: false,
             submitting: false,
-            error: '',
             get validRows() { return this.rows.filter(r => r.product_id !== '' && Number(r.quantity) > 0); },
             get canSubmit() { return this.destinationId !== '' && this.validRows.length > 0; },
-            get hasShortfall() { return this.lines.some(l => l.shortfall > 0); },
             addRow() { this.rows.push({ product_id: '', quantity: '' }); },
             removeRow(i) {
                 this.rows.splice(i, 1);
@@ -24,7 +18,7 @@
             },
             async loadPreview() {
                 this.error = '';
-                if (this.validRows.length === 0) { this.lines = []; this.materialCost = 0; this.laborCost = 0; this.totalCost = 0; return; }
+                if (this.validRows.length === 0) { this.resetPreview(); return; }
                 this.loading = true;
                 try {
                     const res = await fetch('{{ route('production-orders.instant.preview') }}', {
@@ -36,20 +30,14 @@
                         },
                         body: JSON.stringify({ items: this.validRows.map(r => ({ product_id: r.product_id, quantity: r.quantity })) }),
                     });
-                    if (! res.ok) { this.lines = []; this.materialCost = 0; this.laborCost = 0; this.totalCost = 0; this.error = 'No se pudo calcular el consumo de insumos.'; return; }
-                    const data = await res.json();
-                    this.lines = data.lines;
-                    this.materialCost = data.material_cost;
-                    this.laborCost = data.labor_cost;
-                    this.totalCost = data.total_cost;
+                    if (! res.ok) { this.resetPreview(); this.error = 'No se pudo calcular el consumo de insumos.'; return; }
+                    this.applyPreview(await res.json());
                 } catch (e) {
                     this.error = 'No se pudo calcular el consumo de insumos.';
                 } finally {
                     this.loading = false;
                 }
             },
-            fmt(n) { return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0); },
-            fmtQty(n) { return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 3 }).format(n || 0); },
         }">
 
         <div class="mb-5">
@@ -147,68 +135,9 @@
                 </div>
 
                 {{-- Vista previa del consumo combinado --}}
-                <div class="bg-white border border-miga rounded-lg shadow-sm overflow-hidden">
-                    <div class="px-5 py-3 border-b border-miga flex items-center justify-between">
-                        <h3 class="text-sm font-semibold text-corteza">Insumos a consumir</h3>
-                        <span x-show="loading" class="text-xs text-masa-madre">Calculando…</span>
-                    </div>
-
-                    <template x-if="error">
-                        <p class="px-5 py-4 text-sm text-red-600" x-text="error"></p>
-                    </template>
-
-                    <template x-if="! error && lines.length === 0 && ! loading">
-                        <p class="px-5 py-4 text-sm text-masa-madre">Elegí al menos un artículo y una cantidad para ver el consumo.</p>
-                    </template>
-
-                    <template x-if="lines.length > 0">
-                        <div>
-                            <div x-show="hasShortfall" class="px-5 py-2.5 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">
-                                Algún insumo no alcanza: la producción igual se registra y el stock quedará en negativo.
-                            </div>
-                            <table class="w-full text-sm">
-                                <thead class="bg-miga text-masa-madre">
-                                    <tr>
-                                        <th class="px-5 py-2 text-left font-medium">Insumo</th>
-                                        <th class="px-5 py-2 text-right font-medium">Necesario</th>
-                                        <th class="px-5 py-2 text-right font-medium">Disponible</th>
-                                        <th class="px-5 py-2 text-right font-medium">Costo</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-miga">
-                                    <template x-for="line in lines" :key="line.type + '-' + line.id">
-                                        <tr :class="line.shortfall > 0 ? 'bg-amber-50/50' : ''">
-                                            <td class="px-5 py-2 text-corteza" x-text="line.name"></td>
-                                            <td class="px-5 py-2 text-right font-mono text-corteza">
-                                                <span x-text="fmtQty(line.quantity)"></span> <span class="text-masa-madre" x-text="line.unit"></span>
-                                            </td>
-                                            <td class="px-5 py-2 text-right font-mono" :class="line.shortfall > 0 ? 'text-amber-600' : 'text-masa-madre'">
-                                                <span x-text="fmtQty(line.available)"></span>
-                                            </td>
-                                            <td class="px-5 py-2 text-right font-mono text-masa-madre">
-                                                <span x-text="fmt(line.line_cost)"></span>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                                <tfoot class="border-t border-miga">
-                                    <tr>
-                                        <td colspan="3" class="px-5 py-1.5 text-right text-sm text-masa-madre">Costo de insumos</td>
-                                        <td class="px-5 py-1.5 text-right font-mono text-corteza">$ <span x-text="fmt(materialCost)"></span></td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="3" class="px-5 py-1.5 text-right text-sm text-masa-madre">Mano de obra</td>
-                                        <td class="px-5 py-1.5 text-right font-mono text-corteza">$ <span x-text="fmt(laborCost)"></span></td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="3" class="px-5 py-2.5 text-right text-sm text-masa-madre">Costo total</td>
-                                        <td class="px-5 py-2.5 text-right font-mono text-corteza font-semibold">$ <span x-text="fmt(totalCost)"></span></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </template>
-                </div>
+                <x-production-consumption-preview
+                    shortfall-note="Algún insumo no alcanza: la producción igual se registra y el stock quedará en negativo."
+                    empty-note="Elegí al menos un artículo y una cantidad para ver el consumo." />
 
                 <div class="flex items-center justify-end gap-3">
                     <a href="{{ route('production-orders.index') }}" class="px-4 py-2 text-sm text-masa-madre hover:text-corteza">Cancelar</a>
