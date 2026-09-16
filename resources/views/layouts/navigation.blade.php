@@ -86,6 +86,10 @@
                     $crumbs[] = ['label' => 'Existencias', 'href' => null];
                     $crumbs[] = ['label' => 'Artículos', 'href' => route('products.index')];
                     $crumbs[] = ['label' => 'Matriz de precios', 'href' => null];
+                } elseif (request()->routeIs('products.history')) {
+                    $crumbs[] = ['label' => 'Existencias', 'href' => null];
+                    $crumbs[] = ['label' => 'Artículos', 'href' => route('products.index')];
+                    $crumbs[] = ['label' => 'Historial', 'href' => null];
                 } elseif (request()->routeIs('products.*')) {
                     $crumbs[] = ['label' => 'Existencias', 'href' => null];
                     $crumbs[] = ['label' => 'Artículos', 'href' => null];
