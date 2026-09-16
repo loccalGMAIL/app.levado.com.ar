@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\CatalogItemType;
 use App\Enums\NotificationType;
+use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\IngredientPriceLog;
 use App\Models\Notification;
@@ -71,7 +73,11 @@ class NotificationService
             $activeKeys[] = $key;
 
             $qty = (float) $level->quantity;
-            $unit = $item->unit->short();
+            // Los descartables no tienen columna unit (siempre se cuentan por
+            // unidad) — $item->unit->short() sólo existe en Ingredient/Product.
+            $unit = $level->stockable_type === CatalogItemType::Packaging->value
+                ? Unit::Unidad->short()
+                : $item->unit->short();
             $body = $level->isNegative()
                 ? "Stock negativo: {$this->num($qty)} {$unit}."
                 : "Quedan {$this->num($qty)} {$unit} (mínimo {$this->num((float) $level->min_quantity)} {$unit}).";

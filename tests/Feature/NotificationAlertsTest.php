@@ -6,6 +6,7 @@ use App\Enums\NotificationType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Notification;
+use App\Models\Packaging;
 use App\Models\Product;
 use App\Models\StockLevel;
 use App\Models\Supplier;
@@ -234,6 +235,30 @@ test('sync crea una alerta de stock bajo y la resuelve al recuperarse', function
     StockLevel::where('stockable_id', $ingredient->id)->update(['quantity' => 10]);
     $service->syncStateAlerts($tenant);
     expect(Notification::where('type', NotificationType::LowStock->value)->active()->count())->toBe(0);
+});
+
+test('sync crea una alerta de stock bajo para un descartable en negativo', function () {
+    // Ancla de un bug real: Packaging no tiene columna `unit` (siempre se
+    // cuenta por unidad) — el código leía $item->unit->short() sin distinguir
+    // por tipo y explotaba con "Call to a member function short() on null"
+    // en cuanto un descartable (no un ingrediente) entraba en alerta.
+    [, $tenant] = ownerForAlerts();
+    $packaging = Packaging::factory()->for($tenant)->create();
+    StockLevel::create([
+        'tenant_id' => $tenant->id,
+        'location_id' => $tenant->defaultLocation()->id,
+        'stockable_type' => 'packaging',
+        'stockable_id' => $packaging->id,
+        'quantity' => -5,
+        'min_quantity' => null,
+    ]);
+
+    app(NotificationService::class)->syncStateAlerts($tenant);
+
+    $alert = Notification::where('type', NotificationType::LowStock->value)->active()->first();
+    expect($alert)->not->toBeNull()
+        ->and($alert->title)->toContain($packaging->name)
+        ->and($alert->body)->toContain('u.');
 });
 
 // ── Costo desactualizado (estado) ─────────────────────────────────────────
