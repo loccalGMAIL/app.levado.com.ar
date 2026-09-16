@@ -40,7 +40,8 @@
 
         <div class="mb-5">
             <a href="{{ route('production-orders.index') }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">← Órdenes de producción</a>
-            <div class="flex items-center gap-3 mt-2">
+            <h2 class="text-base font-semibold text-corteza mt-2">{{ $productionOrder->numberLabel() }}</h2>
+            <div class="flex items-center gap-3 mt-1">
                 <x-production-order-type-badge :type="$productionOrder->type" />
                 <x-production-order-status-badge :status="$productionOrder->status" />
                 <span class="text-sm text-masa-madre">{{ $productionOrder->scheduled_for?->format('d/m/Y') ?? 'Sin fecha' }}</span>
@@ -130,7 +131,7 @@
                     <div class="bg-white border border-miga rounded-lg shadow-sm">
                         <div class="px-5 py-3 border-b border-miga flex items-center justify-between">
                             <div>
-                                <span class="text-xs text-masa-madre">{{ $request->destination_type->label() }}</span>
+                                <span class="text-xs text-masa-madre">{{ $request->numberLabel() }} · {{ $request->destination_type->label() }}</span>
                                 <div class="font-medium text-corteza text-sm">{{ $request->destination?->name ?? '—' }}</div>
                                 @if($request->notes)
                                     <p class="text-xs text-masa-madre mt-0.5">{{ $request->notes }}</p>

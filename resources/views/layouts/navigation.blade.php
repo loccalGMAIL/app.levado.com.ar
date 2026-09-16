@@ -55,7 +55,8 @@
                     $crumbs[] = ['label' => 'Producción', 'href' => null];
                 } elseif (request()->routeIs('production-orders.show')) {
                     $crumbs[] = ['label' => 'Órdenes de producción', 'href' => route('production-orders.index')];
-                    $crumbs[] = ['label' => 'Orden', 'href' => null];
+                    $order = request()->route('productionOrder');
+                    $crumbs[] = ['label' => $order?->numberLabel() ?? 'Orden', 'href' => null];
                 } elseif (request()->routeIs('production-orders.*')) {
                     $crumbs[] = ['label' => 'Órdenes de producción', 'href' => null];
                 } elseif (request()->routeIs('ingredients.*')) {

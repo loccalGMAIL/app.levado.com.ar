@@ -57,8 +57,11 @@
                         <a href="{{ route('production-orders.show', $order) }}"
                             class="block bg-white border border-miga rounded-lg p-4 shadow-sm {{ $order->isCancelled() ? 'opacity-60' : '' }}">
                             <div class="flex items-start justify-between gap-2">
-                                <x-production-order-type-badge :type="$order->type" />
+                                <span class="font-medium text-corteza">{{ $order->numberLabel() }}</span>
                                 <x-production-order-status-badge :status="$order->status" />
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <x-production-order-type-badge :type="$order->type" />
                             </div>
                             <div class="text-xs text-masa-madre mt-2">
                                 {{ $order->scheduled_for?->format('d/m/Y') ?? 'Sin fecha' }}
@@ -72,6 +75,7 @@
 
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
+                            <th class="px-4 py-3 font-medium">Orden</th>
                             <th class="px-4 py-3 font-medium">Fecha</th>
                             <th class="px-4 py-3 font-medium">Tipo</th>
                             <th class="px-4 py-3 font-medium text-right">Pedidos</th>
@@ -82,11 +86,14 @@
                     <tbody class="divide-y divide-miga">
                         @foreach($orders as $order)
                             <tr class="{{ $order->isCancelled() ? 'opacity-60' : '' }}">
+                                <td class="px-4 py-3 font-medium text-corteza">
+                                    <a href="{{ route('production-orders.show', $order) }}" class="hover:underline">
+                                        {{ $order->numberLabel() }}
+                                    </a>
+                                </td>
                                 <td class="px-4 py-3 text-masa-madre whitespace-nowrap">{{ $order->scheduled_for?->format('d/m/Y') ?? 'Sin fecha' }}</td>
                                 <td class="px-4 py-3">
-                                    <a href="{{ route('production-orders.show', $order) }}" class="hover:underline">
-                                        <x-production-order-type-badge :type="$order->type" />
-                                    </a>
+                                    <x-production-order-type-badge :type="$order->type" />
                                 </td>
                                 <td class="px-4 py-3 text-right text-corteza font-mono">{{ $order->production_order_requests_count }}</td>
                                 <td class="px-4 py-3">

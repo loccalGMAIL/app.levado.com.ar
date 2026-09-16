@@ -159,3 +159,39 @@ test('borrar un pedido no reusa su número', function () {
 
     expect($third->position)->toBe(3);
 });
+
+test('el índice de órdenes muestra el número', function () {
+    [$user, $tenant] = stockTenantUser();
+    ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertSee('Orden #1');
+});
+
+test('el detalle de la orden muestra Orden #N y la etiqueta de cada pedido', function () {
+    [$user, $tenant] = stockTenantUser();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
+    ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)
+        ->get(route('production-orders.show', $order))
+        ->assertOk()
+        ->assertSee('Orden #1')
+        ->assertSee('Pedido 1')
+        ->assertSee('Pedido 2');
+});
+
+test('la planilla de reparto muestra el número de orden', function () {
+    [$user, $tenant] = stockTenantUser();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)
+        ->get(route('production-orders.delivery-sheet', $order))
+        ->assertOk()
+        ->assertSee('Orden #1')
+        ->assertSee('Pedido 1');
+});

@@ -19,7 +19,7 @@
         </div>
 
         <div class="mb-6">
-            <h2 class="text-lg font-semibold text-corteza">Planilla de reparto</h2>
+            <h2 class="text-lg font-semibold text-corteza">Planilla de reparto — {{ $productionOrder->numberLabel() }}</h2>
             <p class="text-sm text-masa-madre mt-0.5">
                 {{ $productionOrder->type->label() }} — {{ $productionOrder->scheduled_for?->format('d/m/Y') ?? 'Sin fecha' }}
             </p>
@@ -32,7 +32,7 @@
                 @foreach($productionOrder->productionOrderRequests as $request)
                     <div class="border border-miga rounded-lg overflow-hidden break-inside-avoid">
                         <div class="bg-miga px-4 py-2">
-                            <span class="text-xs text-masa-madre">{{ $request->destination_type->label() }}</span>
+                            <span class="text-xs text-masa-madre">{{ $request->numberLabel() }} · {{ $request->destination_type->label() }}</span>
                             <div class="font-semibold text-corteza">{{ $request->destination?->name ?? '—' }}</div>
                         </div>
                         @if($request->lines->isEmpty())
