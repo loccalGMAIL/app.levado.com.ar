@@ -32,6 +32,19 @@ test('viewer puede ver la lista de artículos', function () {
         ->assertSee('Agua mineral');
 });
 
+test('el filtro «sin categoría» lista sólo los artículos sin categoría', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $category = $tenant->productCategories()->create(['name' => 'Panificados', 'producible' => true]);
+    Product::factory()->for($tenant)->resale()->create(['name' => 'ConCategoriaZZ', 'product_category_id' => $category->id]);
+    Product::factory()->for($tenant)->resale()->create(['name' => 'SinCategoriaZZ']);
+
+    $this->actingAs($user)
+        ->get(route('products.index', ['category' => 'sin']))
+        ->assertOk()
+        ->assertSee('SinCategoriaZZ')
+        ->assertDontSee('ConCategoriaZZ');
+});
+
 // --- Crear reventa ---
 
 test('owner puede crear un producto de reventa con costo propio', function () {

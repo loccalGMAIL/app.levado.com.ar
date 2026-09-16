@@ -106,6 +106,7 @@
                     <select name="category"
                         class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                         <option value="">Todas las categorías</option>
+                        <option value="sin" @selected(request('category') === 'sin')>Sin categoría</option>
                         @foreach($categories as $cat)
                             <option value="{{ $cat->id }}" @selected((string) request('category') === (string) $cat->id)>{{ $cat->name }}</option>
                         @endforeach

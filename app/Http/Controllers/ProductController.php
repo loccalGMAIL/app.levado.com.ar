@@ -43,7 +43,10 @@ class ProductController extends Controller
             })
             ->when(request('type') === ProductType::Manufactured->value, fn ($q) => $q->where('type', ProductType::Manufactured->value))
             ->when(request('type') === ProductType::Resale->value, fn ($q) => $q->where('type', ProductType::Resale->value))
-            ->when(request('category'), fn ($q, $category) => $q->where('product_category_id', $category))
+            // 'sin' es un valor especial (no un id): aísla lo que hoy cuela el gate
+            // producible invertido por default, para clasificarlo en pocas pasadas.
+            ->when(request('category') === 'sin', fn ($q) => $q->whereNull('product_category_id'))
+            ->when(request('category') && request('category') !== 'sin', fn ($q) => $q->where('product_category_id', request('category')))
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
