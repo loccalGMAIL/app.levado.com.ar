@@ -57,6 +57,9 @@
                     $crumbs[] = ['label' => 'Órdenes de producción', 'href' => route('production-orders.index')];
                     $order = request()->route('productionOrder');
                     $crumbs[] = ['label' => $order?->numberLabel() ?? 'Orden', 'href' => null];
+                } elseif (request()->routeIs('production-orders.instant.create')) {
+                    $crumbs[] = ['label' => 'Órdenes de producción', 'href' => route('production-orders.index')];
+                    $crumbs[] = ['label' => 'Orden instantánea', 'href' => null];
                 } elseif (request()->routeIs('production-orders.*')) {
                     $crumbs[] = ['label' => 'Órdenes de producción', 'href' => null];
                 } elseif (request()->routeIs('ingredients.*')) {

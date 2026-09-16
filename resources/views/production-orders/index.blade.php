@@ -11,11 +11,17 @@
                     <a href="{{ route('production-order-templates.index') }}" class="text-sm text-horno hover:underline">Plantillas →</a>
                 </div>
                 @can('manage-costs')
-                    <button type="button"
-                        @click="$dispatch('open-modal', 'production-order-create')"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors shrink-0">
-                        + Nueva orden
-                    </button>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="{{ route('production-orders.instant.create') }}"
+                            class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                            ⚡ Orden instantánea
+                        </a>
+                        <button type="button"
+                            @click="$dispatch('open-modal', 'production-order-create')"
+                            class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                            + Nueva orden
+                        </button>
+                    </div>
                 @endcan
             </div>
 

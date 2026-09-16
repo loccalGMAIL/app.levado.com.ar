@@ -13,6 +13,7 @@ use App\Http\Controllers\DeliveryPersonController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\IngredientController;
+use App\Http\Controllers\InstantProductionOrderController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LaborTypeController;
 use App\Http\Controllers\LocationController;
@@ -120,6 +121,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('production/{production}', [ProductionController::class, 'show'])->name('production.show');
 
     Route::get('production-orders', [ProductionOrderController::class, 'index'])->name('production-orders.index');
+    // "instant" antes de production-orders/{productionOrder} para que no se interprete como un id.
+    Route::get('production-orders/instant', [InstantProductionOrderController::class, 'create'])
+        ->middleware('role:super_admin,owner,admin')
+        ->name('production-orders.instant.create');
     Route::get('production-orders/{productionOrder}', [ProductionOrderController::class, 'show'])->name('production-orders.show');
     Route::get('production-orders/{productionOrder}/preview', [ProductionOrderController::class, 'preview'])->name('production-orders.preview');
     Route::get('production-order-templates', [ProductionOrderTemplateController::class, 'index'])->name('production-order-templates.index');
@@ -227,6 +232,8 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('production/{production}/cancel', [ProductionController::class, 'cancel'])->name('production.cancel');
 
     Route::post('production-orders', [ProductionOrderController::class, 'store'])->name('production-orders.store');
+    Route::post('production-orders/instant/preview', [InstantProductionOrderController::class, 'preview'])->name('production-orders.instant.preview');
+    Route::post('production-orders/instant', [InstantProductionOrderController::class, 'store'])->name('production-orders.instant.store');
     Route::patch('production-orders/{productionOrder}/transition', [ProductionOrderController::class, 'transition'])->name('production-orders.transition');
     Route::post('production-orders/{productionOrder}/produce', [ProductionOrderController::class, 'produce'])->name('production-orders.produce');
     Route::patch('production-orders/{productionOrder}/cancel', [ProductionOrderController::class, 'cancel'])->name('production-orders.cancel');
