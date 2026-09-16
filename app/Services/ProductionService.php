@@ -12,6 +12,7 @@ use App\Models\Packaging;
 use App\Models\Product;
 use App\Models\Production;
 use App\Models\Recipe;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -209,9 +210,11 @@ class ProductionService
         });
 
         // No dejar en el feed una alerta que apunta a una producción ya anulada.
-        // $production->tenant() es directo (belongsTo propio): evita el lazy
-        // load de ->product->tenant, que preventLazyLoading() no permite.
-        $this->notifications->resolveByDedupeKey($production->tenant, "cost_spike:production:{$production->id}");
+        // Tenant::findOrFail(tenant_id) en vez de $production->tenant: Eloquent
+        // sólo marca preventsLazyLoading en la hidratación de 2+ filas
+        // (Builder::hydrate()), así que una sola Production (el caso típico al
+        // anular) no dispara la excepción pero SÍ lazy-carga en runtime real.
+        $this->notifications->resolveByDedupeKey(Tenant::findOrFail($production->tenant_id), "cost_spike:production:{$production->id}");
     }
 
     private function guardProducible(Product $product, float $quantity): Recipe

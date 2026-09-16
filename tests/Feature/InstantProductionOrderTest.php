@@ -206,6 +206,31 @@ test('el preview de la orden instantánea devuelve el consumo combinado sin escr
     expect((float) app(StockService::class)->levelFor($harina->fresh(), $tenant->defaultLocation())->quantity)->toBe(700.0);
 });
 
+test('el preview de la orden instantánea con dos artículos distintos no lazy-carga la receta', function () {
+    // Ancla de un bug real encontrado a mano en el navegador: pairsFrom() no
+    // precargaba 'recipe' y explotaba con LazyLoadingViolationException en
+    // cuanto había más de un artículo (o cualquiera, en los hechos) en el
+    // preview — sólo se veía con datos reales, nunca con un solo artículo
+    // simple como el resto de esta suite.
+    [$user, $tenant, $productA, $harina] = productionSetup();
+    $recipeB = Recipe::factory()->for($tenant)->create(['yield_quantity' => 1, 'yield_unit' => Unit::Unidad->value]);
+    $recipeB->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 200, 'unit' => Unit::Gramo->value]);
+    $productB = manufacturedProduct($tenant, $recipeB);
+    $productB->update(['product_category_id' => $productA->product_category_id]);
+    seedStock($harina, 5000, $user);
+
+    $this->actingAs($user)
+        ->postJson(route('production-orders.instant.preview'), [
+            'items' => [
+                ['product_id' => $productA->id, 'quantity' => 12],
+                ['product_id' => $productB->id, 'quantity' => 5],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonStructure(['lines', 'material_cost', 'labor_cost', 'total_cost'])
+        ->assertJsonPath('lines.0.name', 'Harina');
+});
+
 test('un viewer no puede abrir la pantalla de orden instantánea', function () {
     [$user] = productionSetup(TenantUserRole::Viewer);
 
@@ -239,4 +264,34 @@ test('anular una orden instantánea revierte el stock', function () {
     $this->actingAs($user)->patch(route('production-orders.cancel', $order))->assertRedirect();
 
     expect((float) app(StockService::class)->levelFor($harina->fresh(), $location)->quantity)->toBe(5000.0);
+});
+
+test('anular una orden instantánea con dos artículos no lazy-carga el tenant de cada producción', function () {
+    // Ancla de otro bug real encontrado a mano: ProductionService::cancel()
+    // leía $production->tenant (relación) para resolver la alerta de salto de
+    // costo. Con UNA sola producción en la orden, Eloquent nunca activa su
+    // guarda de lazy-loading (sólo lo hace al hidratar 2+ filas de una,
+    // Builder::hydrate()) y el bug queda invisible; con dos productos en la
+    // misma orden, la orden tiene 2 Production y el guard sí se activa.
+    [$user, $tenant, $productA, $harina] = productionSetup();
+    $recipeB = Recipe::factory()->for($tenant)->create(['yield_quantity' => 1, 'yield_unit' => Unit::Unidad->value]);
+    $recipeB->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 200, 'unit' => Unit::Gramo->value]);
+    $productB = manufacturedProduct($tenant, $recipeB);
+    $productB->update(['product_category_id' => $productA->product_category_id]);
+    seedStock($harina, 5000, $user);
+    $location = $tenant->defaultLocation();
+
+    $this->actingAs($user)->post(route('production-orders.instant.store'), [
+        'destination_type' => 'location',
+        'destination_id' => $location->id,
+        'items' => [
+            ['product_id' => $productA->id, 'quantity' => 12],
+            ['product_id' => $productB->id, 'quantity' => 5],
+        ],
+    ]);
+    $order = ProductionOrder::where('tenant_id', $tenant->id)->first();
+
+    $this->actingAs($user)->patch(route('production-orders.cancel', $order))->assertRedirect();
+
+    expect($order->fresh()->isCancelled())->toBeTrue();
 });

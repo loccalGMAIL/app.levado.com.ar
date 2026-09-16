@@ -91,7 +91,10 @@ class InstantProductionOrderController extends Controller
      */
     private function pairsFrom(Tenant $tenant, array $items): Collection
     {
+        // with('recipe'): baseConsumption()/guardProducible() lo leen enseguida
+        // (factorFor(), explodeWithLabor()) y preventLazyLoading no perdona.
         $products = $tenant->products()->producible()
+            ->with('recipe')
             ->whereIn('id', collect($items)->pluck('product_id'))
             ->get()
             ->keyBy('id');
