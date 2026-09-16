@@ -159,16 +159,36 @@ class Product extends Model
         return $this->hasMany(ProductPriceLog::class);
     }
 
-    /** Historial del COSTO (sólo reventa: el del elaborado vive en la receta). */
+    /**
+     * Historial del COSTO de compra (sólo reventa). El elaborado no registra
+     * logs acá — su costo vigente vive en la receta; su historial de
+     * fabricaciones es productions(), no esto.
+     */
     public function costLogs(): HasMany
     {
         return $this->hasMany(ProductCostLog::class);
     }
 
-    /** Última entrada del historial de costo, para etiquetar la procedencia sin N+1. */
+    /**
+     * Última entrada del historial de costo de COMPRA, para etiquetar la
+     * procedencia sin N+1. Sólo tiene sentido para reventa: en un elaborado
+     * el costo vigente no sale de acá (sale de la receta), así que esto no
+     * sirve para inferir procedencia de un elaborado.
+     */
     public function latestCostLog(): HasOne
     {
         return $this->hasOne(ProductCostLog::class)->latestOfMany('recorded_at');
+    }
+
+    /**
+     * Fabricaciones de este elaborado (vacía en la reventa). Es el historial
+     * de "cuánto costó cada vez que se produjo" — no confundir con costLogs():
+     * el costo VIGENTE de un elaborado sigue saliendo de la receta (currentCost()),
+     * esto solo lista lo que pasó en cada evento de producción.
+     */
+    public function productions(): HasMany
+    {
+        return $this->hasMany(Production::class);
     }
 
     public function stockLevels(): HasMany

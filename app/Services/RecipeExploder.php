@@ -15,8 +15,9 @@ use Illuminate\Support\Collection;
  *
  * Las cantidades vuelven ya en la unidad de cada ítem (la misma en la que
  * StockService espera los movimientos), agregadas por ítem: un insumo que aparece
- * en varias sub-recetas se suma una sola vez. La mano de obra se ignora (no es
- * insumo físico, no descuenta stock).
+ * en varias sub-recetas se suma una sola vez. La mano de obra no es insumo físico
+ * (no descuenta stock) así que `explode()` la ignora; `explodeWithLabor()` la
+ * acumula aparte, recorriendo el mismo árbol y con el mismo escalado.
  */
 class RecipeExploder
 {
@@ -27,17 +28,31 @@ class RecipeExploder
      */
     public function explode(Recipe $recipe, float $factor): Collection
     {
-        $accumulator = [];
-        $this->walk($recipe, $factor, $accumulator, []);
+        return $this->explodeWithLabor($recipe, $factor)['items'];
+    }
 
-        return collect(array_values($accumulator));
+    /**
+     * @return array{items: Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>, labor_cost: float, labor_hours: float}
+     */
+    public function explodeWithLabor(Recipe $recipe, float $factor): array
+    {
+        $accumulator = [];
+        $labor = ['cost' => 0.0, 'hours' => 0.0];
+        $this->walk($recipe, $factor, $accumulator, $labor, []);
+
+        return [
+            'items' => collect(array_values($accumulator)),
+            'labor_cost' => $labor['cost'],
+            'labor_hours' => $labor['hours'],
+        ];
     }
 
     /**
      * @param  array<string, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>  $accumulator
+     * @param  array{cost: float, hours: float}  $labor
      * @param  array<int, bool>  $visited  ids de recetas ya recorridas en esta rama (guarda anti-ciclo)
      */
-    private function walk(Recipe $recipe, float $factor, array &$accumulator, array $visited): void
+    private function walk(Recipe $recipe, float $factor, array &$accumulator, array &$labor, array $visited): void
     {
         if (isset($visited[$recipe->id])) {
             return;
@@ -47,6 +62,7 @@ class RecipeExploder
         $recipe->loadMissing([
             'ingredientLines.ingredient',
             'packagingLines.packaging',
+            'laborLines.laborType',
             'subrecipeLines.childRecipe',
         ]);
 
@@ -62,13 +78,19 @@ class RecipeExploder
             $this->add($accumulator, CatalogItemType::Packaging, $line->packaging, (float) $line->quantity * $factor);
         }
 
+        foreach ($recipe->laborLines as $line) {
+            $hours = (float) $line->hours * $factor;
+            $labor['hours'] += $hours;
+            $labor['cost'] += $hours * (float) $line->laborType->hourly_rate;
+        }
+
         foreach ($recipe->subrecipeLines as $line) {
             $child = $line->childRecipe;
             $convertedYield = $this->converter->convert((float) $line->quantity_used, $line->unit, $child->yield_unit);
 
             if ($convertedYield !== null && (float) $child->yield_quantity > 0) {
                 $childFactor = $factor * $convertedYield / (float) $child->yield_quantity;
-                $this->walk($child, $childFactor, $accumulator, $visited);
+                $this->walk($child, $childFactor, $accumulator, $labor, $visited);
             }
         }
     }

@@ -45,14 +45,16 @@
             },
             // El historial se trae a demanda: son N filas por artículo y viajar en
             // el payload del listado inflaría el HTML para algo que casi no se abre.
-            costHistory: { name: '', loading: false, failed: false, rows: [] },
+            costHistory: { name: '', isResale: true, loading: false, failed: false, rows: [] },
             async openCostHistory(url, name) {
-                this.costHistory = { name, loading: true, failed: false, rows: [] };
+                this.costHistory = { name, isResale: true, loading: true, failed: false, rows: [] };
                 $dispatch('open-modal', 'product-cost-history');
                 try {
                     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
                     if (!res.ok) throw new Error(res.status);
-                    this.costHistory.rows = (await res.json()).rows;
+                    const data = await res.json();
+                    this.costHistory.isResale = data.is_resale;
+                    this.costHistory.rows = data.rows;
                 } catch (e) {
                     this.costHistory.failed = true;
                 } finally {

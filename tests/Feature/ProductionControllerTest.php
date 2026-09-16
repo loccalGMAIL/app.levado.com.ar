@@ -44,7 +44,7 @@ test('el endpoint de preview devuelve el consumo de insumos en JSON', function (
     $this->actingAs($user)
         ->postJson(route('production.preview'), ['product_id' => $product->id, 'quantity' => 24])
         ->assertOk()
-        ->assertJsonStructure(['lines' => [['type', 'id', 'name', 'unit', 'quantity', 'available', 'shortfall', 'unit_cost', 'line_cost']], 'total_cost'])
+        ->assertJsonStructure(['lines' => [['type', 'id', 'name', 'unit', 'quantity', 'available', 'shortfall', 'unit_cost', 'line_cost']], 'material_cost', 'labor_cost', 'total_cost'])
         ->assertJsonPath('lines.0.name', 'Harina');
 });
 

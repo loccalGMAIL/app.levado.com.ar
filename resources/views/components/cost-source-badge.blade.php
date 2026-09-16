@@ -1,12 +1,15 @@
 @props(['product', 'historyUrl' => null])
 {{--
-    De dónde sale el costo vigente del artículo. Sólo para REVENTA: en un
-    elaborado el badge de tipo ya dice que el costo lo calcula la receta, y
-    repetirlo sólo gasta espacio.
+    De dónde sale el costo vigente del artículo. Para REVENTA son dos
+    preguntas distintas: la REGLA (currentCostSource(), derivada del tipo)
+    diría siempre 'compra', pero la PROCEDENCIA del valor vigente puede ser
+    una factura o una carga a mano — por eso mira latestCostLog.
 
-    Para la reventa sí aporta, porque son dos preguntas distintas: la REGLA
-    (currentCostSource(), derivada del tipo) diría siempre 'compra', pero la
-    PROCEDENCIA del valor vigente puede ser una factura o una carga a mano.
+    Para un ELABORADO el costo vigente SIGUE saliendo de la receta (no de
+    productions ni de ningún log): la etiqueta acá es la regla nomás, nunca
+    la procedencia. Solo se muestra si hay link: sin historyUrl el badge de
+    tipo ya dice "Elaborado" y repetirlo no aporta nada (por eso /stock,
+    que no tiene el modal de historial, sigue sin badge para un elaborado).
 --}}
 @if($product->isResale())
     @php
@@ -25,4 +28,9 @@
     @else
         <span title="{{ $title }}" {{ $attributes->merge(['class' => $base]) }}>{{ $label }}</span>
     @endif
+@elseif($historyUrl)
+    <button type="button"
+        title="El costo lo calcula la receta · ver historial de fabricaciones"
+        @click.stop="openCostHistory('{{ $historyUrl }}', @js($product->name))"
+        {{ $attributes->merge(['class' => 'text-[10px] font-medium rounded px-1 py-0.5 bg-amber-50 text-amber-700 hover:ring-1 hover:ring-current transition']) }}>Receta</button>
 @endif

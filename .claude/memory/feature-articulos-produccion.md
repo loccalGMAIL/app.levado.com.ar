@@ -264,13 +264,45 @@ de qué es por-sucursal.
 3. **Facturación/cuentas corrientes**: horizonte reconocido, nada construido; el *pedido* es la unidad natural
    donde colgaría la factura futura.
 
-## Próximo — lo que sigue sobre la mesa
-1. **Valuación del elaborado por producción** — que fabricar alimente el costo del artículo. `productions.unit_cost`
-   ya se calcula y se snapshotea en el movimiento; falta propagarlo. Ojo: hoy `stock_levels.unit_cost` **no lo lee
-   nadie**, así que sin un lector el trabajo no cambia ninguna pantalla.
+## Punto 1 resuelto — costo de producción, historial y alerta (16/09/2026)
+
+**No** se hizo en la forma que decía la nota vieja ("propagar `productions.unit_cost` al costo del artículo").
+Al mirarlo con el código, ese camino era un retroceso: `recipes.unit_cost` (el costo vigente) suma insumos +
+descartables + **mano de obra** + sub-recetas y se recalcula solo; `productions.unit_cost` explotaba la misma
+receta con los mismos `cost_per_unit` pero **sin mano de obra** y quedaba congelado. Propagarlo habría reemplazado
+un número completo y actualizado por uno incompleto y viejo. El usuario lo objetó apenas se lo planteé, antes de
+ver el código — su instinto era correcto. **Esto ratifica el ADR de [[domain-model-articulos]]: `currentCost()`
+sigue siendo la única fuente del costo vigente; el costo del evento de producción queda aparte a propósito. No
+volver a proponer que producir alimente `currentCost()`.**
+
+Lo que sí se hizo, sobre los huecos reales:
+1. **Mano de obra en el costo de producción**: `RecipeExploder::explodeWithLabor()` recorre el mismo BOM que
+   `explode()` (sub-recetas phantom incluidas) y acumula `labor_cost`/`labor_hours` aparte — así el costo de
+   producir es comparable con `recipes.unit_cost` en vez de venir sistemáticamente más bajo. `productions` sumó
+   `material_cost`/`labor_cost` (backfill: viejas = material, MO en 0, honesto porque antes el exploder la ignoraba).
+   El movimiento de entrada del elaborado pasa a valuarse al costo completo — es el snapshot del evento en el
+   ledger, no toca `stock_levels.unit_cost` (guard intacto) ni el costo vigente.
+2. **Historial de fabricaciones del elaborado**: **sin tabla nueva.** `Product::productions()` alcanza — cantidad,
+   costo, fecha y estado ya viven ahí. Se descartó a propósito sumar `product_cost_logs` para elaborados (lo
+   proponía el primer borrador del plan): habría duplicado esos mismos campos y roto la semántica de
+   `latestCostLog` como *procedencia del costo vigente* (que para un elaborado sigue siendo la receta, nunca una
+   producción). `ProductCostLogTest` ("un elaborado no registra logs de costo") sigue intacto y sigue siendo cierto.
+   El badge del catálogo dice **Receta** para el elaborado (la regla, no una procedencia) y abre el mismo modal.
+3. **Alerta de salto de costo al fabricar**: se dispara **al producir**, contra la producción confirmada anterior
+   del mismo artículo — no desde `RecipeCostPropagator`, que recalcula el cierre completo de ancestros en un lote
+   (una suba de harina toca decenas de las 304 recetas reales de una sola vez) y hubiera sido una tormenta de
+   alertas por un costo que todavía nadie fabricó. Mismo umbral/toggle que la alerta de compra
+   (`alerts.cost_spike.*`), sin setting propio todavía.
+
+**777 tests, todos verdes** (22 nuevos: `ProductionTest` ampliado, `ProductionCostHistoryTest`,
+`ProductionCostSpikeTest`, ajustes en `ProductCostSourceTest`/`ProductionControllerTest`).
+
+## Próximo — lo que sigue sobre la mesa (parkeado, no para la sesión actual)
 2. **Semi-elaborados stockeables** — las sub-recetas son siempre phantom (`RecipeExploder`). BOM multinivel real.
 3. **Movimientos de stock por destino** de P5 (transferencias/reparto) — ver la sección de arriba.
-4. **Mermas / rendimiento real** — depende de que exista (1) para tener dónde impactar el ajuste.
+4. **Mermas / rendimiento real** — el único camino real hacia un costo de fabricación distinto del teórico (el
+   punto 1 no lo daba: mientras el consumo se derive de la receta, no hay desvío que medir). Depende de que la
+   valuación por producción exista para tener dónde impactar el ajuste — parcialmente cubierto por lo de arriba.
 Después: **Ventas / POS** (usará el EAN-13 y la política de precio; probablemente se cruce con clientes/reparto).
 
 ## ⚠️ Deploy de v0.13.0 — ORDEN (o las listas de precios se ven vacías)

@@ -49,21 +49,24 @@ class ProductionOrderService
     }
 
     /**
-     * Preview combinado: el consumo de insumos de todos los artículos de la
-     * orden, sumado por insumo, contra el stock del obrador. Mismo array
-     * shape que ProductionService::preview() para reusar el markup.
+     * Preview combinado: el consumo de insumos y la mano de obra de todos los
+     * artículos de la orden, sumados por insumo, contra el stock del obrador.
+     * Mismo array shape que ProductionService::preview() para reusar el markup.
      *
-     * @return array{lines: array<int, array<string, mixed>>, total_cost: float}
+     * @return array{lines: array<int, array<string, mixed>>, material_cost: float, labor_cost: float, total_cost: float}
      */
     public function preview(ProductionOrder $order): array
     {
         $aggregated = $this->aggregate($order);
 
-        $base = $aggregated->map(
+        $consumptions = $aggregated->map(
             fn (array $entry) => $this->productions->baseConsumption($entry['product'], $entry['quantity'])
         );
 
-        return $this->productions->summarize($this->mergeBase($base), $order->location);
+        $items = $this->mergeBase($consumptions->pluck('items'));
+        $laborCost = $consumptions->sum('labor_cost');
+
+        return $this->productions->summarize($items, $order->location, $laborCost);
     }
 
     /**

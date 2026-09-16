@@ -203,6 +203,51 @@ cada orden agrupa **pedidos**, uno por destino.
 
 - `php artisan migrate` (4 tablas/columnas nuevas) y `npm run build` (vistas y componentes nuevos).
 
+### Costo de producción con mano de obra, historial del elaborado y alerta al fabricar
+
+El costo del artículo vigente **sigue saliendo de la receta** — esto no lo toca. Cierra en cambio tres huecos
+reales de Producción: el costo que mostraba esa pantalla no incluía mano de obra (más bajo que el del catálogo,
+para el mismo artículo); un elaborado no tenía historial de costo (la reventa sí); y no había alerta si el costo de
+fabricar algo pegaba un salto.
+
+#### Agregado
+
+- **El costo de producción ahora incluye mano de obra** (la de la receta y la de sus sub-recetas), no sólo
+  insumos. La pantalla de una producción y el preview (pantalla "producir ahora" y orden de producción) muestran
+  Insumos / Mano de obra / Costo total por separado.
+- **Historial de fabricaciones del elaborado**: el mismo botón de historial que ya tenía la reventa (badge junto al
+  Costo/u del catálogo) ahora también funciona para elaborados — dice **Receta** y abre la lista de producciones
+  con fecha, cantidad, costo y link a cada una; las anuladas quedan marcadas.
+- **Alerta de salto de costo al fabricar**: si producir un elaborado sale más caro que la vez anterior por encima
+  del umbral configurado, aparece en el centro de alertas con link a la producción. Primera producción de un
+  artículo: sin baseline, no alerta.
+
+#### Técnico
+
+- `RecipeExploder::explodeWithLabor()`: mismo recorrido del BOM que `explode()` (sub-recetas phantom, escalado
+  recursivo), sumando además `labor_cost`/`labor_hours` por nivel. `explode()` queda como wrapper sin cambios de
+  contrato para el resto de los consumidores.
+- `ProductionService`: `baseConsumption()`/`summarize()`/`preview()`/`produce()` propagan el desglose
+  `material_cost`/`labor_cost`/`total_cost`. El movimiento de stock de entrada del elaborado pasa a valuarse al
+  costo **completo** (antes sólo insumos) — es un snapshot del evento en el ledger, no toca `stock_levels.unit_cost`
+  (el guard de `StockService` que sólo lo pisan las compras sigue intacto) ni el costo vigente del artículo.
+- Columnas `productions.material_cost`/`labor_cost` (`decimal(14,4)`), con backfill honesto: las producciones
+  anteriores a este cambio eran efectivamente insumos-only. Índice `[product_id, produced_at]` para el historial y
+  el baseline de la alerta.
+- **Sin tabla de log nueva para el elaborado**: el historial de fabricaciones sale directo de `productions` (ya
+  tiene todo — cantidad, costo, fecha, estado) vía `Product::productions()`; no se duplica en `product_cost_logs`,
+  que sigue siendo sólo de reventa. `ProductCostHistoryController` branchea por tipo.
+- `NotificationService::raiseProductionCostSpike()`: mismo umbral y toggle que la alerta de compra
+  (`alerts.cost_spike.*`, sin setting propio), dedupe por producción. Se dispara **al producir**, comparando contra
+  la producción confirmada anterior del mismo artículo — no desde la propagación de costo de receta, que recalcula
+  el cierre completo de ancestros en un lote y hubiera disparado una tormenta de alertas por un solo cambio de
+  insumo. Al anular una producción se resuelve su alerta si la generó.
+- **777 tests, todos verdes** (22 nuevos).
+
+#### Al deployar
+
+- `php artisan migrate` (2 columnas + 1 índice sobre `productions`).
+
 ---
 
 ## [0.12.13] — 2026-08-11

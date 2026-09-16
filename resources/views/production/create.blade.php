@@ -7,6 +7,8 @@
             quantity: '',
             unit: '',
             lines: [],
+            materialCost: 0,
+            laborCost: 0,
             totalCost: 0,
             loading: false,
             submitting: false,
@@ -19,7 +21,7 @@
             },
             async loadPreview() {
                 this.error = '';
-                if (! this.canSubmit) { this.lines = []; this.totalCost = 0; return; }
+                if (! this.canSubmit) { this.lines = []; this.materialCost = 0; this.laborCost = 0; this.totalCost = 0; return; }
                 this.loading = true;
                 try {
                     const res = await fetch('{{ route('production.preview') }}', {
@@ -31,9 +33,11 @@
                         },
                         body: JSON.stringify({ product_id: this.productId, quantity: this.quantity }),
                     });
-                    if (! res.ok) { this.lines = []; this.totalCost = 0; this.error = 'No se pudo calcular el consumo de insumos.'; return; }
+                    if (! res.ok) { this.lines = []; this.materialCost = 0; this.laborCost = 0; this.totalCost = 0; this.error = 'No se pudo calcular el consumo de insumos.'; return; }
                     const data = await res.json();
                     this.lines = data.lines;
+                    this.materialCost = data.material_cost;
+                    this.laborCost = data.labor_cost;
                     this.totalCost = data.total_cost;
                 } catch (e) {
                     this.error = 'No se pudo calcular el consumo de insumos.';
@@ -144,7 +148,15 @@
                                 </tbody>
                                 <tfoot class="border-t border-miga">
                                     <tr>
-                                        <td colspan="3" class="px-5 py-2.5 text-right text-sm text-masa-madre">Costo total de insumos</td>
+                                        <td colspan="3" class="px-5 py-1.5 text-right text-sm text-masa-madre">Costo de insumos</td>
+                                        <td class="px-5 py-1.5 text-right font-mono text-corteza">$ <span x-text="fmt(materialCost)"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="px-5 py-1.5 text-right text-sm text-masa-madre">Mano de obra</td>
+                                        <td class="px-5 py-1.5 text-right font-mono text-corteza">$ <span x-text="fmt(laborCost)"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="px-5 py-2.5 text-right text-sm text-masa-madre">Costo total</td>
                                         <td class="px-5 py-2.5 text-right font-mono text-corteza font-semibold">$ <span x-text="fmt(totalCost)"></span></td>
                                     </tr>
                                 </tfoot>

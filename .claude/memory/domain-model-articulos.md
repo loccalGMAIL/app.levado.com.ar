@@ -80,11 +80,17 @@ información sin duplicar reglas.
   - **Distinción que hay que respetar**: `currentCostSource()` responde *de qué columna* sale el costo (derivado del
     `type`); la **procedencia** del valor vigente sale del último `ProductCostLog`. Para una reventa con costo tipeado
     a mano, la regla igual dice `'compra'`. No unificar los dos conceptos en un método.
-- **Próximo 🔲**: Módulo de Producción (valuación por producción / semi-elaborados stockeables / órdenes / mermas,
-  sin elegir todavía). Luego Ventas.
+- **Órdenes de producción ✅ (P5)**. **Costo de producción + historial + alerta ✅ (16/09/2026)**: ver
+  [[feature-articulos-produccion]] → "Punto 1 resuelto". Ratifica este ADR, no lo cambia — `currentCost()` sigue
+  siendo la única fuente del costo vigente del elaborado.
+- **Próximo 🔲**: semi-elaborados stockeables / movimientos de stock por destino / mermas (parkeados, sin trabajar).
+  Luego Ventas.
 
 ## Notas de diseño
 - `currentCost()` es el **costo estándar** del artículo (para valuar existencias); el costo del **evento** de
-  producción (`productions.total_cost`, consumo físico) queda aparte a propósito.
+  producción (`productions.total_cost`/`material_cost`/`labor_cost`, consumo físico) queda aparte a propósito.
+  **Confirmado de nuevo (16/09/2026)**: se evaluó explícitamente propagar `productions.unit_cost` a `currentCost()`
+  y se descartó — sería reemplazar el costo completo y siempre actualizado de la receta (insumos+MO+sub-recetas,
+  recalculado cada vez que cambia un insumo) por uno parcial y congelado en el tiempo. No volver a proponerlo.
 - Overhead de gastos fijos: excluido de `currentCost()`; si el pricing lo necesita, se decide en P2.
 - Unificar `Ingredient`+`Packaging` en un solo "Insumo": posible mejora futura, baja prioridad, fuera de alcance.

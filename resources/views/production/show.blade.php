@@ -34,12 +34,23 @@
                 <div class="mt-1 font-mono text-corteza">{{ number_format($production->quantity, 2, ',', '.') }} {{ $production->unit->short() }}</div>
             </div>
             <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
-                <div class="text-xs text-masa-madre">Costo total de insumos</div>
-                <div class="mt-1 font-mono text-corteza">$ {{ number_format($production->total_cost, 2, ',', '.') }}</div>
-            </div>
-            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
                 <div class="text-xs text-masa-madre">Costo por unidad</div>
                 <div class="mt-1 font-mono text-corteza">$ {{ number_format($production->unit_cost, 2, ',', '.') }}</div>
+            </div>
+            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+                <div class="text-xs text-masa-madre">Costo total</div>
+                <div class="mt-1 font-mono text-corteza">$ {{ number_format($production->total_cost, 2, ',', '.') }}</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+                <div class="text-xs text-masa-madre">Insumos</div>
+                <div class="mt-1 font-mono text-corteza">$ {{ number_format($production->material_cost, 2, ',', '.') }}</div>
+            </div>
+            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+                <div class="text-xs text-masa-madre">Mano de obra</div>
+                <div class="mt-1 font-mono text-corteza">$ {{ number_format($production->labor_cost, 2, ',', '.') }}</div>
             </div>
         </div>
 

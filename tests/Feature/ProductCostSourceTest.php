@@ -14,7 +14,7 @@ use App\Models\Tenant;
 
 // --- Etiqueta de origen en el catálogo ---
 
-test('el catálogo etiqueta el origen de la reventa y no el del elaborado', function () {
+test('el catálogo etiqueta Receta en el elaborado y Compra en la reventa', function () {
     [$user, $tenant] = stockPurchaseOwner();
     $recipe = Recipe::factory()->for($tenant)->create(['unit_cost' => 30, 'yield_quantity' => 1]);
     Product::factory()->for($tenant)->manufactured()->create(['name' => 'BudinElaborado', 'recipe_id' => $recipe->id]);
@@ -22,10 +22,20 @@ test('el catálogo etiqueta el origen de la reventa y no el del elaborado', func
 
     $html = $this->actingAs($user)->get(route('products.index'))->assertOk()->getContent();
 
-    // El elaborado no lleva etiqueta de origen: su badge de tipo ya dice que el
-    // costo sale de la receta, y repetirlo sólo gasta espacio en la fila.
+    // El catálogo pasa historyUrl para ambos tipos, así que el elaborado ahora
+    // sí lleva badge — clickeable, abre el historial de sus fabricaciones.
     expect($html)->toContain('El costo lo alimentan las compras')
-        ->not->toContain('El costo lo calcula la receta');
+        ->toContain('El costo lo calcula la receta · ver historial de fabricaciones');
+});
+
+test('el badge Receta del elaborado abre el historial de fabricaciones', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+    $recipe = Recipe::factory()->for($tenant)->create(['unit_cost' => 30, 'yield_quantity' => 1]);
+    $product = Product::factory()->for($tenant)->manufactured()->create(['recipe_id' => $recipe->id]);
+
+    $html = $this->actingAs($user)->get(route('products.index'))->assertOk()->getContent();
+
+    expect($html)->toContain(route('products.cost-history', $product));
 });
 
 test('un costo tipeado a mano se etiqueta Manual, no Compra', function () {
@@ -149,5 +159,9 @@ test('la ficha de stock de un elaborado no lleva etiqueta de origen', function (
         ->assertOk()
         ->getContent();
 
+    // Decisión, no omisión: <x-cost-source-badge> en stock/show no pasa
+    // historyUrl (esa vista no tiene el modal de historial), y el componente
+    // omite el badge del elaborado sin link a propósito — el badge de tipo ya
+    // dice "Elaborado" y repetirlo sin poder abrir nada no aporta nada.
     expect($html)->not->toContain('El costo lo calcula la receta');
 });

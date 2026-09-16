@@ -5,6 +5,7 @@ use App\Enums\ProductType;
 use App\Enums\StockMovementType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
+use App\Models\LaborType;
 use App\Models\Packaging;
 use App\Models\Product;
 use App\Models\Recipe;
@@ -70,7 +71,48 @@ test('producir descuenta ingredientes y descartables por el factor correcto y su
         ->and((float) $stock->levelFor($product, $loc)->quantity)->toBe(24.0);  // +24
 });
 
-test('el costo total de la producción suma el costo físico de los insumos consumidos', function () {
+test('el costo de una producción suma los insumos consumidos y la mano de obra', function () {
+    [$user, $tenant] = stockTenantUser();
+
+    $harina = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
+    $laborType = LaborType::factory()->for($tenant)->create(['hourly_rate' => 100]);
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 10, 'yield_unit' => Unit::Unidad->value]);
+    $recipe->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 200, 'unit' => Unit::Gramo->value]);
+    $recipe->laborLines()->create(['labor_type_id' => $laborType->id, 'hours' => 0.5]);
+    $product = manufacturedProduct($tenant, $recipe);
+
+    $production = productionService()->produce($product, 20, null, $user); // factor 2 → materiales 400gr×0.01=4, MO 1h×100=100
+
+    expect((float) $production->material_cost)->toBe(4.0)
+        ->and((float) $production->labor_cost)->toBe(100.0)
+        ->and((float) $production->total_cost)->toBe(104.0)
+        ->and((float) $production->unit_cost)->toBe(5.2); // 104 / 20
+});
+
+test('la mano de obra de una sub-receta también entra en el costo de la producción', function () {
+    [$user, $tenant] = stockTenantUser();
+
+    $harina = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
+    $laborType = LaborType::factory()->for($tenant)->create(['hourly_rate' => 100]);
+
+    $masa = Recipe::factory()->for($tenant)->semiElaborate()->create(['yield_quantity' => 1, 'yield_unit' => Unit::Kilogramo->value]);
+    $masa->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 800, 'unit' => Unit::Gramo->value]);
+    $masa->laborLines()->create(['labor_type_id' => $laborType->id, 'hours' => 1]); // 100
+
+    $facturas = Recipe::factory()->for($tenant)->create(['yield_quantity' => 12, 'yield_unit' => Unit::Unidad->value]);
+    $facturas->subrecipeLines()->create(['child_recipe_id' => $masa->id, 'quantity_used' => 0.5, 'unit' => Unit::Kilogramo->value]);
+    $facturas->laborLines()->create(['labor_type_id' => $laborType->id, 'hours' => 0.2]); // 20
+
+    $product = manufacturedProduct($tenant, $facturas);
+    seedStock($harina, 5000, $user);
+
+    // factor 2, childFactor = 2*0.5/1 = 1 → sub-receta aporta 1h de MO, receta padre 0.4h (0.2*2)
+    $production = productionService()->produce($product, 24, null, $user);
+
+    expect((float) $production->labor_cost)->toBe(140.0); // 100 (sub-receta) + 40 (0.4h×100)
+});
+
+test('una receta sin mano de obra produce al mismo costo total que antes', function () {
     [$user, $tenant] = stockTenantUser();
 
     $harina = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
@@ -80,8 +122,53 @@ test('el costo total de la producción suma el costo físico de los insumos cons
 
     $production = productionService()->produce($product, 20, null, $user); // factor 2 → 400 gr × 0.01 = 4
 
-    expect((float) $production->total_cost)->toBe(4.0)
+    expect((float) $production->material_cost)->toBe(4.0)
+        ->and((float) $production->labor_cost)->toBe(0.0)
+        ->and((float) $production->total_cost)->toBe(4.0)
         ->and((float) $production->unit_cost)->toBe(0.2); // 4 / 20
+});
+
+test('el movimiento de entrada del elaborado se valúa al costo con mano de obra', function () {
+    [$user, $tenant] = stockTenantUser();
+
+    $harina = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
+    $laborType = LaborType::factory()->for($tenant)->create(['hourly_rate' => 100]);
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 10, 'yield_unit' => Unit::Unidad->value]);
+    $recipe->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 200, 'unit' => Unit::Gramo->value]);
+    $recipe->laborLines()->create(['labor_type_id' => $laborType->id, 'hours' => 0.5]);
+    $product = manufacturedProduct($tenant, $recipe);
+
+    $production = productionService()->produce($product, 20, null, $user);
+
+    $entryMovement = $production->movements()->where('quantity', '>', 0)->sole();
+    expect((float) $entryMovement->unit_cost)->toBe(5.2); // igual al unit_cost de la producción
+});
+
+test('producir no cambia el costo vigente del artículo ni el de su receta', function () {
+    [$user, $tenant] = stockTenantUser();
+
+    $harina = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
+    $laborType = LaborType::factory()->for($tenant)->create(['hourly_rate' => 100]);
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 10, 'yield_unit' => Unit::Unidad->value]);
+    $recipe->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 200, 'unit' => Unit::Gramo->value]);
+    $recipe->laborLines()->create(['labor_type_id' => $laborType->id, 'hours' => 0.5]);
+    propagateRecipeCosts($recipe);
+    $product = manufacturedProduct($tenant, $recipe);
+
+    $recipeCostBefore = (float) $recipe->fresh()->unit_cost;
+    $currentCostBefore = $product->fresh()->currentCost();
+    $sourceBefore = $product->fresh()->currentCostSource();
+
+    productionService()->produce($product, 20, null, $user);
+
+    expect((float) $recipe->fresh()->unit_cost)->toBe($recipeCostBefore)
+        ->and($product->fresh()->currentCost())->toBe($currentCostBefore)
+        ->and($product->fresh()->currentCostSource())->toBe($sourceBefore)
+        ->and($product->fresh()->currentCostSource())->toBe('receta');
+
+    $loc = $tenant->defaultLocation();
+    // stock_levels.unit_cost solo lo pisan las entradas de compra: producir no lo toca.
+    expect((float) app(StockService::class)->levelFor($product, $loc)->unit_cost)->toBe(0.0);
 });
 
 // --- Sub-receta phantom: se explota a insumos base, no genera movimiento propio ---
@@ -240,8 +327,29 @@ test('el preview informa insumos, faltantes y costo total sin escribir stock', f
         ->and($preview['lines'][0]['quantity'])->toBe(1000.0)
         ->and($preview['lines'][0]['available'])->toBe(700.0)
         ->and($preview['lines'][0]['shortfall'])->toBe(300.0)
-        ->and($preview['total_cost'])->toBe(10.0); // 1000 × 0.01
+        ->and($preview['material_cost'])->toBe(10.0) // 1000 × 0.01
+        ->and($preview['labor_cost'])->toBe(0.0)
+        ->and($preview['total_cost'])->toBe(10.0);
 
     // El preview no movió stock.
     expect((float) app(StockService::class)->levelFor($harina, $tenant->defaultLocation())->quantity)->toBe(700.0);
+});
+
+test('el preview informa la mano de obra aparte del costo de insumos', function () {
+    [$user, $tenant] = stockTenantUser();
+
+    $harina = Ingredient::factory()->for($tenant)->create(['name' => 'Harina', 'unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
+    $laborType = LaborType::factory()->for($tenant)->create(['hourly_rate' => 100]);
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 12, 'yield_unit' => Unit::Unidad->value]);
+    $recipe->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 500, 'unit' => Unit::Gramo->value]);
+    $recipe->laborLines()->create(['labor_type_id' => $laborType->id, 'hours' => 1]);
+    $product = manufacturedProduct($tenant, $recipe);
+
+    seedStock($harina, 5000, $user);
+
+    $preview = productionService()->preview($product, 24); // factor 2 → materiales 1000gr×0.01=10, MO 2h×100=200
+
+    expect($preview['material_cost'])->toBe(10.0)
+        ->and($preview['labor_cost'])->toBe(200.0)
+        ->and($preview['total_cost'])->toBe(210.0);
 });
