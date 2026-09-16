@@ -96,12 +96,13 @@ la **Receta** queda como fórmula/BOM. Es la Etapa 3 que el roadmap ya preveía.
   de categorías de gastos: `ProductCategory` modelo, `ProductCategoryController` (store/update/destroy, guard de
   borrado si tiene artículos, `wantsJson` para alta rápida, unicidad scoped), rutas `product-categories.*`, componente
   **propio** `product-categories-modal` (toggle "se produce"; **no** se tocó el de gastos). Modales de producto con
-  `<select>` de categoría + "+ nueva" al vuelo; índice con columna y filtro. **El objetivo**: `ProductionController::create`
-  filtra `whereHas('category', producible=true)` → **solo aparecen elaborados de una categoría marcada "se produce"**;
-  sin categoría o categoría no-producible → ocultos (decisión del usuario: cafetería se costea pero no se produce hasta
-  el módulo de ventas). El filtro es solo del select; `produce()` no lo revalida (no es un guard duro). `ProductCategoryTest`
-  (10) + filtro en `ProductionControllerTest` (3). **570 tests verdes.** Los 131 productos de Orfano quedaron sin categoría
-  → hay que clasificarlos para producirlos.
+  `<select>` de categoría + "+ nueva" al vuelo; índice con columna y filtro. `ProductCategoryTest` (10) + filtro en
+  `ProductionControllerTest` (3). **570 tests verdes.**
+  **Gate invertido (17/09/2026):** con datos reales de Orfano, 193 de 195 elaborados quedaron sin categoría y por
+  lo tanto invisibles en Producción — la regla original ("sólo aparece lo de una categoría marcada «se produce»")
+  castigaba a quien no había clasificado. `Product::scopeProducible()` pasó a: elaborado activo con receta **y**
+  (sin categoría **o** categoría con `producible=true`). La categoría ahora sólo sirve para **excluir**
+  explícitamente (cafetería se costea pero no se produce); sin categoría es producible por default.
 - **P3 · UI de política de precio (paso 3 ✅)**: factory compartido `Alpine.data('priceCell')`
   (`resources/js/pricing/price-cell.js`, registrado en `app.js` antes de `Alpine.start()`) + componente
   `<x-price-cell-editor>` — popover **teletransportado a `body`** con posición `fixed` calculada en JS (`startEdit`

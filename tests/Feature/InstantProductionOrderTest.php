@@ -22,12 +22,12 @@ test('la pantalla de orden instantánea lista los elaborados producibles', funct
     $this->actingAs($user)->get(route('production-orders.instant.create'))->assertOk()->assertSee($product->name);
 });
 
-test('la pantalla oculta un elaborado sin categoría', function () {
+test('la pantalla muestra un elaborado sin categoría', function () {
     [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
     $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 12, 'yield_unit' => Unit::Unidad->value]);
     manufacturedProduct($tenant, $recipe)->update(['name' => 'ElaboradoSinCategoriaZZ']);
 
-    $this->actingAs($user)->get(route('production-orders.instant.create'))->assertOk()->assertDontSee('ElaboradoSinCategoriaZZ');
+    $this->actingAs($user)->get(route('production-orders.instant.create'))->assertOk()->assertSee('ElaboradoSinCategoriaZZ');
 });
 
 test('la pantalla oculta un elaborado de una categoría que no se produce', function () {

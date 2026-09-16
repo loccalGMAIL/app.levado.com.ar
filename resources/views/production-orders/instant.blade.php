@@ -63,8 +63,8 @@
 
         @if($products->isEmpty())
             <x-empty-state>
-                No hay elaborados en una categoría que se produzca. Asigná a tus artículos una
-                <a href="{{ route('products.index') }}" class="text-horno hover:underline">categoría marcada «se produce»</a>.
+                No hay elaborados para producir. Creá un artículo elaborado con receta, o revisá que su
+                <a href="{{ route('products.index') }}" class="text-horno hover:underline">categoría no esté marcada «no se produce»</a>.
             </x-empty-state>
         @else
             <form method="POST" action="{{ route('production-orders.instant.store') }}" @submit="submitting = true" class="space-y-6">

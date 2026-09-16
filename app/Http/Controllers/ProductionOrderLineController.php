@@ -25,8 +25,8 @@ class ProductionOrderLineController extends Controller
             'quantity' => ['required', 'numeric', 'gt:0'],
         ]);
 
-        // producible(): mismo filtro que la pantalla "producir ahora" — sólo
-        // elaborados activos, con receta, en una categoría "se produce".
+        // producible(): mismo filtro que la orden instantánea — elaborados
+        // activos con receta, salvo que su categoría diga "no se produce".
         $product = app(Tenant::class)->products()->producible()->find($data['product_id']);
         abort_if($product === null, 422, 'El artículo no está disponible para producir.');
 

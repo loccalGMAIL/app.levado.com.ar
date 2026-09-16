@@ -276,7 +276,7 @@
                                         <span class="inline-flex items-center gap-1">
                                             {{ $product->category->name }}
                                             @unless($product->category->producible)
-                                                <span class="text-[10px] text-gray-400" title="No se produce">·</span>
+                                                <span class="text-[10px] text-gray-400 whitespace-nowrap" title="Excluido de los selectores de Producción">no se produce</span>
                                             @endunless
                                         </span>
                                     @else

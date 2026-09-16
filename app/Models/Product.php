@@ -60,9 +60,11 @@ class Product extends Model
     }
 
     /**
-     * Elaborados que se pueden producir hoy: activos, con receta, y en una
-     * categoría marcada "se produce" (sin categoría o no-producible quedan
-     * fuera). Único filtro compartido por la pantalla de Producción y por
+     * Elaborados que se pueden producir hoy: activos, con receta, y que NO
+     * estén en una categoría marcada explícitamente "no se produce". Sin
+     * categoría = producible (el default es incluir); la categoría sólo
+     * sirve para EXCLUIR un área que se costea pero no se fabrica desde acá
+     * (ej. cafetería). Único filtro compartido por la orden instantánea y
      * las órdenes de producción — no repetir la cadena en dos lugares.
      */
     public function scopeProducible(Builder $query): void
@@ -70,7 +72,12 @@ class Product extends Model
         $query->active()
             ->where('type', ProductType::Manufactured->value)
             ->whereNotNull('recipe_id')
-            ->whereHas('category', fn (Builder $q) => $q->where('producible', true));
+            // El closure agrupa el OR: sin paréntesis el orWhereHas se
+            // aplicaría contra toda la cadena de arriba y un artículo de
+            // reventa en categoría producible se colaría en el resultado.
+            ->where(fn (Builder $q) => $q
+                ->whereNull('product_category_id')
+                ->orWhereHas('category', fn (Builder $sub) => $sub->where('producible', true)));
     }
 
     public function isManufactured(): bool
