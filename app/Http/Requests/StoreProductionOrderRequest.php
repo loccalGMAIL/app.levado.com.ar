@@ -18,7 +18,9 @@ class StoreProductionOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::enum(ProductionOrderType::class)],
+            // Instant queda afuera: sólo nace del flujo de orden instantánea,
+            // nunca del alta manual (ver ProductionOrderType::selectable()).
+            'type' => ['required', Rule::enum(ProductionOrderType::class)->except(ProductionOrderType::Instant)],
             'scheduled_for' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];

@@ -6,6 +6,7 @@ use App\Enums\DeliveryDestinationType;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
 use App\Models\Tenant;
+use App\Services\ProductionOrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -17,6 +18,8 @@ use Illuminate\Validation\Rule;
  */
 class ProductionOrderRequestController extends Controller
 {
+    public function __construct(private readonly ProductionOrderService $orders) {}
+
     public function store(Request $request, ProductionOrder $productionOrder): RedirectResponse
     {
         $this->authorize('update', $productionOrder);
@@ -36,7 +39,7 @@ class ProductionOrderRequestController extends Controller
         };
         abort_unless($destinationExists, 422, 'El destino elegido no es válido.');
 
-        $productionOrder->productionOrderRequests()->create([
+        $this->orders->addRequest($productionOrder, [
             'destination_type' => $type->value,
             'destination_id' => $data['destination_id'],
             'notes' => $data['notes'] ?? null,

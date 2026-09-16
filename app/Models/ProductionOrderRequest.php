@@ -37,6 +37,12 @@ class ProductionOrderRequest extends Model
         ];
     }
 
+    /** "Pedido 1", "Pedido 2"... — position reusada como número dentro de la orden. */
+    public function numberLabel(): string
+    {
+        return "Pedido {$this->position}";
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

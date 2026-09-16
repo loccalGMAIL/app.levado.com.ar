@@ -45,10 +45,11 @@ class ProductionOrderController extends Controller
     {
         $tenant = app(Tenant::class);
 
-        $order = $tenant->productionOrders()->create([
+        $order = $this->orders->createOrder($tenant, [
             ...$request->validated(),
             'location_id' => $tenant->defaultLocation()->id,
             'status' => ProductionOrderStatus::Draft->value,
+            'is_template' => false,
             'user_id' => $request->user()->id,
         ]);
 

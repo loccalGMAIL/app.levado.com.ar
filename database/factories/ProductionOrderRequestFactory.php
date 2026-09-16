@@ -31,7 +31,10 @@ class ProductionOrderRequestFactory extends Factory
                 'tenant_id' => $attributes['tenant_id'],
             ])->id,
             'notes' => null,
-            'position' => 0,
+            // MAX+1 entre los pedidos ya existentes de la orden — position 0
+            // fijo colisionaría con el unique (production_order_id, position)
+            // apenas una orden tenga 2 pedidos.
+            'position' => fn (array $attributes) => (int) ProductionOrderRequest::where('production_order_id', $attributes['production_order_id'])->max('position') + 1,
         ];
     }
 

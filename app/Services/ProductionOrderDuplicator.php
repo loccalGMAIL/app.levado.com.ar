@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\ProductionOrderStatus;
 use App\Models\ProductionOrder;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\DB;
  */
 class ProductionOrderDuplicator
 {
+    public function __construct(private ProductionOrderService $orders) {}
+
     public function duplicate(
         ProductionOrder $source,
         ?User $user = null,
@@ -25,8 +28,7 @@ class ProductionOrderDuplicator
         return DB::transaction(function () use ($source, $user, $scheduledFor, $templateName) {
             $isTemplate = $templateName !== null;
 
-            $copy = ProductionOrder::create([
-                'tenant_id' => $source->tenant_id,
+            $copy = $this->orders->createOrder(Tenant::findOrFail($source->tenant_id), [
                 'location_id' => $source->location_id,
                 'type' => $source->type->value,
                 'scheduled_for' => $isTemplate ? null : $scheduledFor,
@@ -38,12 +40,14 @@ class ProductionOrderDuplicator
             ]);
 
             foreach ($source->productionOrderRequests()->with('lines')->get() as $request) {
-                $newRequest = $copy->productionOrderRequests()->create([
-                    'tenant_id' => $source->tenant_id,
+                // El número de pedido (position) se recalcula desde cero en la
+                // copia — no se copia el del origen: la copia arranca su
+                // propia numeración 1, 2, 3... y con el unique nuevo copiar el
+                // valor viejo podría además colisionar entre pedidos.
+                $newRequest = $this->orders->addRequest($copy, [
                     'destination_type' => $request->destination_type->value,
                     'destination_id' => $request->destination_id,
                     'notes' => $request->notes,
-                    'position' => $request->position,
                 ]);
 
                 foreach ($request->lines as $line) {

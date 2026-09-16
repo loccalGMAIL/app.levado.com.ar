@@ -10,7 +10,7 @@
         <div>
             <x-input-label value="Tipo" />
             <div class="mt-1 flex gap-4">
-                @foreach(\App\Enums\ProductionOrderType::cases() as $option)
+                @foreach(\App\Enums\ProductionOrderType::selectable() as $option)
                     <label class="flex items-center gap-2 text-sm text-corteza">
                         <input type="radio" name="type" value="{{ $option->value }}" x-model="type"
                             class="border-gray-300 text-horno focus:ring-horno">

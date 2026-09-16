@@ -7,6 +7,7 @@ use App\Enums\ProductionOrderType;
 use App\Models\ProductionOrder;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @extends Factory<ProductionOrder>
@@ -28,6 +29,28 @@ class ProductionOrderFactory extends Factory
             'name' => null,
             'notes' => null,
         ];
+    }
+
+    /**
+     * Las órdenes reales (no plantilla) necesitan un número — la factory no
+     * pasa por ProductionOrderService::createOrder(), así que lo asigna acá
+     * con el mismo mecanismo (lock del contador del tenant), para que los
+     * tests ejerciten el unique real en vez de dejar `number` en null.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (ProductionOrder $order) {
+            if ($order->is_template || $order->number !== null) {
+                return;
+            }
+
+            DB::transaction(function () use ($order) {
+                $row = DB::table('tenants')->where('id', $order->tenant_id)->lockForUpdate()->first();
+                $number = (int) $row->next_production_order_number;
+                DB::table('tenants')->where('id', $order->tenant_id)->update(['next_production_order_number' => $number + 1]);
+                $order->update(['number' => $number]);
+            });
+        });
     }
 
     public function spontaneous(): static

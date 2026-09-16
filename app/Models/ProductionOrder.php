@@ -28,6 +28,7 @@ class ProductionOrder extends Model
         'tenant_id',
         'location_id',
         'type',
+        'number',
         'scheduled_for',
         'status',
         'is_template',
@@ -82,6 +83,12 @@ class ProductionOrder extends Model
     public function isDone(): bool
     {
         return $this->status === ProductionOrderStatus::Done;
+    }
+
+    /** "Orden #7", o el nombre si es una plantilla (no lleva número). */
+    public function numberLabel(): string
+    {
+        return $this->number !== null ? "Orden #{$this->number}" : ($this->name ?? 'Plantilla sin nombre');
     }
 
     public function tenant(): BelongsTo

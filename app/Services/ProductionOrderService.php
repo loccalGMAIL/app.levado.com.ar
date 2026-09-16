@@ -3,13 +3,19 @@
 namespace App\Services;
 
 use App\Enums\CatalogItemType;
+use App\Enums\DeliveryDestinationType;
 use App\Enums\ProductionOrderStatus;
+use App\Enums\ProductionOrderType;
 use App\Models\Ingredient;
+use App\Models\Location;
 use App\Models\Packaging;
 use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderLine;
+use App\Models\ProductionOrderRequest;
+use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -21,6 +27,82 @@ use Illuminate\Support\Facades\DB;
 class ProductionOrderService
 {
     public function __construct(private ProductionService $productions) {}
+
+    /**
+     * Crea una orden numerándola en la misma transacción (salvo que sea una
+     * plantilla: is_template=true no consume número, no es una orden real
+     * todavía). Único punto de creación — tanto el alta manual
+     * (ProductionOrderController::store()) como ProductionOrderDuplicator
+     * pasan por acá para que el número nunca se asigne en dos lugares.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function createOrder(Tenant $tenant, array $attributes): ProductionOrder
+    {
+        if ($attributes['is_template'] ?? false) {
+            return $tenant->productionOrders()->create($attributes);
+        }
+
+        return DB::transaction(function () use ($tenant, $attributes) {
+            try {
+                return $tenant->productionOrders()->create([...$attributes, 'number' => $this->reserveNumber($tenant)]);
+            } catch (QueryException) {
+                // Carrera rarísima entre dos altas concurrentes del mismo
+                // negocio: el número reservado ya fue tomado por la otra.
+                // Mismo patrón de reintento que StockService::lockedLevelRow().
+                return $tenant->productionOrders()->create([...$attributes, 'number' => $this->reserveNumber($tenant)]);
+            }
+        });
+    }
+
+    /**
+     * Toma el contador de órdenes del negocio con lock pesimista y lo
+     * incrementa — mismo patrón que StockService::lockedLevelRow() (lock de
+     * fila dentro de la transacción, con el unique de la base como red).
+     */
+    private function reserveNumber(Tenant $tenant): int
+    {
+        $row = DB::table('tenants')->where('id', $tenant->id)->lockForUpdate()->first();
+        $number = (int) $row->next_production_order_number;
+
+        DB::table('tenants')->where('id', $tenant->id)->update([
+            'next_production_order_number' => $number + 1,
+        ]);
+
+        return $number;
+    }
+
+    /**
+     * Agrega un pedido a la orden, numerándolo dentro de ella ("Pedido 1",
+     * "Pedido 2"... vía la columna position, reusada como número). Lockea la
+     * orden padre para que dos altas concurrentes de pedidos en la misma
+     * orden no calculen el mismo MAX+1.
+     *
+     * withTemplates() es obligatorio: sin él, el global scope de
+     * ExcludeTemplatesScope hace que el lock falle con 404 cuando se está
+     * armando una plantilla (ProductionOrderDuplicator).
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function addRequest(ProductionOrder $order, array $attributes): ProductionOrderRequest
+    {
+        // tenant_id explícito: el auto-fill de BelongsToTenant depende de que
+        // haya un Tenant bindeado en el container, que no está garantizado
+        // fuera de un request HTTP (tests de servicio, artisan).
+        $attributes = ['tenant_id' => $order->tenant_id, ...$attributes];
+
+        return DB::transaction(function () use ($order, $attributes) {
+            $locked = ProductionOrder::withTemplates()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            $nextPosition = fn () => (int) $locked->productionOrderRequests()->max('position') + 1;
+
+            try {
+                return $locked->productionOrderRequests()->create([...$attributes, 'position' => $nextPosition()]);
+            } catch (QueryException) {
+                return $locked->productionOrderRequests()->create([...$attributes, 'position' => $nextPosition()]);
+            }
+        });
+    }
 
     /**
      * Suma la cantidad pedida por artículo a través de todos los pedidos de
@@ -57,16 +139,27 @@ class ProductionOrderService
      */
     public function preview(ProductionOrder $order): array
     {
-        $aggregated = $this->aggregate($order);
+        return $this->previewFor($this->aggregate($order), $order->location);
+    }
 
-        $consumptions = $aggregated->map(
+    /**
+     * Igual que preview(), pero sobre pares artículo+cantidad en memoria, sin
+     * que exista una orden persistida — lo usa la orden instantánea para
+     * mostrar el consumo combinado antes de crear nada.
+     *
+     * @param  Collection<int, array{product: Product, quantity: float}>  $pairs
+     * @return array{lines: array<int, array<string, mixed>>, material_cost: float, labor_cost: float, total_cost: float}
+     */
+    public function previewFor(Collection $pairs, Location $location): array
+    {
+        $consumptions = $pairs->map(
             fn (array $entry) => $this->productions->baseConsumption($entry['product'], $entry['quantity'])
         );
 
         $items = $this->mergeBase($consumptions->pluck('items'));
         $laborCost = $consumptions->sum('labor_cost');
 
-        return $this->productions->summarize($items, $order->location, $laborCost);
+        return $this->productions->summarize($items, $location, $laborCost);
     }
 
     /**
@@ -95,6 +188,59 @@ class ProductionOrderService
             }
 
             $this->applyTransition($order, ProductionOrderStatus::Done);
+        });
+    }
+
+    /**
+     * Orden instantánea: un solo paso, un solo destino. Crea la orden (tipo
+     * Instant), la confirma, arma su único pedido con las líneas dadas, y la
+     * produce — todo en una transacción, sin que el usuario vea los pasos
+     * intermedios. Reusa createOrder()/addRequest()/transitionTo()/produce()
+     * tal cual, sin duplicar ninguna regla.
+     *
+     * El destino es informativo (arma la planilla): el stock entra igual al
+     * obrador, nunca al destino elegido — ver decision-multi-sucursal.md.
+     *
+     * @param  Collection<int, array{product: Product, quantity: float}>  $items  ya agrupados por artículo (sumar cantidades repetidas es responsabilidad del caller)
+     */
+    public function produceInstant(
+        Tenant $tenant,
+        User $user,
+        DeliveryDestinationType $destinationType,
+        int $destinationId,
+        Collection $items,
+        ?string $notes = null,
+    ): ProductionOrder {
+        abort_if($items->isEmpty(), 422, 'La orden no tiene artículos para producir.');
+
+        return DB::transaction(function () use ($tenant, $user, $destinationType, $destinationId, $items, $notes) {
+            $order = $this->createOrder($tenant, [
+                'location_id' => $tenant->defaultLocation()->id,
+                'type' => ProductionOrderType::Instant->value,
+                'scheduled_for' => now()->toDateString(),
+                'status' => ProductionOrderStatus::Draft->value,
+                'is_template' => false,
+                'notes' => $notes,
+                'user_id' => $user->id,
+            ]);
+
+            $request = $this->addRequest($order, [
+                'destination_type' => $destinationType->value,
+                'destination_id' => $destinationId,
+            ]);
+
+            foreach ($items as $entry) {
+                $request->lines()->create([
+                    'product_id' => $entry['product']->id,
+                    'quantity' => $entry['quantity'],
+                    'unit' => $entry['product']->unit->value,
+                ]);
+            }
+
+            $this->transitionTo($order, ProductionOrderStatus::Confirmed, $user);
+            $this->produce($order, $user);
+
+            return $order->fresh();
         });
     }
 
