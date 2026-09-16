@@ -92,6 +92,44 @@ test('el preview combinado suma el consumo de insumos y marca faltantes', functi
         ->and($preview['lines'][0]['shortfall'])->toBe(500.0);
 });
 
+test('previewFor calcula el consumo combinado de pares en memoria', function () {
+    [$user, $tenant] = stockTenantUser();
+    $harina = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 1, 'yield_unit' => Unit::Unidad->value]);
+    $recipe->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 100, 'unit' => Unit::Gramo->value]);
+    $product = manufacturedProduct($tenant, $recipe);
+
+    seedStock($harina, 500, $user);
+
+    // Sin ninguna ProductionOrder persistida: los pares se arman a mano.
+    $pairs = collect([['product' => $product, 'quantity' => 10]]);
+    $preview = productionOrderService()->previewFor($pairs, $tenant->defaultLocation());
+
+    expect($preview['lines'])->toHaveCount(1)
+        ->and($preview['lines'][0]['quantity'])->toBe(1000.0)
+        ->and($preview['lines'][0]['available'])->toBe(500.0)
+        ->and($preview['lines'][0]['shortfall'])->toBe(500.0);
+});
+
+test('el preview de una orden persistida da lo mismo que previewFor', function () {
+    [$user, $tenant] = stockTenantUser();
+    $harina = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 1, 'yield_unit' => Unit::Unidad->value]);
+    $recipe->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 100, 'unit' => Unit::Gramo->value]);
+    $product = manufacturedProduct($tenant, $recipe);
+    seedStock($harina, 500, $user);
+
+    $order = orderWithLine($product, 10, $tenant);
+
+    $fromOrder = productionOrderService()->preview($order);
+    $fromPairs = productionOrderService()->previewFor(
+        collect([['product' => $product, 'quantity' => 10]]),
+        $order->location,
+    );
+
+    expect($fromOrder)->toBe($fromPairs);
+});
+
 test('producir la orden crea una Production por artículo, atada a la orden, y descuenta/suma el stock agregado', function () {
     [$user, $tenant] = stockTenantUser();
     $harina = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
