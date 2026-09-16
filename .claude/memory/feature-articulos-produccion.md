@@ -297,12 +297,59 @@ Lo que sí se hizo, sobre los huecos reales:
 **777 tests, todos verdes** (22 nuevos: `ProductionTest` ampliado, `ProductionCostHistoryTest`,
 `ProductionCostSpikeTest`, ajustes en `ProductCostSourceTest`/`ProductionControllerTest`).
 
+## Numeración, pestaña Historial y Órdenes instantáneas ✅ (16/09/2026)
+El usuario, usando la app real con Confitería Orfano, encontró tres fricciones nuevas: `/production` (un
+renglón por fabricación, todos los artículos mezclados) se llenaba rapidísimo sin filtros; ni las órdenes ni
+los pedidos tenían un número legible (sólo el `id`); y fabricar un solo artículo sin armar una orden completa
+no tenía un camino corto dentro del modelo de Órdenes de P5.
+
+**Decisiones tomadas** (no re-litigar):
+1. **Numeración**: orden = secuencial **por negocio** ("Orden #7"); pedido = secuencial **dentro de su
+   orden**, reiniciando en cada una ("Pedido 1", "Pedido 2"...). Mismo patrón de concurrencia que
+   `StockService::lockedLevelRow()` — lock pesimista + unique de respaldo + reintento ante `QueryException`.
+   Las plantillas no consumen número de orden.
+2. **Pestaña Historial en Artículos** (junto a Catálogo/Matriz de precios) **reemplaza** el listado
+   `/production` — tabla global filtrable por artículo/estado/fecha.
+3. **Orden instantánea**: un solo paso (destino único + artículos/cantidad) que crea+confirma+produce en un
+   request, quedando numerada y Terminada. **Absorbe y retira "Producir suelto"** (`ProductionController::
+   create/store`, `production/create.blade.php`).
+4. **Limitación conocida y aceptada, no resuelta**: el destino de un pedido sigue siendo sólo informativo — el
+   stock entra igual al obrador, nunca al destino elegido (depende del punto 3 de "Próximo", parqueado). La
+   orden instantánea hereda esta misma limitación; hay una línea de ayuda en su pantalla.
+5. **Fuera de alcance** (parqueado para otra sesión, más grande): plantilla recurrente con horizonte móvil de
+   ~7 días, auto-generada por un comando programado (cron) — necesita infraestructura de scheduler que hoy no
+   existe en el hosting.
+
+**Lo que se hizo** (777→811 tests verdes):
+- `ProductionOrderService`: `createOrder()`/`reserveNumber()` (contador `tenants.next_production_order_number`)
+  y `addRequest()` (reusa `production_order_requests.position`, hasta ahora muerta, como número de pedido vía
+  `MAX(position)+1` con la orden padre lockeada) son el **único punto de alta** — `ProductionOrderController`,
+  `ProductionOrderRequestController` y `ProductionOrderDuplicator` (repetir/plantillas) pasan todos por ahí.
+  `previewFor(pairs, location)`: extracción del cuerpo de `preview(order)` para trabajar sobre pares en memoria
+  sin una orden persistida; `preview(order)` quedó como `previewFor(aggregate(order), order->location)`.
+  `produceInstant()`: encadena `createOrder()` → `addRequest()` → líneas → `transitionTo(Confirmed)` →
+  `produce()`, todo en una transacción — cero lógica de estado nueva.
+- `ProductionHistoryController` nuevo (no un método más de `ProductController`: la tabla es de `Production`).
+  `InstantProductionOrderController` nuevo + `StoreInstantProductionOrderRequest` (su `itemRules()` estático se
+  comparte entre el endpoint de preview y el de alta, un solo dueño de la validación de renglones).
+  `ProductionOrderType::Instant` nuevo, excluido del alta manual vía `selectable()`.
+- **Retirado**: `production.index/create/store/preview`, `StoreProductionRequest`,
+  `production/index.blade.php`, `production/create.blade.php`. Sidebar/drawer móvil/breadcrumbs actualizados;
+  el back-link de `production/show` va a la orden si vino de una, o al Historial si es ad-hoc (dato viejo,
+  ya no puede pasar con código nuevo — toda producción nace de una orden desde este cambio).
+- Migraciones con **backfill de los datos reales existentes antes de cada unique** (las 6 órdenes/pedidos de
+  Orfano en dev tenían `position=0`; agregar el unique sin backfill abortaba contra esos datos).
+
 ## Próximo — lo que sigue sobre la mesa (parkeado, no para la sesión actual)
 2. **Semi-elaborados stockeables** — las sub-recetas son siempre phantom (`RecipeExploder`). BOM multinivel real.
-3. **Movimientos de stock por destino** de P5 (transferencias/reparto) — ver la sección de arriba.
+3. **Movimientos de stock por destino** de P5 (transferencias/reparto) — ver la sección de arriba. Ahora
+   también condiciona si la orden instantánea "mueve stock de verdad" al destino elegido.
 4. **Mermas / rendimiento real** — el único camino real hacia un costo de fabricación distinto del teórico (el
    punto 1 no lo daba: mientras el consumo se derive de la receta, no hay desvío que medir). Depende de que la
    valuación por producción exista para tener dónde impactar el ajuste — parcialmente cubierto por lo de arriba.
+5. **Plantilla recurrente con horizonte móvil (cron)** — generar automáticamente ~7 días de órdenes por
+   adelantado desde una plantilla marcada "se repite". Necesita un comando programado nuevo; el hosting no
+   corre `schedule:run` todavía.
 Después: **Ventas / POS** (usará el EAN-13 y la política de precio; probablemente se cruce con clientes/reparto).
 
 ## ⚠️ Deploy de v0.13.0 — ORDEN (o las listas de precios se ven vacías)

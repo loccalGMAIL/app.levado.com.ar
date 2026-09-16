@@ -248,6 +248,53 @@ fabricar algo pegaba un salto.
 
 - `php artisan migrate` (2 columnas + 1 índice sobre `productions`).
 
+### Numeración de órdenes y pedidos, pestaña Historial en Artículos, y Órdenes instantáneas
+
+El listado `/production` (un renglón por cada fabricación, de todos los artículos mezclados) se llenaba
+rapidísimo sin ninguna forma de acotarlo, ni las órdenes ni los pedidos tenían un número legible para hablar con
+un repartidor o mirar la planilla, y fabricar un solo artículo sin armar una orden completa no tenía un camino
+corto dentro del nuevo modelo de Órdenes.
+
+#### Agregado
+
+- **Numeración**: cada orden de producción tiene un número por negocio ("Orden #7"), y cada pedido dentro de
+  ella un número propio que arranca de nuevo en cada orden ("Pedido 1", "Pedido 2"...). Visible en el índice, el
+  detalle, la planilla de reparto y los breadcrumbs. Las plantillas no consumen número.
+- **Pestaña Historial en Artículos**: junto a Catálogo y Matriz de precios — tabla global de todas las
+  producciones (fabricado/anulado) de todos los artículos, la más reciente primero, filtrable por
+  artículo/estado/fecha. Reemplaza al listado `/production`, que se retira.
+- **Orden instantánea**: un solo paso — un destino (sucursal o repartidor) + uno o más artículos con cantidad —
+  y un botón único crea la orden, la confirma y la produce, quedando numerada y **Terminada** sin pasos
+  intermedios. Absorbe a "Producir suelto" (la pantalla vieja de producir un solo artículo), que se retira.
+  El destino sigue siendo informativo (arma la planilla): el stock entra igual al obrador, no al destino
+  elegido — mismo comportamiento que las órdenes normales, aclarado en la pantalla.
+
+#### Técnico
+
+- Contador `tenants.next_production_order_number` (lock pesimista dentro de la transacción, unique de respaldo
+  en `production_orders.number`) — mismo patrón de concurrencia que `StockService::lockedLevelRow()`. El
+  número de pedido reusa la columna `production_order_requests.position` (existía, estaba muerta), calculado
+  como `MAX(position)+1` contra la orden padre lockeada.
+- `ProductionOrderService::createOrder()`/`addRequest()` son el único punto de alta de órdenes/pedidos —
+  `ProductionOrderController::store()`, `ProductionOrderRequestController::store()` y
+  `ProductionOrderDuplicator` (repetir orden, guardar/usar plantilla) pasan todos por ahí, así que la
+  numeración nunca se calcula en dos lugares.
+- `ProductionOrderService::previewFor()`: extracción del cuerpo de `preview(order)` para trabajar sobre pares
+  artículo+cantidad en memoria, sin que exista una orden persistida — lo usa el preview de la orden
+  instantánea. `preview(order)` queda como `previewFor(aggregate(order), order->location)`, sin cambio de
+  comportamiento.
+- `ProductionHistoryController` nuevo (la tabla es de `Production`, no de `Product`). Nuevo
+  `ProductionOrderType::Instant`, excluido del alta manual (`selectable()`).
+- **Retirado**: `production.index`/`create`/`store`/`preview`, `ProductionController::index/create/preview/store`,
+  `StoreProductionRequest`, las vistas `production/index` y `production/create`. Quedan intactos
+  `production.show`/`cancel` y todo `ProductionService`, que sigue siendo el motor de `ProductionOrderService`.
+- **811 tests, todos verdes** (34 nuevos).
+
+#### Al deployar
+
+- `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
+  `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
+
 ---
 
 ## [0.12.13] — 2026-08-11
