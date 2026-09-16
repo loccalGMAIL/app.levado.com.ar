@@ -84,7 +84,10 @@ class ProductionOrderController extends Controller
     {
         $this->authorize('view', $productionOrder);
 
-        return response()->json($this->orders->preview($productionOrder));
+        // load('location'): ProductionOrderService::preview() lee $order->location;
+        // sin esto es un lazy load que preventLazyLoading sólo loguea (no revienta
+        // fuera de tests), y ningún test pegaba a este endpoint hasta ahora.
+        return response()->json($this->orders->preview($productionOrder->load('location')));
     }
 
     public function deliverySheet(ProductionOrder $productionOrder): View

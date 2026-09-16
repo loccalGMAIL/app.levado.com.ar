@@ -40,7 +40,7 @@ test('owner puede crear una orden', function () {
     expect($order->status)->toBe(ProductionOrderStatus::Draft);
 });
 
-test('armar un pedido con un artículo y verlo en el detalle', function () {
+test('armar un pedido con un artículo por syncLines y verlo en el detalle', function () {
     [$user, $tenant, $product] = productionSetup();
     $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
 
@@ -51,10 +51,11 @@ test('armar un pedido con un artículo y verlo en el detalle', function () {
 
     $request = $order->fresh()->productionOrderRequests()->first();
 
-    $this->actingAs($user)->post(route('production-orders.requests.lines.store', [$order, $request]), [
-        'product_id' => $product->id,
-        'quantity' => 5,
-    ])->assertRedirect();
+    $this->actingAs($user)
+        ->putJson(route('production-orders.requests.lines.sync', [$order, $request]), [
+            'lines' => [['product_id' => $product->id, 'quantity' => 5]],
+        ])
+        ->assertOk();
 
     $this->actingAs($user)
         ->get(route('production-orders.show', $order))
@@ -70,9 +71,20 @@ test('una línea de artículo no producible se rechaza', function () {
     $request = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $order->id]);
 
     $this->actingAs($user)
-        ->post(route('production-orders.requests.lines.store', [$order, $request]), [
-            'product_id' => $notProducible->id,
-            'quantity' => 1,
+        ->putJson(route('production-orders.requests.lines.sync', [$order, $request]), [
+            'lines' => [['product_id' => $notProducible->id, 'quantity' => 1]],
+        ])
+        ->assertStatus(422);
+});
+
+test('una orden terminada rechaza agregar un pedido', function () {
+    [$user, $tenant] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->done()->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)
+        ->post(route('production-orders.requests.store', $order), [
+            'destination_type' => 'location',
+            'destination_id' => $tenant->defaultLocation()->id,
         ])
         ->assertStatus(422);
 });
@@ -91,6 +103,18 @@ test('el pedido admite un repartidor como destino', function () {
         ->get(route('production-orders.show', $order))
         ->assertOk()
         ->assertSee('Juan Reparto');
+});
+
+test('el endpoint de preview responde con el consumo agregado de la orden', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $request = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $order->id]);
+    $request->lines()->create(['product_id' => $product->id, 'quantity' => 3, 'unit' => $product->unit->value, 'position' => 1]);
+
+    $this->actingAs($user)
+        ->getJson(route('production-orders.preview', $order))
+        ->assertOk()
+        ->assertJsonStructure(['lines', 'material_cost', 'labor_cost', 'total_cost']);
 });
 
 test('producir la orden confirmada la marca Done y redirige a su detalle', function () {

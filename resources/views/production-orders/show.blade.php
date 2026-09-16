@@ -2,7 +2,7 @@
     <x-slot name="title">Orden de producción</x-slot>
 
     @php
-        $editable = ! $productionOrder->isDone() && ! $productionOrder->isCancelled();
+        $editable = $productionOrder->isEditable();
     @endphp
 
     <div class="py-8 px-6 lg:px-8 max-w-4xl mx-auto"
@@ -140,6 +140,7 @@
                             @endcan
                         </div>
 
+                        {{-- TODO(paso 6): grilla editable con guardado en lote (ProductionOrderLineController::sync). --}}
                         @if($request->lines->isNotEmpty())
                             <table class="w-full text-sm">
                                 <tbody class="divide-y divide-miga">
@@ -149,44 +150,11 @@
                                             <td class="px-5 py-2 text-right font-mono text-corteza">
                                                 {{ number_format($line->quantity, 2, ',', '.') }} {{ $line->unit->short() }}
                                             </td>
-                                            @can('manage-costs')
-                                                @if($editable)
-                                                    <td class="px-5 py-2 text-right w-8">
-                                                        <form method="POST" action="{{ route('production-orders.requests.lines.destroy', [$productionOrder, $request, $line]) }}">
-                                                            @csrf @method('DELETE')
-                                                            <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
-                                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                                </svg>
-                                                            </button>
-                                                        </form>
-                                                    </td>
-                                                @endif
-                                            @endcan
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                         @endif
-
-                        @can('manage-costs')
-                            @if($editable)
-                                <form method="POST" action="{{ route('production-orders.requests.lines.store', [$productionOrder, $request]) }}"
-                                    class="px-5 py-3 border-t border-miga flex items-center gap-2">
-                                    @csrf
-                                    <select name="product_id" required
-                                        class="flex-1 border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                                        <option value="">Elegí un artículo…</option>
-                                        @foreach($products as $product)
-                                            <option value="{{ $product->id }}">{{ $product->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <input type="number" step="0.01" min="0.01" name="quantity" required placeholder="Cantidad"
-                                        class="w-28 border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                                    <button type="submit" class="px-3 py-1.5 bg-corteza text-white text-xs rounded-md hover:bg-horno transition-colors">Agregar</button>
-                                </form>
-                            @endif
-                        @endcan
                     </div>
                 @endforeach
             @endif

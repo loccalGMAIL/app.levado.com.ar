@@ -23,6 +23,7 @@ class ProductionOrderRequestController extends Controller
     public function store(Request $request, ProductionOrder $productionOrder): RedirectResponse
     {
         $this->authorize('update', $productionOrder);
+        abort_unless($productionOrder->isEditable(), 422, 'La orden ya no se puede editar.');
 
         $data = $request->validate([
             'destination_type' => ['required', Rule::enum(DeliveryDestinationType::class)],
@@ -51,6 +52,7 @@ class ProductionOrderRequestController extends Controller
     public function destroy(ProductionOrder $productionOrder, ProductionOrderRequest $productionOrderRequest): RedirectResponse
     {
         $this->authorize('update', $productionOrder);
+        abort_unless($productionOrder->isEditable(), 422, 'La orden ya no se puede editar.');
 
         // cascadeOnDelete se lleva las líneas del pedido con él.
         $productionOrderRequest->delete();

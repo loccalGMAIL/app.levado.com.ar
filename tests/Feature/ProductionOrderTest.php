@@ -73,6 +73,31 @@ test('aggregate suma la cantidad de un mismo artículo pedido por dos destinos',
         ->and($aggregated->first()['quantity'])->toBe(15.0);
 });
 
+test('syncLines deja el set exacto y aggregate suma bien después', function () {
+    [$user, $tenant] = stockTenantUser();
+    $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 1, 'yield_unit' => Unit::Unidad->value]);
+    $category = $tenant->productCategories()->create(['name' => 'Producción', 'producible' => true]);
+    $productA = tap(manufacturedProduct($tenant, $recipe))->update(['product_category_id' => $category->id]);
+    $productB = tap(manufacturedProduct($tenant, $recipe))->update(['product_category_id' => $category->id]);
+
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $request = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $order->id]);
+    $existing = $request->lines()->create(['product_id' => $productA->id, 'quantity' => 3, 'unit' => $productA->unit->value, 'position' => 1]);
+    $toDrop = $request->lines()->create(['product_id' => $productA->id, 'quantity' => 1, 'unit' => $productA->unit->value, 'position' => 2]);
+
+    $count = productionOrderService()->syncLines($request, [
+        ['id' => $existing->id, 'product_id' => $productA->id, 'quantity' => 8],
+        ['product_id' => $productB->id, 'quantity' => 2],
+    ]);
+
+    expect($count)->toBe(2)
+        ->and(ProductionOrderLine::find($toDrop->id))->toBeNull()
+        ->and($existing->fresh()->quantity)->toEqualWithDelta(8, 0.001);
+
+    $aggregated = productionOrderService()->aggregate($order->fresh());
+    expect($aggregated->sum('quantity'))->toBe(10.0);
+});
+
 test('el preview combinado suma el consumo de insumos y marca faltantes', function () {
     [$user, $tenant] = stockTenantUser();
     $harina = Ingredient::factory()->for($tenant)->create(['unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);

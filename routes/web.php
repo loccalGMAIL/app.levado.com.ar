@@ -237,10 +237,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::delete('production-orders/{productionOrder}/requests/{productionOrderRequest}', [ProductionOrderRequestController::class, 'destroy'])
         ->scopeBindings()->name('production-orders.requests.destroy');
 
-    Route::post('production-orders/{productionOrder}/requests/{productionOrderRequest}/lines', [ProductionOrderLineController::class, 'store'])
-        ->scopeBindings()->name('production-orders.requests.lines.store');
-    Route::delete('production-orders/{productionOrder}/requests/{productionOrderRequest}/lines/{line}', [ProductionOrderLineController::class, 'destroy'])
-        ->scopeBindings()->name('production-orders.requests.lines.destroy');
+    // Reemplaza el set completo del pedido en una sola operación — ver
+    // ProductionOrderLineController::sync()/ProductionOrderService::syncLines().
+    Route::put('production-orders/{productionOrder}/requests/{productionOrderRequest}/lines', [ProductionOrderLineController::class, 'sync'])
+        ->scopeBindings()->name('production-orders.requests.lines.sync');
 
     Route::post('production-orders/{productionOrder}/duplicate', [ProductionOrderController::class, 'duplicate'])->name('production-orders.duplicate');
     Route::post('production-orders/{productionOrder}/save-as-template', [ProductionOrderController::class, 'saveAsTemplate'])->name('production-orders.save-as-template');

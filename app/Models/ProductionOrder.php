@@ -85,6 +85,12 @@ class ProductionOrder extends Model
         return $this->status === ProductionOrderStatus::Done;
     }
 
+    /** Se pueden seguir editando sus pedidos y líneas: no terminada ni anulada. */
+    public function isEditable(): bool
+    {
+        return ! $this->isDone() && ! $this->isCancelled();
+    }
+
     /** "Orden #7", o el nombre si es una plantilla (no lleva número). */
     public function numberLabel(): string
     {

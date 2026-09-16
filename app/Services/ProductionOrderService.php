@@ -15,6 +15,7 @@ use App\Models\ProductionOrderLine;
 use App\Models\ProductionOrderRequest;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -101,6 +102,65 @@ class ProductionOrderService
             } catch (QueryException) {
                 return $locked->productionOrderRequests()->create([...$attributes, 'position' => $nextPosition()]);
             }
+        });
+    }
+
+    /**
+     * Reemplaza el set completo de líneas de un pedido en una sola operación:
+     * las que ya existen (traen `id`) se actualizan, las nuevas se crean y
+     * las que la grilla ya no manda se borran. Único camino de escritura de
+     * líneas — evita que store()/destroy() sueltos se desincronicen en el
+     * chequeo de producible o en position/unit (como pasaba antes).
+     *
+     * Un `id` que no pertenece a este pedido (de otro pedido, o inventado) no
+     * matchea contra $existing y se trata como alta — nunca "roba" una línea
+     * ajena. La pertenencia de los product_id al gate producible ya la validó
+     * SyncProductionOrderLinesRequest antes de llegar acá.
+     *
+     * @param  array<int, array{id?: int|null, product_id: int, quantity: float|string}>  $lines
+     * @return int cantidad de líneas que quedaron en el pedido
+     */
+    public function syncLines(ProductionOrderRequest $request, array $lines): int
+    {
+        // producible(): defensa en profundidad, mismo gate que ya validó
+        // SyncProductionOrderLinesRequest — si algo cambió entre la
+        // validación y acá (carrera rarísima), un id que ya no es
+        // producible simplemente no aparece y su línea no se guarda.
+        $productIds = collect($lines)->pluck('product_id')->unique()->values();
+        $products = Product::query()->producible()->whereIn('id', $productIds)->get()->keyBy('id');
+
+        // Filtrado antes de numerar: una línea sin producto no ocupa un hueco
+        // en position, y $i queda 0..N-1 sobre lo que realmente se guarda.
+        $validLines = array_values(array_filter(
+            $lines,
+            fn (array $line) => $products->has($line['product_id']),
+        ));
+
+        return DB::transaction(function () use ($request, $validLines, $products) {
+            /** @var EloquentCollection<int, ProductionOrderLine> $existing */
+            $existing = $request->lines()->get()->keyBy('id');
+            $kept = [];
+
+            foreach ($validLines as $i => $line) {
+                $product = $products->get($line['product_id']);
+                $attributes = [
+                    'product_id' => $product->id,
+                    'quantity' => $line['quantity'],
+                    'unit' => $product->unit->value,
+                    'position' => $i + 1,
+                ];
+
+                $current = $existing->get($line['id'] ?? null);
+                $saved = $current !== null
+                    ? tap($current)->update($attributes)
+                    : $request->lines()->create($attributes);
+
+                $kept[] = $saved->id;
+            }
+
+            $request->lines()->whereNotIn('id', $kept ?: [0])->delete();
+
+            return count($kept);
         });
     }
 
