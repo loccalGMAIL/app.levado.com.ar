@@ -38,6 +38,20 @@
     <div class="py-8 px-6 lg:px-8"
         x-data="{
             mobileExpanded: false,
+            // Asignación masiva de categoría: sólo en la tabla (no en las
+            // cards) — clasificar 190+ artículos es tarea de escritorio.
+            // x-model en checkbox de array guarda strings, por eso pageIds
+            // se siembra como strings (comparar contra números da siempre
+            // falso). No sobrevive el cambio de página, a propósito.
+            selectedIds: [],
+            pageIds: {{ Js::from($products->pluck('id')->map(fn ($id) => (string) $id)->all()) }},
+            get allPageSelected() { return this.pageIds.length > 0 && this.pageIds.every(id => this.selectedIds.includes(id)); },
+            togglePage(on) {
+                this.selectedIds = on
+                    ? [...new Set([...this.selectedIds, ...this.pageIds])]
+                    : this.selectedIds.filter(id => ! this.pageIds.includes(id));
+            },
+            clearSelection() { this.selectedIds = []; },
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
                 this.editing = record;
@@ -135,6 +149,20 @@
                 @endif
             </form>
 
+            @can('manage-costs')
+                <div x-show="selectedIds.length > 0" x-cloak
+                    class="flex items-center gap-3 bg-miga rounded-md px-4 py-2 text-sm">
+                    <span class="text-corteza"><span x-text="selectedIds.length"></span> artículo(s) seleccionados (de esta página)</span>
+                    <button type="button" @click="$dispatch('open-modal', 'product-bulk-category')"
+                        class="px-3 py-1 bg-corteza text-white text-xs rounded-md hover:bg-horno transition-colors">
+                        Asignar categoría
+                    </button>
+                    <button type="button" @click="clearSelection()" class="text-masa-madre hover:text-corteza hover:underline">
+                        Limpiar selección
+                    </button>
+                </div>
+            @endcan
+
             @php
                 $sort = request('sort', 'name');
                 $dir  = request('dir', 'asc');
@@ -222,6 +250,13 @@
 
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
+                            @can('manage-costs')
+                                <th class="px-4 py-3 w-8">
+                                    <input type="checkbox" :checked="allPageSelected" @change="togglePage($event.target.checked)"
+                                        aria-label="Seleccionar todos los de esta página"
+                                        class="rounded border-gray-300 text-horno focus:ring-horno">
+                                </th>
+                            @endcan
                             <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
                             <th class="px-4 py-3 font-medium">Tipo</th>
                             <th class="px-4 py-3 font-medium">Categoría</th>
@@ -258,6 +293,13 @@
                                     policyType: '{{ $policy['type'] }}',
                                     policyValue: {{ $policy['value'] ?? 'null' }},
                                 })">
+                                @can('manage-costs')
+                                    <td class="px-4 py-3">
+                                        <input type="checkbox" value="{{ $product->id }}" x-model="selectedIds"
+                                            aria-label="Seleccionar {{ $product->name }}"
+                                            class="rounded border-gray-300 text-horno focus:ring-horno">
+                                    </td>
+                                @endcan
                                 <td class="px-4 py-3 font-medium text-corteza">
                                     @can('manage-costs')
                                         <button type="button"
@@ -373,6 +415,7 @@
             @include('products.modals.create')
             @include('products.modals.edit')
             @include('products.modals.cost-history')
+            @include('products.modals.bulk-category')
 
             <x-product-categories-modal
                 name="product-categories"

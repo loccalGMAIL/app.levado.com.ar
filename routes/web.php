@@ -21,6 +21,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\PackagingCostController;
 use App\Http\Controllers\PriceListController;
+use App\Http\Controllers\ProductBulkCategoryController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductCostHistoryController;
@@ -213,6 +214,8 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('purchases/{purchase}/apply-suggestions', [PurchaseController::class, 'applyLineSuggestions'])->name('purchases.apply-suggestions');
 
     Route::post('products', [ProductController::class, 'store'])->name('products.store');
+    // Antes de products/{product}: bulk-category no es un id de producto.
+    Route::patch('products/bulk-category', ProductBulkCategoryController::class)->name('products.bulk-category');
     Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::patch('products/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('products.toggle-active');
     Route::patch('products/{product}/prices/{priceList}', [ProductPriceController::class, 'update'])->name('products.prices.update');
