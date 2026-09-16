@@ -113,11 +113,6 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         ->whereNumber('id')
         ->name('stock.show');
 
-    Route::get('production', [ProductionController::class, 'index'])->name('production.index');
-    // "create" antes de production/{production} para que no se interprete como un id.
-    Route::get('production/create', [ProductionController::class, 'create'])
-        ->middleware('role:super_admin,owner,admin')
-        ->name('production.create');
     Route::get('production/{production}', [ProductionController::class, 'show'])->name('production.show');
 
     Route::get('production-orders', [ProductionOrderController::class, 'index'])->name('production-orders.index');
@@ -226,9 +221,6 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::put('product-categories/{productCategory}', [ProductCategoryController::class, 'update'])->name('product-categories.update');
     Route::delete('product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])->name('product-categories.destroy');
 
-    // Preview del consumo de insumos antes de confirmar la producción (no escribe stock).
-    Route::post('production/preview', [ProductionController::class, 'preview'])->name('production.preview');
-    Route::post('production', [ProductionController::class, 'store'])->name('production.store');
     Route::patch('production/{production}/cancel', [ProductionController::class, 'cancel'])->name('production.cancel');
 
     Route::post('production-orders', [ProductionOrderController::class, 'store'])->name('production-orders.store');

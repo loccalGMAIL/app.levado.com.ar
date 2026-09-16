@@ -10,7 +10,11 @@
 
         <div class="flex items-start justify-between gap-4">
             <div>
-                <a href="{{ route('production.index') }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">← Producción</a>
+                @if($production->productionOrder)
+                    <a href="{{ route('production-orders.show', $production->productionOrder) }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">← {{ $production->productionOrder->numberLabel() }}</a>
+                @else
+                    <a href="{{ route('products.history') }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">← Historial</a>
+                @endif
                 <h2 class="text-base font-semibold text-corteza mt-2">{{ $production->product?->name ?? 'Producción' }}</h2>
                 <p class="text-sm text-masa-madre mt-0.5">
                     {{ $production->produced_at?->format('d/m/Y H:i') }}

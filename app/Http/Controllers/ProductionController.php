@@ -2,14 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreProductionRequest;
 use App\Models\Production;
-use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\ProductionService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ProductionController extends Controller
@@ -19,76 +15,11 @@ class ProductionController extends Controller
         private readonly AdminActivityRecorder $recorder,
     ) {}
 
-    public function index(): View
-    {
-        $tenant = app(Tenant::class);
-
-        $productions = $tenant->productions()
-            ->with(['product', 'user'])
-            ->latest('produced_at')
-            ->latest('id')
-            ->paginate(20);
-
-        return view('production.index', compact('productions'));
-    }
-
-    public function create(): View
-    {
-        $tenant = app(Tenant::class);
-
-        // Solo elaborados activos con receta y en una categoría marcada "se produce":
-        // los sin categoría o en categorías no-producibles quedan fuera de Producción.
-        $products = $tenant->products()
-            ->producible()
-            ->with('recipe')
-            ->orderBy('name')
-            ->get();
-
-        return view('production.create', compact('products'));
-    }
-
-    public function preview(Request $request): JsonResponse
-    {
-        $tenant = app(Tenant::class);
-        $data = $request->validate([
-            'product_id' => ['required', 'integer'],
-            'quantity' => ['required', 'numeric', 'gt:0'],
-        ]);
-
-        $product = $tenant->products()->findOrFail($data['product_id']);
-
-        return response()->json($this->productions->preview($product, (float) $data['quantity']));
-    }
-
-    public function store(StoreProductionRequest $request): RedirectResponse
-    {
-        $tenant = app(Tenant::class);
-        $product = $tenant->products()->findOrFail($request->validated('product_id'));
-
-        $production = $this->productions->produce(
-            $product,
-            (float) $request->validated('quantity'),
-            $request->validated('notes'),
-            $request->user(),
-        );
-
-        $this->recorder->record(
-            actor: $request->user(),
-            targetType: 'production',
-            targetId: $production->id,
-            action: 'production.created',
-            payload: ['product' => $product->name, 'quantity' => (float) $production->quantity],
-            tenantId: $tenant->id,
-        );
-
-        return redirect()->route('production.show', $production)->with('status', 'Producción registrada.');
-    }
-
     public function show(Production $production): View
     {
         $this->authorize('view', $production);
 
-        $production->load(['product', 'recipe', 'user']);
+        $production->load(['product', 'recipe', 'user', 'productionOrder']);
         $movements = $production->movements()
             ->with(['ingredient', 'packaging', 'product'])
             ->orderBy('id')
@@ -112,6 +43,6 @@ class ProductionController extends Controller
             tenantId: $production->tenant_id,
         );
 
-        return back(fallback: route('production.index'))->with('status', 'Producción anulada.');
+        return back(fallback: route('products.history'))->with('status', 'Producción anulada.');
     }
 }

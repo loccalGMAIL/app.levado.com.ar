@@ -45,14 +45,18 @@
                     $crumbs[] = ['label' => 'Producción', 'href' => null];
                     $crumbs[] = ['label' => 'Recetas', 'href' => null];
                 } elseif (request()->routeIs('production.show')) {
-                    $crumbs[] = ['label' => 'Producción', 'href' => route('production.index')];
                     $production = request()->route('production');
+                    if ($production?->productionOrder) {
+                        $crumbs[] = ['label' => 'Órdenes de producción', 'href' => route('production-orders.index')];
+                        $crumbs[] = ['label' => $production->productionOrder->numberLabel(), 'href' => route('production-orders.show', $production->productionOrder)];
+                    } else {
+                        $crumbs[] = ['label' => 'Existencias', 'href' => null];
+                        $crumbs[] = ['label' => 'Artículos', 'href' => route('products.index')];
+                        $crumbs[] = ['label' => 'Historial', 'href' => route('products.history')];
+                    }
                     if ($production) { $crumbs[] = ['label' => $production->product?->name ?? ('Producción #'.$production->id), 'href' => null]; }
-                } elseif (request()->routeIs('production.create')) {
-                    $crumbs[] = ['label' => 'Producción', 'href' => route('production.index')];
-                    $crumbs[] = ['label' => 'Producir', 'href' => null];
                 } elseif (request()->routeIs('production.*')) {
-                    $crumbs[] = ['label' => 'Producción', 'href' => null];
+                    $crumbs[] = ['label' => 'Órdenes de producción', 'href' => null];
                 } elseif (request()->routeIs('production-orders.show')) {
                     $crumbs[] = ['label' => 'Órdenes de producción', 'href' => route('production-orders.index')];
                     $order = request()->route('productionOrder');
