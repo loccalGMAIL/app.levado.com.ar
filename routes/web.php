@@ -241,6 +241,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     // ProductionOrderLineController::sync()/ProductionOrderService::syncLines().
     Route::put('production-orders/{productionOrder}/requests/{productionOrderRequest}/lines', [ProductionOrderLineController::class, 'sync'])
         ->scopeBindings()->name('production-orders.requests.lines.sync');
+    // No persiste: sólo trae renglones para precargar la grilla ("Traer del
+    // pedido anterior"). Ayuda de edición, no de lectura — mismo grupo que sync().
+    Route::get('production-orders/{productionOrder}/requests/{productionOrderRequest}/previous-lines', [ProductionOrderRequestController::class, 'previousLines'])
+        ->scopeBindings()->name('production-orders.requests.previous-lines');
 
     Route::post('production-orders/{productionOrder}/duplicate', [ProductionOrderController::class, 'duplicate'])->name('production-orders.duplicate');
     Route::post('production-orders/{productionOrder}/save-as-template', [ProductionOrderController::class, 'saveAsTemplate'])->name('production-orders.save-as-template');

@@ -57,6 +57,22 @@ test('armar un pedido con un artículo por syncLines y verlo en el detalle', fun
         ])
         ->assertOk();
 
+    // Orden editable → la rama es la grilla Alpine (products/lines viajan como
+    // JSON embebido, no como HTML formateado): se ancla contra la base, no
+    // contra assertSee('5,00'). La rama de sólo lectura se ancla más abajo.
+    $this->actingAs($user)
+        ->get(route('production-orders.show', $order))
+        ->assertOk()
+        ->assertSee($product->name);
+    expect($request->lines()->where('product_id', $product->id)->first()->quantity)->toEqualWithDelta(5, 0.001);
+});
+
+test('el detalle de una orden terminada muestra las líneas de sólo lectura', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->done()->create(['location_id' => $tenant->defaultLocation()->id]);
+    $request = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $order->id]);
+    $request->lines()->create(['product_id' => $product->id, 'quantity' => 5, 'unit' => $product->unit->value]);
+
     $this->actingAs($user)
         ->get(route('production-orders.show', $order))
         ->assertOk()

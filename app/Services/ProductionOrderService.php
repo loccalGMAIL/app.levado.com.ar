@@ -165,6 +165,31 @@ class ProductionOrderService
     }
 
     /**
+     * El pedido más reciente al mismo destino que $request, para precargar
+     * su grilla ("Traer del pedido anterior"). Se excluye la ORDEN actual
+     * entera, no sólo este pedido: dos pedidos al mismo destino en la misma
+     * orden son un caso real, y traer el hermano de hoy confundiría. Las
+     * plantillas quedan afuera solas — el whereHas aplica el global scope
+     * ExcludeTemplatesScope de ProductionOrder (no agregar withTemplates()
+     * acá "por las dudas": rompería justo esta exclusión). Los borradores sí
+     * cuentan — se busca "lo que pedí la última vez", no sólo lo producido.
+     */
+    public function previousRequestFor(ProductionOrderRequest $request): ?ProductionOrderRequest
+    {
+        return ProductionOrderRequest::query()
+            ->where('destination_type', $request->destination_type->value)
+            ->where('destination_id', $request->destination_id)
+            ->where('production_order_id', '!=', $request->production_order_id)
+            ->whereHas('productionOrder', fn ($query) => $query->where('status', '!=', ProductionOrderStatus::Cancelled->value))
+            ->with(['lines.product', 'productionOrder'])
+            ->join('production_orders', 'production_orders.id', '=', 'production_order_requests.production_order_id')
+            ->orderByDesc('production_orders.scheduled_for')
+            ->orderByDesc('production_orders.id')
+            ->select('production_order_requests.*')
+            ->first();
+    }
+
+    /**
      * Suma la cantidad pedida por artículo a través de todos los pedidos de
      * la orden. Es lo que se produce y lo que muestra el resumen agregado.
      *

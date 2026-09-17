@@ -3,11 +3,16 @@
 
     @php
         $editable = $productionOrder->isEditable();
+        // La grilla exige poder editar Y el permiso de escritura — un viewer
+        // ve sólo lectura aunque la orden siga editable (ver partials.request-lines).
+        $showGrid = $editable && auth()->user()->can('manage-costs');
     @endphp
 
     <div class="py-8 px-6 lg:px-8 max-w-4xl mx-auto"
         x-data="{
             ...consumptionPreviewState(),
+            products: @js($products),
+            aggregated: [],
             async loadPreview() {
                 this.error = '';
                 this.loading = true;
@@ -15,8 +20,10 @@
                     const res = await fetch('{{ route('production-orders.preview', $productionOrder) }}', {
                         headers: { 'Accept': 'application/json' },
                     });
-                    if (! res.ok) { this.resetPreview(); this.error = 'No se pudo calcular el consumo de insumos.'; return; }
-                    this.applyPreview(await res.json());
+                    if (! res.ok) { this.resetPreview(); this.aggregated = []; this.error = 'No se pudo calcular el consumo de insumos.'; return; }
+                    const data = await res.json();
+                    this.applyPreview(data);
+                    this.aggregated = data.aggregated;
                 } catch (e) {
                     this.error = 'No se pudo calcular el consumo de insumos.';
                 } finally {
@@ -24,7 +31,8 @@
                 }
             },
         }"
-        x-init="loadPreview()">
+        x-init="loadPreview()"
+        @@production-lines-saved.window="applyPreview($event.detail.preview); aggregated = $event.detail.aggregated">
 
         <div class="mb-5">
             <a href="{{ route('production-orders.index') }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">← Órdenes de producción</a>
@@ -140,49 +148,38 @@
                             @endcan
                         </div>
 
-                        {{-- TODO(paso 6): grilla editable con guardado en lote (ProductionOrderLineController::sync). --}}
-                        @if($request->lines->isNotEmpty())
-                            <table class="w-full text-sm">
-                                <tbody class="divide-y divide-miga">
-                                    @foreach($request->lines as $line)
-                                        <tr>
-                                            <td class="px-5 py-2 text-corteza">{{ $line->product?->name ?? '—' }}</td>
-                                            <td class="px-5 py-2 text-right font-mono text-corteza">
-                                                {{ number_format($line->quantity, 2, ',', '.') }} {{ $line->unit->short() }}
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        @endif
+                        @include('production-orders.partials.request-lines', ['productionOrder' => $productionOrder, 'request' => $request, 'showGrid' => $showGrid])
                     </div>
                 @endforeach
             @endif
         </div>
 
-        {{-- Resumen agregado --}}
-        @if($aggregated->isNotEmpty())
-            <div class="bg-white border border-miga rounded-lg shadow-sm overflow-hidden mb-6">
-                <div class="px-5 py-3 border-b border-miga">
-                    <h3 class="text-sm font-semibold text-corteza">Total a producir</h3>
+        {{-- Resumen agregado — se pinta con Alpine (loadPreview()/sync() lo traen
+             en el mismo viaje): show() ya no calcula $aggregated aparte. --}}
+        <template x-if="aggregated.length > 0">
+            <div>
+                <div class="bg-white border border-miga rounded-lg shadow-sm overflow-hidden mb-6">
+                    <div class="px-5 py-3 border-b border-miga">
+                        <h3 class="text-sm font-semibold text-corteza">Total a producir</h3>
+                    </div>
+                    <table class="w-full text-sm">
+                        <tbody class="divide-y divide-miga">
+                            <template x-for="entry in aggregated" :key="entry.product_id">
+                                <tr>
+                                    <td class="px-5 py-2 text-corteza" x-text="entry.name"></td>
+                                    <td class="px-5 py-2 text-right font-mono text-corteza">
+                                        <span x-text="fmtQty(entry.quantity)"></span> <span x-text="entry.unit"></span>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
-                <table class="w-full text-sm">
-                    <tbody class="divide-y divide-miga">
-                        @foreach($aggregated as $entry)
-                            <tr>
-                                <td class="px-5 py-2 text-corteza">{{ $entry['product']->name }}</td>
-                                <td class="px-5 py-2 text-right font-mono text-corteza">
-                                    {{ number_format($entry['quantity'], 2, ',', '.') }} {{ $entry['product']->unit->short() }}
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
 
-            {{-- Preview de insumos --}}
-            <x-production-consumption-preview shortfall-note="Algún insumo no alcanza: producir igual descuenta lo que hay y deja el stock en negativo." />
-        @endif
+                {{-- Preview de insumos --}}
+                <x-production-consumption-preview shortfall-note="Algún insumo no alcanza: producir igual descuenta lo que hay y deja el stock en negativo." />
+            </div>
+        </template>
 
         @can('manage-costs')
             @if($editable)

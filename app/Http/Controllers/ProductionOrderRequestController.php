@@ -7,6 +7,7 @@ use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
 use App\Models\Tenant;
 use App\Services\ProductionOrderService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -58,5 +59,47 @@ class ProductionOrderRequestController extends Controller
         $productionOrderRequest->delete();
 
         return back(fallback: route('production-orders.show', $productionOrder))->with('status', 'Pedido eliminado.');
+    }
+
+    /**
+     * Renglones del último pedido al mismo destino, para precargar la
+     * grilla ("Traer del pedido anterior"). No persiste nada — es sólo una
+     * lectura que el usuario revisa y ajusta antes de Guardar (que sí pasa
+     * por el único camino de escritura: ProductionOrderLineController::sync()).
+     */
+    public function previousLines(ProductionOrder $productionOrder, ProductionOrderRequest $productionOrderRequest): JsonResponse
+    {
+        $this->authorize('view', $productionOrder);
+
+        $previous = $this->orders->previousRequestFor($productionOrderRequest);
+
+        if ($previous === null) {
+            return response()->json(['found' => false]);
+        }
+
+        // Filtrado server-side: un artículo del pedido anterior que dejó de
+        // ser producible (recategorizado) no se trae — si se trajera igual,
+        // el PUT de guardado fallaría con un 422 por renglón sin que el
+        // usuario entienda por qué.
+        $producibleIds = app(Tenant::class)->products()->producible()
+            ->whereIn('id', $previous->lines->pluck('product_id'))
+            ->pluck('id');
+
+        [$lines, $skipped] = $previous->lines->partition(fn ($line) => $producibleIds->contains($line->product_id));
+
+        return response()->json([
+            'found' => true,
+            'source' => [
+                'label' => $previous->productionOrder->numberLabel().' · '.$previous->numberLabel(),
+                'scheduled_for' => $previous->productionOrder->scheduled_for?->format('d/m/Y'),
+            ],
+            'lines' => $lines->values()->map(fn ($line) => [
+                'product_id' => $line->product_id,
+                'name' => $line->product->name,
+                'unit' => $line->unit->short(),
+                'quantity' => (float) $line->quantity,
+            ]),
+            'skipped' => $skipped->map(fn ($line) => $line->product?->name ?? '—')->values(),
+        ]);
     }
 }

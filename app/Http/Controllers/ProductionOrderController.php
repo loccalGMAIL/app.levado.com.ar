@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ProductionOrderStatus;
 use App\Http\Requests\StoreProductionOrderRequest;
+use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
@@ -72,12 +73,17 @@ class ProductionOrderController extends Controller
         $productionOrder->load(['productionOrderRequests.destination', 'productionOrderRequests.lines.product', 'user']);
 
         $tenant = app(Tenant::class);
-        $aggregated = $this->orders->aggregate($productionOrder);
         $deliveryPeople = $tenant->deliveryPeople()->active()->orderBy('name')->get();
         $locations = $tenant->locations()->active()->orderBy('name')->get();
-        $products = $tenant->products()->producible()->orderBy('name')->get();
 
-        return view('production-orders.show', compact('productionOrder', 'aggregated', 'deliveryPeople', 'locations', 'products'));
+        // Payload liviano para la grilla (id/nombre/unidad, no el modelo
+        // completo): con el gate producible invertido son ~195 artículos y
+        // viaja una sola vez por página, compartido por referencia entre las
+        // grillas de todos los pedidos — no uno por pedido.
+        $products = $tenant->products()->producible()->orderBy('name')->get(['id', 'name', 'unit'])
+            ->map(fn (Product $product) => ['id' => $product->id, 'name' => $product->name, 'unit' => $product->unit->short()]);
+
+        return view('production-orders.show', compact('productionOrder', 'deliveryPeople', 'locations', 'products'));
     }
 
     public function preview(ProductionOrder $productionOrder): JsonResponse
@@ -87,7 +93,19 @@ class ProductionOrderController extends Controller
         // load('location'): ProductionOrderService::preview() lee $order->location;
         // sin esto es un lazy load que preventLazyLoading sólo loguea (no revienta
         // fuera de tests), y ningún test pegaba a este endpoint hasta ahora.
-        return response()->json($this->orders->preview($productionOrder->load('location')));
+        $data = $this->orders->preview($productionOrder->load('location'));
+
+        // "Total a producir" se pinta con Alpine desde este mismo payload —
+        // show() ya no calcula $aggregated aparte (una consulta con dos
+        // eager loads menos por render).
+        $data['aggregated'] = $this->orders->aggregate($productionOrder)->map(fn (array $entry) => [
+            'product_id' => $entry['product']->id,
+            'name' => $entry['product']->name,
+            'unit' => $entry['product']->unit->short(),
+            'quantity' => $entry['quantity'],
+        ]);
+
+        return response()->json($data);
     }
 
     public function deliverySheet(ProductionOrder $productionOrder): View
