@@ -341,6 +341,71 @@ no tenía un camino corto dentro del modelo de Órdenes de P5.
 - Migraciones con **backfill de los datos reales existentes antes de cada unique** (las 6 órdenes/pedidos de
   Orfano en dev tenían `position=0`; agregar el unique sin backfill abortaba contra esos datos).
 
+## Rediseño: el pedido como unidad de alta, la orden se genera sola ✅ (17/09/2026)
+Con datos reales de Orfano existían **10 órdenes distintas para el mismo día**: crear una Orden y
+después ir agregando Pedidos adentro era fricción para lo que en realidad es la tarea diaria de un
+panadero (cargar pedidos). Cierra el punto 5 de "Próximo" de arriba ("plantilla recurrente con
+horizonte móvil (cron)") — **resuelto sin cron**, ver decisión 1 abajo.
+
+**Decisiones tomadas** (no re-litigar):
+1. **Recurrencia sin cron**: se genera **al entrar a la pantalla de Órdenes** (`materializeIfDue()`,
+   throttle por hora vía `tenants.recurring_materialized_at` + `Cache::lock()` no bloqueante), con
+   horizonte corto (7 días) y autocurativo si nadie entra un par de días. Botón "Generar ahora" como
+   escape manual (`RecurringProductionRequestMaterializer::materialize()` directo, salta el throttle).
+2. **Frecuencia = días de la semana elegibles** (`weekdays` json, ISO 1=lunes..7=domingo — **no**
+   `dayOfWeek` de Carbon, que es 0=domingo), no sólo "todos los días".
+3. **El pedido nace sin crear la orden a mano**: `ProductionOrderService::placeRequest()` hace
+   find-or-create de la orden diaria de esa fecha (`orderForDate()`: prioriza Draft, nunca reusa
+   Done/Cancelled/Espontánea/Instantánea) dentro de la misma transacción — en la base nunca existe un
+   pedido sin orden. La fecha **no se agregó** a `production_order_requests`: sigue viviendo sólo en
+   `production_orders` (es propiedad de lo que se produce junto, no de un destino).
+4. **Los pedidos tienen numeración propia** (`production_order_requests.number`, correlativa por
+   negocio — "Pedido #123"), independiente del `position` (local a la orden, ya no se muestra pero
+   sigue protegiendo el `MAX+1`) y del número de la orden. Segundo contador
+   (`tenants.next_production_order_request_number`), mismo patrón de lock pesimista que el de orden,
+   fusionados en `reserveCounter()` genérico.
+5. **`production_order_requests` pasó a soft-delete** (`SoftDeletes`): necesario para que el
+   materializador sepa que un pedido borrado a propósito no debe regenerarse — el set de existencia se
+   arma `withTrashed()`.
+6. **Se retiran las plantillas de orden completa** (`ProductionOrderDuplicator`, "Guardar como
+   plantilla", "Repetir orden") — la recurrencia por pedido las reemplaza, evita mantener dos conceptos
+   de "repetir" en paralelo, y bajo el modelo nuevo duplicar una orden entera quedaba con un
+   comportamiento incorrecto (crearía una segunda orden para un día que ya tiene la suya).
+   **`is_template` + `ExcludeTemplatesScope` quedan dormidos a propósito**, no se borran: ver el
+   comentario en `ExcludeTemplatesScope` para el porqué y el candidato a migración futura
+   (`drop_is_template_from_production_orders`).
+7. **Órdenes sigue siendo la pantalla principal** de navegación — se ven las órdenes, y dentro los
+   pedidos. Pedidos recurrentes tiene su propia pantalla de administración (editar días/vigencia/
+   artículos, pausar/reanudar, "Generar ahora") porque el pedido que originó un recurrente puede ya
+   haberse producido y ser difícil de encontrar.
+8. **La orden instantánea no cambió** — sigue siendo el atajo de urgencia (un destino, se arma y se
+   despacha ya, sin fecha ni recurrencia).
+
+**Lo que se hizo** (913→905 tests verdes; el número baja porque se retiraron 8 tests del feature
+retirado, no por cobertura perdida):
+- Modelos nuevos: `RecurringProductionRequest` (molde: destino polimórfico, `weekdays`, vigencia,
+  `occursOn()`), `RecurringProductionRequestLine`. Vínculo instancia↔molde:
+  `production_order_requests.recurring_production_request_id` (nullable) +
+  `unique(recurring_production_request_id, production_order_id)` como garantía de no-duplicar a nivel
+  base (múltiples NULL conviven).
+- `RecurringProductionRequestMaterializer::materialize()`: una sola query por corrida (join crudo
+  contra `production_orders`, **no aplica el global scope** — hay que filtrar `is_template=false` a
+  mano, al revés de `previousRequestFor()`), nunca propaga excepciones (`report()` por instancia rota).
+- UI: modal "+ Nuevo pedido" (destino + fecha + grilla de artículos + "copiar el anterior" +
+  sección "Se repite" con checkboxes de día vía `<template x-if>`, no `x-show`, para que los inputs
+  ocultos no viajen cuando está destildado) reemplaza a "+ Nueva orden" como acción primaria; la
+  espontánea se demueve a link chico. Pantalla `production-requests/recurring` nueva.
+- **`APP_TIMEZONE` faltaba en el `.env` real** (dev): sin él, `config('app.timezone')` resolvía a UTC,
+  corriendo el borde del día del materializador ~3 horas (21:00–24:00 hora Argentina ya era "mañana"
+  en UTC). Seteado a `America/Argentina/Buenos_Aires`. **Falta hacer lo mismo en el `.env` de
+  producción al deployar** — no se puede verificar desde acá.
+- Verificado dos veces en vivo contra Orfano (modal de alta con recurrencia, y la pantalla de
+  administración): se encontraron y corrigieron 2 bugs reales que los tests no atrapaban —
+  `products` no definido en el `x-data` raíz de una vista nueva (cascada de errores Alpine en todo lo
+  demás del mismo objeto), y un `\$dispatch` mal escapado con backslash fuera de un bloque Blade
+  `{{ }}` (el backslash sólo hace falta *dentro* de `{{ }}`, no en un atributo HTML común) — mismo tipo
+  de trampa que el ya documentado `@@production-lines-saved.window`.
+
 ## Próximo — lo que sigue sobre la mesa (parkeado, no para la sesión actual)
 2. **Semi-elaborados stockeables** — las sub-recetas son siempre phantom (`RecipeExploder`). BOM multinivel real.
 3. **Movimientos de stock por destino** de P5 (transferencias/reparto) — ver la sección de arriba. Ahora
@@ -348,9 +413,9 @@ no tenía un camino corto dentro del modelo de Órdenes de P5.
 4. **Mermas / rendimiento real** — el único camino real hacia un costo de fabricación distinto del teórico (el
    punto 1 no lo daba: mientras el consumo se derive de la receta, no hay desvío que medir). Depende de que la
    valuación por producción exista para tener dónde impactar el ajuste — parcialmente cubierto por lo de arriba.
-5. **Plantilla recurrente con horizonte móvil (cron)** — generar automáticamente ~7 días de órdenes por
-   adelantado desde una plantilla marcada "se repite". Necesita un comando programado nuevo; el hosting no
-   corre `schedule:run` todavía.
+5. **Drop de `is_template`/`ExcludeTemplatesScope`** — quedaron dormidos tras retirar la UI de plantillas
+   (ver sección de arriba). Tocar `createOrder()`/`addRequest()`, la columna, tres índices, el scope y varios
+   tests para un beneficio invisible; esperar a que se necesite el espacio o la claridad.
 Después: **Ventas / POS** (usará el EAN-13 y la política de precio; probablemente se cruce con clientes/reparto).
 
 ## ⚠️ Deploy de v0.13.0 — ORDEN (o las listas de precios se ven vacías)
