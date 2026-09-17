@@ -29,7 +29,7 @@
                 <div>
                     <h2 class="text-base font-semibold text-corteza">Órdenes de producción</h2>
                     <p class="text-sm text-masa-madre mt-0.5">Cargá los pedidos y la orden del día se va armando sola.</p>
-                    <a href="{{ route('production-order-templates.index') }}" class="text-sm text-horno hover:underline">Plantillas →</a>
+                    <a href="{{ route('production-requests.recurring.index') }}" class="text-sm text-horno hover:underline">Pedidos recurrentes →</a>
                 </div>
                 @can('manage-costs')
                     <div class="flex items-center gap-2 shrink-0">

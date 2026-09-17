@@ -38,6 +38,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeLineController;
+use App\Http\Controllers\RecurringProductionRequestController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
@@ -126,6 +127,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('production-orders/{productionOrder}/preview', [ProductionOrderController::class, 'preview'])->name('production-orders.preview');
     Route::get('production-order-templates', [ProductionOrderTemplateController::class, 'index'])->name('production-order-templates.index');
     Route::get('production-orders/{productionOrder}/delivery-sheet', [ProductionOrderController::class, 'deliverySheet'])->name('production-orders.delivery-sheet');
+
+    Route::get('production-requests/recurring', [RecurringProductionRequestController::class, 'index'])->name('production-requests.recurring.index');
 
     // Centro de alertas (feed) — visible y accionable para todos los roles con tenant.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -233,6 +236,12 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     // ProductionRequestController/ProductionOrderService::placeRequest().
     Route::get('production-requests/previous-lines', [ProductionRequestController::class, 'previousLines'])->name('production-requests.previous-lines');
     Route::post('production-requests', [ProductionRequestController::class, 'store'])->name('production-requests.store');
+
+    // Administración de pedidos recurrentes — "generate" antes de
+    // {recurringProductionRequest} para que no se interprete como un id.
+    Route::post('production-requests/recurring/generate', [RecurringProductionRequestController::class, 'generateNow'])->name('production-requests.recurring.generate');
+    Route::patch('production-requests/recurring/{recurringProductionRequest}', [RecurringProductionRequestController::class, 'update'])->name('production-requests.recurring.update');
+    Route::patch('production-requests/recurring/{recurringProductionRequest}/toggle-active', [RecurringProductionRequestController::class, 'toggleActive'])->name('production-requests.recurring.toggle-active');
 
     Route::post('production-orders/instant/preview', [InstantProductionOrderController::class, 'preview'])->name('production-orders.instant.preview');
     Route::post('production-orders/instant', [InstantProductionOrderController::class, 'store'])->name('production-orders.instant.store');
