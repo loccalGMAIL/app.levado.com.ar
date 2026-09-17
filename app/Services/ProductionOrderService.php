@@ -301,12 +301,18 @@ class ProductionOrderService
      * ya queda vinculada y el materializador no la duplica (su fecha ya
      * está en el set de existencia la primera vez que corra).
      *
+     * `recurring_production_request_id` (distinto de `recurrence`) es para
+     * el materializador: vincula la instancia a un molde que YA EXISTE, sin
+     * crear uno nuevo — `recurrence` es para el alta de un panadero, que
+     * recién ahí nace el molde.
+     *
      * @param  array{
      *     destination_type: string, destination_id: int, scheduled_for: string,
      *     notes?: ?string,
      *     lines?: array<int, array{id?: int|null, product_id: int, quantity: float|string}>,
      *     copy_previous?: bool,
      *     recurrence?: array{weekdays: array<int, int>, ends_on?: ?string},
+     *     recurring_production_request_id?: ?int,
      * }  $attributes
      */
     public function placeRequest(Tenant $tenant, array $attributes, ?User $user = null): ProductionOrderRequest
@@ -324,7 +330,7 @@ class ProductionOrderService
 
             $lines = $attributes['lines'] ?? [];
 
-            $recurringId = null;
+            $recurringId = $attributes['recurring_production_request_id'] ?? null;
             if (isset($attributes['recurrence'])) {
                 $recurringId = $this->recurring->create($tenant, [
                     'destination_type' => $attributes['destination_type'],

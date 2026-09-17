@@ -33,6 +33,7 @@ class Tenant extends Model
             'productive_hours_month' => 'integer',
             'condicion_iva' => CondicionIva::class,
             'onboarding_completed_at' => 'datetime',
+            'recurring_materialized_at' => 'datetime',
         ];
     }
 

@@ -10,6 +10,7 @@ use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\ProductionOrderDuplicator;
 use App\Services\ProductionOrderService;
+use App\Services\RecurringProductionRequestMaterializer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,11 +23,17 @@ class ProductionOrderController extends Controller
         private readonly ProductionOrderService $orders,
         private readonly ProductionOrderDuplicator $duplicator,
         private readonly AdminActivityRecorder $recorder,
+        private readonly RecurringProductionRequestMaterializer $materializer,
     ) {}
 
     public function index(Request $request): View
     {
         $tenant = app(Tenant::class);
+
+        // Sin cron: cada vez que alguien abre Órdenes se completan los
+        // pedidos recurrentes que falten hasta el horizonte (materializeIfDue
+        // throttlea a una corrida por hora por negocio, nunca propaga).
+        $this->materializer->materializeIfDue($tenant);
 
         $orders = $tenant->productionOrders()
             ->when($request->filled('type'), fn ($query) => $query->where('type', $request->string('type')))
