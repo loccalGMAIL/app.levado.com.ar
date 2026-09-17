@@ -8,7 +8,6 @@ use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
-use App\Services\ProductionOrderDuplicator;
 use App\Services\ProductionOrderService;
 use App\Services\RecurringProductionRequestMaterializer;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +21,6 @@ class ProductionOrderController extends Controller
 {
     public function __construct(
         private readonly ProductionOrderService $orders,
-        private readonly ProductionOrderDuplicator $duplicator,
         private readonly AdminActivityRecorder $recorder,
         private readonly RecurringProductionRequestMaterializer $materializer,
     ) {}
@@ -173,32 +171,6 @@ class ProductionOrderController extends Controller
         );
 
         return redirect()->route('production-orders.show', $productionOrder)->with('status', 'Orden producida.');
-    }
-
-    public function duplicate(Request $request, ProductionOrder $productionOrder): RedirectResponse
-    {
-        $this->authorize('view', $productionOrder);
-
-        $data = $request->validate(['scheduled_for' => ['nullable', 'date']]);
-
-        $copy = $this->duplicator->duplicate(
-            $productionOrder,
-            $request->user(),
-            scheduledFor: $data['scheduled_for'] ?? now()->toDateString(),
-        );
-
-        return redirect()->route('production-orders.show', $copy)->with('status', 'Orden duplicada.');
-    }
-
-    public function saveAsTemplate(Request $request, ProductionOrder $productionOrder): RedirectResponse
-    {
-        $this->authorize('view', $productionOrder);
-
-        $data = $request->validate(['name' => ['required', 'string', 'max:255']]);
-
-        $this->duplicator->duplicate($productionOrder, $request->user(), templateName: $data['name']);
-
-        return back(fallback: route('production-orders.show', $productionOrder))->with('status', 'Guardada como plantilla.');
     }
 
     public function cancel(Request $request, ProductionOrder $productionOrder): RedirectResponse

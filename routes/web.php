@@ -30,7 +30,6 @@ use App\Http\Controllers\ProductionHistoryController;
 use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ProductionOrderLineController;
 use App\Http\Controllers\ProductionOrderRequestController;
-use App\Http\Controllers\ProductionOrderTemplateController;
 use App\Http\Controllers\ProductionRequestController;
 use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
@@ -125,7 +124,6 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         ->name('production-orders.instant.create');
     Route::get('production-orders/{productionOrder}', [ProductionOrderController::class, 'show'])->name('production-orders.show');
     Route::get('production-orders/{productionOrder}/preview', [ProductionOrderController::class, 'preview'])->name('production-orders.preview');
-    Route::get('production-order-templates', [ProductionOrderTemplateController::class, 'index'])->name('production-order-templates.index');
     Route::get('production-orders/{productionOrder}/delivery-sheet', [ProductionOrderController::class, 'deliverySheet'])->name('production-orders.delivery-sheet');
 
     Route::get('production-requests/recurring', [RecurringProductionRequestController::class, 'index'])->name('production-requests.recurring.index');
@@ -261,14 +259,6 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     // pedido anterior"). Ayuda de edición, no de lectura — mismo grupo que sync().
     Route::get('production-orders/{productionOrder}/requests/{productionOrderRequest}/previous-lines', [ProductionOrderRequestController::class, 'previousLines'])
         ->scopeBindings()->name('production-orders.requests.previous-lines');
-
-    Route::post('production-orders/{productionOrder}/duplicate', [ProductionOrderController::class, 'duplicate'])->name('production-orders.duplicate');
-    Route::post('production-orders/{productionOrder}/save-as-template', [ProductionOrderController::class, 'saveAsTemplate'])->name('production-orders.save-as-template');
-
-    Route::post('production-order-templates/{template}/use', [ProductionOrderTemplateController::class, 'use'])
-        ->whereNumber('template')->name('production-order-templates.use');
-    Route::delete('production-order-templates/{template}', [ProductionOrderTemplateController::class, 'destroy'])
-        ->whereNumber('template')->name('production-order-templates.destroy');
 
     Route::post('stock/{type}/{id}/adjustments', [StockController::class, 'storeAdjustment'])
         ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.adjustments.store');

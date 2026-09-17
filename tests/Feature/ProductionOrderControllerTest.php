@@ -247,45 +247,6 @@ test('aislamiento: owner no puede ver una orden de otro tenant', function () {
         ->assertNotFound();
 });
 
-test('repetir una orden crea una copia en borrador y redirige a su detalle', function () {
-    [$user, $tenant] = productionSetup();
-    $order = ProductionOrder::factory()->for($tenant)->confirmed()->create(['location_id' => $tenant->defaultLocation()->id]);
-
-    $response = $this->actingAs($user)->post(route('production-orders.duplicate', $order), [
-        'scheduled_for' => '2026-10-01',
-    ]);
-
-    $copy = $tenant->productionOrders()->where('id', '!=', $order->id)->first();
-    $response->assertRedirect(route('production-orders.show', $copy));
-    expect($copy->status)->toBe(ProductionOrderStatus::Draft);
-});
-
-test('guardar una orden como plantilla y usarla crea una nueva orden', function () {
-    [$user, $tenant, $product] = productionSetup();
-    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
-    $request = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $order->id]);
-    $request->lines()->create(['product_id' => $product->id, 'quantity' => 1, 'unit' => $product->unit->value]);
-
-    $this->actingAs($user)
-        ->post(route('production-orders.save-as-template', $order), ['name' => 'Plantilla test'])
-        ->assertRedirect();
-
-    $this->actingAs($user)
-        ->get(route('production-order-templates.index'))
-        ->assertOk()
-        ->assertSee('Plantilla test');
-
-    $template = ProductionOrder::onlyTemplates()->firstWhere('name', 'Plantilla test');
-
-    $response = $this->actingAs($user)->post(route('production-order-templates.use', $template->id), [
-        'scheduled_for' => now()->toDateString(),
-    ]);
-
-    $newOrder = $tenant->productionOrders()->where('id', '!=', $order->id)->first();
-    $response->assertRedirect(route('production-orders.show', $newOrder));
-    expect($newOrder->productionOrderRequests()->first()->lines()->count())->toBe(1);
-});
-
 test('aislamiento: un pedido de otra orden no se puede eliminar cruzado', function () {
     [$user, $tenant] = productionSetup();
     $orderA = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);

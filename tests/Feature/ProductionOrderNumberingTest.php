@@ -2,7 +2,6 @@
 
 use App\Enums\DeliveryDestinationType;
 use App\Models\ProductionOrder;
-use App\Services\ProductionOrderDuplicator;
 use App\Services\ProductionOrderService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -75,28 +74,6 @@ test('una plantilla no consume número de orden', function () {
         ->and($order->number)->toBe(1); // la plantilla no gastó el número 1
 });
 
-test('usar una plantilla numera la orden resultante', function () {
-    [$user, $tenant] = stockTenantUser();
-    $template = ProductionOrder::factory()->for($tenant)->template()->create([
-        'location_id' => $tenant->defaultLocation()->id,
-    ]);
-
-    $copy = app(ProductionOrderDuplicator::class)->duplicate($template, $user, scheduledFor: now()->toDateString());
-
-    expect($copy->is_template)->toBeFalse()
-        ->and($copy->number)->toBe(1);
-});
-
-test('repetir una orden le da un número nuevo y no el del original', function () {
-    [$user, $tenant] = stockTenantUser();
-    $original = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
-
-    $copy = app(ProductionOrderDuplicator::class)->duplicate($original, $user, scheduledFor: now()->addDay()->toDateString());
-
-    expect($copy->number)->not->toBe($original->number)
-        ->and($copy->number)->toBe(2);
-});
-
 test('dos órdenes del mismo negocio no pueden compartir número', function () {
     [, $tenant] = stockTenantUser();
     $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
@@ -135,18 +112,6 @@ test('la numeración de pedidos arranca de nuevo en cada orden', function () {
     $firstOfB = ordersService()->addRequest($orderB, $attrs);
 
     expect($firstOfB->position)->toBe(1);
-});
-
-test('duplicar una orden renumera sus pedidos desde 1', function () {
-    [$user, $tenant] = stockTenantUser();
-    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
-    $attrs = ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id];
-    ordersService()->addRequest($order, $attrs);
-    ordersService()->addRequest($order, $attrs);
-
-    $copy = app(ProductionOrderDuplicator::class)->duplicate($order, $user, scheduledFor: now()->addDay()->toDateString());
-
-    expect($copy->productionOrderRequests()->orderBy('position')->pluck('position')->all())->toBe([1, 2]);
 });
 
 test('borrar un pedido no reusa su número', function () {
@@ -248,16 +213,12 @@ test('el pedido único de una orden instantánea también numera', function () {
     expect($order->productionOrderRequests()->first()->number)->toBe(1);
 });
 
-test('una plantilla no consume número de pedido, pero usarla sí', function () {
-    [$user, $tenant] = stockTenantUser();
+test('una plantilla no consume número de pedido', function () {
+    [, $tenant] = stockTenantUser();
     $template = ProductionOrder::factory()->for($tenant)->template()->create(['location_id' => $tenant->defaultLocation()->id]);
     $templateRequest = ordersService()->addRequest($template, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
 
     expect($templateRequest->number)->toBeNull();
-
-    $copy = app(ProductionOrderDuplicator::class)->duplicate($template, $user, scheduledFor: now()->toDateString());
-
-    expect($copy->productionOrderRequests()->first()->number)->toBe(1); // la plantilla no gastó el 1
 });
 
 test('borrar un pedido no reusa su número propio', function () {

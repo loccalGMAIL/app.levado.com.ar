@@ -50,22 +50,6 @@
             </a>
         </div>
 
-        {{-- Repetir / guardar como plantilla --}}
-        @can('manage-costs')
-            <div class="flex flex-wrap items-center gap-2 mb-4">
-                <form method="POST" action="{{ route('production-orders.duplicate', $productionOrder) }}" class="flex items-center gap-2">
-                    @csrf
-                    <input type="date" name="scheduled_for" value="{{ now()->toDateString() }}"
-                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                    <button type="submit" class="px-3 py-1.5 border border-miga text-xs text-masa-madre rounded-md hover:bg-miga transition-colors">Repetir orden</button>
-                </form>
-                <button type="button" @click="$dispatch('open-modal', 'production-order-save-template')"
-                    class="px-3 py-1.5 border border-miga text-xs text-masa-madre rounded-md hover:bg-miga transition-colors">
-                    Guardar como plantilla
-                </button>
-            </div>
-        @endcan
-
         {{-- Acciones de estado --}}
         @can('manage-costs')
             <div class="flex flex-wrap items-center gap-2 mb-6">
@@ -185,7 +169,6 @@
             @if($editable)
                 @include('production-orders.modals.request')
             @endif
-            @include('production-orders.modals.save-template')
         @endcan
     </div>
 </x-app-layout>

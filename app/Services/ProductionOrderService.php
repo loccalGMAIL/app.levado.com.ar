@@ -35,8 +35,8 @@ class ProductionOrderService
     /**
      * Crea una orden numerándola en la misma transacción (salvo que sea una
      * plantilla: is_template=true no consume número, no es una orden real
-     * todavía). Único punto de creación — tanto el alta manual
-     * (ProductionOrderController::store()) como ProductionOrderDuplicator
+     * todavía). Único punto de creación — el alta manual
+     * (ProductionOrderController::store()), orderForDate() y produceInstant()
      * pasan por acá para que el número nunca se asigne en dos lugares.
      *
      * @param  array<string, mixed>  $attributes
@@ -106,8 +106,8 @@ class ProductionOrderService
      * es seguro.
      *
      * withTemplates() es obligatorio: sin él, el global scope de
-     * ExcludeTemplatesScope hace que el lock falle con 404 cuando se está
-     * armando una plantilla (ProductionOrderDuplicator).
+     * ExcludeTemplatesScope hace que el lock falle con 404 cuando la orden
+     * bloqueada es una plantilla.
      *
      * @param  array<string, mixed>  $attributes
      */
