@@ -27,7 +27,10 @@ use Illuminate\Support\Facades\DB;
  */
 class ProductionOrderService
 {
-    public function __construct(private ProductionService $productions) {}
+    public function __construct(
+        private ProductionService $productions,
+        private RecurringProductionRequestService $recurring,
+    ) {}
 
     /**
      * Crea una orden numerándola en la misma transacción (salvo que sea una
@@ -288,13 +291,22 @@ class ProductionOrderService
      * crea la orden diaria de esa fecha (orderForDate()) y cuelga el pedido
      * de ella. Es el alta que usa el panadero — addRequest() sigue siendo el
      * alta de bajo nivel ("agregar a ESTA orden"); acá la diferencia es que
-     * la orden la busca sola.
+     * la orden la busca sola. Lo mismo usa el materializador de recurrencia
+     * para generar cada instancia, así que las garantías (numeración,
+     * validación de líneas) son las mismas para un pedido suelto y uno
+     * generado.
+     *
+     * Si viene `recurrence`, el molde se crea ANTES del pedido, en la misma
+     * transacción, y su id viaja a addRequest() — así la primera instancia
+     * ya queda vinculada y el materializador no la duplica (su fecha ya
+     * está en el set de existencia la primera vez que corra).
      *
      * @param  array{
      *     destination_type: string, destination_id: int, scheduled_for: string,
      *     notes?: ?string,
      *     lines?: array<int, array{id?: int|null, product_id: int, quantity: float|string}>,
      *     copy_previous?: bool,
+     *     recurrence?: array{weekdays: array<int, int>, ends_on?: ?string},
      * }  $attributes
      */
     public function placeRequest(Tenant $tenant, array $attributes, ?User $user = null): ProductionOrderRequest
@@ -310,13 +322,26 @@ class ProductionOrderService
             $order = $this->orderForDate($tenant, $attributes['scheduled_for'], $user);
             abort_unless($order->isEditable(), 422, 'La orden de ese día ya no se puede editar.');
 
+            $lines = $attributes['lines'] ?? [];
+
+            $recurringId = null;
+            if (isset($attributes['recurrence'])) {
+                $recurringId = $this->recurring->create($tenant, [
+                    'destination_type' => $attributes['destination_type'],
+                    'destination_id' => $attributes['destination_id'],
+                    'weekdays' => $attributes['recurrence']['weekdays'],
+                    'starts_on' => $attributes['scheduled_for'],
+                    'ends_on' => $attributes['recurrence']['ends_on'] ?? null,
+                    'lines' => $lines,
+                ], $user)->id;
+            }
+
             $request = $this->addRequest($order, [
                 'destination_type' => $attributes['destination_type'],
                 'destination_id' => $attributes['destination_id'],
                 'notes' => $attributes['notes'] ?? null,
+                'recurring_production_request_id' => $recurringId,
             ]);
-
-            $lines = $attributes['lines'] ?? [];
 
             if (($attributes['copy_previous'] ?? false) && $lines === []) {
                 $previous = $this->previousRequestForDestination(

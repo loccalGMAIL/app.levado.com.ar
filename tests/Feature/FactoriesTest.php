@@ -7,6 +7,8 @@ use App\Models\MailTemplate;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
+use App\Models\RecurringProductionRequest;
+use App\Models\RecurringProductionRequestLine;
 use App\Models\Tenant;
 
 // Humo de las factories agregadas por la auditoría (D3). StockMovement no
@@ -77,4 +79,25 @@ test('ProductFactory crea un producto elaborado con receta del mismo tenant y si
         ->and($product->cost_per_unit)->toBeNull()
         ->and($product->recipe)->not->toBeNull()
         ->and($product->recipe->tenant_id)->toBe($tenant->id);
+});
+
+test('RecurringProductionRequestFactory crea un molde lunes a sábado con destino del mismo tenant', function () {
+    $tenant = Tenant::factory()->create();
+
+    $recurring = RecurringProductionRequest::factory()->for($tenant)->create();
+
+    expect($recurring->tenant_id)->toBe($tenant->id)
+        ->and($recurring->weekdays)->toBe([1, 2, 3, 4, 5, 6])
+        ->and($recurring->active)->toBeTrue()
+        ->and($recurring->destination->tenant_id)->toBe($tenant->id);
+});
+
+test('RecurringProductionRequestLineFactory crea un renglón con producto elaborado del mismo tenant', function () {
+    $tenant = Tenant::factory()->create();
+    $recurring = RecurringProductionRequest::factory()->for($tenant)->create();
+
+    $line = RecurringProductionRequestLine::factory()->for($recurring, 'recurringProductionRequest')->create();
+
+    expect($line->product->tenant_id)->toBe($tenant->id)
+        ->and($line->product->isManufactured())->toBeTrue();
 });

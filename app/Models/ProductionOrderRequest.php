@@ -30,6 +30,7 @@ class ProductionOrderRequest extends Model
     protected $fillable = [
         'tenant_id',
         'production_order_id',
+        'recurring_production_request_id',
         'destination_type',
         'destination_id',
         'notes',
@@ -62,6 +63,12 @@ class ProductionOrderRequest extends Model
     public function productionOrder(): BelongsTo
     {
         return $this->belongsTo(ProductionOrder::class);
+    }
+
+    /** El molde recurrente que generó esta instancia, si nació de uno. */
+    public function recurringProductionRequest(): BelongsTo
+    {
+        return $this->belongsTo(RecurringProductionRequest::class);
     }
 
     public function destination(): MorphTo

@@ -8,6 +8,7 @@ use App\Models\DeliveryPerson;
 use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
+use App\Models\RecurringProductionRequest;
 use App\Models\Tenant;
 use App\Services\ProductionOrderService;
 
@@ -220,4 +221,37 @@ test('el endpoint de previous-lines por destino no persiste nada', function () {
     $response->assertJsonPath('found', true)
         ->assertJsonPath('lines.0.product_id', $product->id);
     expect(ProductionOrderRequest::where('tenant_id', $tenant->id)->count())->toBe(1); // el que ya existía, nada nuevo
+});
+
+// --- Recurrencia: placeRequest() con recurrence crea el molde de una ---
+
+test('cargar un pedido marcado como recurrente crea el molde y vincula la primera instancia', function () {
+    [$user, $tenant, $product] = productionSetup();
+
+    $this->actingAs($user)
+        ->post(route('production-requests.store'), placeRequestPayload($tenant, $product, [
+            'recurrence' => ['weekdays' => [1, 2, 3, 4, 5, 6]],
+        ]))
+        ->assertRedirect();
+
+    $recurring = RecurringProductionRequest::where('tenant_id', $tenant->id)->first();
+    $request = ProductionOrderRequest::where('tenant_id', $tenant->id)->first();
+
+    expect($recurring)->not->toBeNull()
+        ->and($recurring->weekdays)->toBe([1, 2, 3, 4, 5, 6])
+        ->and($recurring->starts_on->toDateString())->toBe(now()->toDateString())
+        ->and($recurring->lines()->count())->toBe(1)
+        ->and($recurring->lines()->first()->product_id)->toBe($product->id)
+        ->and($request->recurring_production_request_id)->toBe($recurring->id);
+});
+
+test('un pedido sin recurrence no crea ningún molde', function () {
+    [$user, $tenant, $product] = productionSetup();
+
+    $this->actingAs($user)
+        ->post(route('production-requests.store'), placeRequestPayload($tenant, $product))
+        ->assertRedirect();
+
+    expect(RecurringProductionRequest::where('tenant_id', $tenant->id)->count())->toBe(0)
+        ->and(ProductionOrderRequest::where('tenant_id', $tenant->id)->first()->recurring_production_request_id)->toBeNull();
 });

@@ -56,6 +56,11 @@ class Tenant extends Model
         return $this->hasMany(ProductionOrder::class);
     }
 
+    public function recurringProductionRequests(): HasMany
+    {
+        return $this->hasMany(RecurringProductionRequest::class);
+    }
+
     /** @var Location|null Cache por instancia: defaultLocation() se llama una vez por ítem en los bucles de compra */
     private ?Location $cachedDefaultLocation = null;
 
