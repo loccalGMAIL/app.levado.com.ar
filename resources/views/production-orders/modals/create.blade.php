@@ -2,32 +2,20 @@
     $errorsInCreate = $errors->hasAny(['type', 'scheduled_for', 'notes']);
 @endphp
 
-<x-crud-modal name="production-order-create" title="Nueva orden de producción" :show="$errorsInCreate">
-    <form method="POST" action="{{ route('production-orders.store') }}" class="space-y-4"
-        x-data="{ type: '{{ old('type', 'daily') }}' }">
+{{--
+    Sólo Espontánea: Diaria ya no se crea a mano — nace sola cuando alguien
+    carga un pedido (ProductionOrderService::orderForDate(), ver
+    modals/request-create.blade.php). El tipo va fijo, sin radio.
+--}}
+<x-crud-modal name="production-order-create" title="Nueva orden espontánea" :show="$errorsInCreate">
+    <form method="POST" action="{{ route('production-orders.store') }}" class="space-y-4">
         @csrf
+        <input type="hidden" name="type" value="spontaneous">
 
-        <div>
-            <x-input-label value="Tipo" />
-            <div class="mt-1 flex gap-4">
-                @foreach(\App\Enums\ProductionOrderType::selectable() as $option)
-                    <label class="flex items-center gap-2 text-sm text-corteza">
-                        <input type="radio" name="type" value="{{ $option->value }}" x-model="type"
-                            class="border-gray-300 text-horno focus:ring-horno">
-                        {{ $option->label() }}
-                    </label>
-                @endforeach
-            </div>
-            <x-input-error :messages="$errors->get('type')" class="mt-2" />
-        </div>
-
-        <div x-show="type === 'daily'">
-            <x-input-label for="scheduled_for" value="Fecha" />
-            <input id="scheduled_for" name="scheduled_for" type="date"
-                value="{{ old('scheduled_for', now()->toDateString()) }}"
-                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-            <x-input-error :messages="$errors->get('scheduled_for')" class="mt-2" />
-        </div>
+        <p class="text-sm text-masa-madre">
+            Para lo que hay que fabricar ahora mismo, sin agendar. Los pedidos del día se cargan
+            desde <button type="button" @click="$dispatch('close-modal', 'production-order-create'); $dispatch('open-modal', 'production-request-create')" class="text-horno hover:underline">+ Nuevo pedido</button>.
+        </p>
 
         <div>
             <x-input-label for="notes" value="Notas (opcional)" />

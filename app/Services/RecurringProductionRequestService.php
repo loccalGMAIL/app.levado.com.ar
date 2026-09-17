@@ -29,7 +29,11 @@ class RecurringProductionRequestService
             $recurring = $tenant->recurringProductionRequests()->create([
                 'destination_type' => $attributes['destination_type'],
                 'destination_id' => $attributes['destination_id'],
-                'weekdays' => $attributes['weekdays'],
+                // array_map('intval'): weekdays llega desde un formulario
+                // HTML (strings, ej. "3") — occursOn() compara con
+                // dayOfWeekIso (int) en modo estricto, así que un string sin
+                // castear no matchearía nunca.
+                'weekdays' => array_map('intval', $attributes['weekdays']),
                 'starts_on' => $attributes['starts_on'],
                 'ends_on' => $attributes['ends_on'] ?? null,
                 'active' => true,
@@ -52,6 +56,10 @@ class RecurringProductionRequestService
     public function update(RecurringProductionRequest $recurring, array $attributes): void
     {
         DB::transaction(function () use ($recurring, $attributes) {
+            if (isset($attributes['weekdays'])) {
+                $attributes['weekdays'] = array_map('intval', $attributes['weekdays']);
+            }
+
             $recurring->update(array_intersect_key($attributes, array_flip(['weekdays', 'starts_on', 'ends_on', 'notes'])));
 
             if (array_key_exists('lines', $attributes)) {

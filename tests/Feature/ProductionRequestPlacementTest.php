@@ -245,6 +245,30 @@ test('cargar un pedido marcado como recurrente crea el molde y vincula la primer
         ->and($request->recurring_production_request_id)->toBe($recurring->id);
 });
 
+test('los días de la recurrencia se guardan como enteros aunque lleguen como texto (form real)', function () {
+    // Un <input type="checkbox"> real manda "1", "3", etc. (strings) — si
+    // RecurringProductionRequestService no castea, occursOn() (comparación
+    // ESTRICTA contra dayOfWeekIso, que es int) nunca matchearía nada.
+    [$user, $tenant, $product] = productionSetup();
+
+    $this->actingAs($user)
+        ->post(route('production-requests.store'), placeRequestPayload($tenant, $product, [
+            'recurrence' => ['weekdays' => ['1', '3', '5']],
+        ]))
+        ->assertRedirect();
+
+    $recurring = RecurringProductionRequest::where('tenant_id', $tenant->id)->first();
+
+    // El próximo día, desde starts_on, que caiga en uno de los weekdays.
+    $matchingDate = $recurring->starts_on->copy();
+    while (! in_array($matchingDate->dayOfWeekIso, [1, 3, 5], true)) {
+        $matchingDate->addDay();
+    }
+
+    expect($recurring->weekdays)->toBe([1, 3, 5])
+        ->and($recurring->occursOn($matchingDate))->toBeTrue();
+});
+
 test('un pedido sin recurrence no crea ningún molde', function () {
     [$user, $tenant, $product] = productionSetup();
 

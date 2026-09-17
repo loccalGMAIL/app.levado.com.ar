@@ -14,6 +14,7 @@ use App\Services\RecurringProductionRequestMaterializer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -41,12 +42,21 @@ class ProductionOrderController extends Controller
             ->when($request->filled('date'), fn ($query) => $query->whereDate('scheduled_for', $request->string('date')))
             ->with('user')
             ->withCount('productionOrderRequests')
+            // Badge 🔁: la orden tiene al menos un pedido generado por un
+            // recurrente. Sin query extra — es el mismo where sobre la
+            // relación que ya cuenta arriba, sólo con otro alias.
+            ->withCount(['productionOrderRequests as recurring_requests_count' => fn ($q) => $q->whereNotNull('recurring_production_request_id')])
             ->latest('scheduled_for')
             ->latest('id')
             ->paginate(20)
             ->withQueryString();
 
-        return view('production-orders.index', compact('orders'));
+        // Para el modal "+ Nuevo pedido": mismos datos que ya junta show(),
+        // acá vive el punto de entrada nuevo (crear el pedido sin abrir
+        // ninguna orden primero).
+        [$locations, $deliveryPeople, $products] = $this->destinationAndCatalogData($tenant);
+
+        return view('production-orders.index', compact('orders', 'locations', 'deliveryPeople', 'products'));
     }
 
     public function store(StoreProductionOrderRequest $request): RedirectResponse
@@ -79,18 +89,28 @@ class ProductionOrderController extends Controller
 
         $productionOrder->load(['productionOrderRequests.destination', 'productionOrderRequests.lines.product', 'user']);
 
-        $tenant = app(Tenant::class);
-        $deliveryPeople = $tenant->deliveryPeople()->active()->orderBy('name')->get();
-        $locations = $tenant->locations()->active()->orderBy('name')->get();
+        [$locations, $deliveryPeople, $products] = $this->destinationAndCatalogData(app(Tenant::class));
 
-        // Payload liviano para la grilla (id/nombre/unidad, no el modelo
-        // completo): con el gate producible invertido son ~195 artículos y
-        // viaja una sola vez por página, compartido por referencia entre las
-        // grillas de todos los pedidos — no uno por pedido.
+        return view('production-orders.show', compact('productionOrder', 'deliveryPeople', 'locations', 'products'));
+    }
+
+    /**
+     * Sucursales/repartidores activos + el catálogo liviano de artículos
+     * producibles (id/nombre/unidad, no el modelo completo) — lo que
+     * necesitan tanto el detalle de una orden como el modal "+ Nuevo
+     * pedido". Con el gate producible invertido son ~195 artículos; viaja
+     * una sola vez por página, compartido por referencia entre las grillas.
+     *
+     * @return array{0: Collection, 1: Collection, 2: Collection}
+     */
+    private function destinationAndCatalogData(Tenant $tenant): array
+    {
+        $locations = $tenant->locations()->active()->orderBy('name')->get();
+        $deliveryPeople = $tenant->deliveryPeople()->active()->orderBy('name')->get();
         $products = $tenant->products()->producible()->orderBy('name')->get(['id', 'name', 'unit'])
             ->map(fn (Product $product) => ['id' => $product->id, 'name' => $product->name, 'unit' => $product->unit->short()]);
 
-        return view('production-orders.show', compact('productionOrder', 'deliveryPeople', 'locations', 'products'));
+        return [$locations, $deliveryPeople, $products];
     }
 
     public function preview(ProductionOrder $productionOrder): JsonResponse

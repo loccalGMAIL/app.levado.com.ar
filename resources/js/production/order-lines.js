@@ -11,11 +11,20 @@ import Alpine from 'alpinejs';
  * subyacente, que es lo que engancha addProduct().
  *
  * Init esperado:
- *   { saveUrl, previousUrl, products: [{id, name, unit}], lines: [{id, product_id, name, unit, quantity}] }
+ *   { saveUrl, previousUrl, products: [{id, name, unit}], lines: [{id, product_id, name, unit, quantity}], deferred }
  * `products` viaja UNA sola vez por página (en el x-data raíz) y cada grilla
  * lo recibe acá por referencia — no lo dupliques por pedido.
+ *
+ * `deferred: true` (el modal "Nuevo pedido"): no hay saveUrl ni botón
+ * "Guardar pedido" propio — las líneas viajan como inputs ocultos dentro del
+ * <form> del modal, que se manda entero de una. En ese modo, fromPrevious()
+ * necesita destinationType/destinationId, que NO son de este componente:
+ * el Blade que arma el modal los agrega al mismo x-data por spread
+ * (`{ ...productionOrderLines(...), destinationType: '...', destinationId: '' }`),
+ * así que `this.destinationType` ya está en el mismo objeto reactivo.
  */
 Alpine.data('productionOrderLines', (init = {}) => ({
+    deferred: init.deferred ?? false,
     saveUrl: init.saveUrl ?? '',
     previousUrl: init.previousUrl ?? '',
     products: init.products ?? [],
@@ -104,12 +113,19 @@ Alpine.data('productionOrderLines', (init = {}) => ({
 
     /** Trae (sin persistir) los renglones del último pedido al mismo destino. */
     async fromPrevious() {
+        if (this.deferred && !this.destinationId) {
+            alert('Elegí primero un destino.');
+            return;
+        }
         if (this.lines.length > 0 && !confirm('¿Reemplazar los artículos actuales por los del pedido anterior?')) {
             return;
         }
         this.error = '';
         try {
-            const res = await fetch(this.previousUrl, { headers: { Accept: 'application/json' } });
+            const url = this.deferred
+                ? `${this.previousUrl}?destination_type=${encodeURIComponent(this.destinationType)}&destination_id=${encodeURIComponent(this.destinationId)}`
+                : this.previousUrl;
+            const res = await fetch(url, { headers: { Accept: 'application/json' } });
             if (!res.ok) {
                 this.error = 'No se pudo traer el pedido anterior.';
                 return;

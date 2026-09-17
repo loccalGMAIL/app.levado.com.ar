@@ -1,25 +1,51 @@
 <x-app-layout>
     <x-slot name="title">Órdenes de producción</x-slot>
 
-    <div class="py-8 px-6 lg:px-8" x-data="{ mobileExpanded: false }">
+    @php
+        // Hoy/Mañana: con el horizonte de 7 días del materializador, "hoy"
+        // queda enterrado a mitad de un listado ordenado por fecha sin esto.
+        $dateLabel = function ($order) {
+            if ($order->scheduled_for === null) {
+                return 'Sin fecha';
+            }
+            if ($order->scheduled_for->isToday()) {
+                return 'Hoy';
+            }
+            if ($order->scheduled_for->isTomorrow()) {
+                return 'Mañana';
+            }
+
+            return $order->scheduled_for->format('d/m/Y');
+        };
+    @endphp
+
+    {{-- products viaja una sola vez acá (root x-data) y el modal "+ Nuevo
+         pedido" lo lee por referencia, igual que hace show.blade.php con
+         cada grilla de pedido — ver partials/lines-grid.blade.php. --}}
+    <div class="py-8 px-6 lg:px-8" x-data="{ mobileExpanded: false, products: @js($products) }">
         <div class="space-y-6">
 
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-base font-semibold text-corteza">Órdenes de producción</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Agrupá los pedidos del día (o los espontáneos) y producilos de una.</p>
+                    <p class="text-sm text-masa-madre mt-0.5">Cargá los pedidos y la orden del día se va armando sola.</p>
                     <a href="{{ route('production-order-templates.index') }}" class="text-sm text-horno hover:underline">Plantillas →</a>
                 </div>
                 @can('manage-costs')
                     <div class="flex items-center gap-2 shrink-0">
+                        <button type="button"
+                            @click="$dispatch('open-modal', 'production-request-create')"
+                            class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                            + Nuevo pedido
+                        </button>
                         <a href="{{ route('production-orders.instant.create') }}"
                             class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
                             ⚡ Orden instantánea
                         </a>
                         <button type="button"
                             @click="$dispatch('open-modal', 'production-order-create')"
-                            class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
-                            + Nueva orden
+                            class="text-sm text-masa-madre hover:text-corteza hover:underline whitespace-nowrap">
+                            Nueva orden espontánea
                         </button>
                     </div>
                 @endcan
@@ -55,7 +81,7 @@
             </form>
 
             @if($orders->isEmpty())
-                <x-empty-state>Todavía no hay órdenes de producción. Creá la primera.</x-empty-state>
+                <x-empty-state>Todavía no hay órdenes de producción. Cargá el primer pedido.</x-empty-state>
             @else
                 <x-responsive-table>
                     <x-slot:cards>
@@ -63,14 +89,19 @@
                         <a href="{{ route('production-orders.show', $order) }}"
                             class="block bg-white border border-miga rounded-lg p-4 shadow-sm {{ $order->isCancelled() ? 'opacity-60' : '' }}">
                             <div class="flex items-start justify-between gap-2">
-                                <span class="font-medium text-corteza">{{ $order->numberLabel() }}</span>
+                                <span class="font-medium text-corteza">
+                                    {{ $order->numberLabel() }}
+                                    @if($order->recurring_requests_count > 0)
+                                        <span title="Tiene pedidos recurrentes">🔁</span>
+                                    @endif
+                                </span>
                                 <x-production-order-status-badge :status="$order->status" />
                             </div>
                             <div class="flex items-center gap-2 mt-1">
                                 <x-production-order-type-badge :type="$order->type" />
                             </div>
                             <div class="text-xs text-masa-madre mt-2">
-                                {{ $order->scheduled_for?->format('d/m/Y') ?? 'Sin fecha' }}
+                                {{ $dateLabel($order) }}
                             </div>
                             <div class="mt-1 text-sm text-corteza">
                                 {{ $order->production_order_requests_count }} pedido(s)
@@ -96,8 +127,11 @@
                                     <a href="{{ route('production-orders.show', $order) }}" class="hover:underline">
                                         {{ $order->numberLabel() }}
                                     </a>
+                                    @if($order->recurring_requests_count > 0)
+                                        <span title="Tiene pedidos recurrentes">🔁</span>
+                                    @endif
                                 </td>
-                                <td class="px-4 py-3 text-masa-madre whitespace-nowrap">{{ $order->scheduled_for?->format('d/m/Y') ?? 'Sin fecha' }}</td>
+                                <td class="px-4 py-3 text-masa-madre whitespace-nowrap">{{ $dateLabel($order) }}</td>
                                 <td class="px-4 py-3">
                                     <x-production-order-type-badge :type="$order->type" />
                                 </td>
@@ -126,6 +160,7 @@
 
         @can('manage-costs')
             @include('production-orders.modals.create')
+            @include('production-orders.modals.request-create')
         @endcan
     </div>
 </x-app-layout>

@@ -6,6 +6,7 @@ use App\Models\DeliveryPerson;
 use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
+use App\Models\RecurringProductionRequest;
 use App\Models\Tenant;
 
 // tenantUserAs() (IngredientCrudTest) y productionSetup() (ProductionControllerTest) son helpers globales.
@@ -25,6 +26,57 @@ test('el índice de órdenes no lista plantillas', function () {
         ->get(route('production-orders.index'))
         ->assertOk()
         ->assertDontSee('Plantilla del lunes');
+});
+
+test('el índice ofrece "Nuevo pedido" como acción principal, ya no "Nueva orden"', function () {
+    [$user, $tenant] = productionSetup();
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertSee('+ Nuevo pedido')
+        ->assertSee('Nueva orden espontánea')
+        ->assertDontSee('+ Nueva orden');
+});
+
+test('un viewer no ve el botón de cargar pedido', function () {
+    [$user] = productionSetup(TenantUserRole::Viewer);
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertDontSee('+ Nuevo pedido');
+});
+
+test('el índice marca con 🔁 la orden que tiene un pedido recurrente', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $recurring = RecurringProductionRequest::factory()->for($tenant)->create([
+        'destination_id' => $tenant->defaultLocation()->id,
+    ]);
+    ordersService()->addRequest($order, [
+        'destination_type' => 'location',
+        'destination_id' => $tenant->defaultLocation()->id,
+        'recurring_production_request_id' => $recurring->id,
+    ]);
+    $plainOrder = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $response = $this->actingAs($user)->get(route('production-orders.index'))->assertOk();
+
+    $response->assertSeeInOrder([$order->numberLabel(), '🔁']);
+});
+
+test('el índice muestra "Hoy" para una orden con fecha de hoy', function () {
+    [$user, $tenant] = productionSetup();
+    ProductionOrder::factory()->for($tenant)->create([
+        'location_id' => $tenant->defaultLocation()->id,
+        'scheduled_for' => now()->toDateString(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertSee('Hoy');
 });
 
 test('owner puede crear una orden', function () {
