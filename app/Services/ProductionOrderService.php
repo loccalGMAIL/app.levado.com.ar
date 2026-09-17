@@ -46,38 +46,61 @@ class ProductionOrderService
 
         return DB::transaction(function () use ($tenant, $attributes) {
             try {
-                return $tenant->productionOrders()->create([...$attributes, 'number' => $this->reserveNumber($tenant)]);
+                return $tenant->productionOrders()->create([...$attributes, 'number' => $this->reserveOrderNumber($tenant->id)]);
             } catch (QueryException) {
                 // Carrera rarísima entre dos altas concurrentes del mismo
                 // negocio: el número reservado ya fue tomado por la otra.
                 // Mismo patrón de reintento que StockService::lockedLevelRow().
-                return $tenant->productionOrders()->create([...$attributes, 'number' => $this->reserveNumber($tenant)]);
+                return $tenant->productionOrders()->create([...$attributes, 'number' => $this->reserveOrderNumber($tenant->id)]);
             }
         });
     }
 
     /**
-     * Toma el contador de órdenes del negocio con lock pesimista y lo
-     * incrementa — mismo patrón que StockService::lockedLevelRow() (lock de
-     * fila dentro de la transacción, con el unique de la base como red).
+     * Toma un contador del negocio con lock pesimista y lo incrementa —
+     * mismo patrón que StockService::lockedLevelRow() (lock de fila dentro
+     * de la transacción, con el unique de la base como red). Un solo método
+     * para los dos contadores (orden y pedido) — el nombre de columna nunca
+     * viene de input, lo fijan los wrappers de abajo.
      */
-    private function reserveNumber(Tenant $tenant): int
+    private function reserveCounter(int $tenantId, string $column): int
     {
-        $row = DB::table('tenants')->where('id', $tenant->id)->lockForUpdate()->first();
-        $number = (int) $row->next_production_order_number;
+        $row = DB::table('tenants')->where('id', $tenantId)->lockForUpdate()->first();
+        $number = (int) $row->{$column};
 
-        DB::table('tenants')->where('id', $tenant->id)->update([
-            'next_production_order_number' => $number + 1,
+        DB::table('tenants')->where('id', $tenantId)->update([
+            $column => $number + 1,
         ]);
 
         return $number;
     }
 
+    private function reserveOrderNumber(int $tenantId): int
+    {
+        return $this->reserveCounter($tenantId, 'next_production_order_number');
+    }
+
+    private function reserveRequestNumber(int $tenantId): int
+    {
+        return $this->reserveCounter($tenantId, 'next_production_order_request_number');
+    }
+
     /**
-     * Agrega un pedido a la orden, numerándolo dentro de ella ("Pedido 1",
-     * "Pedido 2"... vía la columna position, reusada como número). Lockea la
-     * orden padre para que dos altas concurrentes de pedidos en la misma
-     * orden no calculen el mismo MAX+1.
+     * Agrega un pedido a la orden. Numera dos cosas distintas: `position`
+     * (local a la orden — "Pedido 1", "Pedido 2"... ya no se muestra pero
+     * sigue protegiendo el orden estable y el MAX+1) y `number` (identidad
+     * propia del pedido, correlativa por negocio — "Pedido #123", igual que
+     * la orden tiene la suya). Lockea la orden padre para que dos altas
+     * concurrentes de pedidos en la misma orden no calculen el mismo MAX+1.
+     *
+     * MAX(position) es withTrashed(): un pedido borrado (soft delete) sigue
+     * ocupando su position, y sin esto el próximo alta chocaría contra el
+     * unique (production_order_id, position) apenas alguien borre y agregue.
+     *
+     * Los pedidos de una orden plantilla no consumen number (igual que la
+     * plantilla misma no consume number de orden) — is_template no cambia
+     * después de creada la orden, así que leerlo de $order (sin recargar)
+     * es seguro.
      *
      * withTemplates() es obligatorio: sin él, el global scope de
      * ExcludeTemplatesScope hace que el lock falle con 404 cuando se está
@@ -91,16 +114,18 @@ class ProductionOrderService
         // haya un Tenant bindeado en el container, que no está garantizado
         // fuera de un request HTTP (tests de servicio, artisan).
         $attributes = ['tenant_id' => $order->tenant_id, ...$attributes];
+        $isTemplate = $order->is_template;
 
-        return DB::transaction(function () use ($order, $attributes) {
+        return DB::transaction(function () use ($order, $attributes, $isTemplate) {
             $locked = ProductionOrder::withTemplates()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-            $nextPosition = fn () => (int) $locked->productionOrderRequests()->max('position') + 1;
+            $nextPosition = fn () => (int) $locked->productionOrderRequests()->withTrashed()->max('position') + 1;
+            $number = fn () => $isTemplate ? null : $this->reserveRequestNumber($locked->tenant_id);
 
             try {
-                return $locked->productionOrderRequests()->create([...$attributes, 'position' => $nextPosition()]);
+                return $locked->productionOrderRequests()->create([...$attributes, 'position' => $nextPosition(), 'number' => $number()]);
             } catch (QueryException) {
-                return $locked->productionOrderRequests()->create([...$attributes, 'position' => $nextPosition()]);
+                return $locked->productionOrderRequests()->create([...$attributes, 'position' => $nextPosition(), 'number' => $number()]);
             }
         });
     }

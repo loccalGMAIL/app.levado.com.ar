@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\DeliveryDestinationType;
 use App\Models\ProductionOrder;
 use App\Services\ProductionOrderDuplicator;
 use App\Services\ProductionOrderService;
@@ -7,7 +8,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 // stockTenantUser() es global (StockServiceTest); productionOrderService() y
-// orderWithLine() son globales (ProductionOrderTest).
+// orderWithLine() son globales (ProductionOrderTest); productionSetup() y
+// seedStock() son globales (ProductionControllerTest/ProductionTest).
 
 function ordersService(): ProductionOrderService
 {
@@ -170,28 +172,113 @@ test('el índice de órdenes muestra el número', function () {
         ->assertSee('Orden #1');
 });
 
-test('el detalle de la orden muestra Orden #N y la etiqueta de cada pedido', function () {
+test('el detalle de la orden muestra Orden #N y el número propio de cada pedido', function () {
     [$user, $tenant] = stockTenantUser();
     $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
-    ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
-    ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
+    $r1 = ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
+    $r2 = ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
 
     $this->actingAs($user)
         ->get(route('production-orders.show', $order))
         ->assertOk()
         ->assertSee('Orden #1')
-        ->assertSee('Pedido 1')
-        ->assertSee('Pedido 2');
+        ->assertSee("Pedido #{$r1->number}")
+        ->assertSee("Pedido #{$r2->number}");
 });
 
-test('la planilla de reparto muestra el número de orden', function () {
+test('la planilla de reparto muestra el número de orden y el del pedido', function () {
     [$user, $tenant] = stockTenantUser();
     $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
-    ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
+    $request = ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
 
     $this->actingAs($user)
         ->get(route('production-orders.delivery-sheet', $order))
         ->assertOk()
         ->assertSee('Orden #1')
-        ->assertSee('Pedido 1');
+        ->assertSee("Pedido #{$request->number}");
+});
+
+// --- Numeración PROPIA del pedido (independiente de position/la orden) ---
+
+test('el primer pedido del negocio es el número 1', function () {
+    [, $tenant] = stockTenantUser();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $request = ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
+
+    expect($request->number)->toBe(1);
+});
+
+test('la numeración de pedidos es correlativa por negocio a través de órdenes distintas', function () {
+    [, $tenant] = stockTenantUser();
+    $orderA = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $orderB = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $attrs = ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id];
+
+    $r1 = ordersService()->addRequest($orderA, $attrs);
+    $r2 = ordersService()->addRequest($orderB, $attrs);
+    $r3 = ordersService()->addRequest($orderA, $attrs);
+
+    expect([$r1->number, $r2->number, $r3->number])->toBe([1, 2, 3])
+        ->and([$r1->position, $r2->position, $r3->position])->toBe([1, 1, 2]); // position sigue local a su orden
+});
+
+test('la numeración de pedidos es independiente entre negocios', function () {
+    [, $tenantA] = stockTenantUser();
+    [, $tenantB] = stockTenantUser();
+    $orderA = ProductionOrder::factory()->for($tenantA)->create(['location_id' => $tenantA->defaultLocation()->id]);
+    $orderB = ProductionOrder::factory()->for($tenantB)->create(['location_id' => $tenantB->defaultLocation()->id]);
+
+    $requestA = ordersService()->addRequest($orderA, ['destination_type' => 'location', 'destination_id' => $tenantA->defaultLocation()->id]);
+    $requestB = ordersService()->addRequest($orderB, ['destination_type' => 'location', 'destination_id' => $tenantB->defaultLocation()->id]);
+
+    expect($requestA->number)->toBe(1)
+        ->and($requestB->number)->toBe(1);
+});
+
+test('el pedido único de una orden instantánea también numera', function () {
+    [$user, $tenant, $product, $harina] = productionSetup();
+    seedStock($harina, 5000, $user);
+
+    $order = ordersService()->produceInstant(
+        $tenant, $user, DeliveryDestinationType::Location, $tenant->defaultLocation()->id,
+        collect([['product' => $product, 'quantity' => 1]]),
+    );
+
+    expect($order->productionOrderRequests()->first()->number)->toBe(1);
+});
+
+test('una plantilla no consume número de pedido, pero usarla sí', function () {
+    [$user, $tenant] = stockTenantUser();
+    $template = ProductionOrder::factory()->for($tenant)->template()->create(['location_id' => $tenant->defaultLocation()->id]);
+    $templateRequest = ordersService()->addRequest($template, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
+
+    expect($templateRequest->number)->toBeNull();
+
+    $copy = app(ProductionOrderDuplicator::class)->duplicate($template, $user, scheduledFor: now()->toDateString());
+
+    expect($copy->productionOrderRequests()->first()->number)->toBe(1); // la plantilla no gastó el 1
+});
+
+test('borrar un pedido no reusa su número propio', function () {
+    [, $tenant] = stockTenantUser();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $attrs = ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id];
+    $first = ordersService()->addRequest($order, $attrs);
+    $first->delete();
+
+    $second = ordersService()->addRequest($order, $attrs);
+
+    expect($second->number)->toBe(2);
+});
+
+test('numberLabel dice Pedido #N, y cae a Pedido {position} si number es null', function () {
+    [, $tenant] = stockTenantUser();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+    $request = ordersService()->addRequest($order, ['destination_type' => 'location', 'destination_id' => $tenant->defaultLocation()->id]);
+
+    expect($request->numberLabel())->toBe("Pedido #{$request->number}");
+
+    $request->forceFill(['number' => null])->save();
+    expect($request->fresh()->numberLabel())->toBe("Pedido {$request->position}");
 });

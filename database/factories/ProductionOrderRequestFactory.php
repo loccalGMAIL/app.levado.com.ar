@@ -31,10 +31,14 @@ class ProductionOrderRequestFactory extends Factory
                 'tenant_id' => $attributes['tenant_id'],
             ])->id,
             'notes' => null,
-            // MAX+1 entre los pedidos ya existentes de la orden — position 0
-            // fijo colisionaría con el unique (production_order_id, position)
+            // MAX+1 entre los pedidos ya existentes de la orden (withTrashed:
+            // un pedido borrado sigue ocupando su position) — position 0 fijo
+            // colisionaría con el unique (production_order_id, position)
             // apenas una orden tenga 2 pedidos.
-            'position' => fn (array $attributes) => (int) ProductionOrderRequest::where('production_order_id', $attributes['production_order_id'])->max('position') + 1,
+            'position' => fn (array $attributes) => (int) ProductionOrderRequest::withTrashed()->where('production_order_id', $attributes['production_order_id'])->max('position') + 1,
+            // Mismo motivo que position, pero el contador es por NEGOCIO, no
+            // por orden — igual que addRequest() en producción.
+            'number' => fn (array $attributes) => (int) ProductionOrderRequest::withTrashed()->where('tenant_id', $attributes['tenant_id'])->max('number') + 1,
         ];
     }
 

@@ -10,16 +10,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Un pedido dentro de una orden de producción: lo que hay que llevar a un
  * destino (sucursal o repartidor). Tiene tenant_id propio porque se lee desde
  * la UI por fuera de su orden ("qué lleva el repartidor Juan").
+ *
+ * SoftDeletes a propósito (no sólo por la convención de baja lógica): el
+ * materializador de recurrencia necesita distinguir "nunca se generó" de
+ * "se generó y lo borraron" — con DELETE físico no podría, y regeneraría lo
+ * que alguien borró a mano en la próxima corrida.
  */
 class ProductionOrderRequest extends Model
 {
     /** @use HasFactory<ProductionOrderRequestFactory> */
-    use BelongsToTenant, HasFactory;
+    use BelongsToTenant, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'tenant_id',
@@ -28,6 +34,7 @@ class ProductionOrderRequest extends Model
         'destination_id',
         'notes',
         'position',
+        'number',
     ];
 
     protected function casts(): array
@@ -37,10 +44,14 @@ class ProductionOrderRequest extends Model
         ];
     }
 
-    /** "Pedido 1", "Pedido 2"... — position reusada como número dentro de la orden. */
+    /**
+     * "Pedido #123" — number es correlativo por negocio (identidad propia
+     * del pedido, independiente de su orden). Fallback a position ("Pedido 1")
+     * sólo para filas viejas de plantillas, que nunca consumieron número.
+     */
     public function numberLabel(): string
     {
-        return "Pedido {$this->position}";
+        return $this->number !== null ? "Pedido #{$this->number}" : "Pedido {$this->position}";
     }
 
     public function tenant(): BelongsTo
