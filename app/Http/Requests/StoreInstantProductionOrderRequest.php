@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\DeliveryDestinationType;
 use App\Models\Tenant;
+use App\Rules\ValidDestination;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,19 +25,7 @@ class StoreInstantProductionOrderRequest extends FormRequest
 
         return [
             'destination_type' => ['required', Rule::enum(DeliveryDestinationType::class)],
-            'destination_id' => ['required', 'integer', function ($attribute, $value, $fail) use ($tenant) {
-                $type = DeliveryDestinationType::tryFrom((string) $this->input('destination_type'));
-
-                $exists = match ($type) {
-                    DeliveryDestinationType::Location => $tenant->locations()->whereKey($value)->exists(),
-                    DeliveryDestinationType::DeliveryPerson => $tenant->deliveryPeople()->whereKey($value)->exists(),
-                    default => false,
-                };
-
-                if (! $exists) {
-                    $fail('El destino elegido no es válido.');
-                }
-            }],
+            'destination_id' => ['required', 'integer', new ValidDestination($tenant, $this->input('destination_type'))],
             'notes' => ['nullable', 'string', 'max:1000'],
             ...static::itemRules($tenant),
         ];

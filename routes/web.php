@@ -31,6 +31,7 @@ use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ProductionOrderLineController;
 use App\Http\Controllers\ProductionOrderRequestController;
 use App\Http\Controllers\ProductionOrderTemplateController;
+use App\Http\Controllers\ProductionRequestController;
 use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
@@ -227,6 +228,12 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('production/{production}/cancel', [ProductionController::class, 'cancel'])->name('production.cancel');
 
     Route::post('production-orders', [ProductionOrderController::class, 'store'])->name('production-orders.store');
+
+    // Alta suelta de un pedido, sin pasar por crear una orden — ver
+    // ProductionRequestController/ProductionOrderService::placeRequest().
+    Route::get('production-requests/previous-lines', [ProductionRequestController::class, 'previousLines'])->name('production-requests.previous-lines');
+    Route::post('production-requests', [ProductionRequestController::class, 'store'])->name('production-requests.store');
+
     Route::post('production-orders/instant/preview', [InstantProductionOrderController::class, 'preview'])->name('production-orders.instant.preview');
     Route::post('production-orders/instant', [InstantProductionOrderController::class, 'store'])->name('production-orders.instant.store');
     Route::patch('production-orders/{productionOrder}/transition', [ProductionOrderController::class, 'transition'])->name('production-orders.transition');

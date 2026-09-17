@@ -191,20 +191,49 @@ class ProductionOrderService
 
     /**
      * El pedido más reciente al mismo destino que $request, para precargar
-     * su grilla ("Traer del pedido anterior"). Se excluye la ORDEN actual
-     * entera, no sólo este pedido: dos pedidos al mismo destino en la misma
-     * orden son un caso real, y traer el hermano de hoy confundiría. Las
-     * plantillas quedan afuera solas — el whereHas aplica el global scope
-     * ExcludeTemplatesScope de ProductionOrder (no agregar withTemplates()
-     * acá "por las dudas": rompería justo esta exclusión). Los borradores sí
-     * cuentan — se busca "lo que pedí la última vez", no sólo lo producido.
+     * su grilla ("Traer del pedido anterior"). Wrapper de
+     * previousRequestForDestination() que arma los argumentos desde un
+     * pedido existente.
      */
     public function previousRequestFor(ProductionOrderRequest $request): ?ProductionOrderRequest
     {
+        // loadMissing: el caller típico (route model binding) no trae la
+        // relación tenant precargada, y preventLazyLoading la frenaría.
+        return $this->previousRequestForDestination(
+            $request->loadMissing('tenant')->tenant,
+            $request->destination_type,
+            $request->destination_id,
+            excludeOrderId: $request->production_order_id,
+        );
+    }
+
+    /**
+     * El pedido más reciente a ese destino — separado de previousRequestFor()
+     * para poder ofrecer "traer los artículos del último pedido" *antes* de
+     * que el pedido nuevo exista (placeRequest(), el modal de alta). Se
+     * excluye la ORDEN entera de $excludeOrderId, no sólo un pedido: dos
+     * pedidos al mismo destino en la misma orden son un caso real, y traer
+     * el hermano de hoy confundiría. Las plantillas quedan afuera solas — el
+     * whereHas aplica el global scope ExcludeTemplatesScope de
+     * ProductionOrder (no agregar withTemplates() acá "por las dudas":
+     * rompería justo esta exclusión). Los borradores sí cuentan — se busca
+     * "lo que pedí la última vez", no sólo lo producido.
+     *
+     * $tenant explícito (no confiar en el scope de BelongsToTenant): se
+     * llama también desde contextos sin tenant bindeado en el container
+     * (el materializador, artisan).
+     */
+    public function previousRequestForDestination(
+        Tenant $tenant,
+        DeliveryDestinationType $type,
+        int $destinationId,
+        ?int $excludeOrderId = null,
+    ): ?ProductionOrderRequest {
         return ProductionOrderRequest::query()
-            ->where('destination_type', $request->destination_type->value)
-            ->where('destination_id', $request->destination_id)
-            ->where('production_order_id', '!=', $request->production_order_id)
+            ->where('production_order_requests.tenant_id', $tenant->id)
+            ->where('destination_type', $type->value)
+            ->where('destination_id', $destinationId)
+            ->when($excludeOrderId !== null, fn ($query) => $query->where('production_order_id', '!=', $excludeOrderId))
             ->whereHas('productionOrder', fn ($query) => $query->where('status', '!=', ProductionOrderStatus::Cancelled->value))
             ->with(['lines.product', 'productionOrder'])
             ->join('production_orders', 'production_orders.id', '=', 'production_order_requests.production_order_id')
@@ -212,6 +241,152 @@ class ProductionOrderService
             ->orderByDesc('production_orders.id')
             ->select('production_order_requests.*')
             ->first();
+    }
+
+    /**
+     * Da forma al JSON de "traer del pedido anterior" — un solo lugar para
+     * las dos superficies que lo piden: dentro de un pedido existente
+     * (ProductionOrderRequestController::previousLines()) y en el alta
+     * suelta, antes de que el pedido nuevo exista
+     * (ProductionRequestController::previousLines()). Filtra server-side los
+     * artículos que dejaron de ser producibles — si se trajeran igual, el
+     * guardado posterior fallaría con un 422 por renglón sin que el usuario
+     * entienda por qué.
+     *
+     * @return array{found: bool, source?: array{label: string, scheduled_for: ?string}, lines?: array<int, array<string, mixed>>, skipped?: array<int, string>}
+     */
+    public function previousLinesPayload(Tenant $tenant, ?ProductionOrderRequest $previous): array
+    {
+        if ($previous === null) {
+            return ['found' => false];
+        }
+
+        $producibleIds = $tenant->products()->producible()
+            ->whereIn('id', $previous->lines->pluck('product_id'))
+            ->pluck('id');
+
+        [$lines, $skipped] = $previous->lines->partition(fn ($line) => $producibleIds->contains($line->product_id));
+
+        return [
+            'found' => true,
+            'source' => [
+                'label' => $previous->productionOrder->numberLabel().' · '.$previous->numberLabel(),
+                'scheduled_for' => $previous->productionOrder->scheduled_for?->format('d/m/Y'),
+            ],
+            'lines' => $lines->values()->map(fn (ProductionOrderLine $line) => [
+                'product_id' => $line->product_id,
+                'name' => $line->product->name,
+                'unit' => $line->unit->short(),
+                'quantity' => (float) $line->quantity,
+            ])->all(),
+            'skipped' => $skipped->map(fn (ProductionOrderLine $line) => $line->product?->name ?? '—')->values()->all(),
+        ];
+    }
+
+    /**
+     * Carga un pedido sin que exista todavía la orden del día: encuentra-o-
+     * crea la orden diaria de esa fecha (orderForDate()) y cuelga el pedido
+     * de ella. Es el alta que usa el panadero — addRequest() sigue siendo el
+     * alta de bajo nivel ("agregar a ESTA orden"); acá la diferencia es que
+     * la orden la busca sola.
+     *
+     * @param  array{
+     *     destination_type: string, destination_id: int, scheduled_for: string,
+     *     notes?: ?string,
+     *     lines?: array<int, array{id?: int|null, product_id: int, quantity: float|string}>,
+     *     copy_previous?: bool,
+     * }  $attributes
+     */
+    public function placeRequest(Tenant $tenant, array $attributes, ?User $user = null): ProductionOrderRequest
+    {
+        return DB::transaction(function () use ($tenant, $attributes, $user) {
+            // Lock de la fila del negocio antes del find-or-create: dos altas
+            // simultáneas para la misma fecha no deben crear dos órdenes del
+            // día. Reentrante con el lock que reserveOrderNumber()/
+            // reserveRequestNumber() vuelven a tomar más abajo — misma
+            // transacción y conexión, no deadlockea.
+            DB::table('tenants')->where('id', $tenant->id)->lockForUpdate()->first();
+
+            $order = $this->orderForDate($tenant, $attributes['scheduled_for'], $user);
+            abort_unless($order->isEditable(), 422, 'La orden de ese día ya no se puede editar.');
+
+            $request = $this->addRequest($order, [
+                'destination_type' => $attributes['destination_type'],
+                'destination_id' => $attributes['destination_id'],
+                'notes' => $attributes['notes'] ?? null,
+            ]);
+
+            $lines = $attributes['lines'] ?? [];
+
+            if (($attributes['copy_previous'] ?? false) && $lines === []) {
+                $previous = $this->previousRequestForDestination(
+                    $tenant,
+                    DeliveryDestinationType::from($attributes['destination_type']),
+                    (int) $attributes['destination_id'],
+                    excludeOrderId: $order->id,
+                );
+
+                $lines = $previous?->lines->map(fn (ProductionOrderLine $line) => [
+                    'product_id' => $line->product_id,
+                    'quantity' => (float) $line->quantity,
+                ])->all() ?? [];
+            }
+
+            if ($lines !== []) {
+                $this->syncLines($request, $lines);
+            }
+
+            // setRelation en vez de dejar que $request->productionOrder
+            // lazy-loadee: $order ya está en memoria, así que es la misma
+            // fila — evita una consulta de más y el corte de preventLazyLoading.
+            return $request->setRelation('productionOrder', $order);
+        });
+    }
+
+    /**
+     * La orden diaria de esa fecha, o una nueva en Draft. Sólo considera
+     * órdenes tipo Daily y editables (Draft/Confirmed/InProduction — es
+     * literalmente isEditable(), no se endurece la regla). Prioriza Draft si
+     * hay más de una candidata. Una orden Done o Cancelled NO se reusa: un
+     * pedido tardío (llegó después de que la tanda de la mañana ya se
+     * produjo) abre una orden nueva para la misma fecha — es un caso real,
+     * no un edge case. Espontánea e Instantánea nunca se reusan (quedan
+     * afuera del filtro de tipo).
+     */
+    private function orderForDate(Tenant $tenant, string $date, ?User $user): ProductionOrder
+    {
+        // A lo sumo 3 candidatas por fecha (una por estado editable) — se
+        // ordena en PHP, no con field() de MySQL, para que el mismo código
+        // corra igual contra SQLite (tests) y MySQL (todo lo demás).
+        $candidates = $tenant->productionOrders()
+            ->whereDate('scheduled_for', $date)
+            ->where('type', ProductionOrderType::Daily->value)
+            ->whereIn('status', [
+                ProductionOrderStatus::Draft->value,
+                ProductionOrderStatus::Confirmed->value,
+                ProductionOrderStatus::InProduction->value,
+            ])
+            ->orderBy('id')
+            ->get();
+
+        // Prioriza Draft sobre Confirmed/InProduction si hay más de una
+        // candidata: colgarse de un borrador molesta menos que tocar una
+        // orden ya confirmada.
+        $priority = [ProductionOrderStatus::Draft, ProductionOrderStatus::Confirmed, ProductionOrderStatus::InProduction];
+        $existing = $candidates->sortBy(fn (ProductionOrder $order) => array_search($order->status, $priority, true))->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        return $this->createOrder($tenant, [
+            'location_id' => $tenant->defaultLocation()->id,
+            'type' => ProductionOrderType::Daily->value,
+            'scheduled_for' => $date,
+            'status' => ProductionOrderStatus::Draft->value,
+            'is_template' => false,
+            'user_id' => $user?->id,
+        ]);
     }
 
     /**
