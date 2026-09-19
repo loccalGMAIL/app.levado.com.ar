@@ -34,7 +34,7 @@ class ProductionOrderController extends Controller
         // throttlea a una corrida por hora por negocio, nunca propaga).
         $this->materializer->materializeIfDue($tenant);
 
-        $orders = $tenant->productionOrders()
+        $query = $tenant->productionOrders()
             ->when($request->filled('type'), fn ($query) => $query->where('type', $request->string('type')))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
             ->when($request->filled('date'), fn ($query) => $query->whereDate('scheduled_for', $request->string('date')))
@@ -43,11 +43,25 @@ class ProductionOrderController extends Controller
             // Badge 🔁: la orden tiene al menos un pedido generado por un
             // recurrente. Sin query extra — es el mismo where sobre la
             // relación que ya cuenta arriba, sólo con otro alias.
-            ->withCount(['productionOrderRequests as recurring_requests_count' => fn ($q) => $q->whereNotNull('recurring_production_request_id')])
-            ->latest('scheduled_for')
-            ->latest('id')
-            ->paginate(20)
-            ->withQueryString();
+            ->withCount(['productionOrderRequests as recurring_requests_count' => fn ($q) => $q->whereNotNull('recurring_production_request_id')]);
+
+        // Columnas ordenables de <x-sortable-th> — whitelist explícita, el
+        // nombre de columna nunca viene de input directo al orderBy().
+        // Default: número de orden descendente (el más nuevo primero, mismo
+        // efecto que el ->latest() fijo que reemplaza).
+        $sortable = ['number', 'scheduled_for', 'type', 'production_order_requests_count', 'status'];
+        $sort = in_array($request->string('sort')->toString(), $sortable, true) ? $request->string('sort')->toString() : 'number';
+        $dir = $request->string('dir')->toString() === 'asc' ? 'asc' : 'desc';
+
+        match ($sort) {
+            'scheduled_for' => $query->orderBy('scheduled_for', $dir)->orderByDesc('id'),
+            'type' => $query->orderBy('type', $dir)->orderByDesc('id'),
+            'production_order_requests_count' => $query->orderBy('production_order_requests_count', $dir)->orderByDesc('id'),
+            'status' => $query->orderBy('status', $dir)->orderByDesc('id'),
+            default => $query->orderBy('number', $dir)->orderByDesc('id'),
+        };
+
+        $orders = $query->paginate(20)->withQueryString();
 
         // Para el modal "+ Nuevo pedido": mismos datos que ya junta show(),
         // acá vive el punto de entrada nuevo (crear el pedido sin abrir

@@ -127,14 +127,15 @@ test('borrar un pedido no reusa su número', function () {
     expect($third->position)->toBe(3);
 });
 
-test('el índice de órdenes muestra el número', function () {
+test('el índice de órdenes muestra el número, sin el prefijo "Orden #" y con ceros', function () {
     [$user, $tenant] = stockTenantUser();
     ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
 
     $this->actingAs($user)
         ->get(route('production-orders.index'))
         ->assertOk()
-        ->assertSee('Orden #1');
+        ->assertSee('00001')
+        ->assertDontSee('Orden #1');
 });
 
 test('el detalle de la orden muestra Orden #N y el número propio de cada pedido', function () {

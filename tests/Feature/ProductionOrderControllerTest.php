@@ -35,7 +35,7 @@ test('el índice ofrece "Nuevo pedido" como acción principal, ya no "Nueva orde
         ->get(route('production-orders.index'))
         ->assertOk()
         ->assertSee('+ Nuevo pedido')
-        ->assertSee('Nueva orden espontánea')
+        ->assertDontSee('Nueva orden espontánea')
         ->assertDontSee('+ Nueva orden');
 });
 
@@ -63,7 +63,7 @@ test('el índice marca con 🔁 la orden que tiene un pedido recurrente', functi
 
     $response = $this->actingAs($user)->get(route('production-orders.index'))->assertOk();
 
-    $response->assertSeeInOrder([$order->numberLabel(), '🔁']);
+    $response->assertSeeInOrder([str_pad((string) $order->number, 5, '0', STR_PAD_LEFT), '🔁']);
 });
 
 test('el índice muestra "Hoy" para una orden con fecha de hoy', function () {

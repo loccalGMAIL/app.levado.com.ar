@@ -17,6 +17,18 @@
 
             return $order->scheduled_for->format('d/m/Y');
         };
+
+        // Sin "Orden #": la columna ya dice "Orden", mostrar el prefijo de
+        // nuevo sería redundante. Sólo en esta lista — numberLabel() (con
+        // "Orden #") se sigue usando en el detalle, la planilla de reparto,
+        // breadcrumbs y mensajes de confirmación.
+        $orderNumber = fn ($order) => str_pad((string) $order->number, 5, '0', STR_PAD_LEFT);
+
+        // <x-sortable-th> arma su propia URL desde request(); este cálculo
+        // sólo es para pintar la flecha activa (mismo patrón que labor-types/
+        // stock/ingredients/etc.) — el orden real lo aplica el controller.
+        $sort = request('sort', 'number');
+        $dir = request('dir', 'desc');
     @endphp
 
     {{-- products viaja una sola vez acá (root x-data) y el modal "+ Nuevo
@@ -38,14 +50,10 @@
                             class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                             + Nuevo pedido
                         </button>
-                        <a href="{{ route('production-orders.instant.create') }}"
+                        <button type="button"
+                            @click="$dispatch('open-modal', 'production-instant-create')"
                             class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
                             ⚡ Orden instantánea
-                        </a>
-                        <button type="button"
-                            @click="$dispatch('open-modal', 'production-order-create')"
-                            class="text-sm text-masa-madre hover:text-corteza hover:underline whitespace-nowrap">
-                            Nueva orden espontánea
                         </button>
                     </div>
                 @endcan
@@ -90,7 +98,7 @@
                             class="block bg-white border border-miga rounded-lg p-4 shadow-sm {{ $order->isCancelled() ? 'opacity-60' : '' }}">
                             <div class="flex items-start justify-between gap-2">
                                 <span class="font-medium text-corteza">
-                                    {{ $order->numberLabel() }}
+                                    {{ $orderNumber($order) }}
                                     @if($order->recurring_requests_count > 0)
                                         <span title="Tiene pedidos recurrentes">🔁</span>
                                     @endif
@@ -112,11 +120,11 @@
 
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Orden</th>
-                            <th class="px-4 py-3 font-medium">Fecha</th>
-                            <th class="px-4 py-3 font-medium">Tipo</th>
-                            <th class="px-4 py-3 font-medium text-right">Pedidos</th>
-                            <th class="px-4 py-3 font-medium">Estado</th>
+                            <x-sortable-th column="number" :sort="$sort" :dir="$dir">Orden</x-sortable-th>
+                            <x-sortable-th column="scheduled_for" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
+                            <x-sortable-th column="type" :sort="$sort" :dir="$dir">Tipo</x-sortable-th>
+                            <x-sortable-th column="production_order_requests_count" :sort="$sort" :dir="$dir" align="right">Pedidos</x-sortable-th>
+                            <x-sortable-th column="status" :sort="$sort" :dir="$dir">Estado</x-sortable-th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
@@ -125,7 +133,7 @@
                             <tr class="{{ $order->isCancelled() ? 'opacity-60' : '' }}">
                                 <td class="px-4 py-3 font-medium text-corteza">
                                     <a href="{{ route('production-orders.show', $order) }}" class="hover:underline">
-                                        {{ $order->numberLabel() }}
+                                        {{ $orderNumber($order) }}
                                     </a>
                                     @if($order->recurring_requests_count > 0)
                                         <span title="Tiene pedidos recurrentes">🔁</span>
@@ -159,8 +167,8 @@
         </div>
 
         @can('manage-costs')
-            @include('production-orders.modals.create')
             @include('production-orders.modals.request-create')
+            @include('production-orders.modals.instant-create')
         @endcan
     </div>
 </x-app-layout>
