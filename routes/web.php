@@ -118,10 +118,6 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('production/{production}', [ProductionController::class, 'show'])->name('production.show');
 
     Route::get('production-orders', [ProductionOrderController::class, 'index'])->name('production-orders.index');
-    // "instant" antes de production-orders/{productionOrder} para que no se interprete como un id.
-    Route::get('production-orders/instant', [InstantProductionOrderController::class, 'create'])
-        ->middleware('role:super_admin,owner,admin')
-        ->name('production-orders.instant.create');
     Route::get('production-orders/{productionOrder}', [ProductionOrderController::class, 'show'])->name('production-orders.show');
     Route::get('production-orders/{productionOrder}/preview', [ProductionOrderController::class, 'preview'])->name('production-orders.preview');
     Route::get('production-orders/{productionOrder}/delivery-sheet', [ProductionOrderController::class, 'deliverySheet'])->name('production-orders.delivery-sheet');

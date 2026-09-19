@@ -12,14 +12,16 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\View\View;
 
 /**
  * Orden instantánea: un solo paso — destino único + artículos/cantidad —
  * que crea la orden, la confirma y la produce en el mismo request. Reemplaza
  * a "Producir suelto" (ProductionController::create/store, retirado):
  * absorbido acá dentro del concepto de orden de producción, numerada como
- * cualquier otra.
+ * cualquier otra. Vive como modal en production-orders/index.blade.php
+ * (modals/instant-create.blade.php) — no tiene pantalla propia, ProductionOrderController::index()
+ * ya junta $locations/$deliveryPeople/$products para el modal "+ Nuevo pedido"
+ * y el mismo juego de datos le sirve a éste.
  */
 class InstantProductionOrderController extends Controller
 {
@@ -27,17 +29,6 @@ class InstantProductionOrderController extends Controller
         private readonly ProductionOrderService $orders,
         private readonly AdminActivityRecorder $recorder,
     ) {}
-
-    public function create(): View
-    {
-        $tenant = app(Tenant::class);
-
-        $products = $tenant->products()->producible()->with('recipe')->orderBy('name')->get();
-        $locations = $tenant->locations()->active()->orderBy('name')->get();
-        $deliveryPeople = $tenant->deliveryPeople()->active()->orderBy('name')->get();
-
-        return view('production-orders.instant', compact('products', 'locations', 'deliveryPeople'));
-    }
 
     /**
      * Preview del consumo combinado, sin destino (no afecta el costo) y sin

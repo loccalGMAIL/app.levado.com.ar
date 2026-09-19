@@ -1,4 +1,4 @@
-@props(['pickerId', 'products', 'showFooter' => true])
+@props(['pickerId', 'products', 'showFooter' => true, 'showPrevious' => true])
 
 {{--
     Picker + tabla de renglones de la grilla productionOrderLines — compartido
@@ -21,9 +21,11 @@
             <option value="{{ $product['id'] }}">{{ $product['name'] }}</option>
         @endforeach
     </select>
-    <button type="button" @click="fromPrevious()" class="text-sm text-horno hover:underline whitespace-nowrap">
-        Traer del pedido anterior
-    </button>
+    @if($showPrevious)
+        <button type="button" @click="fromPrevious()" class="text-sm text-horno hover:underline whitespace-nowrap">
+            Traer del pedido anterior
+        </button>
+    @endif
 </div>
 
 <p x-show="duplicateNotice" x-cloak x-text="duplicateNotice" class="px-5 pb-2 text-xs text-amber-700"></p>

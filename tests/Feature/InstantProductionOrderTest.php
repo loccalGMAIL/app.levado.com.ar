@@ -16,28 +16,32 @@ use App\Services\StockService;
 // seedStock() son globales (ProductionTest); productionSetup() es global
 // (ProductionControllerTest) — arma un elaborado en categoría producible.
 
-test('la pantalla de orden instantánea lista los elaborados producibles', function () {
+// La orden instantánea vive como modal en production-orders/index.blade.php
+// (modals/instant-create.blade.php) — no tiene pantalla propia, así que su
+// catálogo de artículos se prueba contra el índice de órdenes.
+
+test('el modal de orden instantánea lista los elaborados producibles', function () {
     [$user, $tenant, $product] = productionSetup();
 
-    $this->actingAs($user)->get(route('production-orders.instant.create'))->assertOk()->assertSee($product->name);
+    $this->actingAs($user)->get(route('production-orders.index'))->assertOk()->assertSee($product->name);
 });
 
-test('la pantalla muestra un elaborado sin categoría', function () {
+test('el modal de orden instantánea muestra un elaborado sin categoría', function () {
     [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
     $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 12, 'yield_unit' => Unit::Unidad->value]);
     manufacturedProduct($tenant, $recipe)->update(['name' => 'ElaboradoSinCategoriaZZ']);
 
-    $this->actingAs($user)->get(route('production-orders.instant.create'))->assertOk()->assertSee('ElaboradoSinCategoriaZZ');
+    $this->actingAs($user)->get(route('production-orders.index'))->assertOk()->assertSee('ElaboradoSinCategoriaZZ');
 });
 
-test('la pantalla oculta un elaborado de una categoría que no se produce', function () {
+test('el modal de orden instantánea oculta un elaborado de una categoría que no se produce', function () {
     [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
     $recipe = Recipe::factory()->for($tenant)->create(['yield_quantity' => 12, 'yield_unit' => Unit::Unidad->value]);
     $product = manufacturedProduct($tenant, $recipe);
     $cafeteria = $tenant->productCategories()->create(['name' => 'Cafetería', 'producible' => false]);
     $product->update(['name' => 'ElaboradoCafeteriaZZ', 'product_category_id' => $cafeteria->id]);
 
-    $this->actingAs($user)->get(route('production-orders.instant.create'))->assertOk()->assertDontSee('ElaboradoCafeteriaZZ');
+    $this->actingAs($user)->get(route('production-orders.index'))->assertOk()->assertDontSee('ElaboradoCafeteriaZZ');
 });
 
 test('producir una orden instantánea deja la orden terminada', function () {
@@ -231,10 +235,13 @@ test('el preview de la orden instantánea con dos artículos distintos no lazy-c
         ->assertJsonPath('lines.0.name', 'Harina');
 });
 
-test('un viewer no puede abrir la pantalla de orden instantánea', function () {
+test('un viewer no ve el botón de orden instantánea', function () {
     [$user] = productionSetup(TenantUserRole::Viewer);
 
-    $this->actingAs($user)->get(route('production-orders.instant.create'))->assertForbidden();
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertDontSee('⚡ Orden instantánea');
 });
 
 test('un viewer no puede producir una orden instantánea', function () {

@@ -1,10 +1,14 @@
 {{--
     Tabla de insumos a consumir (orden y orden instantánea). Presentacional
-    puro: se monta DENTRO de un x-data que trae `lines`, `materialCost`,
+    puro: se monta DENTRO de un x-data que trae `previewLines`, `materialCost`,
     `laborCost`, `totalCost`, `loading`, `error`, `hasShortfall`, `fmt()` y
     `fmtQty()` — el shape que arma consumptionPreviewState() (ver
     resources/js/production/consumption-preview.js). Mismo contrato que
     <x-price-cell-editor>: el componente no define su propio x-data.
+
+    `previewLines`, no `lines`: la orden instantánea combina este x-data con
+    productionOrderLines() (artículos del pedido) en el mismo <form> — ambos
+    factories usaban "lines" y colisionaban.
 --}}
 @props([
     'shortfallNote' => 'Algún insumo no alcanza: producir igual descuenta lo que hay y deja el stock en negativo.',
@@ -22,12 +26,12 @@
     </template>
 
     @if($emptyNote)
-        <template x-if="! error && lines.length === 0 && ! loading">
+        <template x-if="! error && previewLines.length === 0 && ! loading">
             <p class="px-5 py-4 text-sm text-masa-madre">{{ $emptyNote }}</p>
         </template>
     @endif
 
-    <template x-if="! error && lines.length > 0">
+    <template x-if="! error && previewLines.length > 0">
         <div>
             <div x-show="hasShortfall" class="px-5 py-2.5 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">
                 {{ $shortfallNote }}
@@ -42,7 +46,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-miga">
-                    <template x-for="line in lines" :key="line.type + '-' + line.id">
+                    <template x-for="line in previewLines" :key="line.type + '-' + line.id">
                         <tr :class="line.shortfall > 0 ? 'bg-amber-50/50' : ''">
                             <td class="px-5 py-2 text-corteza" x-text="line.name"></td>
                             <td class="px-5 py-2 text-right font-mono text-corteza">
