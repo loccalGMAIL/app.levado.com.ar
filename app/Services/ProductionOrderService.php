@@ -421,6 +421,26 @@ class ProductionOrderService
     }
 
     /**
+     * Sucursales/repartidores activos + el catálogo liviano de artículos
+     * producibles (id/nombre/unidad, no el modelo completo) — lo que
+     * necesitan los modales "+ Nuevo pedido" / "Orden instantánea", se abran
+     * desde Órdenes de producción o desde el dashboard. Con el gate
+     * producible invertido son ~195 artículos; viaja una sola vez por
+     * página, compartido por referencia entre las grillas.
+     *
+     * @return array{0: Collection, 1: Collection, 2: Collection}
+     */
+    public function destinationAndCatalogData(Tenant $tenant): array
+    {
+        $locations = $tenant->locations()->active()->orderBy('name')->get();
+        $deliveryPeople = $tenant->deliveryPeople()->active()->orderBy('name')->get();
+        $products = $tenant->products()->producible()->orderBy('name')->get(['id', 'name', 'unit'])
+            ->map(fn (Product $product) => ['id' => $product->id, 'name' => $product->name, 'unit' => $product->unit->short()]);
+
+        return [$locations, $deliveryPeople, $products];
+    }
+
+    /**
      * Suma la cantidad pedida por artículo a través de todos los pedidos de
      * la orden. Es lo que se produce y lo que muestra el resumen agregado.
      *

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\ProductionOrderStatus;
 use App\Http\Requests\StoreProductionOrderRequest;
-use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
@@ -13,7 +12,6 @@ use App\Services\RecurringProductionRequestMaterializer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -66,7 +64,7 @@ class ProductionOrderController extends Controller
         // Para el modal "+ Nuevo pedido": mismos datos que ya junta show(),
         // acá vive el punto de entrada nuevo (crear el pedido sin abrir
         // ninguna orden primero).
-        [$locations, $deliveryPeople, $products] = $this->destinationAndCatalogData($tenant);
+        [$locations, $deliveryPeople, $products] = $this->orders->destinationAndCatalogData($tenant);
 
         return view('production-orders.index', compact('orders', 'locations', 'deliveryPeople', 'products'));
     }
@@ -101,28 +99,9 @@ class ProductionOrderController extends Controller
 
         $productionOrder->load(['productionOrderRequests.destination', 'productionOrderRequests.lines.product', 'user']);
 
-        [$locations, $deliveryPeople, $products] = $this->destinationAndCatalogData(app(Tenant::class));
+        [$locations, $deliveryPeople, $products] = $this->orders->destinationAndCatalogData(app(Tenant::class));
 
         return view('production-orders.show', compact('productionOrder', 'deliveryPeople', 'locations', 'products'));
-    }
-
-    /**
-     * Sucursales/repartidores activos + el catálogo liviano de artículos
-     * producibles (id/nombre/unidad, no el modelo completo) — lo que
-     * necesitan tanto el detalle de una orden como el modal "+ Nuevo
-     * pedido". Con el gate producible invertido son ~195 artículos; viaja
-     * una sola vez por página, compartido por referencia entre las grillas.
-     *
-     * @return array{0: Collection, 1: Collection, 2: Collection}
-     */
-    private function destinationAndCatalogData(Tenant $tenant): array
-    {
-        $locations = $tenant->locations()->active()->orderBy('name')->get();
-        $deliveryPeople = $tenant->deliveryPeople()->active()->orderBy('name')->get();
-        $products = $tenant->products()->producible()->orderBy('name')->get(['id', 'name', 'unit'])
-            ->map(fn (Product $product) => ['id' => $product->id, 'name' => $product->name, 'unit' => $product->unit->short()]);
-
-        return [$locations, $deliveryPeople, $products];
     }
 
     public function preview(ProductionOrder $productionOrder): JsonResponse

@@ -6,13 +6,17 @@ use App\Models\Notification;
 use App\Models\ProductPrice;
 use App\Models\Tenant;
 use App\Services\NotificationService;
+use App\Services\ProductionOrderService;
 use App\Services\RecipeCostCalculator;
 use App\Services\UnitConverter;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __construct(private readonly NotificationService $notifications) {}
+    public function __construct(
+        private readonly NotificationService $notifications,
+        private readonly ProductionOrderService $productionOrders,
+    ) {}
 
     /**
      * La tabla paginada trabaja EXCLUSIVAMENTE sobre los caches unit_cost y
@@ -154,6 +158,13 @@ class DashboardController extends Controller
         $activeRecipeCount = $tenant->recipes()->active()->count();
         $packagingCount = $tenant->packagings()->active()->count();
 
+        // Para los botones "+ Nuevo pedido" / "⚡ Orden instantánea": mismos
+        // modales de production-orders/index.blade.php, mismos datos.
+        [$locations, $deliveryPeople, $products] = $this->productionOrders->destinationAndCatalogData($tenant);
+
+        // Para el modal "+ Nueva compra" (mismo dato que junta PurchaseController::index()).
+        $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
+
         // ── Estadísticas y datos para los gráficos ──────────────────────────
         // Se recorren las recetas activas una vez con sus líneas para obtener el
         // desglose por componente (ingredientes / mano de obra / descartables)
@@ -247,6 +258,10 @@ class DashboardController extends Controller
             'lowMarginCount',
             'costDistributionForChart',
             'topRecipesForChart',
+            'locations',
+            'deliveryPeople',
+            'products',
+            'suppliers',
         ));
     }
 }

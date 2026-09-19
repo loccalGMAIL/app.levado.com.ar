@@ -17,9 +17,18 @@
 
         $donutHasData = array_sum($costDistributionForChart) > 0;
         $gaugeValue   = $avgMarginPct !== null ? round((float) $avgMarginPct, 1) : 0;
+
+        // Mismo chequeo que recipes/index.blade.php y purchases/index.blade.php
+        // — acá con nombres propios porque los dos modales conviven en esta
+        // misma página (ambos esperan una variable $errorsInCreate).
+        $errorsInRecipeCreate   = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit']) && old('_form') === 'create';
+        $errorsInPurchaseCreate = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'invoice']) && old('_form') === 'create';
     @endphp
 
-    <div class="py-6 px-6 lg:px-8 space-y-5">
+    {{-- products viaja una sola vez acá (root x-data) y los modales "+ Nuevo
+         pedido" / "Orden instantánea" lo leen por referencia — mismo patrón
+         que production-orders/index.blade.php. --}}
+    <div class="py-6 px-6 lg:px-8 space-y-5" x-data="{ products: @js($products) }">
 
         {{-- ═══════════════════════════════════════════════
              GREETING + QUICK ACTIONS
@@ -34,21 +43,46 @@
                     &nbsp;·&nbsp; Actualizado al {{ now()->format('d/m/Y') }}
                 </p>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <a href="{{ route('recipes.index') }}"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Nueva receta
-                </a>
-                <a href="{{ route('purchases.index') }}"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
-                    Compra
-                </a>
+            {{-- grid 2x2 en mobile: los 4 botones quedan del mismo tamaño en vez de
+                 envolver según el largo de cada texto (ver flex-wrap original,
+                 dejaba "Nuevo pedido"/"Orden instantánea" solos en su fila y
+                 "Nueva receta"+"Compra" apareados, descompaginado). A partir de
+                 sm vuelve a fila única con ancho natural. --}}
+            <div class="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:flex-wrap">
+                @can('manage-costs')
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'production-request-create')"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Nuevo pedido
+                    </button>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'production-instant-create')"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
+                        </svg>
+                        Orden instantánea
+                    </button>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'recipe-create')"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Nueva receta
+                    </button>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'purchase-create')"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        Compra
+                    </button>
+                @endcan
             </div>
         </div>
 
@@ -622,6 +656,13 @@
         </div>
         {{-- fin tabla --}}
 
+        @can('manage-costs')
+            @include('production-orders.modals.request-create')
+            @include('production-orders.modals.instant-create')
+            @include('recipes.modals.create', ['errorsInCreate' => $errorsInRecipeCreate])
+            @include('purchases.modals.create', ['errorsInCreate' => $errorsInPurchaseCreate])
+            @include('suppliers.modals.quick-create')
+        @endcan
     </div>
 
     {{-- Datos para los gráficos del dashboard (los renderiza resources/js/dashboard-charts.js) --}}
