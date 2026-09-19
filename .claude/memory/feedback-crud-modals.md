@@ -57,6 +57,25 @@ x-data="{
   vacío y los `x-show` por tipo no ocultan nada. Se resolvió renombrando la propiedad del hijo (`editing` → `popoverOpen`).
   Regla: el `editing` del modal debe tener nombre único respecto de cualquier x-data anidado en la lista.
 
+## Gotchas (aprendidos en Producción — orden instantánea como modal, sesión 18-19/09/2026)
+- **TomSelect (`<select data-searchable>`) dentro de un modal necesita `dropdownParent: 'body'`.**
+  Por default el desplegable se renderiza como hermano del `<select>`, dentro del flujo normal del
+  DOM — cualquier ancestro con `overflow-hidden` (muy común: bordes redondeados de una grilla o
+  tabla) lo recorta y lo deja invisible o casi. Se corrigió una vez, en el init global de app.js
+  (`new TomSelect(el, { maxOptions: null, dropdownParent: 'body' })`), no por-modal — afecta a
+  cualquier picker searchable de la app. Con `dropdownParent: 'body'` hace falta además que
+  `.ts-dropdown` tenga un `z-index` mayor al de cualquier modal (incluido uno anidado) para que no
+  quede tapado por el overlay — ver `resources/css/app.css`.
+- **No combinar dos factories Alpine que usan el mismo nombre de propiedad en el mismo `x-data`
+  plano.** `consumptionPreviewState()` y `productionOrderLines()` (ambos en `resources/js/production/`)
+  usan/usaban `lines` con significados distintos. Spreadeados juntos en un solo `<form x-data="...">`
+  (sin scope anidado), los métodos del uno (`resetPreview()`) pisan silenciosamente el estado del
+  otro — sin ningún error en consola, el síntoma es datos que aparecen y desaparecen solos un rato
+  después (ej. con un `$watch` debounced de por medio). Antes de spreadear dos factories en el mismo
+  objeto literal, listar las propiedades que cada uno define y confirmar que no colisionan — o
+  namespacearlos / mantenerlos en scopes Alpine anidados distintos (como ya hace `show.blade.php`,
+  que por eso nunca pisó nada).
+
 ## Rutas
 Solo `index` (GET), `store` (POST), `update` (PUT), `toggleActive` (PATCH). Sin rutas GET para `/create` o `/{id}/edit`.
 

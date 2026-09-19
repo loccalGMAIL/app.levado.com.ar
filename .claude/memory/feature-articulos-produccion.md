@@ -379,7 +379,8 @@ horizonte móvil (cron)") — **resuelto sin cron**, ver decisión 1 abajo.
    artículos, pausar/reanudar, "Generar ahora") porque el pedido que originó un recurrente puede ya
    haberse producido y ser difícil de encontrar.
 8. **La orden instantánea no cambió** — sigue siendo el atajo de urgencia (un destino, se arma y se
-   despacha ya, sin fecha ni recurrencia).
+   despacha ya, sin fecha ni recurrencia). *(Actualizado: sí cambió de contenedor — ver "Ajustes de
+   UX post-rediseño" más abajo, se convirtió de pantalla a modal.)*
 
 **Lo que se hizo** (913→905 tests verdes; el número baja porque se retiraron 8 tests del feature
 retirado, no por cobertura perdida):
@@ -405,6 +406,84 @@ retirado, no por cobertura perdida):
   demás del mismo objeto), y un `\$dispatch` mal escapado con backslash fuera de un bloque Blade
   `{{ }}` (el backslash sólo hace falta *dentro* de `{{ }}`, no en un atributo HTML común) — mismo tipo
   de trampa que el ya documentado `@@production-lines-saved.window`.
+
+## Ajustes de UX post-rediseño: modales, orden instantánea, ordenamiento ✅ (18–19/09/2026)
+Serie de ajustes puntuales pedidos por el usuario usando ya en la práctica la pantalla de Órdenes
+rediseñada (sección de arriba). Sin cambios de modelo de datos — todo Blade/Alpine/controller, un
+pedido chico a la vez, cada uno verificado en vivo contra Confitería Orfano y limpiado después
+(crear → confirmar en pantalla → anular vía `ProductionOrderService::cancel()` en tinker para no
+disparar el `confirm()` del botón "Anular orden" desde el browser automation → borrar
+duro orden/pedido/producción/movimientos). **905 tests verdes** durante toda la serie (sin cambios
+netos de cantidad — sólo tests reescritos/reubicados, ver abajo).
+
+**Decisiones tomadas** (no re-litigar):
+1. **Lista de Órdenes**: columnas ordenables (`<x-sortable-th>`, mismo patrón que
+   `PurchaseController`/`LaborTypeController`) en las 5 columnas — Orden/Fecha/Tipo/Pedidos/Estado —
+   default número de orden descendente (mantiene el "más reciente primero" que ya había).
+   La columna "Orden" pasa a mostrar sólo el número con ceros a la izquierda (`00012`, 5 dígitos) sin
+   el prefijo "Orden #" — **sólo en esta lista**; `ProductionOrder::numberLabel()` (con "Orden #")
+   sigue igual en el detalle, planilla de reparto, breadcrumbs y mensajes de confirmación. Se sacó el
+   botón/link "Nueva orden espontánea" del header (la ruta `production-orders.store`, el controller y
+   el modal `modals/create.blade.php` se dejaron intactos a propósito — sin trigger en la UI pero sin
+   romper nada, dos tests siguen ejercitando el alta por POST directo).
+2. **Modal "+ Nuevo pedido"**: destino (radios) + `<select>` de sucursal/repartidor + fecha de
+   entrega, los tres en una sola fila (antes apilados). La sección "Se repite" (checkboxes de día +
+   atajos "Lunes a sábado"/"Todos los días"/"Lunes a viernes" + "Repetir hasta") también pasó a una
+   sola fila. Ninguna de las dos filas entraba en el ancho `2xl` del modal — se agregó la opción
+   `3xl` a `<x-modal>`/`<x-crud-modal>` (`resources/views/components/modal.blade.php`, antes sólo
+   llegaba hasta `2xl`) y se subió `request-create.blade.php` a `max-width="3xl"`. Se sacó el tilde
+   "Copiar los artículos del último pedido a este destino" (el botón "Traer del pedido anterior"
+   sigue siendo el único camino, y sigue andando) — el campo `copy_previous` en
+   `StorePlaceRequestRequest`/`ProductionOrderService::placeRequest()` se dejó sin uso a propósito,
+   no rompe nada sin el checkbox.
+3. **Orden instantánea pasó de pantalla propia a modal** (`modals/instant-create.blade.php`), para
+   que trabaje igual que "+ Nuevo pedido" — misma grilla `productionOrderLines()`/`lines-grid.blade.php`.
+   `lines-grid.blade.php` sumó el prop `showPrevious` (default `true`, no rompe nada existente) para
+   poder ocultar el botón "Traer del pedido anterior" acá — no tiene sentido para un alta de urgencia.
+   Se retiró `InstantProductionOrderController::create()` + la ruta GET
+   `production-orders.instant.create` + la vista `instant.blade.php` + la rama muerta del breadcrumb
+   en `navigation.blade.php`; **`store()`/`preview()` (POST) se dejaron intactos**, siguen probados
+   directo por HTTP en `InstantProductionOrderTest.php` sin pasar por la UI. Los tres tests que
+   abrían la pantalla vieja (`GET production-orders.instant.create`) pasaron a pegarle a
+   `production-orders.index` y comprobar que el catálogo aparece ahí (mismo `$products` que ya arma
+   `ProductionOrderController::destinationAndCatalogData()` para "+ Nuevo pedido" — no hizo falta
+   duplicar la query).
+4. **"Insumos a consumir" (preview de consumo en vivo) se sacó del modal de orden instantánea** — el
+   usuario lo consideró redundante ahí, ya se ve después en el detalle de la orden creada
+   (`show.blade.php`, mismo `<x-production-consumption-preview>`). Se borró todo lo que sólo existía
+   para alimentarlo en el modal: el spread `...consumptionPreviewState()`, el `$watch('lines', ...)`
+   con debounce de 400ms, y el método `loadPreview()` que pegaba a
+   `POST production-orders/instant/preview`. **El endpoint/controller/Form Request se dejaron
+   intactos** (siguen con sus dos tests directos) — nada en la UI lo llama más, pero no se retiró
+   backend por una decisión de UI. "Notas" en el mismo modal se hizo plegable (oculto detrás de un
+   link "+ Agregar nota", mismo patrón `<template x-if>` que ya usaba "Se repite" en "+ Nuevo
+   pedido" — se auto-expande si `$errors->has('notes')`).
+
+**Bug real encontrado en vivo (no lo atrapaba ningún test)**: al combinar
+`...consumptionPreviewState()` y `...productionOrderLines()` en el mismo `x-data` plano del modal de
+orden instantánea (antes del punto 4 de arriba), **ambos factories usan una propiedad llamada
+`lines`** con significados distintos — artículos del pedido vs. renglones de insumo del preview.
+`resetPreview()`/`applyPreview()` (que corrían cada vez que el debounce del preview disparaba)
+pisaban silenciosamente los artículos recién agregados a la grilla: el artículo aparecía y
+desaparecía solo ~400ms después. En `show.blade.php` nunca pasa porque `consumptionPreviewState()`
+vive en el x-data de la PÁGINA y cada `productionOrderLines()` vive en su propio x-data hijo, uno
+por pedido (scopes Alpine distintos, sin colisión). Se corrigió renombrando la propiedad de
+`consumptionPreviewState()` a `previewLines`
+(`resources/js/production/consumption-preview.js` + `<x-production-consumption-preview>`) — cambio
+angosto, sin tocar `show.blade.php` (no referencia `.lines` directo, sólo a través del componente).
+**Ver [[feedback-crud-modals]] para la regla general** (evitar combinar dos factories Alpine con
+nombres de propiedad iguales en un mismo scope plano).
+
+**Bug de UI encontrado en vivo, aparte, afecta TODOS los modales de la app**: el picker
+`<select data-searchable>` (TomSelect) dentro de un modal mostraba el desplegable de opciones
+recortado/invisible — el `<div class="... overflow-hidden">` que redondea la grilla de artículos
+(border-radius del cuadro) le cortaba el dropdown, porque TomSelect por default lo renderiza como
+hermano del `<select>`, dentro del mismo flujo del DOM. Se corrigió agregando
+`dropdownParent: 'body'` al init global de TomSelect (`resources/js/app.js`, afecta TODO
+`[data-searchable]` de la app, no sólo Producción) y subiendo `.ts-dropdown { z-index }` de 50 a 70
+en `resources/css/app.css` (para ganarle a cualquier modal, incluido uno anidado — el más alto en
+uso hoy es `z=60` en `suppliers/modals/quick-create.blade.php`). Verificado que no rompió el picker
+de proveedor en Compras (otro `data-searchable` que ya andaba bien).
 
 ## Próximo — lo que sigue sobre la mesa (parkeado, no para la sesión actual)
 2. **Semi-elaborados stockeables** — las sub-recetas son siempre phantom (`RecipeExploder`). BOM multinivel real.
