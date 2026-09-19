@@ -485,6 +485,12 @@ en `resources/css/app.css` (para ganarle a cualquier modal, incluido uno anidado
 uso hoy es `z=60` en `suppliers/modals/quick-create.blade.php`). Verificado que no rompió el picker
 de proveedor en Compras (otro `data-searchable` que ya andaba bien).
 
+## v0.13.2 — "+ Nuevo pedido" y "⚡ Orden instantánea" también desde el Dashboard (19/09/2026)
+Los mismos dos modales de `production-orders/index.blade.php` (sin cambios) ahora también se abren
+desde los quick actions del saludo en `/dashboard`, junto con altas de receta y compra. Detalle
+completo (gate `manage-costs`, grid 2×2 en mobile, colisión de `$errorsInCreate` al reusar modales
+ajenos) en [[feature-dashboard]].
+
 ## Próximo — lo que sigue sobre la mesa (parkeado, no para la sesión actual)
 2. **Semi-elaborados stockeables** — las sub-recetas son siempre phantom (`RecipeExploder`). BOM multinivel real.
 3. **Movimientos de stock por destino** de P5 (transferencias/reparto) — ver la sección de arriba. Ahora

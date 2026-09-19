@@ -76,6 +76,22 @@ x-data="{
   namespacearlos / mantenerlos en scopes Alpine anidados distintos (como ya hace `show.blade.php`,
   que por eso nunca pisó nada).
 
+## Gotchas (aprendidos al reusar modales de Recetas/Compras en el Dashboard, sesión 19/09/2026)
+- **Dos convenciones distintas para `$errorsInCreate` conviven en el proyecto.** Los modales de
+  producción (`production-orders/modals/*.blade.php`) calculan su propio `$errorsInXxx` en un `@php`
+  al tope del archivo — son autocontenidos. Los modales más viejos (`recipes/modals/create.blade.php`,
+  `purchases/modals/create.blade.php`, etc.) NO lo hacen: esperan que la página que los `@include`
+  ya haya definido `$errorsInCreate` (así lo hacen sus índices originales). Antes de reusar un modal
+  ajeno desde otra página, revisar si es de la primera o la segunda familia.
+- **Si una página incluye dos modales de la segunda familia, no puede pasarles la misma
+  `$errorsInCreate`** — cada uno la pisaría. Solución: calcular una variable con nombre propio por
+  módulo (`$errorsInRecipeCreate`, `$errorsInPurchaseCreate`) y pasarla con la sintaxis de
+  `@include('modulo.modals.create', ['errorsInCreate' => $errorsInModuloCreate])`. Ver
+  [[feature-dashboard]] (quick actions del saludo, v0.13.2).
+- Si el modal reusado depende de otro modal auxiliar (ej. `purchases/modals/create.blade.php` abre
+  `supplier-quick-create` con "+ Nuevo proveedor"), ese auxiliar también hay que incluirlo en la
+  página nueva — no es automático por estar en el mismo `@can`.
+
 ## Rutas
 Solo `index` (GET), `store` (POST), `update` (PUT), `toggleActive` (PATCH). Sin rutas GET para `/create` o `/{id}/edit`.
 
