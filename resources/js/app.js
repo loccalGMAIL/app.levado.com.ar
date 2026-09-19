@@ -37,9 +37,13 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// Initialize Tom Select on [data-searchable] elements (non-Alpine selects)
+// Initialize Tom Select on [data-searchable] elements (non-Alpine selects).
+// dropdownParent: 'body' saca el listado del flujo normal del DOM (se
+// posiciona con JS sobre las coordenadas del control) — sin esto, cualquier
+// ancestro con overflow-hidden (como el borde redondeado de la grilla de
+// artículos dentro de un modal) recorta el desplegable y lo deja invisible.
 document.querySelectorAll('[data-searchable]').forEach(function (el) {
-    const ts = new TomSelect(el, { maxOptions: null });
+    const ts = new TomSelect(el, { maxOptions: null, dropdownParent: 'body' });
     el._ts = ts;
 });
 

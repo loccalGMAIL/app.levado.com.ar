@@ -280,14 +280,17 @@
     color: #3D2B1F;
 }
 
-/* Dropdown panel */
+/* Dropdown panel. Con dropdownParent: 'body' (ver app.js) este panel cuelga
+   directo de <body>, así que su z-index tiene que ganarle al de cualquier
+   modal — incluido uno anidado (x-modal admite :z, el más alto en uso hoy
+   es 60 en suppliers/modals/quick-create.blade.php). */
 .ts-dropdown {
     border: 1px solid #d1d5db;
     border-radius: 0.375rem;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     font-size: 0.875rem;
     margin-top: 2px;
-    z-index: 50;
+    z-index: 70;
 }
 
 .ts-dropdown .ts-dropdown-content {
