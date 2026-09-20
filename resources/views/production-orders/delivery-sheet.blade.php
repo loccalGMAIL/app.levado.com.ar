@@ -34,6 +34,9 @@
                         <div class="bg-miga px-4 py-2">
                             <span class="text-xs text-masa-madre">{{ $request->numberLabel() }} · {{ $request->destination_type->label() }}</span>
                             <div class="font-semibold text-corteza">{{ $request->destination?->name ?? '—' }}</div>
+                            @if($request->destination instanceof \App\Models\Customer && $request->destination->address)
+                                <div class="text-xs text-masa-madre">{{ $request->destination->address }}@if($request->destination->city), {{ $request->destination->city }}@endif</div>
+                            @endif
                         </div>
                         @if($request->lines->isEmpty())
                             <p class="px-4 py-3 text-sm text-masa-madre">Sin artículos.</p>

@@ -27,9 +27,7 @@ class AppServiceProvider extends ServiceProvider
         // discriminadores polimórficos del dominio — llamarlo dos veces pisaría
         // el primero. CatalogItemType (stockable/purchaseable, 'ingredient'/
         // 'packaging'/'product') + DeliveryDestinationType (destino del pedido
-        // de producción, 'location'/'delivery_person'). Los valores ya
-        // persistidos coinciden con las claves, así que no requiere migración
-        // de datos. Desbloquea with()/whereHasMorph().
+        // de producción, 'location'/'customer'). Desbloquea with()/whereHasMorph().
         Relation::enforceMorphMap(
             collect(CatalogItemType::cases())
                 ->mapWithKeys(fn (CatalogItemType $type) => [$type->value => $type->modelClass()])

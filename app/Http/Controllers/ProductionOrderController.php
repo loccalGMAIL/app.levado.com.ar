@@ -64,9 +64,9 @@ class ProductionOrderController extends Controller
         // Para el modal "+ Nuevo pedido": mismos datos que ya junta show(),
         // acá vive el punto de entrada nuevo (crear el pedido sin abrir
         // ninguna orden primero).
-        [$locations, $deliveryPeople, $products] = $this->orders->destinationAndCatalogData($tenant);
+        [$locations, $customers, $products] = $this->orders->destinationAndCatalogData($tenant);
 
-        return view('production-orders.index', compact('orders', 'locations', 'deliveryPeople', 'products'));
+        return view('production-orders.index', compact('orders', 'locations', 'customers', 'products'));
     }
 
     public function store(StoreProductionOrderRequest $request): RedirectResponse
@@ -99,9 +99,9 @@ class ProductionOrderController extends Controller
 
         $productionOrder->load(['productionOrderRequests.destination', 'productionOrderRequests.lines.product', 'user']);
 
-        [$locations, $deliveryPeople, $products] = $this->orders->destinationAndCatalogData(app(Tenant::class));
+        [$locations, $customers, $products] = $this->orders->destinationAndCatalogData(app(Tenant::class));
 
-        return view('production-orders.show', compact('productionOrder', 'deliveryPeople', 'locations', 'products'));
+        return view('production-orders.show', compact('productionOrder', 'customers', 'locations', 'products'));
     }
 
     public function preview(ProductionOrder $productionOrder): JsonResponse

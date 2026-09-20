@@ -29,6 +29,14 @@ class ProductionOrderRequestController extends Controller
 
         $tenant = app(Tenant::class);
 
+        // El select unificado de destino manda "location:3"/"customer:7" —
+        // se parte al mismo par que valida el resto del dominio (ver
+        // DeliveryDestinationType::splitRef(), dueño único del split).
+        if ($request->filled('destination') && ! $request->filled('destination_type')) {
+            [$type, $id] = DeliveryDestinationType::splitRef($request->string('destination')->toString());
+            $request->merge(['destination_type' => $type, 'destination_id' => $id]);
+        }
+
         $data = $request->validate([
             'destination_type' => ['required', Rule::enum(DeliveryDestinationType::class)],
             'destination_id' => ['required', 'integer', new ValidDestination($tenant, $request->input('destination_type'))],

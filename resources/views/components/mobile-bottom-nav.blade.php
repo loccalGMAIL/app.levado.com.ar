@@ -165,6 +165,17 @@
             @endcan
 
             @can('edit-settings')
+            <a href="{{ route('customers.index') }}" @click="open = false"
+                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
+                    {{ request()->routeIs('customers.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+                Clientes
+            </a>
+            @endcan
+
+            @can('edit-settings')
             <a href="{{ route('price-lists.index') }}" @click="open = false"
                 class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
                     {{ request()->routeIs('price-lists.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
@@ -263,7 +274,7 @@
         {{-- Más --}}
         <button @click="open = !open"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs(['production.*', 'products.*', 'price-lists.*', 'fixed-costs.*', 'variable-expenses.*', 'packaging.*', 'labor-types.*', 'suppliers.*', 'stock.*', 'business.*', 'team.*', 'locations.*', 'profile.*', 'admin.*']) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs(['production.*', 'products.*', 'price-lists.*', 'fixed-costs.*', 'variable-expenses.*', 'packaging.*', 'labor-types.*', 'suppliers.*', 'stock.*', 'business.*', 'team.*', 'locations.*', 'delivery-people.*', 'customers.*', 'profile.*', 'admin.*']) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>

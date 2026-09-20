@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\DeliveryDestinationType;
+use App\Http\Requests\Concerns\ResolvesDestinationRef;
 use App\Models\Tenant;
 use App\Rules\ValidDestination;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -16,9 +17,16 @@ use Illuminate\Validation\Rule;
  */
 class StorePlaceRequestRequest extends FormRequest
 {
+    use ResolvesDestinationRef;
+
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->resolveDestinationRef();
     }
 
     /** @return array<string, ValidationRule|array<mixed>|string> */

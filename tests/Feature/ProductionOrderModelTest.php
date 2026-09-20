@@ -2,7 +2,7 @@
 
 use App\Enums\DeliveryDestinationType;
 use App\Enums\ProductionOrderStatus;
-use App\Models\DeliveryPerson;
+use App\Models\Customer;
 use App\Models\Location;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderLine;
@@ -51,16 +51,16 @@ test('un pedido con destino sucursal resuelve la relación morph a Location', fu
         ->and($request->destination_type)->toBe(DeliveryDestinationType::Location);
 });
 
-test('un pedido con destino repartidor resuelve la relación morph a DeliveryPerson', function () {
+test('un pedido con destino cliente resuelve la relación morph a Customer', function () {
     $tenant = Tenant::factory()->create();
-    $deliveryPerson = DeliveryPerson::factory()->for($tenant)->create();
+    $customer = Customer::factory()->for($tenant)->create();
     $request = ProductionOrderRequest::factory()->for($tenant)->create([
-        'destination_type' => DeliveryDestinationType::DeliveryPerson->value,
-        'destination_id' => $deliveryPerson->id,
+        'destination_type' => DeliveryDestinationType::Customer->value,
+        'destination_id' => $customer->id,
     ]);
 
-    expect($request->destination)->toBeInstanceOf(DeliveryPerson::class)
-        ->and($request->destination->id)->toBe($deliveryPerson->id);
+    expect($request->destination)->toBeInstanceOf(Customer::class)
+        ->and($request->destination->id)->toBe($customer->id);
 });
 
 test('una línea de pedido pertenece a su pedido y a su artículo', function () {

@@ -4,7 +4,7 @@ use App\Enums\DeliveryDestinationType;
 use App\Enums\ProductionOrderStatus;
 use App\Enums\ProductionOrderType;
 use App\Enums\TenantUserRole;
-use App\Models\DeliveryPerson;
+use App\Models\Customer;
 use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
@@ -43,12 +43,12 @@ test('cargar un pedido crea la orden diaria del día si no existe', function () 
 
 test('un segundo pedido para la misma fecha se cuelga de la orden Draft ya creada', function () {
     [$user, $tenant, $product] = productionSetup();
-    $deliveryPerson = DeliveryPerson::factory()->for($tenant)->create();
+    $customer = Customer::factory()->for($tenant)->create();
 
     $this->actingAs($user)->post(route('production-requests.store'), placeRequestPayload($tenant, $product))->assertRedirect();
     $this->actingAs($user)->post(route('production-requests.store'), placeRequestPayload($tenant, $product, [
-        'destination_type' => 'delivery_person',
-        'destination_id' => $deliveryPerson->id,
+        'destination_type' => 'customer',
+        'destination_id' => $customer->id,
     ]))->assertRedirect();
 
     expect(ProductionOrder::where('tenant_id', $tenant->id)->count())->toBe(1);
@@ -155,6 +155,67 @@ test('un destino de otro negocio se rechaza', function () {
 
     $this->actingAs($user)
         ->post(route('production-requests.store'), placeRequestPayload($tenant, $product, ['destination_id' => $foreignLocation->id]))
+        ->assertSessionHasErrors('destination_id');
+});
+
+// --- Select unificado de destino ("location:ID" / "customer:ID") ---
+
+test('el select unificado de destino acepta "location:ID"', function () {
+    [$user, $tenant, $product] = productionSetup();
+
+    $this->actingAs($user)
+        ->post(route('production-requests.store'), [
+            'destination' => "location:{$tenant->defaultLocation()->id}",
+            'scheduled_for' => now()->toDateString(),
+            'lines' => [['product_id' => $product->id, 'quantity' => 3]],
+        ])
+        ->assertRedirect();
+
+    $request = ProductionOrderRequest::where('tenant_id', $tenant->id)->first();
+    expect($request->destination_type)->toBe(DeliveryDestinationType::Location)
+        ->and($request->destination_id)->toBe($tenant->defaultLocation()->id);
+});
+
+test('el select unificado de destino acepta "customer:ID"', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $customer = Customer::factory()->for($tenant)->create();
+
+    $this->actingAs($user)
+        ->post(route('production-requests.store'), [
+            'destination' => "customer:{$customer->id}",
+            'scheduled_for' => now()->toDateString(),
+            'lines' => [['product_id' => $product->id, 'quantity' => 3]],
+        ])
+        ->assertRedirect();
+
+    $request = ProductionOrderRequest::where('tenant_id', $tenant->id)->first();
+    expect($request->destination_type)->toBe(DeliveryDestinationType::Customer)
+        ->and($request->destination_id)->toBe($customer->id);
+});
+
+test('una referencia de destino con un tipo desconocido se rechaza', function () {
+    [$user, $tenant, $product] = productionSetup();
+
+    $this->actingAs($user)
+        ->post(route('production-requests.store'), [
+            'destination' => 'banana:1',
+            'scheduled_for' => now()->toDateString(),
+            'lines' => [['product_id' => $product->id, 'quantity' => 3]],
+        ])
+        ->assertSessionHasErrors('destination_type');
+});
+
+test('el select unificado no puede referenciar un cliente de otro negocio', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $otherTenant = Tenant::factory()->create();
+    $foreignCustomer = Customer::factory()->for($otherTenant)->create();
+
+    $this->actingAs($user)
+        ->post(route('production-requests.store'), [
+            'destination' => "customer:{$foreignCustomer->id}",
+            'scheduled_for' => now()->toDateString(),
+            'lines' => [['product_id' => $product->id, 'quantity' => 3]],
+        ])
         ->assertSessionHasErrors('destination_id');
 });
 

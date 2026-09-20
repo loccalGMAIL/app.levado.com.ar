@@ -421,7 +421,7 @@ class ProductionOrderService
     }
 
     /**
-     * Sucursales/repartidores activos + el catálogo liviano de artículos
+     * Sucursales/clientes activos + el catálogo liviano de artículos
      * producibles (id/nombre/unidad, no el modelo completo) — lo que
      * necesitan los modales "+ Nuevo pedido" / "Orden instantánea", se abran
      * desde Órdenes de producción o desde el dashboard. Con el gate
@@ -433,11 +433,11 @@ class ProductionOrderService
     public function destinationAndCatalogData(Tenant $tenant): array
     {
         $locations = $tenant->locations()->active()->orderBy('name')->get();
-        $deliveryPeople = $tenant->deliveryPeople()->active()->orderBy('name')->get();
+        $customers = $tenant->customers()->active()->orderBy('name')->get();
         $products = $tenant->products()->producible()->orderBy('name')->get(['id', 'name', 'unit'])
             ->map(fn (Product $product) => ['id' => $product->id, 'name' => $product->name, 'unit' => $product->unit->short()]);
 
-        return [$locations, $deliveryPeople, $products];
+        return [$locations, $customers, $products];
     }
 
     /**

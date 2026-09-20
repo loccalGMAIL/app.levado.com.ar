@@ -27,7 +27,7 @@ class ValidDestination implements ValidationRule
 
         $exists = match ($type) {
             DeliveryDestinationType::Location => $this->tenant->locations()->whereKey($value)->exists(),
-            DeliveryDestinationType::DeliveryPerson => $this->tenant->deliveryPeople()->whereKey($value)->exists(),
+            DeliveryDestinationType::Customer => $this->tenant->customers()->whereKey($value)->exists(),
             default => false,
         };
 

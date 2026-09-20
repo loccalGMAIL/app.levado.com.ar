@@ -4,7 +4,7 @@ use App\Enums\ProductionOrderStatus;
 use App\Enums\ProductionOrderType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
-use App\Models\DeliveryPerson;
+use App\Models\Customer;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\ProductionOrder;
@@ -96,21 +96,21 @@ test('la orden instantánea queda con tipo Instantánea y un pedido con el desti
         ->and($order->productionOrderRequests->first()->position)->toBe(1);
 });
 
-test('la orden instantánea admite un repartidor como destino', function () {
+test('la orden instantánea admite un cliente como destino', function () {
     [$user, $tenant, $product, $harina] = productionSetup();
     seedStock($harina, 5000, $user);
-    $repartidor = DeliveryPerson::factory()->for($tenant)->create();
+    $customer = Customer::factory()->for($tenant)->create();
 
     $this->actingAs($user)
         ->post(route('production-orders.instant.store'), [
-            'destination_type' => 'delivery_person',
-            'destination_id' => $repartidor->id,
+            'destination_type' => 'customer',
+            'destination_id' => $customer->id,
             'items' => [['product_id' => $product->id, 'quantity' => 12]],
         ])
         ->assertRedirect();
 
     $order = ProductionOrder::where('tenant_id', $tenant->id)->with('productionOrderRequests')->first();
-    expect($order->productionOrderRequests->first()->destination_id)->toBe($repartidor->id);
+    expect($order->productionOrderRequests->first()->destination_id)->toBe($customer->id);
 });
 
 test('la orden instantánea numera la orden y su pedido', function () {
@@ -158,6 +158,22 @@ test('la orden instantánea rechaza un destino de otro negocio', function () {
             'items' => [['product_id' => $product->id, 'quantity' => 12]],
         ])
         ->assertSessionHasErrors('destination_id');
+});
+
+test('la orden instantánea acepta el select unificado de destino ("customer:ID")', function () {
+    [$user, $tenant, $product, $harina] = productionSetup();
+    seedStock($harina, 5000, $user);
+    $customer = Customer::factory()->for($tenant)->create();
+
+    $this->actingAs($user)
+        ->post(route('production-orders.instant.store'), [
+            'destination' => "customer:{$customer->id}",
+            'items' => [['product_id' => $product->id, 'quantity' => 12]],
+        ])
+        ->assertRedirect();
+
+    $order = ProductionOrder::where('tenant_id', $tenant->id)->with('productionOrderRequests')->first();
+    expect($order->productionOrderRequests->first()->destination_id)->toBe($customer->id);
 });
 
 test('la orden instantánea rechaza un artículo de reventa', function () {

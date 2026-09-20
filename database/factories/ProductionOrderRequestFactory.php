@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\DeliveryDestinationType;
-use App\Models\DeliveryPerson;
+use App\Models\Customer;
 use App\Models\Location;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
@@ -42,12 +42,12 @@ class ProductionOrderRequestFactory extends Factory
         ];
     }
 
-    /** Destino repartidor en vez de sucursal (el default). */
-    public function toDeliveryPerson(): static
+    /** Destino cliente en vez de sucursal (el default). */
+    public function toCustomer(): static
     {
         return $this->state(fn (array $attributes) => [
-            'destination_type' => DeliveryDestinationType::DeliveryPerson->value,
-            'destination_id' => DeliveryPerson::factory()->create([
+            'destination_type' => DeliveryDestinationType::Customer->value,
+            'destination_id' => Customer::factory()->create([
                 'tenant_id' => $attributes['tenant_id'] ?? Tenant::factory()->create()->id,
             ])->id,
         ]);

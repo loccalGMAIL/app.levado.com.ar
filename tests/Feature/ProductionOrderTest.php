@@ -59,7 +59,7 @@ test('aggregate suma la cantidad de un mismo artículo pedido por dos destinos',
         'unit' => $product->unit->value,
     ]);
 
-    $requestB = ProductionOrderRequest::factory()->for($tenant)->toDeliveryPerson()->create(['production_order_id' => $order->id]);
+    $requestB = ProductionOrderRequest::factory()->for($tenant)->toCustomer()->create(['production_order_id' => $order->id]);
     ProductionOrderLine::factory()->create([
         'production_order_request_id' => $requestB->id,
         'product_id' => $product->id,

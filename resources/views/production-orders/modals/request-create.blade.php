@@ -17,8 +17,9 @@
                 products: products,
                 previousUrl: @js(route('production-requests.previous-lines')),
             }),
-            destinationType: '{{ old('destination_type', 'location') }}',
-            destinationId: '{{ old('destination_id', '') }}',
+            destination: '{{ old('destination', '') }}',
+            get destinationType() { return this.destination.split(':')[0] || ''; },
+            get destinationId() { return this.destination.split(':')[1] || ''; },
             recurs: false,
             weekdays: [],
             endsOn: '',
@@ -26,45 +27,11 @@
         @csrf
 
         <div class="flex flex-col md:flex-row md:items-start gap-4">
-            <div>
-                <x-input-label value="Destino" />
-                <div class="mt-1 flex gap-4">
-                    <label class="flex items-center gap-2 text-sm text-corteza">
-                        <input type="radio" name="destination_type" value="location" x-model="destinationType"
-                            @change="destinationId = ''" class="border-gray-300 text-horno focus:ring-horno">
-                        Sucursal
-                    </label>
-                    <label class="flex items-center gap-2 text-sm text-corteza">
-                        <input type="radio" name="destination_type" value="delivery_person" x-model="destinationType"
-                            @change="destinationId = ''" class="border-gray-300 text-horno focus:ring-horno">
-                        Repartidor
-                    </label>
-                </div>
+            <div class="flex-1">
+                <x-input-label for="request_create_destination" value="Destino" />
+                @include('production-orders.partials.destination-select', ['id' => 'request_create_destination', 'locations' => $locations, 'customers' => $customers])
                 <x-input-error :messages="$errors->get('destination_type')" class="mt-2" />
-            </div>
-
-            <div class="flex-1" x-show="destinationType === 'location'">
-                <x-input-label for="request_create_location" value="Sucursal" />
-                <select id="request_create_location" x-model="destinationId"
-                    x-bind:name="destinationType === 'location' ? 'destination_id' : ''"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                    <option value="">Elegí una sucursal…</option>
-                    @foreach($locations as $location)
-                        <option value="{{ $location->id }}">{{ $location->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="flex-1" x-show="destinationType === 'delivery_person'">
-                <x-input-label for="request_create_delivery_person" value="Repartidor" />
-                <select id="request_create_delivery_person" x-model="destinationId"
-                    x-bind:name="destinationType === 'delivery_person' ? 'destination_id' : ''"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                    <option value="">Elegí un repartidor…</option>
-                    @foreach($deliveryPeople as $deliveryPerson)
-                        <option value="{{ $deliveryPerson->id }}">{{ $deliveryPerson->name }}</option>
-                    @endforeach
-                </select>
+                <x-input-error :messages="$errors->get('destination_id')" class="mt-2" />
             </div>
 
             <div class="w-full md:w-44">
@@ -75,7 +42,6 @@
                 <x-input-error :messages="$errors->get('scheduled_for')" class="mt-2" />
             </div>
         </div>
-        <x-input-error :messages="$errors->get('destination_id')" class="mt-2" />
 
         <div>
             <x-input-label value="Artículos" />

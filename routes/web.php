@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\TenantController as AdminTenantController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AlertSettingsController;
 use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryPersonController;
 use App\Http\Controllers\FixedCostCategoryController;
@@ -291,6 +292,11 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner'])->gro
     Route::post('delivery-people', [DeliveryPersonController::class, 'store'])->name('delivery-people.store');
     Route::put('delivery-people/{deliveryPerson}', [DeliveryPersonController::class, 'update'])->name('delivery-people.update');
     Route::patch('delivery-people/{deliveryPerson}/toggle-active', [DeliveryPersonController::class, 'toggleActive'])->name('delivery-people.toggle-active');
+
+    Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+    Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
+    Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+    Route::patch('customers/{customer}/toggle-active', [CustomerController::class, 'toggleActive'])->name('customers.toggle-active');
 });
 
 // Mi equipo (requiere auth + tenant resuelto + rol manage-team)

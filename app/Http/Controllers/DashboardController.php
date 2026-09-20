@@ -160,7 +160,7 @@ class DashboardController extends Controller
 
         // Para los botones "+ Nuevo pedido" / "⚡ Orden instantánea": mismos
         // modales de production-orders/index.blade.php, mismos datos.
-        [$locations, $deliveryPeople, $products] = $this->productionOrders->destinationAndCatalogData($tenant);
+        [$locations, $customers, $products] = $this->productionOrders->destinationAndCatalogData($tenant);
 
         // Para el modal "+ Nueva compra" (mismo dato que junta PurchaseController::index()).
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
@@ -259,7 +259,7 @@ class DashboardController extends Controller
             'costDistributionForChart',
             'topRecipesForChart',
             'locations',
-            'deliveryPeople',
+            'customers',
             'products',
             'suppliers',
         ));

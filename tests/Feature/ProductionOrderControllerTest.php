@@ -2,7 +2,7 @@
 
 use App\Enums\ProductionOrderStatus;
 use App\Enums\TenantUserRole;
-use App\Models\DeliveryPerson;
+use App\Models\Customer;
 use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
@@ -157,20 +157,20 @@ test('una orden terminada rechaza agregar un pedido', function () {
         ->assertStatus(422);
 });
 
-test('el pedido admite un repartidor como destino', function () {
+test('el pedido admite un cliente como destino', function () {
     [$user, $tenant] = productionSetup();
-    $deliveryPerson = DeliveryPerson::factory()->for($tenant)->create(['name' => 'Juan Reparto']);
+    $customer = Customer::factory()->for($tenant)->create(['name' => 'Kiosco La Esquina']);
     $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
 
     $this->actingAs($user)->post(route('production-orders.requests.store', $order), [
-        'destination_type' => 'delivery_person',
-        'destination_id' => $deliveryPerson->id,
+        'destination_type' => 'customer',
+        'destination_id' => $customer->id,
     ])->assertRedirect();
 
     $this->actingAs($user)
         ->get(route('production-orders.show', $order))
         ->assertOk()
-        ->assertSee('Juan Reparto');
+        ->assertSee('Kiosco La Esquina');
 });
 
 test('el endpoint de preview responde con el consumo agregado de la orden', function () {

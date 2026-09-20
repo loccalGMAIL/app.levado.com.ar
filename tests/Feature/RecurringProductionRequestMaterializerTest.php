@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\DeliveryPerson;
+use App\Models\Customer;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\ProductionOrder;
@@ -107,12 +107,12 @@ test('no regenera una instancia que se borró (soft delete)', function () {
 test('dos recurrentes del mismo día caen en una sola orden', function () {
     [$user, $tenant, $product] = productionSetup();
     $productB = Product::factory()->for($tenant)->manufactured()->create(['product_category_id' => $product->product_category_id]);
-    $deliveryPerson = DeliveryPerson::factory()->for($tenant)->create();
+    $customer = Customer::factory()->for($tenant)->create();
 
     recurringWith($tenant, $product);
     $recurringB = RecurringProductionRequest::factory()->for($tenant)->everyday()->create([
-        'destination_type' => 'delivery_person',
-        'destination_id' => $deliveryPerson->id,
+        'destination_type' => 'customer',
+        'destination_id' => $customer->id,
     ]);
     RecurringProductionRequestLine::factory()->for($recurringB, 'recurringProductionRequest')->create(['product_id' => $productB->id]);
 

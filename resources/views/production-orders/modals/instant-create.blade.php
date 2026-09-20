@@ -17,8 +17,8 @@
     <form method="POST" action="{{ route('production-orders.instant.store') }}" class="space-y-5"
         x-data="{
             ...productionOrderLines({ deferred: true, products: products }),
-            destinationType: '{{ old('destination_type', 'location') }}',
-            destinationId: '{{ old('destination_id', '') }}',
+            destination: '{{ old('destination', '') }}',
+            get destinationId() { return this.destination.split(':')[1] || ''; },
             showNotes: {{ $errors->has('notes') || old('notes') ? 'true' : 'false' }},
             get validLines() { return this.lines.filter(l => l.product_id !== '' && Number(l.quantity) > 0); },
             get canSubmit() { return this.destinationId !== '' && this.validLines.length > 0; },
@@ -29,49 +29,12 @@
             El destino es informativo, para la planilla de reparto — el stock producido entra igual al obrador, no se mueve al destino elegido.
         </p> -->
 
-        <div class="flex flex-col md:flex-row md:items-start gap-4">
-            <div>
-                <x-input-label value="Destino" />
-                <div class="mt-1 flex gap-4">
-                    <label class="flex items-center gap-2 text-sm text-corteza">
-                        <input type="radio" name="destination_type" value="location" x-model="destinationType"
-                            @change="destinationId = ''" class="border-gray-300 text-horno focus:ring-horno">
-                        Sucursal
-                    </label>
-                    <label class="flex items-center gap-2 text-sm text-corteza">
-                        <input type="radio" name="destination_type" value="delivery_person" x-model="destinationType"
-                            @change="destinationId = ''" class="border-gray-300 text-horno focus:ring-horno">
-                        Repartidor
-                    </label>
-                </div>
-                <x-input-error :messages="$errors->get('destination_type')" class="mt-2" />
-            </div>
-
-            <div class="flex-1" x-show="destinationType === 'location'">
-                <x-input-label for="instant_create_location" value="Sucursal" />
-                <select id="instant_create_location" x-model="destinationId"
-                    x-bind:name="destinationType === 'location' ? 'destination_id' : ''"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                    <option value="">Elegí una sucursal…</option>
-                    @foreach($locations as $location)
-                        <option value="{{ $location->id }}">{{ $location->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="flex-1" x-show="destinationType === 'delivery_person'">
-                <x-input-label for="instant_create_delivery_person" value="Repartidor" />
-                <select id="instant_create_delivery_person" x-model="destinationId"
-                    x-bind:name="destinationType === 'delivery_person' ? 'destination_id' : ''"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                    <option value="">Elegí un repartidor…</option>
-                    @foreach($deliveryPeople as $deliveryPerson)
-                        <option value="{{ $deliveryPerson->id }}">{{ $deliveryPerson->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+        <div>
+            <x-input-label for="instant_create_destination" value="Destino" />
+            @include('production-orders.partials.destination-select', ['id' => 'instant_create_destination', 'locations' => $locations, 'customers' => $customers])
+            <x-input-error :messages="$errors->get('destination_type')" class="mt-2" />
+            <x-input-error :messages="$errors->get('destination_id')" class="mt-2" />
         </div>
-        <x-input-error :messages="$errors->get('destination_id')" class="mt-2" />
 
         <div>
             <x-input-label value="Artículos" />
