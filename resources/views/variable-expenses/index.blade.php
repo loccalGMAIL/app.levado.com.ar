@@ -35,8 +35,13 @@
                     <h2 class="text-base font-semibold text-corteza">Gastos</h2>
                     <p class="text-sm text-masa-madre mt-0.5">Gastos ocasionales o imprevistos. No intervienen en el costo de las recetas.</p>
                 </div>
-                @can('manage-costs')
-                    <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'fixed-cost-report')"
+                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        Imprimir
+                    </button>
+                    @can('manage-costs')
                         <button type="button"
                             @click="$dispatch('open-modal', 'variable-expense-categories')"
                             class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
@@ -47,8 +52,8 @@
                             class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                             + Nuevo gasto
                         </button>
-                    </div>
-                @endcan
+                    @endcan
+                </div>
             </div>
 
             <x-expense-tabs />
@@ -61,13 +66,34 @@
                         placeholder="Buscar por nombre o descripción..."
                         class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
-                <select name="category"
-                    class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                    <option value="">Todas las categorías</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat->id }}" @selected(request('category') == $cat->id)>{{ $cat->name }}</option>
-                    @endforeach
-                </select>
+                {{-- Dropdown de checkboxes en vez de un <select multiple>: Tom Select
+                     mostraba los tags elegidos sin forma obvia de sacarlos (hacía falta
+                     seleccionar el tag y apretar Backspace). Tildar/destildar acá es la
+                     misma interacción para elegir y para sacar. --}}
+                <div class="relative" x-data="{ open: false, selected: {{ Js::from((array) request('category', [])) }} }" @click.outside="open = false">
+                    <button type="button" @click="open = !open"
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno px-3 py-2 bg-white text-corteza flex items-center gap-2 min-w-[11rem] justify-between">
+                        <span x-text="selected.length ? 'Categoría (' + selected.length + ')' : 'Todas las categorías'"></span>
+                        <svg class="w-4 h-4 text-masa-madre shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </button>
+                    <div x-show="open" x-transition
+                        class="absolute z-20 mt-1 w-56 max-h-64 overflow-y-auto bg-white border border-gray-300 rounded-md shadow-lg p-2 space-y-1"
+                        style="display: none;">
+                        @foreach($categories as $cat)
+                            <label class="flex items-center gap-2 text-sm text-corteza px-1.5 py-1 hover:bg-miga rounded cursor-pointer">
+                                <input type="checkbox" name="category[]" value="{{ $cat->id }}" x-model="selected"
+                                    class="rounded border-gray-300 text-horno focus:ring-horno">
+                                {{ $cat->name }}
+                            </label>
+                        @endforeach
+                        <button type="button" @click="selected = []" x-show="selected.length"
+                            class="w-full text-left text-xs text-masa-madre hover:text-corteza hover:underline mt-1 pt-1 border-t border-miga">
+                            Limpiar
+                        </button>
+                    </div>
+                </div>
                 <select name="supplier"
                     class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                     <option value="">Todos los proveedores</option>
@@ -293,6 +319,12 @@
                 update-route="variable-expense-categories.update"
                 destroy-route="variable-expense-categories.destroy" />
         @endcan
+
+        @include('fixed-costs.modals.report', [
+            'context' => 'variable',
+            'from' => request('from'),
+            'to' => request('to'),
+        ])
 
     </div>
 </x-app-layout>

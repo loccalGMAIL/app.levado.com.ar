@@ -34,6 +34,7 @@ class PurchaseLineFactory extends Factory
             'iva_rate' => 0.21,
             'percepcion_rate' => null,
             'subtotal' => round($quantity * $unitPrice, 2),
+            'is_bonus' => false,
             'cost_applied_at' => null,
         ];
     }
@@ -51,6 +52,19 @@ class PurchaseLineFactory extends Factory
         return $this->state(fn () => [
             'purchaseable_type' => CatalogItemType::Packaging->value,
             'purchaseable_id' => $packagingId,
+        ]);
+    }
+
+    /**
+     * Renglón sin cargo: obsequio o promoción de la distribuidora. Precio y
+     * subtotal en cero, que es como llega en la factura.
+     */
+    public function bonus(): static
+    {
+        return $this->state(fn () => [
+            'is_bonus' => true,
+            'unit_price' => 0,
+            'subtotal' => 0,
         ]);
     }
 }

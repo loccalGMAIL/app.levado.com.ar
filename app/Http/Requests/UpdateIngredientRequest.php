@@ -32,4 +32,21 @@ class UpdateIngredientRequest extends FormRequest
             'subdivision_label' => ['nullable', 'string', 'max:50'],
         ];
     }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return [
+            'subdivisions' => 'unidades por envase',
+            'subdivision_label' => 'nombre de la unidad',
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'subdivisions.min' => 'Si el envase no se subdivide, dejá «Unidades por envase» vacío. Poné un número sólo cuando el envase trae 2 o más unidades.',
+        ];
+    }
 }

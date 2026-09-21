@@ -52,18 +52,17 @@ metadata:
   - Vista index con tabla, modales create/edit, botón quick-create supplier
   - 10 tests CRUD + 4 tests price log
 
-- 2.3 Gastos Fijos: ✅ Completo (2026-05-18)
+- 2.3 Gastos Fijos: ✅ Completo (2026-05-18); **histórico mensual agregado en v0.12.17** (2026-09-06)
   - Tabla fixed_cost_categories (tenant_id, name) — per-tenant, gestionable desde modal
-  - Tabla fixed_costs (tenant_id, fixed_cost_category_id nullable FK, name, monthly_amount decimal 10,2, active)
-  - Tabla fixed_cost_logs (fixed_cost_id, monthly_amount, valid_from date; sin timestamps)
-  - FixedCostController CRUD + toggleActive + log solo si cambia monthly_amount
+  - Tabla fixed_costs (tenant_id, fixed_cost_category_id nullable FK, name, monthly_amount decimal 10,2, active, deleted_at desde v0.12.17)
+  - Tabla fixed_cost_logs (fixed_cost_id, monthly_amount, period date; unique(fixed_cost_id, period); sin timestamps) — antes de v0.12.17 usaba `valid_from` (fecha suelta, sin unique) y era write-only
+  - FixedCostController CRUD + toggleActive + destroy (soft delete, v0.12.17) + log solo si cambia monthly_amount (toggleActive y destroy también registran el período en curso desde v0.12.17)
   - FixedCostCategoryController (store/update/destroy con bloqueo si hay gastos asignados)
-  - valid_from editable por usuario (permite cargar datos históricos)
-  - Vista index: tabla ordenada, total activo al pie, botón "Categorías" + botón "Nuevo gasto"
+  - Vista index: tabla ordenada, total activo al pie, botón "Categorías" + botón "Nuevo gasto" + botón "Historial" (v0.12.17) + ícono de borrar por fila (v0.12.17)
   - Modal categorías: listado inline, edición inline Alpine, agregar nueva, eliminar con guard
   - Modal reopens tras operaciones de categorías via session('reopen_categories')
-  - 20 tests (CRUD, roles, logs, categorías, aislamiento)
-  - 106 tests en suite completa ✅
+  - **v0.12.17:** `FixedCostHistory` (grilla mensual con carry-forward + timeline por gasto) y borrado lógico con `SoftDeletes` (primer uso del trait en el proyecto), ver [[feature-historico-gastos-fijos]]. El costeo de recetas sigue usando sólo el monto vigente.
+  - 40 tests (`FixedCostCrudTest` 28 = CRUD/roles/logs/categorías/aislamiento + 8 de borrado, con 4 tests de logs migrados a `period`; `FixedCostHistoryTest` 12)
 
 - 2.4 Tipos Mano de Obra: ✅ Completo (2026-05-18)
   - Tabla labor_types (tenant_id, name, hourly_rate decimal 10,2, active)

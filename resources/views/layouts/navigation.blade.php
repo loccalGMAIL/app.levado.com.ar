@@ -86,6 +86,14 @@
                 } elseif (request()->routeIs('purchases.*')) {
                     $crumbs[] = ['label' => 'Existencias', 'href' => null];
                     $crumbs[] = ['label' => 'Compras', 'href' => null];
+                } elseif (request()->routeIs('credit-notes.show')) {
+                    $crumbs[] = ['label' => 'Compras', 'href' => route('purchases.index')];
+                    $crumbs[] = ['label' => 'Notas de crédito', 'href' => route('credit-notes.index')];
+                    $creditNote = request()->route('creditNote');
+                    $crumbs[] = ['label' => $creditNote?->note_number ? "NC #{$creditNote->note_number}" : 'Nota de crédito #'.$creditNote?->id, 'href' => null];
+                } elseif (request()->routeIs('credit-notes.*')) {
+                    $crumbs[] = ['label' => 'Compras', 'href' => route('purchases.index')];
+                    $crumbs[] = ['label' => 'Notas de crédito', 'href' => null];
                 } elseif (request()->routeIs('products.matrix')) {
                     $crumbs[] = ['label' => 'Existencias', 'href' => null];
                     $crumbs[] = ['label' => 'Artículos', 'href' => route('products.index')];

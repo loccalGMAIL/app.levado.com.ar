@@ -33,4 +33,21 @@ class UpdatePackagingRequest extends FormRequest
             'subdivision_label' => ['nullable', 'string', 'max:50'],
         ];
     }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return [
+            'subdivisions' => 'unidades por presentación',
+            'subdivision_label' => 'nombre de la unidad',
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'subdivisions.min' => 'Si el envase no se subdivide, dejá «Unidades por presentación» vacío. Poné un número sólo cuando trae 2 o más unidades.',
+        ];
+    }
 }

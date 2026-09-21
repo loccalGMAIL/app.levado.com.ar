@@ -26,6 +26,7 @@ class PurchaseLine extends Model
         'iva_rate',
         'percepcion_rate',
         'subtotal',
+        'is_bonus',
         'cost_applied_at',
         'excluded_at',
         'exclusion_note',
@@ -39,6 +40,7 @@ class PurchaseLine extends Model
             'iva_rate' => 'decimal:4',
             'percepcion_rate' => 'decimal:2',
             'subtotal' => 'decimal:4',
+            'is_bonus' => 'boolean',
             'purchase_unit' => Unit::class,
             'cost_applied_at' => 'datetime',
             'excluded_at' => 'datetime',
@@ -81,8 +83,23 @@ class PurchaseLine extends Model
     }
 
     /**
-     * Renglón que no es del negocio (consumo personal del titular metido en la
-     * misma factura del proveedor). Está resuelto, pero no imputa costo ni stock.
+     * Renglón sin cargo: obsequio, promoción o muestra de la distribuidora.
+     *
+     * No es un cuarto estado sino un matiz del renglón aplicado: entra al stock
+     * como cualquier compra, pero no imputa precio al catálogo (ni price log,
+     * ni propagación a recetas, ni alerta de salto de costo). Por eso convive
+     * con purchaseable_id y cost_applied_at, y nunca con excluded_at.
+     */
+    public function isBonus(): bool
+    {
+        return (bool) $this->is_bonus;
+    }
+
+    /**
+     * Renglón que no corresponde a ningún ítem del catálogo: consumo personal
+     * del titular metido en la misma factura del proveedor, un servicio
+     * administrativo cobrado junto con la mercadería, u otro concepto que no
+     * es un insumo. Está resuelto, pero no imputa costo ni stock.
      *
      * Los tres estados son mutuamente excluyentes: un renglón excluido nunca tiene
      * purchaseable_id ni cost_applied_at. Lo garantiza PurchaseController::matchLine(),
@@ -95,7 +112,7 @@ class PurchaseLine extends Model
 
     /**
      * Ya no hay nada que decidir sobre este renglón: o se imputó su costo, o se
-     * marcó como consumo personal. Es lo que cuenta el indicador de completitud
+     * marcó como "no es un insumo". Es lo que cuenta el indicador de completitud
      * de la factura (antes contaba sólo los aplicados).
      */
     public function isResolved(): bool

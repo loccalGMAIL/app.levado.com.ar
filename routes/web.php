@@ -8,11 +8,15 @@ use App\Http\Controllers\Admin\TenantController as AdminTenantController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AlertSettingsController;
 use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\CatalogReplacementController;
+use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryPersonController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
+use App\Http\Controllers\FixedCostHistoryController;
+use App\Http\Controllers\FixedCostReportController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\InstantProductionOrderController;
 use App\Http\Controllers\InvitationController;
@@ -86,6 +90,14 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
     Route::get('packaging', [PackagingController::class, 'index'])->name('packaging.index');
     Route::get('fixed-costs', [FixedCostController::class, 'index'])->name('fixed-costs.index');
+    // Antes de fixed-costs/{fixedCost}/history para no ambigüedad con el binding.
+    Route::get('fixed-costs/history', [FixedCostHistoryController::class, 'index'])->name('fixed-costs.history');
+    // Antes de fixed-costs/{fixedCost}/... para que "report" no se tome como binding.
+    Route::get('fixed-costs/report', [FixedCostReportController::class, 'show'])->name('fixed-costs.report');
+    Route::get('fixed-costs/report/pdf', [FixedCostReportController::class, 'download'])
+        ->middleware('throttle:20,1')
+        ->name('fixed-costs.report-pdf');
+    Route::get('fixed-costs/{fixedCost}/history', [FixedCostHistoryController::class, 'show'])->name('fixed-costs.show-history');
     Route::get('variable-expenses', [VariableExpenseController::class, 'index'])->name('variable-expenses.index');
     Route::get('variable-expenses/{variableExpense}/receipt', [VariableExpenseController::class, 'receipt'])->name('variable-expenses.receipt');
     Route::get('labor-types', [LaborTypeController::class, 'index'])->name('labor-types.index');
@@ -104,6 +116,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::get('purchases/{purchase}/match', [PurchaseController::class, 'match'])->name('purchases.match');
     Route::get('purchases/{purchase}/invoice', [PurchaseController::class, 'invoiceImage'])->name('purchases.invoice');
+
+    Route::get('credit-notes', [CreditNoteController::class, 'index'])->name('credit-notes.index');
+    Route::get('credit-notes/{creditNote}', [CreditNoteController::class, 'show'])->name('credit-notes.show');
 
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::get('products/matrix', [ProductController::class, 'matrix'])->name('products.matrix');
@@ -134,9 +149,12 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
 // Costos — escritura (owner y admin)
 Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
+    Route::get('catalog/replacement-preview', [CatalogReplacementController::class, 'preview'])->name('catalog.replacement-preview');
+
     Route::post('ingredients', [IngredientController::class, 'store'])->name('ingredients.store');
     Route::put('ingredients/{ingredient}', [IngredientController::class, 'update'])->name('ingredients.update');
     Route::patch('ingredients/{ingredient}/toggle-active', [IngredientController::class, 'toggleActive'])->name('ingredients.toggle-active');
+    Route::post('ingredients/{ingredient}/replace', [CatalogReplacementController::class, 'replaceIngredient'])->name('ingredients.replace');
 
     Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
     Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
@@ -146,10 +164,13 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::put('packaging/{packaging}', [PackagingController::class, 'update'])->name('packaging.update');
     Route::patch('packaging/{packaging}/cost', [PackagingCostController::class, 'update'])->name('packaging.cost.update');
     Route::patch('packaging/{packaging}/toggle-active', [PackagingController::class, 'toggleActive'])->name('packaging.toggle-active');
+    Route::post('packaging/{packaging}/replace', [CatalogReplacementController::class, 'replacePackaging'])->name('packaging.replace');
 
     Route::post('fixed-costs', [FixedCostController::class, 'store'])->name('fixed-costs.store');
+    Route::post('fixed-costs/history', [FixedCostHistoryController::class, 'store'])->name('fixed-costs.history.store');
     Route::put('fixed-costs/{fixedCost}', [FixedCostController::class, 'update'])->name('fixed-costs.update');
     Route::patch('fixed-costs/{fixedCost}/toggle-active', [FixedCostController::class, 'toggleActive'])->name('fixed-costs.toggle-active');
+    Route::delete('fixed-costs/{fixedCost}', [FixedCostController::class, 'destroy'])->name('fixed-costs.destroy');
 
     // Antes de variable-expenses/{variableExpense} para que "scan" no se
     // interprete como un id de gasto (route-model binding). Mismo throttle que
@@ -176,6 +197,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('recipes/{recipe}/copy', [RecipeController::class, 'copy'])->name('recipes.copy');
     Route::put('recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
     Route::patch('recipes/{recipe}/toggle-active', [RecipeController::class, 'toggleActive'])->name('recipes.toggle-active');
+    Route::post('recipes/{recipe}/replace', [CatalogReplacementController::class, 'replaceRecipe'])->name('recipes.replace');
 
     // Los parámetros de línea ({ingredientLine}, {line}, etc.) usan scoped bindings:
     // Laravel resuelve la línea DENTRO de la relación del padre (404 si no pertenece),
@@ -211,6 +233,13 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->scopeBindings()->name('purchases.lines.destroy');
     Route::post('purchases/{purchase}/lines/{line}/match', [PurchaseController::class, 'matchLine'])->scopeBindings()->name('purchases.lines.match');
     Route::post('purchases/{purchase}/apply-suggestions', [PurchaseController::class, 'applyLineSuggestions'])->name('purchases.apply-suggestions');
+
+    Route::post('credit-notes', [CreditNoteController::class, 'store'])->name('credit-notes.store');
+    Route::patch('credit-notes/{creditNote}', [CreditNoteController::class, 'update'])->name('credit-notes.update');
+    Route::delete('credit-notes/{creditNote}', [CreditNoteController::class, 'destroy'])->name('credit-notes.destroy');
+    Route::post('credit-notes/{creditNote}/lines', [CreditNoteController::class, 'storeLine'])->name('credit-notes.lines.store');
+    Route::patch('credit-notes/{creditNote}/lines/{line}', [CreditNoteController::class, 'updateLine'])->scopeBindings()->name('credit-notes.lines.update');
+    Route::delete('credit-notes/{creditNote}/lines/{line}', [CreditNoteController::class, 'destroyLine'])->scopeBindings()->name('credit-notes.lines.destroy');
 
     Route::post('products', [ProductController::class, 'store'])->name('products.store');
     // Antes de products/{product}: bulk-category no es un id de producto.

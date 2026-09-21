@@ -89,13 +89,13 @@
                 <x-input-error :messages="$errors->get('fixed_cost_category_id')" class="mt-2" />
             </div>
             <div>
-                <x-input-label for="edit_fc_valid_from" value="Vigente desde" />
-                <x-text-input id="edit_fc_valid_from" name="valid_from" type="date"
-                    class="mt-1 block w-full"
-                    x-model="editing.valid_from"
+                <x-input-label for="edit_fc_period" value="Mes de vigencia" />
+                <x-month-select id="edit_fc_period" name="period"
+                    class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm"
+                    x-model="editing.period"
                     required />
-                <p class="mt-1 text-xs text-masa-madre">Fecha de vigencia del nuevo monto.</p>
-                <x-input-error :messages="$errors->get('valid_from')" class="mt-2" />
+                <p class="mt-1 text-xs text-masa-madre">Mes desde el que rige el nuevo monto.</p>
+                <x-input-error :messages="$errors->get('period')" class="mt-2" />
             </div>
         </div>
 

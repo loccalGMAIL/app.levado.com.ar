@@ -2,13 +2,19 @@ import { UNIT_ALIASES, UNIT_CONV } from '../units.js';
 
 // `remembered` viene de ProductLinkMemory: { selection: 'ingredient:42', pkgQty: 25 }.
 // Va atado a la selección porque el divisor es del ítem, no del renglón.
-window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, description, remembered = null) {
+window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, description, remembered = null, isBonus = false) {
     return {
         selected,
         unitPrice,
         purchaseUnit,
         description,
         remembered,
+
+        // Renglón sin cargo (obsequio/promo de la distribuidora): suma stock pero
+        // no imputa costo. Lo decide el usuario con el tilde; viene pre-marcado
+        // cuando el precio de la factura es $0. Sobrevive a onSelect() a propósito:
+        // cambiar de insumo no cambia el hecho de que el renglón fue gratis.
+        isBonus,
 
         catalogUnit: '',
         displayUnit: '',
@@ -21,7 +27,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         subdivisions: null,
         subdivisionLabel: null,
 
-        // Centinela del select: el renglón no es del negocio (consumo personal).
+        // Centinela del select: el renglón no es un insumo del catálogo.
         get isExcluded() {
             return this.selected === 'excluded';
         },
@@ -50,7 +56,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
                 return;
             }
 
-            // Consumo personal: no hay costo que calcular. unitCost en 0 deja el hidden
+            // No es un insumo: no hay costo que calcular. unitCost en 0 deja el hidden
             // unit_cost vacío, y catalogUnit vacío mantiene oculto el bloque de cálculo.
             if (this.isExcluded) {
                 this.unitCost = 0;

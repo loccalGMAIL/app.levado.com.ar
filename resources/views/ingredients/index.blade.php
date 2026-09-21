@@ -2,8 +2,8 @@
     <x-slot name="title">Ingredientes</x-slot>
 
     @php
-        $errorsInCreate = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit']) && old('_form') === 'create';
-        $errorsInEdit   = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit']) && old('_form') === 'edit';
+        $errorsInCreate = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit', 'subdivisions', 'subdivision_label']) && old('_form') === 'create';
+        $errorsInEdit   = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit', 'subdivisions', 'subdivision_label']) && old('_form') === 'edit';
         $supplierErrorsInCreate = $errors->hasAny(['name', 'phone', 'email', 'notes']) && old('_form') === 'supplier-quick-create';
         $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'unit' => '', 'cost_per_unit' => '', 'cost_per_package' => null, 'subdivisions' => '', 'subdivision_label' => ''];
         $editingOnError = $errorsInEdit ? [
@@ -22,12 +22,17 @@
     <div class="py-8 px-6 lg:px-8"
         x-data="{
             editing: {{ Js::from($editingOnError) }},
+            replacing: null,
             openEdit(record) {
                 if (record.subdivisions && record.unit === 'u' && record.cost_per_package != null) {
                     record.cost_per_unit = record.cost_per_package;
                 }
                 this.editing = record;
                 $dispatch('open-modal', 'ingredient-edit');
+            },
+            openReplace(item) {
+                this.replacing = item;
+                $dispatch('open-modal', 'ingredient-replace');
             }
         }">
 
@@ -201,6 +206,12 @@
                                             <x-icon name="pencil" />
                                             <span class="dt-card-only">Editar</span>
                                         </button>
+                                        <button type="button" @click="openReplace({{ Js::from(['id' => $ingredient->id, 'name' => $ingredient->name]) }})"
+                                            aria-label="Reemplazar en recetas" title="Reemplazar en recetas"
+                                            class="dt-action">
+                                            <x-icon name="arrow-path" />
+                                            <span class="dt-card-only">Reemplazar</span>
+                                        </button>
                                         <form method="POST" action="{{ route('ingredients.toggle-active', $ingredient) }}">
                                             @csrf
                                             @method('PATCH')
@@ -225,6 +236,7 @@
         @can('manage-costs')
             @include('ingredients.modals.create')
             @include('ingredients.modals.edit')
+            @include('ingredients.modals.replace')
             @include('suppliers.modals.quick-create')
         @endcan
 

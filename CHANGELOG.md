@@ -294,6 +294,277 @@ corto dentro del nuevo modelo de Órdenes.
 
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
+## [0.12.18] — 2026-09-21
+
+### Reporte de gastos imprimible, con filtros por categoría
+
+Los gastos, fijos y variables, no se podían imprimir ni exportar de ninguna forma: cuando el
+contador o un socio pedía "pasame los gastos de agosto" la única salida era una captura de
+pantalla. Con el histórico mensual ya andando desde la 0.12.17, los datos estaban; faltaba la
+salida en papel — y de paso, Gastos Fijos no tenía filtro por categoría (Gastos Variables sí) y el
+de Gastos Variables sólo dejaba elegir una a la vez.
+
+#### Agregado
+
+- **Reporte de gastos**, con botón «Imprimir» en *Gastos → Gastos Fijos*, en *Historial* y en
+  *Gastos Variables*. Un modal elige un **rango de fechas** (Desde/Hasta) y qué secciones incluir:
+  - **Gastos fijos vigentes** al cierre del rango, con su categoría, estado y el total al pie.
+  - **Histórico mensual comparativo**, con la variación porcentual mes a mes en todo el rango.
+  - **Detalle por gasto**: la línea de tiempo de cada gasto fijo con su variación, acotada a los
+    50 gastos de mayor monto para no disparar un PDF gigante en un tenant con muchos.
+  - **Gastos variables del rango** (opcional), con granularidad de día -no acotados al mes
+    calendario-, para un reporte de costos operativos completo en una sola pasada.
+  - Encabezado con el nombre y logo del negocio, razón social, CUIT y condición de IVA, fecha de
+    emisión y los filtros de la pantalla de origen aplicados (búsqueda/estado/categoría en Gastos
+    Fijos; búsqueda/categorías/proveedor en Gastos Variables), con nombres resueltos, no ids.
+- **Dos salidas**: una vista imprimible (`window.print()`, sin marcos: el contenido ocupa toda la
+  página) y una descarga en PDF, con los mismos datos y el mismo diseño.
+- **Filtro por categoría en Gastos Fijos**, para emparejar a Gastos Variables.
+- **Filtro por categoría en Gastos Variables acepta elegir varias a la vez**, con un dropdown de
+  checkboxes (tildar y destildar es la misma acción, con un «Limpiar» para vaciar todo de una).
+
+#### Cómo se comporta
+
+- El reporte respeta el tenant activo igual que el resto de la app: no hay forma de ver gastos de
+  otro negocio a través de él.
+- Un rango sin gastos fijos cargados muestra el estado vacío en vez de una tabla en blanco. El
+  rango no puede invertirse (hasta anterior a desde) ni superar los 24 meses.
+- El PDF funciona igual con o sin logo cargado: sin uno, o si es SVG/WebP/pesa más de 512 KB, el
+  encabezado cae al nombre del negocio en tipografía grande en vez de dejar un hueco roto.
+
+#### Técnico
+
+- Se agrega `barryvdh/laravel-dompdf` (dompdf no soporta Tailwind, ni flex/grid, ni CSS
+  personalizado). El reporte se arma con **una sola plantilla de contenido en CSS vanilla**
+  (`resources/views/fixed-costs/report/_document.blade.php`), compartida por la vista de pantalla
+  y el PDF, para que ambas salidas no puedan divergir en silencio.
+- `App\Services\FixedCostReport` es el único dueño del armado de datos: compone
+  `FixedCostHistory` (histórico) y `VariableExpense` (variables) sin repetir su SQL, y le entrega
+  a la vista sólo arrays y escalares -nunca un modelo Eloquent-, porque el proyecto corre con
+  `preventLazyLoading` y una excepción dentro del render de dompdf deja un PDF corrupto en vez de
+  un error legible.
+- `FixedCostHistory::timelinesFor()` trae el detalle de varios gastos en una sola query
+  (`whereIn` + `groupBy` en memoria) en vez de repetir `timelineFor()` gasto por gasto.
+- El logo del tenant se resuelve como *data URI* (`FixedCostReport::logoDataUri()`): dompdf no
+  acepta `Storage::url()`, necesita un filesystem local o base64.
+- Fuente `DejaVu Sans` (viene con dompdf): las fuentes core PDF no son UTF-8 y rompen «ñ», «ó», «í».
+- Se agrega `print:hidden` al banner de instalación PWA, la barra inferior móvil, los mensajes
+  flash y el banner de impersonación -ninguno se ocultaba al imprimir hasta ahora, aunque no
+  hubiera antes ninguna pantalla con función de impresión que lo expusiera-.
+- Tope de 24 meses de rango y 50 gastos en el detalle, para acotar memoria y tiempo del PDF en un
+  tenant con muchos gastos fijos o mucho historial.
+- El modal del reporte es uno solo (`fixed-costs/modals/report.blade.php`), con un prop `context`
+  (`'fixed'` | `'variable'`) que decide qué secciones vienen tildadas por defecto y qué bloque de
+  "Aplicar los filtros de la pantalla" mostrar. Los filtros de Gastos Variables viajan prefijados
+  (`ve_search`/`ve_category`/`ve_supplier`) para no chocar con los de Gastos Fijos si algún día
+  conviven en el mismo request.
+- El botón «Ver / Imprimir» navega en la misma pestaña (antes abría una nueva por cada intento sin
+  cerrar las anteriores, todas tituladas igual, y era fácil terminar mirando una vieja).
+- El filtro de categoría de Gastos Variables usa un dropdown de checkboxes con Alpine en vez de un
+  `<select multiple>` con Tom Select: sin el plugin `remove_button`, sacar una categoría ya
+  elegida no tenía forma obvia (había que seleccionar el tag y apretar Backspace).
+
+---
+
+## [0.12.17] — 2026-09-06
+
+### Histórico mensual de gastos fijos
+
+Los gastos fijos (alquiler, luz, gas, sueldos) cambian mes a mes, pero el sistema sólo guardaba
+el monto vigente: al editarlo se pisaba el valor anterior y no había forma de responder "¿cuánto
+pagué de luz en junio?" ni de ver cómo venían subiendo los costos operativos. La tabla que
+llevaba ese registro (`fixed_cost_logs`) ya existía desde el alta del módulo, pero era write-only
+— se escribía al crear o editar un gasto y ninguna pantalla la mostraba.
+
+#### Agregado
+
+- **Historial de gastos fijos.** Botón «Historial» en Gastos → Gastos Fijos y un link «historial»
+  por fila, hacia dos vistas nuevas:
+  - **Grilla mensual** (`/fixed-costs/history`): todos los gastos fijos de un mes en una sola
+    pantalla, para completarlo de una pasada en vez de abrir el modal gasto por gasto. Un gasto
+    sin monto propio ese mes muestra el último cargado, marcado «arrastrado» — nunca hay que
+    recargar un alquiler que no cambió. Guardar el **mes en curso** actualiza el monto vigente de
+    cada gasto (y por lo tanto el overhead por hora); guardar un **mes pasado** sólo lo registra,
+    sin tocar el costeo de hoy.
+  - **Línea de tiempo de un gasto** (`/fixed-costs/{id}/history`): un punto por mes con monto
+    propio, con la variación porcentual contra el registro anterior.
+- El campo «Vigente desde» de los modales de alta/edición de gastos fijos pasa a «Mes de
+  vigencia» (un select de meses en vez de una fecha suelta): un gasto fijo cambia por mes
+  calendario, no por día.
+- **Eliminar un gasto fijo.** Hasta ahora sólo se podía desactivar — la razón era que borrarlo
+  alteraría los costos históricos. Con el histórico ya separado en `fixed_cost_logs`, esa
+  objeción desaparece: el borrado es lógico (`deleted_at`), así que el gasto deja de listarse y
+  de contarse en el overhead de hoy, pero los meses en los que sí rigió conservan su monto real
+  en el historial. Mismo botón de confirmación (`confirm()`) que ya usan Gastos Variables y
+  Notas de Crédito.
+
+#### Técnico
+
+- `fixed_cost_logs` pasa de `valid_from` (fecha suelta) a `period` (primer día del mes,
+  `unique(fixed_cost_id, period)`). Migración con backfill: agrupa los logs existentes por
+  `(fixed_cost_id, mes de valid_from)` y conserva el de id más alto de cada grupo -el último
+  cambio del mes es el que rigió al cerrarlo- antes de imponer el unique. En MySQL el `unique`
+  nuevo se crea *antes* de borrar el índice viejo: `fixed_cost_id` sostiene la foreign key hacia
+  `fixed_costs`, y MySQL rechaza borrar el único índice que la respalda.
+- `App\Services\FixedCostHistory`: único dueño de la lectura por período (`amountsForPeriod`,
+  `totalForPeriod`, `timelineFor`, `record`). Deliberadamente separado de
+  `Tenant::totalFixedCosts()`/`overheadPerHour()`, que siguen siendo la única fórmula que
+  alimenta el costeo de recetas — el histórico no la reemplaza, sólo la consulta hacia atrás.
+  `amountsForPeriod` resuelve el arrastre con una subquery correlacionada (no window function,
+  corre igual en MySQL y en el SQLite de los tests).
+- `FixedCostLog::$dateFormat = 'Y-m-d'`: sin esto, `fromDateTime()` -lo que Eloquent usa para
+  serializar un atributo con cast `date` al guardar- ignora el formato del cast y guarda con hora
+  (`00:00:00`). MySQL la trunca porque la columna es `DATE`; SQLite (dynamic typing, los tests) la
+  guarda tal cual, y entonces cualquier comparación por string contra `'Y-m-d'` deja de matchear.
+- `FixedCostController::toggleActive()` ahora registra el período en curso al desactivar (monto
+  `0`, "no aplicó desde acá") y al reactivar (el monto vigente): sin esto, `totalForPeriod()`
+  seguiría contando el monto de un gasto ya desactivado, porque el histórico no tiene noción
+  propia de activo/inactivo. Invariante cubierto por test:
+  `FixedCostHistory::totalForPeriod($tenant, hoy) === $tenant->totalFixedCosts()`.
+- 12 tests nuevos (`FixedCostHistoryTest`): carry-forward, invariante con el total vigente, mes en
+  curso vs. mes pasado, idempotencia de `updateOrCreate` por `(fixed_cost_id, period)`,
+  activar/desactivar, aislamiento entre tenants y el gate `manage-costs` en la grilla. Los 4 tests
+  de `FixedCostCrudTest` sobre el log viejo se actualizaron a `period`; los otros 16 no se
+  tocaron.
+- `FixedCost` suma el trait `SoftDeletes` (`deleted_at`) — primer uso en el proyecto. Un solo
+  lugar consulta `fixed_costs`/`fixed_cost_logs` con query builder crudo
+  (`FixedCostHistory::amountsForPeriod`) y no hace falta tocarlo: no filtra por `deleted_at` a
+  propósito, así un gasto borrado sigue mostrando su monto real en los meses previos al borrado.
+  Todo lo demás (`Tenant::totalFixedCosts()`, el guard de
+  `FixedCostCategoryController::destroy()`, el `withExists(['fixedCosts'])` del onboarding) es
+  Eloquent puro y respeta el global scope de `SoftDeletes` sin cambios de código.
+  `FixedCostController::destroy()` registra un log en `0` para el mes en curso antes de borrar
+  -mismo mecanismo que `toggleActive()` al desactivar- para que
+  `totalForPeriod(hoy) === totalFixedCosts()` se mantenga sin importar si el gasto estaba activo.
+  8 tests nuevos en `FixedCostCrudTest` (permisos por rol, no aparece en el listado, baja el
+  overhead, no altera meses pasados, aislamiento, categoría que se libera al quedar sin gastos).
+
+---
+
+## [0.12.16] — 2026-09-06
+
+### Un insumo que se usa entero, sin subdividir
+
+Confitería Orfano reportó que no podía cargar la crema de leche (pote de 200 cc, se usa entero
+en la receta): el campo «Unidades por envase» exigía un mínimo de 2, y escribir `1` bloqueaba el
+formulario sin ninguna explicación — el navegador cancelaba el envío con su propio aviso
+genérico. El caso ya funcionaba dejando el campo vacío, pero nada en la pantalla lo decía.
+
+#### Arreglado
+
+- El campo «Unidades por envase» / «Unidades por presentación» ahora aclara que es opcional y
+  que sólo hay que completarlo si el envase se subdivide. Si de todas formas se escribe `1`,
+  aparece un aviso en el momento con un botón para vaciar el campo, en vez de depender del
+  bloqueo silencioso del navegador.
+- Un error de validación en «Unidades por envase» al crear o editar un ingrediente ya no cierra
+  el modal en silencio perdiendo lo cargado: ahora lo reabre con el mensaje y los datos intactos,
+  igual que ya pasaba en la pantalla de envases.
+- El mensaje de validación, si igual llega a mostrarse, ahora está en español y nombra el campo
+  correctamente en vez de mostrar el nombre interno de la columna.
+
+#### Técnico
+
+- `StoreIngredientRequest`, `UpdateIngredientRequest`, `StorePackagingRequest`,
+  `UpdatePackagingRequest`: agregan `attributes()`/`messages()` para el mensaje de
+  `subdivisions.min` en español. La regla de validación (`nullable`, `min:2`) no cambió — sigue
+  siendo la fuente de verdad de que `subdivisions` es la cantidad de subdivisiones, no un
+  booleano, y de que `1` no es un valor legítimo: `FixIngredientSubdivisionCosts` depende de ese
+  invariante para distinguir «nunca dividido» de «envase viejo».
+- `resources/views/ingredients/index.blade.php`: el `hasAny(...)` que decide si reabrir el modal
+  ahora incluye `subdivisions`/`subdivision_label`, igual que ya hacía `packaging/index.blade.php`.
+- Se quitó el `min="2"` HTML de los cuatro modales (create/edit de ingredientes y envases): era
+  lo que bloqueaba el envío del formulario antes de que el servidor pudiera responder nada.
+
+---
+
+## [0.12.15] — 2026-09-05
+
+### Devoluciones al proveedor y un insumo descontinuado en cien recetas
+
+Dos huecos que aparecieron con clientes reales. El primero: una distribuidora mandó una factura con mercadería que nunca llegó, y en otro caso reconoció por escrito la rotura de unos insumos en el transporte. En los dos casos el proveedor emite una nota de crédito, y el sistema no tenía dónde cargarla — la única salida era borrar la compra entera (perdiendo la factura) o hacer un ajuste de stock a mano sin ningún documento de por medio. El segundo: un insumo quedó discontinuado por el fabricante y estaba metido en decenas de recetas. Sin una forma de sustituirlo en bloque, la única opción era entrar receta por receta a borrar la línea vieja y cargar la nueva.
+
+#### Agregado
+
+- **Notas de crédito de compra.** Se accede desde *Compras*: un botón «Notas de crédito» junto a «Nueva compra» lleva al listado, y cada compra tiene su propia acción «Nota de crédito» (junto a «Vincular»/«Eliminar») que abre el alta ya con esa compra precargada — sin menú propio, para no sumar ruido a la navegación. Cada nota se liga a una compra (o queda suelta, para un reconocimiento puramente económico) y tiene sus propios renglones: cantidad, precio, IVA y un tilde **«Descuenta stock»**.
+  - Marcado (el caso *mercadería que no vino*): revierte proporcionalmente la entrada de stock del renglón de compra elegido, valuada al mismo costo con el que había entrado.
+  - Destildado (el caso *rotura ya ajustada por recuento*, o cualquier reconocimiento económico puro): no mueve un gramo de stock.
+  - En los dos casos, **el costo del insumo no se toca**: ni el histórico de precios, ni el costo vigente, ni los precios de las recetas. Misma regla que ya regía al desasociar un renglón de compra — una devolución no dice nada sobre lo que cuesta reponer el insumo.
+  - El detalle de la compra muestra sus notas de crédito y el total acreditado, sin alterar el total de la factura original.
+  - El listado de notas de crédito permite eliminar directo, sin entrar al detalle.
+  - El kardex del insumo linkea el movimiento de tipo **Devolución** a la nota que lo generó, igual que ya linkea las entradas de compra a su factura.
+- **Reemplazo masivo de un ingrediente, un descartable o una sub-receta.** Botón *Reemplazar* en el listado de ingredientes, descartables y sub-recetas. Elegís el sustituto, el sistema muestra una vista previa —en cuántas recetas se va a aplicar, cuáles ya tenían el destino y se van a fusionar, y si alguna línea tiene una unidad incompatible— y al confirmar reemplaza el ítem en todas las líneas de una sola vez, con la opción de desactivar el ítem viejo y (para ingredientes) migrar sus vínculos de proveedor al nuevo.
+  - Todo o nada: si una sola línea tiene una unidad incompatible con la del ítem destino, no se toca ninguna.
+  - Si una receta ya tenía una línea del ítem destino, las dos se fusionan en una sola (sumando la cantidad, convertida a la unidad de la que quedó) en vez de dejar dos líneas del mismo ítem.
+  - El costo de cada receta afectada —y el de sus recetas madre, en cascada— se recalcula una sola vez al final.
+
+#### Cómo se comporta
+
+- Una nota de crédito no puede devolver más cantidad de la que trajo el renglón de compra, ni devolver sobre un renglón que todavía no fue aplicado (nunca entró stock) o que se marcó como consumo personal.
+- Editar el renglón de compra original después de crear una nota de crédito sobre él sigue funcionando sin duplicar ni perder stock: la devolución es un movimiento propio (tipo «Devolución»), no un contramovimiento de la compra, así que no interfiere con la idempotencia de esta última.
+- Borrar una nota de crédito revierte el stock de todos sus renglones aplicados, igual que borrar una compra revierte el de sus renglones.
+- Desactivar ahora un ingrediente o un descartable que sigue en uso por una receta **activa** se bloquea con un aviso que nombra las recetas — antes se podía desactivar en silencio y la receta seguía costeando con un insumo dado de baja. Mismo guard que ya protegía a las sub-recetas.
+- Lo que un reemplazo masivo **nunca** toca: el historial de compras, el ledger de stock (inmutable) y el historial de precios del ítem viejo. Reescribirlos falsearía el pasado; por eso el ítem viejo no se borra, sólo se puede desactivar.
+
+#### Técnico
+
+- Tablas nuevas `credit_notes` y `credit_note_lines`, calcadas de `purchases`/`purchase_lines`. `StockMovementType::Return` (`'return'`), con label «Devolución».
+- `StockService::syncCreditNoteLineExit()` / `reverseCreditNoteLineExit()`, espejo de los métodos de compra pero con `reverses_movement_id` siempre en null: la devolución es una salida propia, no un contramovimiento, para no pisar `activePurchaseEntryFor()`. `registerMovement()` generaliza su `reference_type` a `PurchaseLine|CreditNoteLine`.
+- `CreditNoteLineRecorder::applyStock()` deriva la cantidad a devolver **proporcional** a la entrada vigente del renglón de compra (`entrada.quantity × nc.quantity ÷ purchaseLine.quantity_purchased`), en vez de repetir la cascada de conversión de unidades de `PurchaseLineRecorder::apply()` — sale gratis en corrección para subdivisiones y bultos, y una devolución total deja el neto exacto en cero.
+- `CatalogItemReplacer` (nuevo servicio): `replaceIngredient()` / `replacePackaging()` / `replaceSubrecipe()` + sus `preview*()`. Valida compatibilidad de unidad con `UnitConverter` antes de escribir nada, fusiona duplicados por receta, resuelve los ids afectados con `RecipeCostPropagator::recipeIdsUsingIngredients()/recipeIdsUsingPackagings()` y propaga una sola vez con `propagateManyFrom()` al final — mismo patrón que `PurchaseController::applyLineSuggestions()`. El reemplazo de sub-receta reusa `RecipeCostPropagator::isAncestor()` para rechazar ciclos, igual que el alta manual de una línea de sub-receta.
+- `recipe_ingredient_lines`/`recipe_packaging_lines`/`recipe_subrecipe_lines` no tienen `tenant_id`: el scoping del reemplazo masivo depende de que el ítem de origen ya esté acotado al tenant (`ingredient_id`/`packaging_id`/`child_recipe_id` sólo pueden apuntar a filas del mismo tenant por la validación de alta de línea).
+- `IngredientController::toggleActive()` y `PackagingController::toggleActive()` ganan el guard de `recipes.active` que antes sólo tenía `RecipeController::toggleActive()` para sub-recetas.
+- **Trampa de Alpine:** `credit-notes/index.blade.php` y `credit-notes/show.blade.php` nacieron sin `x-data` en el `<div>` contenedor. Alpine sólo procesa `@click`/`$dispatch` dentro del árbol de un `x-data` ancestro, así que los botones de abrir modal (alta, editar, agregar renglón) no hacían nada — y ningún test HTTP lo detecta, porque no ejecutan JS del navegador. Se agregó `x-data="{}"` a ambas vistas más un test que verifica que el `x-data` precede al primer `open-modal` en el HTML servido.
+- Tests nuevos: `CreditNoteStockTest` (11 casos), `CreditNoteCrudTest` (16), `CatalogItemReplacementTest` (18), `IngredientToggleActiveGuardTest` (4).
+
+### El selector de «Consumo personal» no cubría otros conceptos de la factura
+
+Algunas facturas traen un renglón de "Servicios administrativos" u otro cargo del proveedor que tampoco es un insumo, pero que no es consumo personal del titular. No había dónde ponerlo: quedaba pendiente para siempre, sin costo posible de imputar.
+
+#### Cómo se comporta
+
+- El selector de vinculación (`purchases/match`) pasa a llamarse **«No es un insumo»**, en vez de «Consumo personal» — mismo mecanismo de siempre (no imputa costo, no mueve stock, queda resuelto), ahora sin forzar una etiqueta que no aplicaba a un servicio administrativo o cualquier otro concepto no catalogable. La nota opcional del renglón sigue estando para aclarar de qué se trata puntualmente.
+- Sin cambios de comportamiento ni de datos: es el mismo campo `excluded_at`/`exclusion_note` de siempre, sólo cambia cómo se lo nombra en toda la UI (badges, botón, mensajes flash, tooltips).
+
+#### Técnico
+
+- Renombrado en `purchases/match.blade.php`, `purchases/show.blade.php`, `PurchaseController`, `PurchaseLine`, `NotificationService`, `ProductLinkMemory` y `resources/js/purchases/match.js`. `PurchaseController::EXCLUDED_MATCH` y las columnas de BD no cambiaron.
+
+---
+
+## [0.12.14] — 2026-09-01
+
+### Los productos sin cargo obligaban a elegir entre el stock y el costo
+
+Las distribuidoras mandan seguido mercadería de regalo: un obsequio por volumen, una promo, una muestra del producto nuevo. En la factura viene como un renglón más, pero a **$0**. Y ahí empezaba el problema: si se lo asociaba al insumo, el sistema hacía lo de siempre —tomar el precio del renglón como el costo nuevo— y le ponía **cero** al ingrediente. Ese cero se propagaba a todas las recetas que lo usan y les tiraba abajo el precio de venta.
+
+La salida que encontró el cliente fue dejar esos renglones **sin asociar**. Funciona para el costo, pero deja un agujero del otro lado: la mercadería está en el depósito y el sistema no la ve. El stock queda corto justo en los productos que más rotan, que son los que las distribuidoras bonifican.
+
+#### Agregado
+
+- **Tilde «Sin cargo» al asociar un renglón.** En *Asociar renglones* aparece junto al insumo elegido. Marcado, el renglón **suma al stock y no toca ningún costo**: ni el del insumo, ni el historial de precios, ni los precios de las recetas.
+- **Se propone solo cuando el precio es $0.** El renglón llega a la pantalla de asociación con el tilde ya puesto y un aviso *«Precio $0 — se propone como sin cargo»*. Siempre se puede destildar: hay facturas que ponen el precio y después descuentan el 100%, y ahí el precio real sí sirve.
+- **El mismo tilde en «Agregar renglón» y en el modal de edición.** Para cargar un obsequio a mano, o para corregir un renglón que ya estaba cargado sin tener que desasociarlo y volver a asociarlo.
+- **Badge violeta «Sin cargo»** en el detalle de la compra, en la tabla y en las tarjetas del celular, en lugar del check verde de «Aplicado». Verde significa *«se imputó un costo»*, y acá justamente no se imputó ninguno.
+- **Tipo de movimiento «Bonificación» en el kardex.** La ficha del insumo distingue de un vistazo lo que entró comprado de lo que entró de regalo.
+
+#### Cómo se comporta
+
+- **La entrada se valúa al costo vigente del insumo, no a cero.** Si entran 5 kg de harina de regalo y la harina vale $1.200 el kilo, la valuación de existencias sube $6.000. La mercadería en el depósito vale lo mismo se haya pagado o no; valuarla en cero haría que el total de existencias mienta hacia abajo.
+- **No pisa el «último costo de compra»** que muestra la ficha de existencias. Un obsequio no dice nada sobre lo que cuesta reponer el insumo.
+- **El total de la factura no cambia.** Un renglón a $0 aporta $0, como corresponde.
+- Si el renglón viene por unidad y el insumo se lleva en kilos o litros (*«ACEITE X 5 LTS»*), sigue pidiendo el divisor: sin saber cuánto trae el bulto no hay forma de saber cuánto stock entra. Es el único dato que hay que completar a mano.
+- Desasociar un renglón sin cargo revierte su entrada de stock y le saca la marca, igual que con cualquier otro renglón. Marcarlo como consumo personal también.
+- Un renglón que ya se había aplicado con precio y después se pasa a sin cargo **contramueve su entrada anterior** y registra la nueva como bonificación: no quedan dos entradas sumando la misma mercadería. El costo que se había imputado antes no se revierte, igual que al desasociar.
+
+#### Técnico
+
+- `purchase_lines.is_bonus` (boolean, default false). **No es un cuarto estado del renglón**: los tres de siempre —pendiente, consumo personal, aplicado— quedan intactos, y un renglón bonificado es un renglón *aplicado* cuya aplicación no imputó costo. Mantenerlo así evitó reescribir el índice de compras, el contador de completitud y `isResolved()`.
+- `StockMovementType::Bonus`. Tener tipo propio hace que `StockService::registerMovement()` **no** pise `stock_levels.unit_cost` sin tocar el servicio: esa escritura ya estaba condicionada a `Purchase`. `activePurchaseEntryFor()` pasó a buscar por los dos tipos, para que un renglón que cambia de compra a bonificación revierta su entrada en vez de duplicarla.
+- `PurchaseLineRecorder::apply()` ramifica sobre `is_bonus`: saltea el price log, el `update` del costo, la propagación a recetas y la alerta de salto de costo, y valúa el movimiento al `cost_per_unit` vigente del ítem. La aritmética de conversión de unidades y subdivisiones es la misma de siempre — depende de las cantidades, no del precio.
+- Nuevo parámetro `pkgQtyOverride` en `apply()`. Sin él las bonificaciones de unidades incompatibles quedaban sin stock: el camino que las resolvía (`applyWithCost()`) deriva cuánto trae el bulto como `precio ÷ costo`, y con precio $0 eso da cero.
+- La inferencia por precio cero vive en `storePending()`, que es por donde pasan los tres caminos de alta (escaneo con IA, alta manual y revisión previa). Lo que mande el formulario siempre gana sobre la inferencia.
+- `applyLineSuggestions()` no acumula los ítems bonificados en la lista de tocados: sin costo nuevo no hay nada que propagar, y acumularlos hacía recalcular recetas al pedo.
+- `tests/Feature/PurchaseLineBonusTest.php` (nuevo, 13 casos): stock sin costo, sin price log, sin propagación, valuación al costo vigente, el `unit_cost` del cache intacto, divisor explícito y su rechazo cuando falta, subdivisiones, inferencia por precio cero y su override, y los tres caminos de HTTP (asociar, desasociar, consumo personal, y el pasaje de aplicado a sin cargo).
 
 ---
 

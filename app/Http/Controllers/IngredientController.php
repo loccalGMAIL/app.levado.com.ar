@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class IngredientController extends Controller
@@ -52,7 +53,12 @@ class IngredientController extends Controller
             ->get()
             ->keyBy('stockable_id');
 
-        return view('ingredients.index', compact('ingredients', 'suppliers', 'stockLevels'));
+        // Lista completa (activos e inactivos) para el select del modal de
+        // reemplazo masivo: el sustituto puede ser cualquier ingrediente,
+        // no sólo los de la página actual.
+        $allIngredients = $tenant->ingredients()->orderBy('name')->get();
+
+        return view('ingredients.index', compact('ingredients', 'suppliers', 'stockLevels', 'allIngredients'));
     }
 
     public function store(StoreIngredientRequest $request): RedirectResponse
@@ -127,6 +133,26 @@ class IngredientController extends Controller
     public function toggleActive(Ingredient $ingredient): RedirectResponse
     {
         $this->authorize('update', $ingredient);
+
+        // Sin este guard, un ingrediente descontinuado podía desactivarse sin
+        // aviso y las recetas activas seguían costeando con él en silencio.
+        // Mismo patrón que RecipeController::toggleActive() para sub-recetas.
+        if ($ingredient->active) {
+            $blockedBy = DB::table('recipe_ingredient_lines')
+                ->join('recipes', 'recipes.id', '=', 'recipe_ingredient_lines.recipe_id')
+                ->where('recipe_ingredient_lines.ingredient_id', $ingredient->id)
+                ->where('recipes.active', true)
+                ->distinct()
+                ->pluck('recipes.name')
+                ->toArray();
+
+            if (! empty($blockedBy)) {
+                return back()->withErrors([
+                    'toggle' => 'No podés desactivar este ingrediente porque lo usan: '
+                        .implode(', ', $blockedBy).'. Reemplazalo en esas recetas primero.',
+                ]);
+            }
+        }
 
         $ingredient->update(['active' => ! $ingredient->active]);
         $action = $ingredient->active ? 'ingredient.activated' : 'ingredient.deactivated';

@@ -34,8 +34,10 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 class PurchaseController extends Controller
 {
     /**
-     * Valor centinela del select de match: marca el renglón como consumo personal
-     * en vez de asociarlo al catálogo. Ver matchLine().
+     * Valor centinela del select de match: marca el renglón como "no es un
+     * insumo" (consumo personal, servicio administrativo u otro concepto de
+     * la factura que no corresponde al catálogo) en vez de asociarlo. Ver
+     * matchLine().
      */
     public const EXCLUDED_MATCH = 'excluded';
 
@@ -57,8 +59,8 @@ class PurchaseController extends Controller
         $query = $tenant->purchases()
             ->with('supplier')
             ->withCount('lines')
-            // Resueltos = imputados + consumo personal. El indicador ámbar/verde mide
-            // "no queda nada por decidir", no "todo tiene costo aplicado".
+            // Resueltos = imputados + marcados como "no es un insumo". El indicador
+            // ámbar/verde mide "no queda nada por decidir", no "todo tiene costo aplicado".
             ->withCount(['lines as resolved_count' => fn ($q) => $q->where(
                 fn ($q2) => $q2->whereNotNull('cost_applied_at')->orWhereNotNull('excluded_at')
             )])
@@ -187,7 +189,7 @@ class PurchaseController extends Controller
         $this->authorize('view', $purchase);
         $tenant = app(Tenant::class);
 
-        $purchase->load(['supplier', 'lines']);
+        $purchase->load(['supplier', 'lines', 'creditNotes.lines']);
 
         // Todos, no sólo los activos: el select de edición es `required`, así que si el
         // proveedor de la compra fue dado de baja su opción no existiría, el select caería
@@ -484,6 +486,7 @@ class PurchaseController extends Controller
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
             'pkg_qty' => ['nullable', 'numeric', 'min:0.001'],
             'exclusion_note' => ['nullable', 'string', 'max:255'],
+            'is_bonus' => ['nullable', 'boolean'],
         ]);
 
         $match = $validated['match'] ?? null;
@@ -510,6 +513,7 @@ class PurchaseController extends Controller
                     'cost_applied_at' => null,
                     'excluded_at' => null,
                     'exclusion_note' => null,
+                    'is_bonus' => false,
                 ]);
 
                 // Sin esto la próxima factura volvería a sugerir justo lo que
@@ -520,9 +524,10 @@ class PurchaseController extends Controller
             return back()->with('status', 'Renglón marcado como pendiente.');
         }
 
-        // Centinela del select: el renglón no es del negocio (consumo personal del
-        // titular en la factura del proveedor). No colisiona con un match real, que
-        // siempre viaja como "tipo:id".
+        // Centinela del select: el renglón no corresponde a ningún ítem del catálogo
+        // (consumo personal del titular, un servicio administrativo cobrado en la
+        // misma factura, etc.). No colisiona con un match real, que siempre viaja
+        // como "tipo:id".
         if ($match === self::EXCLUDED_MATCH) {
             DB::transaction(function () use ($line, $request, $validated, $tenant, $purchase) {
                 if ($line->isApplied()) {
@@ -535,12 +540,14 @@ class PurchaseController extends Controller
                     'cost_applied_at' => null,
                     'excluded_at' => now(),
                     'exclusion_note' => $validated['exclusion_note'] ?? null,
+                    'is_bonus' => false,
                 ]);
 
                 // Se olvida el vínculo, pero NO se recuerda la exclusión: la tabla
-                // de alias para consumo personal recurrente está fuera de alcance
-                // (ver feature-compras.md), y mezclarla acá rompería la invariante
-                // de los tres estados del renglón.
+                // de alias para renglones sin insumo recurrentes (consumo personal,
+                // servicios administrativos) está fuera de alcance (ver
+                // feature-compras.md), y mezclarla acá rompería la invariante de los
+                // tres estados del renglón.
                 $this->linkMemory->forget($tenant, $purchase->supplier_id, $line->raw_name);
             });
 
@@ -553,7 +560,7 @@ class PurchaseController extends Controller
                 tenantId: $purchase->tenant_id,
             );
 
-            return back()->with('status', 'Renglón marcado como consumo personal.');
+            return back()->with('status', 'Renglón marcado como "no es un insumo".');
         }
 
         [$rawType, $id] = array_pad(explode(':', $match, 2), 2, null);
@@ -568,16 +575,24 @@ class PurchaseController extends Controller
         };
         abort_unless($belongs, 422);
 
+        $isBonus = $request->boolean('is_bonus');
+
         try {
-            DB::transaction(function () use ($line, $type, $id, $unitCost, $pkgQty) {
-                // Asociar saca al renglón del estado "consumo personal", si venía de ahí.
+            DB::transaction(function () use ($line, $type, $id, $unitCost, $pkgQty, $isBonus) {
+                // Asociar saca al renglón del estado "no es un insumo", si venía de ahí.
                 $line->update([
                     'purchaseable_type' => $type,
                     'purchaseable_id' => (int) $id,
                     'excluded_at' => null,
                     'exclusion_note' => null,
+                    'is_bonus' => $isBonus,
                 ]);
-                if ($unitCost !== null) {
+                if ($isBonus) {
+                    // Sin cargo: no hay costo que imputar, pero sí cantidad que sumar.
+                    // El divisor viaja explícito porque con precio $0 no puede
+                    // derivarse del costo, que es lo que hace applyWithCost().
+                    $this->lineRecorder->apply($line, pkgQtyOverride: $pkgQty);
+                } elseif ($unitCost !== null) {
                     $this->lineRecorder->applyWithCost($line, $unitCost);
                 } else {
                     $this->lineRecorder->apply($line);
@@ -596,11 +611,13 @@ class PurchaseController extends Controller
             targetType: 'purchase_line',
             targetId: $line->id,
             action: 'purchase_line.matched',
-            payload: ['type' => $type, 'id' => (int) $id],
+            payload: ['type' => $type, 'id' => (int) $id, 'bonus' => $isBonus],
             tenantId: $purchase->tenant_id,
         );
 
-        return back()->with('status', 'Renglón asociado y costo actualizado.');
+        return back()->with('status', $isBonus
+            ? 'Renglón sin cargo: entró al stock sin modificar el costo.'
+            : 'Renglón asociado y costo actualizado.');
     }
 
     /**
@@ -629,10 +646,14 @@ class PurchaseController extends Controller
                 DB::transaction(function () use ($line, &$touchedIngredientIds, &$touchedPackagingIds) {
                     $item = $this->lineRecorder->apply($line, propagate: false);
 
-                    if ($item instanceof Ingredient) {
-                        $touchedIngredientIds[] = $item->id;
-                    } elseif ($item instanceof Packaging) {
-                        $touchedPackagingIds[] = $item->id;
+                    // Una bonificación no imputa costo, así que no hay nada que
+                    // propagar: acumularla haría recalcular recetas al pedo.
+                    if (! $line->isBonus()) {
+                        if ($item instanceof Ingredient) {
+                            $touchedIngredientIds[] = $item->id;
+                        } elseif ($item instanceof Packaging) {
+                            $touchedPackagingIds[] = $item->id;
+                        }
                     }
                     // Un artículo de reventa no interviene en ninguna receta: no
                     // se acumula en ninguna lista. Antes caía en el else y su id

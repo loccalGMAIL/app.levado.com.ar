@@ -205,7 +205,12 @@
                                         @if($line->isExcluded())
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-miga text-masa-madre"
                                                 @if($line->exclusion_note) title="{{ $line->exclusion_note }}" @endif>
-                                                Personal
+                                                Sin insumo
+                                            </span>
+                                        @elseif($line->isApplied() && $line->isBonus())
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-700"
+                                                title="Obsequio o promoción: entró al stock el {{ $line->cost_applied_at->format('d/m/Y') }} sin modificar el costo del insumo.">
+                                                Sin cargo
                                             </span>
                                         @elseif($line->isApplied())
                                             <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
@@ -245,6 +250,7 @@
                                                 'unit_price' => round((float) $line->unit_price, 2),
                                                 'iva_rate' => $line->iva_rate,
                                                 'percepcion_rate' => $line->percepcion_rate,
+                                                'is_bonus' => $line->isBonus(),
                                             ]) }})"
                                             class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-corteza border border-corteza/30 rounded-md hover:bg-miga transition-colors">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
@@ -278,7 +284,7 @@
                         </div>
                         @if($excludedLines->isNotEmpty())
                             <div class="px-4 pb-3 -mt-1 flex items-center justify-between gap-4 bg-miga/30">
-                                <span class="text-xs text-masa-madre">Consumo personal (no imputado al negocio)</span>
+                                <span class="text-xs text-masa-madre">Sin insumo (no imputado al catálogo)</span>
                                 <span class="font-mono text-xs text-masa-madre whitespace-nowrap">
                                     $ {{ number_format($personalTotal, 2, ',', '.') }}
                                 </span>
@@ -423,8 +429,15 @@
                                         <td class="px-4 py-3 align-top text-center">
                                             @if($line->isExcluded())
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-miga text-masa-madre"
-                                                    title="{{ $line->exclusion_note ?: 'Consumo personal — no es del negocio' }}">
-                                                    Personal
+                                                    title="{{ $line->exclusion_note ?: 'No es un insumo del catálogo (consumo personal, servicio administrativo, etc.)' }}">
+                                                    Sin insumo
+                                                </span>
+                                            @elseif($line->isApplied() && $line->isBonus())
+                                                {{-- Violeta y no verde: el renglón está resuelto pero no imputó ningún
+                                                     costo, que es justo lo que el verde significa en esta columna. --}}
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-700"
+                                                    title="Obsequio o promoción: entró al stock el {{ $line->cost_applied_at->format('d/m/Y') }} sin modificar el costo del insumo.">
+                                                    Sin cargo
                                                 </span>
                                             @elseif($line->isApplied())
                                                 <span class="inline-flex items-center gap-1 text-green-700 text-xs font-medium"
@@ -458,6 +471,7 @@
                                                             'unit_price' => round((float) $line->unit_price, 2),
                                                             'iva_rate' => $line->iva_rate,
                                                             'percepcion_rate' => $line->percepcion_rate,
+                                                'is_bonus' => $line->isBonus(),
                                                         ]) }})"
                                                         class="p-1 text-masa-madre hover:text-corteza transition-colors"
                                                         title="Editar todos los campos">
@@ -505,7 +519,7 @@
                                 @if($excludedLines->isNotEmpty())
                                     <tr>
                                         <td colspan="6" class="px-4 py-2 text-xs text-masa-madre text-right">
-                                            Consumo personal (no imputado al negocio)
+                                            Sin insumo (no imputado al catálogo)
                                         </td>
                                         <td class="px-4 py-2 text-right font-mono text-masa-madre text-xs whitespace-nowrap">
                                             $ {{ number_format($personalTotal, 2, ',', '.') }}
@@ -519,6 +533,48 @@
                     <p class="mt-2 text-xs text-masa-madre">
                         Esta es la factura tal como se leyó. La asociación con insumos y la actualización de costos se hacen en un paso aparte.
                     </p>
+                @endif
+            </div>
+
+            {{-- Notas de crédito de esta compra --}}
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-corteza">Notas de crédito</h3>
+                        <p class="text-xs text-masa-madre mt-0.5">Devoluciones y reconocimientos del proveedor sobre esta factura.</p>
+                    </div>
+                    @can('manage-costs')
+                        <button type="button"
+                            @click="$dispatch('open-modal', 'credit-note-create')"
+                            class="px-3 py-1.5 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                            + Nueva nota de crédito
+                        </button>
+                    @endcan
+                </div>
+
+                @if($purchase->creditNotes->isEmpty())
+                    <p class="text-sm text-masa-madre mt-4">Todavía no hay notas de crédito para esta compra.</p>
+                @else
+                    @php $creditedTotal = $purchase->creditNotes->sum(fn ($n) => (float) $n->lines->sum('subtotal')); @endphp
+                    <div class="mt-4 divide-y divide-miga border-t border-miga">
+                        @foreach($purchase->creditNotes as $note)
+                            <div class="py-3 flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <a href="{{ route('credit-notes.show', $note) }}" class="font-medium text-corteza hover:underline">
+                                        {{ $note->note_number ? 'NC #'.$note->note_number : 'Nota de crédito #'.$note->id }}
+                                    </a>
+                                    <div class="text-xs text-masa-madre mt-0.5">{{ $note->note_date->format('d/m/Y') }} · {{ $note->lines->count() }} renglón(es)</div>
+                                </div>
+                                <div class="text-right font-mono text-sm text-corteza shrink-0">
+                                    − $ {{ number_format($note->lines->sum('subtotal'), 2, ',', '.') }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-miga flex items-center justify-between text-sm">
+                        <span class="text-masa-madre">Acreditado</span>
+                        <span class="font-mono text-corteza">− $ {{ number_format($creditedTotal, 2, ',', '.') }}</span>
+                    </div>
                 @endif
             </div>
 
@@ -545,6 +601,7 @@
             @include('purchases.modals.edit-line')
             @include('purchases.modals.edit-purchase')
             @include('purchases.modals.add-line')
+            @include('credit-notes.modals.create')
         @endcan
 
         {{-- Modal: factura original --}}

@@ -356,3 +356,34 @@ test('quitar subdivisiones al editar limpia cost_per_package', function () {
     expect($ingredient->cost_per_package)->toBeNull()
         ->and((float) $ingredient->cost_per_unit)->toBe(50.0);
 });
+
+test('subdivisions debe ser al menos 2', function () {
+    [$user] = tenantUserAs(TenantUserRole::Owner);
+
+    $this->actingAs($user)
+        ->post(route('ingredients.store'), [
+            'name' => 'Crema de leche',
+            'unit' => Unit::Unidad->value,
+            'cost_per_unit' => '1200',
+            'subdivisions' => 1,
+        ])
+        ->assertSessionHasErrors('subdivisions');
+});
+
+test('un error de subdivisiones reabre el modal de alta', function () {
+    [$user] = tenantUserAs(TenantUserRole::Owner);
+
+    $page = $this->actingAs($user)
+        ->from(route('ingredients.index'))
+        ->followingRedirects()
+        ->post(route('ingredients.store'), [
+            'name' => 'Crema de leche',
+            'unit' => Unit::Unidad->value,
+            'cost_per_unit' => '1200',
+            'subdivisions' => 1,
+            '_form' => 'create',
+        ]);
+
+    $page->assertOk();
+    expect($page->getContent())->toMatch('/ingredient-create[^>]*display:\s*block/');
+});

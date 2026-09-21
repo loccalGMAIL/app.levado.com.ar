@@ -27,7 +27,23 @@ class UpdateFixedCostRequest extends FormRequest
                 Rule::exists('fixed_cost_categories', 'id')->where('tenant_id', app(Tenant::class)->id),
             ],
             'monthly_amount' => ['required', 'numeric', 'min:0'],
-            'valid_from' => ['required', 'date'],
+            'period' => ['required', 'date_format:Y-m'],
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return [
+            'period' => 'mes de vigencia',
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'period.date_format' => 'Elegí el mes de vigencia del monto.',
         ];
     }
 }

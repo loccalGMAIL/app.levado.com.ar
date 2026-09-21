@@ -43,6 +43,16 @@ test('owner puede listar gastos variables', function () {
         ->assertSee('Reparación horno');
 });
 
+test('la pantalla de gastos variables tiene el botón de imprimir el reporte', function () {
+    [$user] = ownerForVariableExpense();
+
+    $this->actingAs($user)
+        ->get(route('variable-expenses.index'))
+        ->assertOk()
+        ->assertSee('Imprimir')
+        ->assertSee('fixed-cost-report');
+});
+
 test('viewer puede ver la lista de gastos variables', function () {
     [$user, $tenant, $category] = userForVariableExpense(TenantUserRole::Viewer);
     VariableExpense::factory()->for($tenant)->create([
@@ -422,6 +432,32 @@ test('el filtro de categoría acota el listado', function () {
         ->assertOk()
         ->assertSee('GastoCategoriaB')
         ->assertDontSee('GastoCategoriaA');
+});
+
+test('el filtro de categoría acepta elegir varias a la vez', function () {
+    [$user, $tenant, $category] = ownerForVariableExpense();
+    $otherCategory = $tenant->variableExpenseCategories()->create(['name' => 'Otra']);
+    $thirdCategory = $tenant->variableExpenseCategories()->create(['name' => 'Tercera']);
+
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'GastoCategoriaA',
+        'variable_expense_category_id' => $category->id,
+    ]);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'GastoCategoriaB',
+        'variable_expense_category_id' => $otherCategory->id,
+    ]);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'GastoCategoriaC',
+        'variable_expense_category_id' => $thirdCategory->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('variable-expenses.index', ['category' => [$category->id, $otherCategory->id]]))
+        ->assertOk()
+        ->assertSee('GastoCategoriaA')
+        ->assertSee('GastoCategoriaB')
+        ->assertDontSee('GastoCategoriaC');
 });
 
 // --- Categorías ---

@@ -22,12 +22,17 @@
         x-data="{
             mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
+            replacing: null,
             openEdit(record) {
                 if (record.subdivisions && record.cost_per_package != null) {
                     record.cost_per_unit = record.cost_per_package;
                 }
                 this.editing = record;
                 $dispatch('open-modal', 'packaging-edit');
+            },
+            openReplace(item) {
+                this.replacing = item;
+                $dispatch('open-modal', 'packaging-replace');
             }
         }">
 
@@ -191,6 +196,11 @@
                                         ]) }})"
                                         class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
                                         Editar
+                                    </button>
+                                    <button type="button"
+                                        @click="openReplace({{ Js::from(['id' => $packaging->id, 'name' => $packaging->name]) }})"
+                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                        Reemplazar
                                     </button>
                                     <form method="POST" action="{{ route('packaging.toggle-active', $packaging) }}" class="flex-1">
                                         @csrf
@@ -413,6 +423,12 @@
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                                     </svg>
                                                 </button>
+                                                <button type="button"
+                                                    @click="openReplace({{ Js::from(['id' => $packaging->id, 'name' => $packaging->name]) }})"
+                                                    aria-label="Reemplazar en recetas" title="Reemplazar en recetas"
+                                                    class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
+                                                    <x-icon name="arrow-path" />
+                                                </button>
                                                 <form method="POST" action="{{ route('packaging.toggle-active', $packaging) }}">
                                                     @csrf
                                                     @method('PATCH')
@@ -455,6 +471,7 @@
         @can('manage-costs')
             @include('packaging.modals.create')
             @include('packaging.modals.edit')
+            @include('packaging.modals.replace')
             @include('suppliers.modals.quick-create')
         @endcan
 

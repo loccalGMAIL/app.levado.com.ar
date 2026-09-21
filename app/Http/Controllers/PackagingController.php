@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PackagingController extends Controller
@@ -52,7 +53,10 @@ class PackagingController extends Controller
             ->get()
             ->keyBy('stockable_id');
 
-        return view('packaging.index', compact('packagings', 'suppliers', 'stockLevels'));
+        // Lista completa para el select del modal de reemplazo masivo.
+        $allPackagings = $tenant->packagings()->orderBy('name')->get();
+
+        return view('packaging.index', compact('packagings', 'suppliers', 'stockLevels', 'allPackagings'));
     }
 
     public function store(StorePackagingRequest $request): RedirectResponse
@@ -127,6 +131,26 @@ class PackagingController extends Controller
     public function toggleActive(Packaging $packaging): RedirectResponse
     {
         $this->authorize('update', $packaging);
+
+        // Mismo guard que IngredientController::toggleActive(): sin él, un
+        // descartable descontinuado podía desactivarse mientras recetas
+        // activas seguían costeando con él en silencio.
+        if ($packaging->active) {
+            $blockedBy = DB::table('recipe_packaging_lines')
+                ->join('recipes', 'recipes.id', '=', 'recipe_packaging_lines.recipe_id')
+                ->where('recipe_packaging_lines.packaging_id', $packaging->id)
+                ->where('recipes.active', true)
+                ->distinct()
+                ->pluck('recipes.name')
+                ->toArray();
+
+            if (! empty($blockedBy)) {
+                return back()->withErrors([
+                    'toggle' => 'No podés desactivar este descartable porque lo usan: '
+                        .implode(', ', $blockedBy).'. Reemplazalo en esas recetas primero.',
+                ]);
+            }
+        }
 
         $packaging->update(['active' => ! $packaging->active]);
         $action = $packaging->active ? 'packaging.activated' : 'packaging.deactivated';

@@ -53,6 +53,11 @@ class Purchase extends Model
         return $this->hasMany(PurchaseLine::class);
     }
 
+    public function creditNotes(): HasMany
+    {
+        return $this->hasMany(CreditNote::class);
+    }
+
     public function totalAmount(): float
     {
         return (float) ($this->relationLoaded('lines')

@@ -1,6 +1,6 @@
 ---
 name: feature-compras
-description: "Módulo de compras — tablas, flujos, servicios y estado de las fases"
+description: "Módulo de compras — tablas, flujos, servicios, estado de las fases, renglones sin cargo y notas de crédito"
 metadata:
   node_type: memory
   type: project
@@ -24,6 +24,7 @@ Rama: `feature/compras` — versión 0.7.1
 - `purchaseable_type/id`: match con `ingredient` o `packaging` del catálogo (nullable = pendiente)
 - `iva_rate`: alícuota de IVA almacenada por renglón (0, 0.105, 0.21)
 - `cost_applied_at`: null = pendiente de imputar; filled = costo ya aplicado al insumo
+- `is_bonus` (boolean, default false, v0.12.14): renglón sin cargo — obsequio, promo o muestra. **No es un cuarto estado**: es un matiz del renglón *aplicado* (ver «Renglones sin cargo»)
 - **Precision fix:** `unit_price` y `subtotal` cambiados de `decimal(10,4)` a `decimal(14,4)` para soportar subtotales > $999.999 (ej.: 200 bolsas × $13.891 = $2.778.280)
 
 ## Servicios
@@ -311,3 +312,124 @@ Tabla de alias para autosugerir renglones personales recurrentes; reporte mensua
 **Ojo:** la memoria de vinculación de la v0.12.7 **no** cubre el primer punto. Recuerda a qué
 ítem del catálogo corresponde un texto, no que un texto sea consumo personal — `matchLine()`
 *olvida* el vínculo al excluir. Autosugerir exclusiones sigue siendo trabajo aparte.
+
+### Renombrado a «No es un insumo» (v0.12.15)
+
+Facturas con un renglón de "Servicios administrativos" (u otro cargo del proveedor que tampoco
+es insumo, pero tampoco es consumo personal del titular) no tenían dónde ir: la única opción,
+«Consumo personal», mentía sobre el motivo.
+
+**No cambió nada de datos ni de comportamiento** — sigue siendo el mismo `excluded_at`/
+`exclusion_note`, el mismo centinela `PurchaseController::EXCLUDED_MATCH = 'excluded'`, la misma
+invariante de los tres estados. Sólo se renombró la etiqueta en toda la UI para que cubra
+cualquier concepto de la factura que no es un insumo, no sólo el personal:
+
+- Select/badge: «Consumo personal» → **«No es un insumo»** (`match.blade.php`, `show.blade.php`).
+- Badge compacto (tabla/card): «Personal» → **«Sin insumo»**.
+- Botón: «Marcar como personal» → **«Confirmar»**.
+- Mensaje flash: «Renglón marcado como consumo personal.» → **«Renglón marcado como "no es un
+  insumo".»**
+- Placeholder de la nota: ahora sugiere «servicios administrativos, consumo personal…» en vez de
+  sólo el ejemplo de consumo personal.
+- Comentarios actualizados en `PurchaseController`, `PurchaseLine::isExcluded()`,
+  `NotificationService`, `ProductLinkMemory` y `resources/js/purchases/match.js` — todos decían
+  literalmente "consumo personal" en el docblock, lo que habría confundido a quien lo lea después
+  de este cambio si no se tocaban.
+- Nombres de test **no** se tocaron (siguen diciendo "consumo personal" en varios `tests/Feature/
+  Purchase*`, `StockPurchaseIntegrationTest`, `ProductLinkMemoryTest`): describen el caso de uso
+  histórico que motivó la feature, no la etiqueta actual de la UI, y ningún test asertaba el
+  string exacto del label (se verificó antes de renombrar).
+
+## Renglones sin cargo / bonificaciones (v0.12.14)
+
+**El problema:** las distribuidoras mandan mercadería de regalo, que en la factura viene a $0. Asociarla al insumo hacía que `apply()` imputara ese $0 como costo nuevo, lo propagara a todas las recetas y les tirara abajo el precio de venta. El cliente lo esquivaba dejando esos renglones **sin asociar**, y así la mercadería nunca entraba al stock.
+
+**La solución** es el espejo de «consumo personal»: aquel resuelve el renglón sin imputar **nada**; éste **sí suma stock y no toca el costo**.
+
+### Modelo
+
+`is_bonus` convive con `purchaseable_id` y `cost_applied_at`, y nunca con `excluded_at`. Los tres estados del renglón (pendiente / personal / aplicado) **no cambiaron**: un renglón bonificado es un renglón *aplicado* cuya aplicación no imputó costo. Mantenerlo así evitó reescribir el índice, el contador de resueltos y `isResolved()`. `PurchaseLine::isBonus()`.
+
+### Imputación
+
+`PurchaseLineRecorder::apply()` ramifica sobre `is_bonus`: saltea `applyIngredientCost()`/`applyPackagingCost()` completos (price log, `update` de `cost_per_unit`/`cost_per_package`, propagación y `raiseCostSpike`) y tampoco toca el ítem en memoria. La aritmética de conversión de unidades y subdivisiones es la misma de siempre: depende de las cantidades, no del precio.
+
+El movimiento se registra con `StockMovementType::Bonus` y se valúa al `cost_per_unit` **vigente del ítem**, no al $0 de la factura. Ver [[feature-existencias]].
+
+### El divisor tiene que venir del formulario
+
+Con unidades incompatibles (`u` → `kg`, «ACEITE X 5 LTS»), el camino normal es `applyWithCost()`, que deriva cuánto trae el bulto como `unit_price / unitCost`. **Con precio $0 eso da cero y la línea no registraba stock.** Por eso `apply()` tiene el parámetro `pkgQtyOverride`, que gana sobre el divisor recordado y sobre el parseado de la descripción; `matchLine()` se lo pasa desde el `pkg_qty` que el form ya enviaba. Las bonificaciones nunca pasan por `applyWithCost()`.
+
+### Auto-detección
+
+Vive en `storePending()` (`resolveBonus()`), que es por donde pasan los tres caminos de alta — escaneo con IA, alta manual y revisión previa —: un `unit_price` en cero pre-marca el renglón. **Lo que mande el formulario siempre gana** (hay facturas que ponen el precio y descuentan el 100%). En los modales el checkbox va precedido de un `<input type="hidden" name="is_bonus" value="0">`, porque un checkbox destildado no viaja y sin el 0 explícito el servidor volvería a inferir por precio.
+
+### UI
+
+- `purchases/match.blade.php`: tilde «Sin cargo» dentro del bloque de cálculo. El costo unitario se deshabilita, el divisor **sigue visible** cuando hace falta, y el `:disabled` del botón pasó a `(!isBonus && unitCost <= 0)` — una bonificación tiene costo 0 legítimamente. El campo viaja como hidden bindeado (`(isBonus && !isExcluded) ? 1 : 0`), no como checkbox con `name`: el bloque se oculta con `x-show` pero sigue en el DOM.
+- Badge **violeta** «Sin cargo» en `purchases/show` (tabla y cards) y en el renglón aplicado de `match`, en lugar del check verde. El verde significa «se imputó un costo», y acá no se imputó ninguno. Mismo violeta que el badge del kardex.
+- `add-line` y `edit-line` tienen el mismo tilde, con `onPriceInput()` en `purchaseLine()` (`resources/js/purchases/line-form.js`) que pre-marca mientras el usuario no lo haya tocado a mano.
+
+### Lo que NO hace
+
+- No revierte el costo ya imputado si un renglón aplicado pasa a sin cargo (sí contramueve su entrada de stock). Misma política que «Desasociar».
+- `applyLineSuggestions()` no acumula los ítems bonificados en la lista de tocados: sin costo nuevo no hay nada que propagar.
+- No hay backfill de los renglones históricos que el cliente dejó sin asociar. Se resuelven a mano desde la pantalla de asociación, que ahora los propone sola como sin cargo por venir a $0.
+
+## Notas de crédito de compra (v0.12.15)
+
+**El problema:** dos casos reales del cliente sin forma de registrarse — una distribuidora facturó mercadería que nunca llegó, y en otro caso reconoció por escrito la rotura de insumos en el transporte. La única salida hasta acá era borrar la compra entera (se pierde la factura) o un ajuste de stock a mano sin documento de por medio.
+
+### Tablas nuevas
+
+`credit_notes`: `id, tenant_id, supplier_id, purchase_id (nullable, nullOnDelete), note_number (nullable), note_date, notes, timestamps`. Unique `(tenant_id, supplier_id, note_number)`, mismo criterio que `purchases_tenant_supplier_invoice_unique`.
+
+`credit_note_lines`: `id, credit_note_id, purchase_line_id (nullable, nullOnDelete), description (nullable), quantity, unit, unit_price, iva_rate (default 0.21), subtotal, affects_stock (boolean default true), stock_applied_at (nullable), timestamps`.
+
+- `purchase_line_id` null = renglón libre (reconocimiento económico puro, ej. la rotura ya ajustada por recuento). Con valor, ata la devolución al renglón que hizo entrar esa mercadería.
+- `CreditNoteLine::affectsStock()` exige **las dos cosas**: `affects_stock` tildado **y** `purchase_line_id` presente. Sin renglón de origen no hay entrada que revertir, aunque el tilde esté marcado — el modelo lo garantiza, no sólo la UI.
+
+### Cómo sale el stock — proporcional, no recalculado
+
+**Decisión clave:** la NC **no repite** la cascada de conversión de unidades de `PurchaseLineRecorder::apply()` (bultos, subdivisiones, `UnitConverter`). En vez de eso, deriva la salida **proporcional a la entrada vigente** del renglón de compra:
+
+```
+salida = |entradaVigente.quantity| × (nc.quantity ÷ purchaseLine.quantity_purchased)
+unitCost = entradaVigente.unit_cost   (snapshot, no el costo de hoy)
+```
+
+Sale gratis en corrección para bonificaciones y subdivisiones (una devolución de 1 de 2 maples de huevos devuelve exactamente 12 de los 24 huevos que entraron), y una devolución total deja el neto en cero exacto.
+
+`CreditNoteLineRecorder::applyStock()` resuelve la entrada vigente con `StockService::activePurchaseEntryFor()` (pública a propósito, para no duplicar esa query) y aborta 422 si el renglón de origen no está aplicado, está excluido, o si la cantidad devuelta supera lo comprado.
+
+### `StockMovementType::Return` — no es un contramovimiento
+
+Tipo propio, con `reverses_movement_id` **siempre null**. Si fuera un contramovimiento de la entrada de compra, `activePurchaseEntryFor()` (que sólo mira `Purchase`/`Bonus`, sin cambios) dejaría de ver la entrada original como "activa" apenas se creara la devolución, y una edición posterior del renglón de compra (`recompute()` → `syncPurchaseLineEntry()`) volvería a registrar stock desde cero en vez de partir del neto ya descontado — duplicando mercadería. Con la devolución como movimiento propio, la entrada de compra sigue intacta para `syncPurchaseLineEntry()`, y el nivel de stock simplemente acumula ambos movimientos por separado. Test-ancla: *"editar el renglón de compra después de una devolución no duplica stock"*.
+
+`StockService` generaliza `registerMovement()` a `PurchaseLine|CreditNoteLine|null $reference` (antes sólo `PurchaseLine`), con `referenceTypeFor()` mapeando la clase a `'purchase_line'`/`'credit_note_line'`. Métodos nuevos, espejo exacto de los de compra: `syncCreditNoteLineExit()` (idempotente igual que `syncPurchaseLineEntry()`) y `reverseCreditNoteLineExit()`.
+
+### Invariante: el costo NO se toca
+
+Igual que al desasociar un renglón de compra o marcarlo consumo personal: **la NC nunca imputa costo**. Sin price log, sin `update` de `cost_per_unit`, sin propagación a recetas. Una devolución no dice nada sobre lo que cuesta reponer el insumo.
+
+### Controller / rutas
+
+`CreditNoteController` calca la forma de `PurchaseController`: mismo patrón de `destroy()` (revertir el stock de las líneas aplicadas **antes** del `delete()`, dentro de `DB::transaction`, porque el cascade de la FK se lleva las líneas y con ellas la referencia). Rutas bajo `credit-notes.*`, mismos dos grupos de middleware que `purchases.*` (lectura para todos los roles, escritura para `role:super_admin,owner,admin`).
+
+### UI
+
+Sección nueva en el sidebar (*Existencias*, debajo de Compras). `purchases/show.blade.php` lista las notas de crédito de esa compra con el total acreditado — **sin** alterar `invoice_total` ni el neto de la factura, que tiene que seguir cerrando contra el papel. El kardex (`stock/show.blade.php`) linkea el movimiento «Devolución» a la nota igual que ya linkea las entradas de compra a su factura.
+
+## `subdivisions` vacío ≠ `subdivisions = 1` (v0.12.16)
+
+Feedback real de Confitería Orfano: un insumo que se usa entero (crema de leche, pote de 200 cc, sin subdividir) no se podía cargar — el campo «Unidades por envase» tiene `min:2` y escribir `1` bloqueaba el formulario. El caso **ya funcionaba** dejando el campo vacío (`subdivisions = null`: `unit = u`, `cost_per_unit` = precio del envase, sin `cost_per_package`); el problema era sólo de interfaz, en tres capas:
+
+- `min="2"` **HTML nativo** en los cuatro modales (create/edit de `ingredients` y `packaging`) cancelaba el submit con el tooltip genérico del navegador, sin explicar la alternativa. Se sacó — la regla real sigue viviendo sólo en el FormRequest.
+- `resources/views/ingredients/index.blade.php` no incluía `subdivisions`/`subdivision_label` en el `hasAny(...)` que decide reabrir el modal con errores (`packaging/index.blade.php` sí lo hacía). Un error de validación en ese campo cerraba el modal en silencio, con los datos perdidos.
+- `lang/es/validation.php` tiene `'attributes' => []` global, así que el mensaje salía como *"El campo subdivisions debe ser al menos 2."* — se agregó `attributes()`/`messages()` en los cuatro FormRequests en vez de tocar el archivo global (evita pisar el rótulo distinto que usa cada pantalla: «envase» en ingredientes, «presentación» en envases).
+
+**Decisión: `1` sigue sin ser un valor válido.** No se bajó `min:2` a `min:1`. `subdivisions` significa "en cuántas partes se divide el envase" — `1` no es una subdivisión, es la ausencia de una. Además `app/Console/Commands/FixIngredientSubdivisionCosts.php:123-125,144-145` (`ingredients:fix-subdivision-costs`) depende del invariante `subdivisions >= 2` para distinguir el caso A ("nunca dividido", `cost_per_unit == cost_per_package`) del caso B ("envase viejo"): con `subdivisions = 1` esa igualdad sería legítima y rompería el diagnóstico. Ver [[project-architecture]].
+
+Los cuatro modales ahora rotulan el campo "(opcional)", explican en texto cuándo dejarlo vacío vs. cuándo completarlo, y muestran un aviso Alpine en vivo con botón "Vaciar" si el usuario tipea `0` o `1` — resuelve el caso antes del submit; el servidor queda como red de contención.
+
+Lo que **no** se tocó, detectado pero fuera de alcance: `IngredientController::store()`/`update()` no limpian `subdivisions`/`subdivision_label` cuando `unit` deja de ser `u` (sólo limpian `cost_per_package`) — un insumo en `kg` puede quedar con `subdivisions` colgado sin que ninguna validación lo impida.

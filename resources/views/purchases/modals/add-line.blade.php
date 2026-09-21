@@ -24,6 +24,7 @@
                 price: @js(old('unit_price')),
                 ivaRate: {{ (float) $defaultIva }},
                 percepcionRate: {{ (float) ($defaultPercepcion ?: 0) }},
+                isBonus: {{ old('is_bonus') ? 'true' : 'false' }},
             })"
             class="space-y-4">
 
@@ -62,11 +63,26 @@
                         data-maxdecimals="4"
                         class="block w-full pl-7"
                         x-model.number="price"
+                        x-on:input="onPriceInput()"
                         required />
                 </div>
                 <x-unit-price-hint />
                 <x-input-error :messages="$errors->get('unit_price')" class="mt-1" />
             </div>
+
+            {{-- Sin cargo: obsequio o promoción de la distribuidora --}}
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+                {{-- Hidden previo: un checkbox destildado no viaja, y sin el 0 explícito
+                     el servidor volvería a inferir la bonificación desde el precio. --}}
+                <input type="hidden" name="is_bonus" value="0">
+                <input type="checkbox" name="is_bonus" value="1"
+                    x-model="isBonus" @change="bonusTouched = true"
+                    class="mt-0.5 rounded border-gray-300 text-corteza focus:ring-horno">
+                <span class="text-sm text-masa-madre">
+                    <span class="font-medium text-corteza">Sin cargo (bonificación)</span>
+                    <span class="block text-xs">Suma al stock sin modificar el costo del insumo ni los precios de las recetas.</span>
+                </span>
+            </label>
 
             <div class="bg-miga/50 rounded-md p-3 space-y-2">
                 <div class="flex items-center justify-between gap-4">

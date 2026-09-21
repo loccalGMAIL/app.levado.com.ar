@@ -74,7 +74,11 @@ class RecipeController extends Controller
         $prices = $priceRows->pluck('price', 'recipe_id');
         $policies = $priceRows->mapWithKeys(fn (ProductPrice $row) => [$row->recipe_id => $row->policyPayload()]);
 
-        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices', 'policies'));
+        // Lista completa de sub-recetas para el select del modal de reemplazo
+        // masivo: el sustituto tiene que ser un semielaborado, activo o no.
+        $semiElaborateRecipes = $tenant->recipes()->where('is_semi_elaborate', true)->orderBy('name')->get();
+
+        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices', 'policies', 'semiElaborateRecipes'));
     }
 
     public function show(Recipe $recipe): View
