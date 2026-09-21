@@ -30,6 +30,10 @@ class FixedCostReportRequest extends FormRequest
             'sections.*' => ['in:'.implode(',', self::SECTIONS)],
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:active,inactive'],
+            'category' => ['nullable', 'integer'],
+            've_search' => ['nullable', 'string', 'max:100'],
+            've_category' => ['nullable', 'integer'],
+            've_supplier' => ['nullable', 'integer'],
         ];
     }
 
@@ -39,6 +43,10 @@ class FixedCostReportRequest extends FormRequest
         return [
             'from' => 'fecha desde',
             'to' => 'fecha hasta',
+            'category' => 'categoría',
+            've_search' => 'búsqueda de gastos variables',
+            've_category' => 'categoría de gastos variables',
+            've_supplier' => 'proveedor',
         ];
     }
 
@@ -82,7 +90,7 @@ class FixedCostReportRequest extends FormRequest
      * Default sin `to`: hoy. Default sin `from`: 12 meses atrás desde `to`
      * (mismo alcance que tenía antes `months=12`, ahora anclado a fechas).
      *
-     * @return array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string}
+     * @return array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string, category: ?int, ve_search: ?string, ve_category: ?int, ve_supplier: ?int}
      */
     public function options(): array
     {
@@ -97,6 +105,10 @@ class FixedCostReportRequest extends FormRequest
             'sections' => array_values(array_intersect(self::SECTIONS, $sections)),
             'search' => $this->validated('search'),
             'status' => $this->validated('status'),
+            'category' => $this->validated('category') ? (int) $this->validated('category') : null,
+            've_search' => $this->validated('ve_search'),
+            've_category' => $this->validated('ve_category') ? (int) $this->validated('ve_category') : null,
+            've_supplier' => $this->validated('ve_supplier') ? (int) $this->validated('ve_supplier') : null,
         ];
     }
 }

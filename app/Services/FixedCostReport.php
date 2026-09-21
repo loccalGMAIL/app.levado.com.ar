@@ -26,10 +26,10 @@ class FixedCostReport
     public function __construct(private readonly FixedCostHistory $history) {}
 
     /**
-     * @param  array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string}  $options
+     * @param  array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string, category: ?int, ve_search: ?string, ve_category: ?int, ve_supplier: ?int}  $options
      * @return array{
      *     business: array{name: string, razon_social: ?string, cuit: ?string, condicion_iva: ?string, currency: string, logo: ?string},
-     *     meta: array{from: string, to: string, from_ymd: string, to_ymd: string, snapshot_label: string, generated_at: string, months: int, sections: list<string>, filters: array{search: ?string, status: ?string}},
+     *     meta: array{from: string, to: string, from_ymd: string, to_ymd: string, snapshot_label: string, generated_at: string, months: int, sections: list<string>, filters: array{search: ?string, status: ?string, category: ?string, ve_search: ?string, ve_category: ?string, ve_supplier: ?string}},
      *     current: array{rows: list<array{id: int, name: string, category: ?string, active: bool, amount: float, carried: bool}>, total: float, count: int},
      *     monthly: ?array{rows: list<array{label: string, total: float, change_pct: ?float}>, average: float, min: float, max: float},
      *     details: ?array{rows: list<array{name: string, category: ?string, timeline: list<array{label: string, amount: float, change_pct: ?float}>}>, truncated: bool, total_count: int},
@@ -46,10 +46,12 @@ class FixedCostReport
         $months = $fromMonth->diffInMonths($toMonth) + 1;
         $sections = $options['sections'];
 
-        $current = $this->buildCurrent($tenant, $toMonth, $options['search'], $options['status']);
+        $current = $this->buildCurrent($tenant, $toMonth, $options['search'], $options['status'], $options['category']);
         $monthly = in_array('monthly', $sections, true) ? $this->buildMonthly($tenant, $fromMonth, $toMonth) : null;
         $details = in_array('details', $sections, true) ? $this->buildDetails($tenant, $current['rows'], $toMonth, $months) : null;
-        $variable = in_array('variable', $sections, true) ? $this->buildVariable($tenant, $from, $to) : null;
+        $variable = in_array('variable', $sections, true)
+            ? $this->buildVariable($tenant, $from, $to, $options['ve_search'], $options['ve_category'], $options['ve_supplier'])
+            : null;
 
         return [
             'business' => [
@@ -69,7 +71,16 @@ class FixedCostReport
                 'generated_at' => Carbon::now()->format('d/m/Y H:i'),
                 'months' => $months,
                 'sections' => $sections,
-                'filters' => ['search' => $options['search'], 'status' => $options['status']],
+                // Nombres resueltos, no ids: es lo que se imprime en el encabezado del
+                // reporte, y un id sin cruzar contra el catálogo no le dice nada al lector.
+                'filters' => [
+                    'search' => $options['search'],
+                    'status' => $options['status'],
+                    'category' => $options['category'] ? $tenant->fixedCostCategories()->find($options['category'])?->name : null,
+                    've_search' => $options['ve_search'],
+                    've_category' => $options['ve_category'] ? $tenant->variableExpenseCategories()->find($options['ve_category'])?->name : null,
+                    've_supplier' => $options['ve_supplier'] ? $tenant->suppliers()->find($options['ve_supplier'])?->name : null,
+                ],
             ],
             'current' => $current,
             'monthly' => $monthly,
@@ -88,11 +99,11 @@ class FixedCostReport
     /**
      * @return array{rows: list<array{id: int, name: string, category: ?string, active: bool, amount: float, carried: bool}>, total: float, count: int}
      */
-    private function buildCurrent(Tenant $tenant, Carbon $period, ?string $search, ?string $status): array
+    private function buildCurrent(Tenant $tenant, Carbon $period, ?string $search, ?string $status, ?int $category): array
     {
-        // Mismo when(search)/when(status) que FixedCostController@index, para
-        // que "Aplicar los filtros de la pantalla" reporte exactamente lo que
-        // el usuario está viendo en Gastos Fijos.
+        // Mismo when(search)/when(status)/when(category) que FixedCostController@index,
+        // para que "Aplicar los filtros de la pantalla" reporte exactamente lo que el
+        // usuario está viendo en Gastos Fijos.
         $fixedCosts = $tenant->fixedCosts()
             ->with('category')
             ->when($search, function ($q, $search) {
@@ -102,6 +113,7 @@ class FixedCostReport
             })
             ->when($status === 'active', fn ($q) => $q->active())
             ->when($status === 'inactive', fn ($q) => $q->where('active', false))
+            ->when($category, fn ($q) => $q->where('fixed_cost_category_id', $category))
             ->orderByDesc('active')->orderBy('name')
             ->get();
 
@@ -203,10 +215,25 @@ class FixedCostReport
      *
      * @return array{rows: list<array{date: string, name: string, category: ?string, supplier: ?string, description: ?string, amount: float}>, total: float}
      */
-    private function buildVariable(Tenant $tenant, Carbon $from, Carbon $to): array
+    private function buildVariable(Tenant $tenant, Carbon $from, Carbon $to, ?string $search, ?int $category, ?int $supplier): array
     {
+        // Mismo when(search)/when(category)/when(supplier) que VariableExpenseController@index,
+        // para que "Aplicar los filtros de la pantalla" (abierto desde Gastos Variables) reporte
+        // exactamente lo que el usuario está viendo ahí.
         $expenses = $tenant->variableExpenses()
             ->with(['category', 'supplier'])
+            ->when($search, function ($q, $search) {
+                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+                // El closure agrupa el OR: suelto, se mezclaría con category/supplier/fecha
+                // y el filtro de búsqueda los ignoraría.
+                return $q->where(function ($q2) use ($escaped) {
+                    $q2->where('name', 'like', "%{$escaped}%")
+                        ->orWhere('description', 'like', "%{$escaped}%");
+                });
+            })
+            ->when($category, fn ($q) => $q->where('variable_expense_category_id', $category))
+            ->when($supplier, fn ($q) => $q->where('supplier_id', $supplier))
             ->between($from->toDateString(), $to->toDateString())
             ->orderBy('expense_date')
             ->get();

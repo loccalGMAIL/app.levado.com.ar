@@ -36,6 +36,7 @@ class FixedCostController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
+            ->when(request('category'), fn ($q, $categoryId) => $q->where('fixed_cost_category_id', $categoryId))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();

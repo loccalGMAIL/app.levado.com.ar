@@ -77,6 +77,48 @@ test('el encabezado trae los datos del negocio y la fecha de emisión', function
         ->assertSee(now()->format('d/m/Y'));
 });
 
+test('el filtro por categoría acota la sección de gastos vigentes', function () {
+    [$user, $tenant, $category] = reportSetup();
+    $otherCategory = $tenant->fixedCostCategories()->create(['name' => 'Otra']);
+    FixedCost::factory()->for($tenant)->for($category, 'category')->create(['name' => 'Alquiler'])
+        ->logs()->create(['monthly_amount' => 100, 'period' => now()->startOfMonth()]);
+    FixedCost::factory()->for($tenant)->for($otherCategory, 'category')->create(['name' => 'Internet'])
+        ->logs()->create(['monthly_amount' => 200, 'period' => now()->startOfMonth()]);
+
+    $this->actingAs($user)
+        ->get(route('fixed-costs.report', ['category' => $category->id]))
+        ->assertOk()
+        ->assertSee('Alquiler')
+        ->assertDontSee('Internet');
+});
+
+test('los filtros de gastos variables (ve_*) acotan esa sección del reporte', function () {
+    [$user, $tenant] = reportSetup();
+    $category = $tenant->variableExpenseCategories()->create(['name' => 'Mantenimiento']);
+    $otherCategory = $tenant->variableExpenseCategories()->create(['name' => 'Otra']);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'Reparación horno',
+        'variable_expense_category_id' => $category->id,
+        'expense_date' => now()->startOfMonth()->addDays(2),
+    ]);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'Compra de insumos',
+        'variable_expense_category_id' => $otherCategory->id,
+        'expense_date' => now()->startOfMonth()->addDays(3),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('fixed-costs.report', [
+            'sections' => ['variable'],
+            'from' => now()->startOfMonth()->format('Y-m-d'),
+            'to' => now()->endOfMonth()->format('Y-m-d'),
+            've_category' => $category->id,
+        ]))
+        ->assertOk()
+        ->assertSee('Reparación horno')
+        ->assertDontSee('Compra de insumos');
+});
+
 test('el histórico mensual sólo aparece si se pide la sección', function () {
     [$user, $tenant, $category] = reportSetup();
     FixedCost::factory()->for($tenant)->for($category, 'category')->withHistory(3)->create(['name' => 'Internet']);

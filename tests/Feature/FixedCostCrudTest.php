@@ -37,6 +37,19 @@ test('owner puede listar gastos fijos', function () {
         ->assertSee('Alquiler local');
 });
 
+test('el filtro por categoría acota el listado de gastos fijos', function () {
+    [$user, $tenant, $category] = ownerForFixedCost();
+    $otherCategory = $tenant->fixedCostCategories()->create(['name' => 'Otra']);
+    FixedCost::factory()->for($tenant)->create(['name' => 'Alquiler local', 'fixed_cost_category_id' => $category->id]);
+    FixedCost::factory()->for($tenant)->create(['name' => 'Internet', 'fixed_cost_category_id' => $otherCategory->id]);
+
+    $this->actingAs($user)
+        ->get(route('fixed-costs.index', ['category' => $category->id]))
+        ->assertOk()
+        ->assertSee('Alquiler local')
+        ->assertDontSee('Internet');
+});
+
 test('viewer puede ver la lista de gastos fijos', function () {
     $tenant = Tenant::factory()->create();
     $user = User::factory()->create();

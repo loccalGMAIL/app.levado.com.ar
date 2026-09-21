@@ -26,9 +26,13 @@ del módulo, con `FixedCostHistory` (histórico mensual, v0.12.17) ya listo para
     cantidad de meses hacia atrás (6/12/24). Se reemplazó por el rango de fechas a pedido explícito
     del usuario: más simple de leer, y habilita que la sección de variables use granularidad de día
     en vez de forzar el mes calendario completo (ver abajo).
-- Botón «Imprimir» en `fixed-costs/index.blade.php` e `history.blade.php`, fuera de
-  `@can('manage-costs')` (mismo acceso que la ruta — cualquier usuario del tenant ya ve los montos
-  en el listado).
+- Botón «Imprimir» en `fixed-costs/index.blade.php`, `history.blade.php` y
+  `variable-expenses/index.blade.php`, fuera de `@can('manage-costs')` (mismo acceso que la ruta —
+  cualquier usuario del tenant ya ve los montos en el listado). Las tres pantallas abren **el mismo
+  modal** (`fixed-cost-report`, ver abajo el prop `context`), no hay uno por pantalla.
+- **Filtro por categoría en Gastos Fijos** (`FixedCostController@index`), agregado para emparejar a
+  Gastos Variables (que ya filtraba por categoría/proveedor). `$categories` ya estaba disponible en
+  el controller (se usaba para el modal de Categorías) — el filtro nuevo no agrega ninguna query.
 
 ## Arquitectura — una sola plantilla, no dos
 `resources/views/fixed-costs/report/{_styles,_document,screen,pdf}.blade.php`. `_styles` y
@@ -72,6 +76,27 @@ toMonth) + 1` — `months` es un valor **calculado**, no un parámetro que el us
   precisión sin necesidad. El rango de fechas lo arregla de raíz. Ojo: el row necesita `name`
   explícito además de category/supplier/description — se olvidó en el primer borrador y el test de
   esta sección lo agarró (`assertSee` sobre el nombre del gasto, no sobre su descripción).
+  Filtra por `search`/`category`/`supplier`, mismo patrón (`when()` + OR agrupado en un closure para
+  `search`) que `VariableExpenseController@index:30-43`.
+
+**Filtros de `current`/`variable`, sin colisión de nombres**: `current` (Gastos Fijos) usa `search`/
+`status`/`category`; `variable` (Gastos Variables) usa `ve_search`/`ve_category`/`ve_supplier`
+-prefijados a propósito, porque el modal es uno solo y ambos grupos de filtros pueden convivir en el
+mismo `GET` si algún día hace falta-. `meta.filters` guarda **nombres resueltos**
+(`$tenant->fixedCostCategories()->find($id)?->name`, etc.), no ids: es lo que se imprime en el
+encabezado del reporte ("Filtros gastos fijos: ...", "Filtros gastos variables: ..." — dos líneas
+independientes, cada una sólo si tiene algo que mostrar), y un id sin cruzar contra el catálogo no
+le dice nada al lector. El *checkbox* "Aplicar los filtros de la pantalla" del modal, en cambio, no
+resuelve nombres (frase genérica "categoría filtrada") para no tener que pasarle la colección de
+categorías al modal — sólo el documento final lo amerita.
+
+**El modal (`fixed-costs/modals/report.blade.php`) tiene un prop `context` (`'fixed'` por defecto |
+`'variable'`)**: decide qué checkboxes de sección vienen tildados por defecto (`current`+`monthly`
+en `fixed`, `variable` en `variable` — las 4 secciones siguen **siempre** visibles y elegibles en
+los dos casos) y qué bloque de "Aplicar los filtros de la pantalla" se muestra (el de Gastos Fijos o
+el de Gastos Variables). `variable-expenses/index.blade.php` es el único que pasa
+`context: 'variable'`; también precarga el rango de fechas del modal con el `from`/`to` que ya
+tenga activo esa pantalla.
 
 **Tope de rango**: 24 meses, validado a mano en `FixedCostReportRequest::withValidator()` (no con
 la regla `after_or_equal:from`, para controlar el mensaje en español y compartir el mismo chequeo
@@ -100,15 +125,25 @@ el `<div class="sm:hidden">` contenedor no — y al imprimir el ancho suele caer
 `sm`), `components/flash-messages.blade.php`, y el banner de impersonación en
 `layouts/app.blade.php`. El ocultamiento de `nav`/`aside` (el chrome normal del layout) queda
 **scopeado a `screen.blade.php`** vía un `<style>@media print{...}</style>` propio de esa página, no
-global — no hay otra pantalla con función de imprimir todavía.
+global — es la única vista de la app con función de imprimir; las otras pantallas (Gastos Fijos,
+Historial, Gastos Variables) sólo abren el modal que arma la URL hacia ella.
 
 ## Tests
-`tests/Feature/FixedCostReportTest.php`, 12 tests. Setup propio (`reportSetup()`) en vez de
+`tests/Feature/FixedCostReportTest.php`, 14 tests. Setup propio (`reportSetup()`) en vez de
 reusar `ownerForFixedCost()` de `FixedCostCrudTest.php`: una función global declarada en otro
 archivo de test no está garantizada disponible según el orden en que Pest cargue los archivos.
 Trampa de factory: `FixedCost::factory()->for($category)` falla (`fixedCostCategory()` no existe,
 Laravel adivina el nombre de relación por el nombre de la clase) — hace falta
 `->for($category, 'category')` explícito, la relación real del modelo.
+
+Filtro por categoría: test nuevo en `FixedCostCrudTest.php` (pantalla de Gastos Fijos) + test nuevo
+en `FixedCostReportTest.php` (sección "vigentes" del reporte). Filtros `ve_*`: un test en
+`FixedCostReportTest.php` que crea dos categorías de gastos variables y confirma que `ve_category`
+excluye la que no matchea. Botón «Imprimir» en Gastos Variables: un test liviano en
+`VariableExpenseCrudTest.php` que sólo verifica `assertSee('Imprimir')` +
+`assertSee('fixed-cost-report')` (el nombre del modal aparece en el HTML vía el `$dispatch` y el
+`x-on:open-modal.window` de `<x-modal>`) — no hace falta ejecutar Alpine para probar que el botón y
+el modal están conectados.
 
 ## Versión
 0.12.18. `package-lock.json` venía desincronizado de `package.json` **desde antes** de este cambio

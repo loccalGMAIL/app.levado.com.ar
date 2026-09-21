@@ -24,15 +24,27 @@
                 @endif
             </td>
             <td style="width: 40%;">
+                @php
+                    $fixedFilters = array_filter([
+                        $report['meta']['filters']['search'] ? '«'.$report['meta']['filters']['search'].'»' : null,
+                        $report['meta']['filters']['status'] === 'active' ? 'sólo activos' : ($report['meta']['filters']['status'] === 'inactive' ? 'sólo inactivos' : null),
+                        $report['meta']['filters']['category'] ? 'categoría '.$report['meta']['filters']['category'] : null,
+                    ]);
+                    $variableFilters = array_filter([
+                        $report['meta']['filters']['ve_search'] ? '«'.$report['meta']['filters']['ve_search'].'»' : null,
+                        $report['meta']['filters']['ve_category'] ? 'categoría '.$report['meta']['filters']['ve_category'] : null,
+                        $report['meta']['filters']['ve_supplier'] ? 'proveedor '.$report['meta']['filters']['ve_supplier'] : null,
+                    ]);
+                @endphp
                 <p class="report-title">Reporte de gastos</p>
                 <p class="report-meta">
                     Período: {{ $report['meta']['from'] }} al {{ $report['meta']['to'] }}<br>
                     Emitido: {{ $report['meta']['generated_at'] }}
-                    @if($report['meta']['filters']['search'] || $report['meta']['filters']['status'])
-                        <br>Filtros: {{ implode(', ', array_filter([
-                            $report['meta']['filters']['search'] ? '«'.$report['meta']['filters']['search'].'»' : null,
-                            $report['meta']['filters']['status'] === 'active' ? 'sólo activos' : ($report['meta']['filters']['status'] === 'inactive' ? 'sólo inactivos' : null),
-                        ])) }}
+                    @if($fixedFilters)
+                        <br>Filtros gastos fijos: {{ implode(', ', $fixedFilters) }}
+                    @endif
+                    @if($variableFilters)
+                        <br>Filtros gastos variables: {{ implode(', ', $variableFilters) }}
                     @endif
                 </p>
             </td>

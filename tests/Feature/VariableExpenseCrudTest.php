@@ -43,6 +43,16 @@ test('owner puede listar gastos variables', function () {
         ->assertSee('Reparación horno');
 });
 
+test('la pantalla de gastos variables tiene el botón de imprimir el reporte', function () {
+    [$user] = ownerForVariableExpense();
+
+    $this->actingAs($user)
+        ->get(route('variable-expenses.index'))
+        ->assertOk()
+        ->assertSee('Imprimir')
+        ->assertSee('fixed-cost-report');
+});
+
 test('viewer puede ver la lista de gastos variables', function () {
     [$user, $tenant, $category] = userForVariableExpense(TenantUserRole::Viewer);
     VariableExpense::factory()->for($tenant)->create([

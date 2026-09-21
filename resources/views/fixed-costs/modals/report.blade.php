@@ -6,7 +6,16 @@
     y se queda en la misma pestaña porque una descarga no necesita una
     pestaña nueva que después quede en blanco.
 --}}
-@props(['from' => null, 'to' => null])
+{{--
+    `context` decide dos cosas: qué checkboxes de sección vienen tildados por
+    defecto (current+monthly en 'fixed', variable en 'variable' -las 4 siguen
+    siempre visibles y elegibles, sin importar desde dónde se abrió-), y qué
+    bloque de "Aplicar los filtros de la pantalla" se muestra: los filtros de
+    Gastos Fijos (search/status/category) o los de Gastos Variables
+    (ve_search/ve_category/ve_supplier, prefijados para no colisionar con los
+    de arriba si algún día conviven en el mismo request).
+--}}
+@props(['from' => null, 'to' => null, 'context' => 'fixed'])
 
 <x-crud-modal name="fixed-cost-report" title="Imprimir reporte de gastos">
     <form method="GET" action="{{ route('fixed-costs.report') }}" class="space-y-4"
@@ -31,12 +40,12 @@
             <x-input-label value="Secciones a incluir" />
             <div class="mt-2 space-y-2">
                 <label class="flex items-center gap-2 text-sm text-corteza">
-                    <input type="checkbox" name="sections[]" value="current" checked
+                    <input type="checkbox" name="sections[]" value="current" @checked($context === 'fixed')
                         class="rounded border-gray-300 text-horno focus:ring-horno">
                     Gastos fijos vigentes
                 </label>
                 <label class="flex items-center gap-2 text-sm text-corteza">
-                    <input type="checkbox" name="sections[]" value="monthly" checked
+                    <input type="checkbox" name="sections[]" value="monthly" @checked($context === 'fixed')
                         class="rounded border-gray-300 text-horno focus:ring-horno">
                     Histórico mensual comparativo
                 </label>
@@ -46,25 +55,44 @@
                     Detalle por gasto
                 </label>
                 <label class="flex items-center gap-2 text-sm text-corteza">
-                    <input type="checkbox" name="sections[]" value="variable"
+                    <input type="checkbox" name="sections[]" value="variable" @checked($context === 'variable')
                         class="rounded border-gray-300 text-horno focus:ring-horno">
                     Gastos variables del período
                 </label>
             </div>
         </div>
 
-        <div>
-            <label class="flex items-center gap-2 text-sm text-corteza">
-                <input type="checkbox" x-model="useFilters"
-                    class="rounded border-gray-300 text-horno focus:ring-horno">
-                Aplicar los filtros de la pantalla ({{ implode(' · ', array_filter([
-                    request('search') ? '«'.request('search').'»' : null,
-                    request('status') === 'active' ? 'activos' : (request('status') === 'inactive' ? 'inactivos' : null),
-                ])) ?: 'ninguno activo' }})
-            </label>
-            <input type="hidden" name="search" :value="useFilters ? '{{ addslashes(request('search', '')) }}' : ''">
-            <input type="hidden" name="status" :value="useFilters ? '{{ request('status', '') }}' : ''">
-        </div>
+        @if($context === 'variable')
+            <div>
+                <label class="flex items-center gap-2 text-sm text-corteza">
+                    <input type="checkbox" x-model="useFilters"
+                        class="rounded border-gray-300 text-horno focus:ring-horno">
+                    Aplicar los filtros de la pantalla ({{ implode(' · ', array_filter([
+                        request('search') ? '«'.request('search').'»' : null,
+                        request('category') ? 'categoría filtrada' : null,
+                        request('supplier') ? 'proveedor filtrado' : null,
+                    ])) ?: 'ninguno activo' }})
+                </label>
+                <input type="hidden" name="ve_search" :value="useFilters ? '{{ addslashes(request('search', '')) }}' : ''">
+                <input type="hidden" name="ve_category" :value="useFilters ? '{{ request('category', '') }}' : ''">
+                <input type="hidden" name="ve_supplier" :value="useFilters ? '{{ request('supplier', '') }}' : ''">
+            </div>
+        @else
+            <div>
+                <label class="flex items-center gap-2 text-sm text-corteza">
+                    <input type="checkbox" x-model="useFilters"
+                        class="rounded border-gray-300 text-horno focus:ring-horno">
+                    Aplicar los filtros de la pantalla ({{ implode(' · ', array_filter([
+                        request('search') ? '«'.request('search').'»' : null,
+                        request('status') === 'active' ? 'activos' : (request('status') === 'inactive' ? 'inactivos' : null),
+                        request('category') ? 'categoría filtrada' : null,
+                    ])) ?: 'ninguno activo' }})
+                </label>
+                <input type="hidden" name="search" :value="useFilters ? '{{ addslashes(request('search', '')) }}' : ''">
+                <input type="hidden" name="status" :value="useFilters ? '{{ request('status', '') }}' : ''">
+                <input type="hidden" name="category" :value="useFilters ? '{{ request('category', '') }}' : ''">
+            </div>
+        @endif
 
         <div class="flex gap-3 pt-2">
             <x-secondary-button type="submit" formtarget="_blank">Ver / Imprimir</x-secondary-button>

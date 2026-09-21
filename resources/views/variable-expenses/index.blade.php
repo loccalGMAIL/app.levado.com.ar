@@ -35,8 +35,13 @@
                     <h2 class="text-base font-semibold text-corteza">Gastos</h2>
                     <p class="text-sm text-masa-madre mt-0.5">Gastos ocasionales o imprevistos. No intervienen en el costo de las recetas.</p>
                 </div>
-                @can('manage-costs')
-                    <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'fixed-cost-report')"
+                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        Imprimir
+                    </button>
+                    @can('manage-costs')
                         <button type="button"
                             @click="$dispatch('open-modal', 'variable-expense-categories')"
                             class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
@@ -47,8 +52,8 @@
                             class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                             + Nuevo gasto
                         </button>
-                    </div>
-                @endcan
+                    @endcan
+                </div>
             </div>
 
             <x-expense-tabs />
@@ -293,6 +298,12 @@
                 update-route="variable-expense-categories.update"
                 destroy-route="variable-expense-categories.destroy" />
         @endcan
+
+        @include('fixed-costs.modals.report', [
+            'context' => 'variable',
+            'from' => request('from'),
+            'to' => request('to'),
+        ])
 
     </div>
 </x-app-layout>
