@@ -8,14 +8,17 @@
              flash messages, impersonación) llevan su propio print:hidden en su markup,
              porque aparecen en cualquier pantalla, no sólo en ésta. --}}
         @media print {
+            @page {
+                margin: 1.5cm 1.2cm;
+            }
             nav, aside { display: none !important; }
             main { padding: 0 !important; }
             body { background: white !important; }
         }
     </style>
 
-    <div class="py-8 px-6 lg:px-8">
-        <div class="max-w-4xl mx-auto space-y-5">
+    <div class="py-8 px-6 lg:px-8 print:p-0">
+        <div class="max-w-4xl mx-auto space-y-5 print:max-w-none print:space-y-0">
 
             <div class="print:hidden flex items-center justify-between flex-wrap gap-3">
                 <a href="{{ route('fixed-costs.index') }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">
@@ -33,7 +36,7 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow p-8">
+            <div class="bg-white rounded-lg shadow p-8 print:shadow-none print:rounded-none print:p-0">
                 @include('fixed-costs.report._document', ['report' => $report])
             </div>
 
