@@ -89,23 +89,63 @@ class FixedCostHistory
      */
     public function timelineFor(FixedCost $fixedCost): Collection
     {
+        return $this->withChangePct(
+            $fixedCost->logs()->orderBy('period')->get()
+                ->map(fn (FixedCostLog $log) => ['period' => $log->period, 'amount' => (float) $log->monthly_amount])
+        );
+    }
+
+    /**
+     * Timelines de varios gastos en UNA sola query, para no repetir
+     * timelineFor() gasto por gasto (N+1) en un reporte. Indexado por
+     * fixed_cost_id; cada gasto sin logs propios en la ventana simplemente
+     * no aparece en la colección resultante.
+     *
+     * @param  list<int>  $fixedCostIds
+     * @return Collection<int, Collection<int, array{period: Carbon, amount: float, change_pct: ?float}>>
+     */
+    public function timelinesFor(array $fixedCostIds, Carbon $until, int $months): Collection
+    {
+        if ($fixedCostIds === []) {
+            return collect();
+        }
+
+        $since = $until->copy()->startOfMonth()->subMonths($months - 1);
+
+        return FixedCostLog::query()
+            ->whereIn('fixed_cost_id', $fixedCostIds)
+            ->where('period', '>=', $since->toDateString())
+            ->where('period', '<=', $until->copy()->startOfMonth()->toDateString())
+            ->orderBy('fixed_cost_id')
+            ->orderBy('period')
+            ->get()
+            ->groupBy('fixed_cost_id')
+            ->map(fn (Collection $logs) => $this->withChangePct(
+                $logs->map(fn (FixedCostLog $log) => ['period' => $log->period, 'amount' => (float) $log->monthly_amount])
+            ));
+    }
+
+    /**
+     * Agrega `change_pct` (variación % contra el punto anterior de la misma
+     * serie) a una secuencia ya ordenada por período. Única fórmula del
+     * cálculo -timelineFor() y timelinesFor() la comparten- para no
+     * divergir en cómo se redondea o en el caso base sin punto anterior.
+     *
+     * @param  Collection<int, array{period: Carbon, amount: float}>  $points
+     * @return Collection<int, array{period: Carbon, amount: float, change_pct: ?float}>
+     */
+    private function withChangePct(Collection $points): Collection
+    {
         $previousAmount = null;
 
-        return $fixedCost->logs()->orderBy('period')->get()
-            ->map(function (FixedCostLog $log) use (&$previousAmount) {
-                $amount = (float) $log->monthly_amount;
-                $changePct = ($previousAmount !== null && $previousAmount != 0.0)
-                    ? (($amount - $previousAmount) / $previousAmount) * 100
-                    : null;
-                $previousAmount = $amount;
+        return $points->map(function (array $point) use (&$previousAmount) {
+            $changePct = ($previousAmount !== null && $previousAmount != 0.0)
+                ? (($point['amount'] - $previousAmount) / $previousAmount) * 100
+                : null;
+            $previousAmount = $point['amount'];
 
-                return [
-                    'period' => $log->period,
-                    'amount' => $amount,
-                    'change_pct' => $changePct,
-                ];
-            })
-            ->values();
+            return [...$point, 'change_pct' => $changePct];
+        })->values();
     }
 
     /**

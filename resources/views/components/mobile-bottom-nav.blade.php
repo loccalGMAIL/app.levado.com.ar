@@ -1,4 +1,4 @@
-<div x-data="{ open: false }" class="sm:hidden">
+<div x-data="{ open: false }" class="print:hidden sm:hidden">
 
     {{-- Overlay --}}
     <div

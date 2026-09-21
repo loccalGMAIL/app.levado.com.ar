@@ -36,7 +36,7 @@
     <body class="font-sans antialiased bg-harina text-corteza">
 
         @if(session('impersonating_tenant_id'))
-            <div class="bg-horno text-white text-sm text-center py-2 px-4 flex items-center justify-center gap-4">
+            <div class="print:hidden bg-horno text-white text-sm text-center py-2 px-4 flex items-center justify-center gap-4">
                 <span>Impersonando: <strong>{{ app(\App\Models\Tenant::class)->name }}</strong></span>
                 <form method="POST" action="{{ route('admin.impersonate.stop') }}">
                     @csrf

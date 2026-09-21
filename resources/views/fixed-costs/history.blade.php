@@ -15,9 +15,16 @@
                     <h2 class="text-base font-semibold text-corteza">Historial de gastos fijos</h2>
                     <p class="text-sm text-masa-madre mt-0.5">Monto de cada gasto fijo mes a mes.</p>
                 </div>
-                <a href="{{ route('fixed-costs.index') }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">
-                    ← Volver a Gastos fijos
-                </a>
+                <div class="flex items-center gap-3">
+                    <button type="button" x-data
+                        @click="$dispatch('open-modal', 'fixed-cost-report')"
+                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        Imprimir
+                    </button>
+                    <a href="{{ route('fixed-costs.index') }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">
+                        ← Volver a Gastos fijos
+                    </a>
+                </div>
             </div>
 
             <div class="flex items-center justify-center gap-3">
@@ -113,4 +120,6 @@
 
         </div>
     </div>
+
+    @include('fixed-costs.modals.report', ['period' => $period->format('Y-m')])
 </x-app-layout>

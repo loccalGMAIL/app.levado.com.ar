@@ -36,6 +36,11 @@
                         class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                         Historial
                     </a>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'fixed-cost-report')"
+                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        Imprimir
+                    </button>
                     @can('manage-costs')
                         <button type="button"
                             @click="$dispatch('open-modal', 'fixed-cost-categories')"
@@ -279,6 +284,8 @@
                 update-route="fixed-cost-categories.update"
                 destroy-route="fixed-cost-categories.destroy" />
         @endcan
+
+        @include('fixed-costs.modals.report')
 
     </div>
 </x-app-layout>

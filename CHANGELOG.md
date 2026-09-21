@@ -5,6 +5,62 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.12.18] — 2026-09-21
+
+### Reporte de gastos imprimible
+
+Los gastos fijos no se podían imprimir ni exportar de ninguna forma: cuando el contador o un socio
+pedía "pasame los gastos de agosto" la única salida era una captura de pantalla. Con el histórico
+mensual ya andando desde la 0.12.17, los datos estaban; faltaba la salida en papel.
+
+#### Agregado
+
+- **Reporte de gastos**, con botón «Imprimir» en *Gastos → Gastos Fijos* y en *Historial*. Un
+  modal elige el mes, cuántos meses de histórico traer y qué secciones incluir:
+  - **Gastos fijos vigentes** del período, con su categoría, estado y el total al pie.
+  - **Histórico mensual comparativo**, con la variación porcentual mes a mes.
+  - **Detalle por gasto**: la línea de tiempo de cada gasto fijo con su variación, acotada a los
+    50 gastos de mayor monto para no disparar un PDF gigante en un tenant con muchos.
+  - **Gastos variables del mismo período** (opcional), para un reporte de costos operativos
+    completo en una sola pasada.
+  - Encabezado con el nombre y logo del negocio, razón social, CUIT y condición de IVA, fecha de
+    emisión y los filtros de búsqueda/estado aplicados, con la opción de heredar los que ya
+    estaban activos en la pantalla de Gastos Fijos.
+- **Dos salidas**: una vista imprimible (`window.print()`, abre en pestaña nueva) y una descarga
+  en PDF, con los mismos datos y el mismo diseño.
+
+#### Cómo se comporta
+
+- El reporte respeta el tenant activo igual que el resto de la app: no hay forma de ver gastos de
+  otro negocio a través de él.
+- Un mes sin gastos fijos cargados muestra el estado vacío en vez de una tabla en blanco.
+- El PDF funciona igual con o sin logo cargado: sin uno, o si es SVG/WebP/pesa más de 512 KB, el
+  encabezado cae al nombre del negocio en tipografía grande en vez de dejar un hueco roto.
+
+#### Técnico
+
+- Se agrega `barryvdh/laravel-dompdf` (dompdf no soporta Tailwind, ni flex/grid, ni CSS
+  personalizado). El reporte se arma con **una sola plantilla de contenido en CSS vanilla**
+  (`resources/views/fixed-costs/report/_document.blade.php`), compartida por la vista de pantalla
+  y el PDF, para que ambas salidas no puedan divergir en silencio.
+- `App\Services\FixedCostReport` es el único dueño del armado de datos: compone
+  `FixedCostHistory` (histórico) y `VariableExpense::scopeBetween()` (variables) sin repetir su
+  SQL, y le entrega a la vista sólo arrays y escalares -nunca un modelo Eloquent-, porque el
+  proyecto corre con `preventLazyLoading` y una excepción dentro del render de dompdf deja un PDF
+  corrupto en vez de un error legible.
+- `FixedCostHistory::timelinesFor()` trae el detalle de varios gastos en una sola query
+  (`whereIn` + `groupBy` en memoria) en vez de repetir `timelineFor()` gasto por gasto.
+- El logo del tenant se resuelve como *data URI* (`FixedCostReport::logoDataUri()`): dompdf no
+  acepta `Storage::url()`, necesita un filesystem local o base64.
+- Fuente `DejaVu Sans` (viene con dompdf): las fuentes core PDF no son UTF-8 y rompen «ñ», «ó», «í».
+- Se agrega `print:hidden` al banner de instalación PWA, la barra inferior móvil, los mensajes
+  flash y el banner de impersonación -ninguno se ocultaba al imprimir hasta ahora, aunque no
+  hubiera antes ninguna pantalla con función de impresión que lo expusiera-.
+- Tope de 24 meses de histórico y 50 gastos en el detalle, para acotar memoria y tiempo del PDF en
+  un tenant con muchos gastos fijos o mucho historial.
+
+---
+
 ## [0.12.17] — 2026-09-06
 
 ### Histórico mensual de gastos fijos

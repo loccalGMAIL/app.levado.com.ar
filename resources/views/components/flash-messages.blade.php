@@ -8,7 +8,7 @@
          x-transition:leave="transition ease-in duration-200"
          x-transition:leave-start="opacity-100 translate-y-0"
          x-transition:leave-end="opacity-0 translate-y-2"
-         class="fixed top-4 right-4 z-50 space-y-2 w-80 max-w-[calc(100vw-2rem)]">
+         class="print:hidden fixed top-4 right-4 z-50 space-y-2 w-80 max-w-[calc(100vw-2rem)]">
         @if(session('status'))
             <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm shadow-md flex items-start gap-3">
                 <svg class="w-4 h-4 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
