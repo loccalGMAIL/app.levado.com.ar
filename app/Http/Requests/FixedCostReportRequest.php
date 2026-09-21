@@ -32,7 +32,8 @@ class FixedCostReportRequest extends FormRequest
             'status' => ['nullable', 'in:active,inactive'],
             'category' => ['nullable', 'integer'],
             've_search' => ['nullable', 'string', 'max:100'],
-            've_category' => ['nullable', 'integer'],
+            've_category' => ['nullable', 'array'],
+            've_category.*' => ['integer'],
             've_supplier' => ['nullable', 'integer'],
         ];
     }
@@ -90,7 +91,7 @@ class FixedCostReportRequest extends FormRequest
      * Default sin `to`: hoy. Default sin `from`: 12 meses atrás desde `to`
      * (mismo alcance que tenía antes `months=12`, ahora anclado a fechas).
      *
-     * @return array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string, category: ?int, ve_search: ?string, ve_category: ?int, ve_supplier: ?int}
+     * @return array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string, category: ?int, ve_search: ?string, ve_category: list<int>, ve_supplier: ?int}
      */
     public function options(): array
     {
@@ -107,7 +108,7 @@ class FixedCostReportRequest extends FormRequest
             'status' => $this->validated('status'),
             'category' => $this->validated('category') ? (int) $this->validated('category') : null,
             've_search' => $this->validated('ve_search'),
-            've_category' => $this->validated('ve_category') ? (int) $this->validated('ve_category') : null,
+            've_category' => array_map('intval', $this->validated('ve_category') ?: []),
             've_supplier' => $this->validated('ve_supplier') ? (int) $this->validated('ve_supplier') : null,
         ];
     }

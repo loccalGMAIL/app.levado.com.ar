@@ -434,6 +434,32 @@ test('el filtro de categoría acota el listado', function () {
         ->assertDontSee('GastoCategoriaA');
 });
 
+test('el filtro de categoría acepta elegir varias a la vez', function () {
+    [$user, $tenant, $category] = ownerForVariableExpense();
+    $otherCategory = $tenant->variableExpenseCategories()->create(['name' => 'Otra']);
+    $thirdCategory = $tenant->variableExpenseCategories()->create(['name' => 'Tercera']);
+
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'GastoCategoriaA',
+        'variable_expense_category_id' => $category->id,
+    ]);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'GastoCategoriaB',
+        'variable_expense_category_id' => $otherCategory->id,
+    ]);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'GastoCategoriaC',
+        'variable_expense_category_id' => $thirdCategory->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('variable-expenses.index', ['category' => [$category->id, $otherCategory->id]]))
+        ->assertOk()
+        ->assertSee('GastoCategoriaA')
+        ->assertSee('GastoCategoriaB')
+        ->assertDontSee('GastoCategoriaC');
+});
+
 // --- Categorías ---
 
 test('owner puede crear una categoría de gasto variable', function () {

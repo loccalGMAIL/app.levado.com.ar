@@ -26,7 +26,7 @@ class FixedCostReport
     public function __construct(private readonly FixedCostHistory $history) {}
 
     /**
-     * @param  array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string, category: ?int, ve_search: ?string, ve_category: ?int, ve_supplier: ?int}  $options
+     * @param  array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string, category: ?int, ve_search: ?string, ve_category: list<int>, ve_supplier: ?int}  $options
      * @return array{
      *     business: array{name: string, razon_social: ?string, cuit: ?string, condicion_iva: ?string, currency: string, logo: ?string},
      *     meta: array{from: string, to: string, from_ymd: string, to_ymd: string, snapshot_label: string, generated_at: string, months: int, sections: list<string>, filters: array{search: ?string, status: ?string, category: ?string, ve_search: ?string, ve_category: ?string, ve_supplier: ?string}},
@@ -78,7 +78,9 @@ class FixedCostReport
                     'status' => $options['status'],
                     'category' => $options['category'] ? $tenant->fixedCostCategories()->find($options['category'])?->name : null,
                     've_search' => $options['ve_search'],
-                    've_category' => $options['ve_category'] ? $tenant->variableExpenseCategories()->find($options['ve_category'])?->name : null,
+                    've_category' => $options['ve_category']
+                        ? $tenant->variableExpenseCategories()->whereIn('id', $options['ve_category'])->pluck('name')->implode(', ')
+                        : null,
                     've_supplier' => $options['ve_supplier'] ? $tenant->suppliers()->find($options['ve_supplier'])?->name : null,
                 ],
             ],
@@ -213,9 +215,10 @@ class FixedCostReport
      * fecha propia por día, y forzarla a los bordes del mes calendario sólo
      * perdía precisión sin necesidad.
      *
+     * @param  list<int>  $categoryIds
      * @return array{rows: list<array{date: string, name: string, category: ?string, supplier: ?string, description: ?string, amount: float}>, total: float}
      */
-    private function buildVariable(Tenant $tenant, Carbon $from, Carbon $to, ?string $search, ?int $category, ?int $supplier): array
+    private function buildVariable(Tenant $tenant, Carbon $from, Carbon $to, ?string $search, array $categoryIds, ?int $supplier): array
     {
         // Mismo when(search)/when(category)/when(supplier) que VariableExpenseController@index,
         // para que "Aplicar los filtros de la pantalla" (abierto desde Gastos Variables) reporte
@@ -232,7 +235,7 @@ class FixedCostReport
                         ->orWhere('description', 'like', "%{$escaped}%");
                 });
             })
-            ->when($category, fn ($q) => $q->where('variable_expense_category_id', $category))
+            ->when($categoryIds, fn ($q) => $q->whereIn('variable_expense_category_id', $categoryIds))
             ->when($supplier, fn ($q) => $q->where('supplier_id', $supplier))
             ->between($from->toDateString(), $to->toDateString())
             ->orderBy('expense_date')

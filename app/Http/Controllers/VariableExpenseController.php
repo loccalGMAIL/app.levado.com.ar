@@ -38,7 +38,7 @@ class VariableExpenseController extends Controller
                         ->orWhere('description', 'like', "%{$escaped}%");
                 });
             })
-            ->when(request('category'), fn ($q, $categoryId) => $q->where('variable_expense_category_id', $categoryId))
+            ->when(request('category'), fn ($q, $categoryIds) => $q->whereIn('variable_expense_category_id', (array) $categoryIds))
             ->when(request('supplier'), fn ($q, $supplierId) => $q->where('supplier_id', $supplierId))
             ->between(request('from'), request('to'));
 

@@ -72,12 +72,17 @@
                         class="rounded border-gray-300 text-horno focus:ring-horno">
                     Aplicar los filtros de la pantalla ({{ implode(' · ', array_filter([
                         request('search') ? '«'.request('search').'»' : null,
-                        request('category') ? 'categoría filtrada' : null,
+                        count((array) request('category', [])) > 1 ? 'categorías filtradas' : (request('category') ? 'categoría filtrada' : null),
                         request('supplier') ? 'proveedor filtrado' : null,
                     ])) ?: 'ninguno activo' }})
                 </label>
                 <input type="hidden" name="ve_search" :value="useFilters ? '{{ addslashes(request('search', '')) }}' : ''">
-                <input type="hidden" name="ve_category" :value="useFilters ? '{{ request('category', '') }}' : ''">
+                {{-- Un hidden por categoría, deshabilitado en bloque si "useFilters" está apagado:
+                     `category` viene como array desde el multi-select de la pantalla, y Blade no
+                     puede interpolar un array directo en el :value de un solo input. --}}
+                @foreach((array) request('category', []) as $catId)
+                    <input type="hidden" name="ve_category[]" value="{{ $catId }}" :disabled="!useFilters">
+                @endforeach
                 <input type="hidden" name="ve_supplier" :value="useFilters ? '{{ request('supplier', '') }}' : ''">
             </div>
         @else

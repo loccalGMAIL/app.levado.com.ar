@@ -66,11 +66,10 @@
                         placeholder="Buscar por nombre o descripción..."
                         class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
-                <select name="category"
+                <select name="category[]" multiple data-searchable placeholder="Todas las categorías"
                     class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                    <option value="">Todas las categorías</option>
                     @foreach($categories as $cat)
-                        <option value="{{ $cat->id }}" @selected(request('category') == $cat->id)>{{ $cat->name }}</option>
+                        <option value="{{ $cat->id }}" @selected(in_array($cat->id, (array) request('category', [])))>{{ $cat->name }}</option>
                     @endforeach
                 </select>
                 <select name="supplier"

@@ -125,11 +125,45 @@ test('los filtros de gastos variables (ve_*) acotan esa sección del reporte', f
             'sections' => ['variable'],
             'from' => now()->startOfMonth()->format('Y-m-d'),
             'to' => now()->endOfMonth()->format('Y-m-d'),
-            've_category' => $category->id,
+            've_category' => [$category->id],
         ]))
         ->assertOk()
         ->assertSee('Reparación horno')
         ->assertDontSee('Compra de insumos');
+});
+
+test('los filtros de gastos variables (ve_category) aceptan varias categorías a la vez', function () {
+    [$user, $tenant] = reportSetup();
+    $category = $tenant->variableExpenseCategories()->create(['name' => 'Mantenimiento']);
+    $otherCategory = $tenant->variableExpenseCategories()->create(['name' => 'Insumos']);
+    $thirdCategory = $tenant->variableExpenseCategories()->create(['name' => 'Personales']);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'Reparación horno',
+        'variable_expense_category_id' => $category->id,
+        'expense_date' => now()->startOfMonth()->addDays(2),
+    ]);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'Compra de insumos',
+        'variable_expense_category_id' => $otherCategory->id,
+        'expense_date' => now()->startOfMonth()->addDays(3),
+    ]);
+    VariableExpense::factory()->for($tenant)->create([
+        'name' => 'Gasto personal',
+        'variable_expense_category_id' => $thirdCategory->id,
+        'expense_date' => now()->startOfMonth()->addDays(4),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('fixed-costs.report', [
+            'sections' => ['variable'],
+            'from' => now()->startOfMonth()->format('Y-m-d'),
+            'to' => now()->endOfMonth()->format('Y-m-d'),
+            've_category' => [$category->id, $otherCategory->id],
+        ]))
+        ->assertOk()
+        ->assertSee('Reparación horno')
+        ->assertSee('Compra de insumos')
+        ->assertDontSee('Gasto personal');
 });
 
 test('el histórico mensual sólo aparece si se pide la sección', function () {
