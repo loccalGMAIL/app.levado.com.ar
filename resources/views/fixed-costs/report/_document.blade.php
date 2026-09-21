@@ -26,7 +26,7 @@
             <td style="width: 40%;">
                 <p class="report-title">Reporte de gastos</p>
                 <p class="report-meta">
-                    Período: {{ $report['meta']['period_label'] }}<br>
+                    Período: {{ $report['meta']['from'] }} al {{ $report['meta']['to'] }}<br>
                     Emitido: {{ $report['meta']['generated_at'] }}
                     @if($report['meta']['filters']['search'] || $report['meta']['filters']['status'])
                         <br>Filtros: {{ implode(', ', array_filter([
@@ -42,7 +42,7 @@
     {{-- Gastos fijos vigentes --}}
     @if(in_array('current', $report['meta']['sections'], true))
         <div class="section">
-            <p class="section-title">Gastos fijos — {{ $report['meta']['period_label'] }}</p>
+            <p class="section-title">Gastos fijos vigentes — {{ $report['meta']['snapshot_label'] }}</p>
 
             @if(empty($report['current']['rows']))
                 <div class="empty">No hay gastos fijos registrados para este período.</div>
@@ -175,7 +175,7 @@
     {{-- Gastos variables del período --}}
     @if(in_array('variable', $report['meta']['sections'], true) && $report['variable'])
         <div class="section">
-            <p class="section-title">Gastos variables — {{ $report['variable']['from'] }} al {{ $report['variable']['to'] }}</p>
+            <p class="section-title">Gastos variables — {{ $report['meta']['from'] }} al {{ $report['meta']['to'] }}</p>
 
             @if(empty($report['variable']['rows']))
                 <div class="empty">No hay gastos variables registrados en este período.</div>

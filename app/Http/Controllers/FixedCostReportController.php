@@ -32,10 +32,8 @@ class FixedCostReportController extends Controller
         ini_set('memory_limit', '256M');
         set_time_limit(60);
 
-        $period = $request->validated('period') ?: now()->format('Y-m');
-
         return Pdf::loadView('fixed-costs.report.pdf', compact('report'))
             ->setPaper('a4')
-            ->download("gastos-{$period}.pdf");
+            ->download("gastos-{$report['meta']['from_ymd']}_a_{$report['meta']['to_ymd']}.pdf");
     }
 }

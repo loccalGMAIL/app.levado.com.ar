@@ -26,26 +26,30 @@ class FixedCostReport
     public function __construct(private readonly FixedCostHistory $history) {}
 
     /**
-     * @param  array{period: Carbon, months: int, sections: list<string>, search: ?string, status: ?string}  $options
+     * @param  array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string}  $options
      * @return array{
      *     business: array{name: string, razon_social: ?string, cuit: ?string, condicion_iva: ?string, currency: string, logo: ?string},
-     *     meta: array{period_label: string, generated_at: string, months: int, sections: list<string>, filters: array{search: ?string, status: ?string}},
+     *     meta: array{from: string, to: string, from_ymd: string, to_ymd: string, snapshot_label: string, generated_at: string, months: int, sections: list<string>, filters: array{search: ?string, status: ?string}},
      *     current: array{rows: list<array{id: int, name: string, category: ?string, active: bool, amount: float, carried: bool}>, total: float, count: int},
      *     monthly: ?array{rows: list<array{label: string, total: float, change_pct: ?float}>, average: float, min: float, max: float},
      *     details: ?array{rows: list<array{name: string, category: ?string, timeline: list<array{label: string, amount: float, change_pct: ?float}>}>, truncated: bool, total_count: int},
-     *     variable: ?array{rows: list<array{date: string, name: string, category: ?string, supplier: ?string, description: ?string, amount: float}>, total: float, from: string, to: string},
+     *     variable: ?array{rows: list<array{date: string, name: string, category: ?string, supplier: ?string, description: ?string, amount: float}>, total: float},
      *     totals: array{fixed: float, variable: float, grand: float, productive_hours: ?int, overhead_per_hour: ?float},
      * }
      */
     public function build(Tenant $tenant, array $options): array
     {
-        $period = $options['period']->copy()->startOfMonth();
+        $from = $options['from'];
+        $to = $options['to'];
+        $fromMonth = $from->copy()->startOfMonth();
+        $toMonth = $to->copy()->startOfMonth();
+        $months = $fromMonth->diffInMonths($toMonth) + 1;
         $sections = $options['sections'];
 
-        $current = $this->buildCurrent($tenant, $period, $options['search'], $options['status']);
-        $monthly = in_array('monthly', $sections, true) ? $this->buildMonthly($tenant, $period, $options['months']) : null;
-        $details = in_array('details', $sections, true) ? $this->buildDetails($tenant, $current['rows'], $period, $options['months']) : null;
-        $variable = in_array('variable', $sections, true) ? $this->buildVariable($tenant, $period) : null;
+        $current = $this->buildCurrent($tenant, $toMonth, $options['search'], $options['status']);
+        $monthly = in_array('monthly', $sections, true) ? $this->buildMonthly($tenant, $fromMonth, $toMonth) : null;
+        $details = in_array('details', $sections, true) ? $this->buildDetails($tenant, $current['rows'], $toMonth, $months) : null;
+        $variable = in_array('variable', $sections, true) ? $this->buildVariable($tenant, $from, $to) : null;
 
         return [
             'business' => [
@@ -57,9 +61,13 @@ class FixedCostReport
                 'logo' => $this->logoDataUri($tenant),
             ],
             'meta' => [
-                'period_label' => FixedCostHistory::periodLabel($period),
+                'from' => $from->format('d/m/Y'),
+                'to' => $to->format('d/m/Y'),
+                'from_ymd' => $from->format('Y-m-d'),
+                'to_ymd' => $to->format('Y-m-d'),
+                'snapshot_label' => FixedCostHistory::periodLabel($toMonth),
                 'generated_at' => Carbon::now()->format('d/m/Y H:i'),
-                'months' => $options['months'],
+                'months' => $months,
                 'sections' => $sections,
                 'filters' => ['search' => $options['search'], 'status' => $options['status']],
             ],
@@ -117,18 +125,20 @@ class FixedCostReport
 
     /**
      * No reusa `FixedCostHistory::monthlyTotals()`: esa ventana termina
-     * siempre en el mes en curso (`Carbon::now()`), y acá la ventana debe
-     * terminar en el período elegido para el reporte -que puede ser un mes
-     * pasado-. Reusa sí `totalForPeriod()`, mes a mes, que es el cálculo real.
+     * siempre en el mes en curso (`Carbon::now()`), y acá la ventana es
+     * exactamente `[fromMonth, toMonth]` -el rango que eligió el usuario,
+     * que puede terminar en el pasado-. Reusa sí `totalForPeriod()`, mes a
+     * mes, que es el cálculo real.
      *
      * @return array{rows: list<array{label: string, total: float, change_pct: ?float}>, average: float, min: float, max: float}
      */
-    private function buildMonthly(Tenant $tenant, Carbon $period, int $months): array
+    private function buildMonthly(Tenant $tenant, Carbon $fromMonth, Carbon $toMonth): array
     {
+        $months = $fromMonth->diffInMonths($toMonth) + 1;
         $previousTotal = null;
 
-        $rows = collect(range($months - 1, 0))
-            ->map(fn (int $monthsAgo) => $period->copy()->subMonths($monthsAgo))
+        $rows = collect(range(0, $months - 1))
+            ->map(fn (int $i) => $fromMonth->copy()->addMonths($i))
             ->map(function (Carbon $point) use ($tenant, &$previousTotal) {
                 $total = $this->history->totalForPeriod($tenant, $point);
                 $changePct = ($previousTotal !== null && $previousTotal != 0.0)
@@ -158,13 +168,13 @@ class FixedCostReport
      * @param  list<array{id: int, name: string, category: ?string, active: bool, amount: float, carried: bool}>  $currentRows
      * @return array{rows: list<array{name: string, category: ?string, timeline: list<array{label: string, amount: float, change_pct: ?float}>}>, truncated: bool, total_count: int}
      */
-    private function buildDetails(Tenant $tenant, array $currentRows, Carbon $period, int $months): array
+    private function buildDetails(Tenant $tenant, array $currentRows, Carbon $toMonth, int $months): array
     {
         $ordered = collect($currentRows)->sortByDesc('amount')->values();
         $truncated = $ordered->count() > self::MAX_DETAILS;
         $selected = $ordered->take(self::MAX_DETAILS);
 
-        $timelines = $this->history->timelinesFor($selected->pluck('id')->all(), $period, $months);
+        $timelines = $this->history->timelinesFor($selected->pluck('id')->all(), $toMonth, $months);
 
         $rows = $selected->map(fn (array $row) => [
             'name' => $row['name'],
@@ -185,13 +195,16 @@ class FixedCostReport
     }
 
     /**
-     * @return array{rows: list<array{date: string, name: string, category: ?string, supplier: ?string, description: ?string, amount: float}>, total: float, from: string, to: string}
+     * A diferencia de `current`/`monthly`/`details` -que trabajan a mes
+     * completo, la única granularidad que tiene un gasto fijo-, acá se usan
+     * `from`/`to` tal cual los eligió el usuario: `VariableExpense` tiene
+     * fecha propia por día, y forzarla a los bordes del mes calendario sólo
+     * perdía precisión sin necesidad.
+     *
+     * @return array{rows: list<array{date: string, name: string, category: ?string, supplier: ?string, description: ?string, amount: float}>, total: float}
      */
-    private function buildVariable(Tenant $tenant, Carbon $period): array
+    private function buildVariable(Tenant $tenant, Carbon $from, Carbon $to): array
     {
-        $from = $period->copy()->startOfMonth();
-        $to = $period->copy()->endOfMonth();
-
         $expenses = $tenant->variableExpenses()
             ->with(['category', 'supplier'])
             ->between($from->toDateString(), $to->toDateString())
@@ -210,8 +223,6 @@ class FixedCostReport
         return [
             'rows' => $rows,
             'total' => array_sum(array_column($rows, 'amount')),
-            'from' => $from->format('d/m/Y'),
-            'to' => $to->format('d/m/Y'),
         ];
     }
 

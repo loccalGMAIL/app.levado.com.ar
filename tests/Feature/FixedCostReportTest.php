@@ -45,14 +45,14 @@ test('el reporte lista los gastos vigentes con el total al pie', function () {
         ->assertSeeInOrder(['Alquiler', '120.000,00', 'Total']);
 });
 
-test('el reporte usa el monto del período pedido, no el actual', function () {
+test('el reporte usa el monto vigente al cierre del rango, no el actual', function () {
     [$user, $tenant, $category] = reportSetup();
     $fixedCost = FixedCost::factory()->for($tenant)->for($category, 'category')->create(['name' => 'Luz', 'monthly_amount' => 5000]);
     $fixedCost->logs()->create(['monthly_amount' => 3000, 'period' => Carbon::create(2026, 7, 1)]);
     $fixedCost->logs()->create(['monthly_amount' => 5000, 'period' => Carbon::create(2026, 8, 1)]);
 
     $response = $this->actingAs($user)
-        ->get(route('fixed-costs.report', ['period' => '2026-07']));
+        ->get(route('fixed-costs.report', ['to' => '2026-07-31']));
 
     $response->assertOk()
         ->assertSee('Julio 2026')
@@ -92,13 +92,19 @@ test('el histórico mensual sólo aparece si se pide la sección', function () {
         ->assertSee('Histórico mensual');
 });
 
-test('el reporte incluye los gastos variables del período cuando se piden', function () {
+test('el reporte incluye los gastos variables del rango cuando se piden', function () {
     [$user, $tenant] = reportSetup();
     VariableExpense::factory()->for($tenant)->create(['name' => 'Reparación horno', 'amount' => 8000, 'expense_date' => now()->startOfMonth()->addDays(2)]);
     VariableExpense::factory()->for($tenant)->create(['name' => 'Gasto de otro mes', 'amount' => 1000, 'expense_date' => now()->subMonths(2)]);
 
+    // Rango acotado al mes actual: el default (12 meses) incluiría los dos
+    // gastos y no probaría nada.
     $this->actingAs($user)
-        ->get(route('fixed-costs.report', ['sections' => ['variable']]))
+        ->get(route('fixed-costs.report', [
+            'sections' => ['variable'],
+            'from' => now()->startOfMonth()->format('Y-m-d'),
+            'to' => now()->endOfMonth()->format('Y-m-d'),
+        ]))
         ->assertOk()
         ->assertSee('Reparación horno')
         ->assertDontSee('Gasto de otro mes');
@@ -146,12 +152,20 @@ test('aislamiento: el reporte no muestra gastos de otro tenant', function () {
         ->assertDontSee('Gasto Ajeno');
 });
 
-test('el período inválido no genera reporte', function () {
+test('el rango invertido no genera reporte', function () {
     [$user] = reportSetup();
 
     $this->actingAs($user)
-        ->get(route('fixed-costs.report', ['period' => '2026-13']))
-        ->assertSessionHasErrors('period');
+        ->get(route('fixed-costs.report', ['from' => '2026-09-30', 'to' => '2026-01-01']))
+        ->assertSessionHasErrors('to');
+});
+
+test('el rango de más de 24 meses no genera reporte', function () {
+    [$user] = reportSetup();
+
+    $this->actingAs($user)
+        ->get(route('fixed-costs.report', ['from' => '2023-01-01', 'to' => '2026-09-01']))
+        ->assertSessionHasErrors('to');
 });
 
 test('la descarga genera un PDF', function () {
@@ -160,11 +174,11 @@ test('la descarga genera un PDF', function () {
         ->logs()->create(['monthly_amount' => 120000, 'period' => Carbon::create(2026, 9, 1)]);
 
     $response = $this->actingAs($user)
-        ->get(route('fixed-costs.report-pdf', ['period' => '2026-09']));
+        ->get(route('fixed-costs.report-pdf', ['from' => '2026-09-01', 'to' => '2026-09-30']));
 
     $response->assertOk()
         ->assertHeader('content-type', 'application/pdf')
-        ->assertDownload('gastos-2026-09.pdf');
+        ->assertDownload('gastos-2026-09-01_a_2026-09-30.pdf');
 
     expect(substr($response->getContent(), 0, 5))->toBe('%PDF-');
 });

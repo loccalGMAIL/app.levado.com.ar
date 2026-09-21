@@ -121,5 +121,8 @@
         </div>
     </div>
 
-    @include('fixed-costs.modals.report', ['period' => $period->format('Y-m')])
+    @include('fixed-costs.modals.report', [
+        'from' => $period->copy()->subMonths(11)->startOfMonth()->format('Y-m-d'),
+        'to' => $period->copy()->endOfMonth()->format('Y-m-d'),
+    ])
 </x-app-layout>

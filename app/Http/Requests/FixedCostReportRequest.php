@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
 
@@ -10,6 +11,9 @@ class FixedCostReportRequest extends FormRequest
 {
     /** Secciones válidas del reporte, en el orden en que se imprimen. */
     public const SECTIONS = ['current', 'monthly', 'details', 'variable'];
+
+    /** Tope duro del rango: acota memoria/tiempo del PDF y el tamaño de `details`. */
+    private const MAX_MONTHS = 24;
 
     public function authorize(): bool
     {
@@ -20,8 +24,8 @@ class FixedCostReportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'period' => ['nullable', 'date_format:Y-m'],
-            'months' => ['nullable', 'integer', 'min:3', 'max:24'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
             'sections' => ['nullable', 'array', 'max:'.count(self::SECTIONS)],
             'sections.*' => ['in:'.implode(',', self::SECTIONS)],
             'search' => ['nullable', 'string', 'max:100'],
@@ -33,29 +37,63 @@ class FixedCostReportRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'period' => 'mes',
-            'months' => 'cantidad de meses',
+            'from' => 'fecha desde',
+            'to' => 'fecha hasta',
         ];
+    }
+
+    /**
+     * Validación cruzada de `from`/`to`: no va como regla `after_or_equal:from`
+     * para controlar el mensaje en español a mano y compartir el mismo chequeo
+     * con el tope de 24 meses (las reglas de comparación de fecha de Laravel no
+     * dan para las dos cosas en una).
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $from = $this->input('from');
+            $to = $this->input('to');
+
+            if (! $from || ! $to) {
+                return;
+            }
+
+            $from = Carbon::parse($from)->startOfDay();
+            $to = Carbon::parse($to)->startOfDay();
+
+            if ($to->lt($from)) {
+                $validator->errors()->add('to', 'La fecha «hasta» no puede ser anterior a «desde».');
+
+                return;
+            }
+
+            $months = $from->copy()->startOfMonth()->diffInMonths($to->copy()->startOfMonth()) + 1;
+            if ($months > self::MAX_MONTHS) {
+                $validator->errors()->add('to', 'El rango no puede superar los 24 meses.');
+            }
+        });
     }
 
     /**
      * Normaliza los parámetros ya validados a la forma que consume
      * `FixedCostReport::build()`, para que controlador y service no repitan
-     * el parseo de `period` ni los defaults.
+     * el parseo de fechas ni los defaults.
      *
-     * @return array{period: Carbon, months: int, sections: list<string>, search: ?string, status: ?string}
+     * Default sin `to`: hoy. Default sin `from`: 12 meses atrás desde `to`
+     * (mismo alcance que tenía antes `months=12`, ahora anclado a fechas).
+     *
+     * @return array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string}
      */
     public function options(): array
     {
-        $period = $this->validated('period')
-            ? Carbon::createFromFormat('Y-m', $this->validated('period'))->startOfMonth()
-            : Carbon::now()->startOfMonth();
+        $to = $this->validated('to') ? Carbon::parse($this->validated('to')) : Carbon::now();
+        $from = $this->validated('from') ? Carbon::parse($this->validated('from')) : $to->copy()->subMonths(11)->startOfMonth();
 
         $sections = $this->validated('sections') ?: ['current', 'monthly'];
 
         return [
-            'period' => $period,
-            'months' => (int) ($this->validated('months') ?: 12),
+            'from' => $from->startOfDay(),
+            'to' => $to->startOfDay(),
             'sections' => array_values(array_intersect(self::SECTIONS, $sections)),
             'search' => $this->validated('search'),
             'status' => $this->validated('status'),

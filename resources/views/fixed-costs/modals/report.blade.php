@@ -6,7 +6,7 @@
     y se queda en la misma pestaña porque una descarga no necesita una
     pestaña nueva que después quede en blanco.
 --}}
-@props(['period' => null])
+@props(['from' => null, 'to' => null])
 
 <x-crud-modal name="fixed-cost-report" title="Imprimir reporte de gastos">
     <form method="GET" action="{{ route('fixed-costs.report') }}" class="space-y-4"
@@ -14,19 +14,16 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <x-input-label for="report_period" value="Mes" />
-                <x-month-select id="report_period" name="period"
-                    class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm"
-                    :selected="$period ?? now()->format('Y-m')" />
+                <x-input-label for="report_from" value="Desde" />
+                <input type="date" id="report_from" name="from"
+                    value="{{ $from ?? now()->subMonths(11)->startOfMonth()->format('Y-m-d') }}"
+                    class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
             </div>
             <div>
-                <x-input-label for="report_months" value="Meses en el histórico" />
-                <select id="report_months" name="months"
+                <x-input-label for="report_to" value="Hasta" />
+                <input type="date" id="report_to" name="to"
+                    value="{{ $to ?? now()->format('Y-m-d') }}"
                     class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
-                    <option value="6">6 meses</option>
-                    <option value="12" selected>12 meses</option>
-                    <option value="24">24 meses</option>
-                </select>
             </div>
         </div>
 

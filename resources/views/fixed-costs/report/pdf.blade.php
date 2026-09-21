@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Reporte de gastos — {{ $report['meta']['period_label'] }}</title>
+    <title>Reporte de gastos — {{ $report['meta']['from'] }} al {{ $report['meta']['to'] }}</title>
     @include('fixed-costs.report._styles')
     <style>
         @page {
