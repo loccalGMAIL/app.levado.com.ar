@@ -34,6 +34,19 @@ function reportSetup(): array
     return [$user, $tenant, $category];
 }
 
+test('el botón «Ver / Imprimir» navega en la misma pestaña, no abre una nueva', function () {
+    // formtarget="_blank" abría una pestaña por cada intento sin cerrar las
+    // anteriores -todas tituladas igual-, y era fácil terminar mirando una
+    // vieja con un rango de fechas distinto al que se acababa de elegir.
+    [$user] = reportSetup();
+
+    $this->actingAs($user)
+        ->get(route('fixed-costs.index'))
+        ->assertOk()
+        ->assertSee('Ver / Imprimir')
+        ->assertDontSee('formtarget="_blank"', false);
+});
+
 test('el reporte lista los gastos vigentes con el total al pie', function () {
     [$user, $tenant, $category] = reportSetup();
     FixedCost::factory()->for($tenant)->for($category, 'category')->create(['name' => 'Alquiler', 'monthly_amount' => 120000])

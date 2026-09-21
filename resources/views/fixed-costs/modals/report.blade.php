@@ -1,10 +1,13 @@
 {{--
-    Modal de opciones del reporte imprimible. Un solo form GET con dos envíos:
-    "Ver / Imprimir" abre fixed-costs.report en una pestaña nueva (para no
-    perder la pantalla de Gastos Fijos detrás); "Descargar PDF" usa
-    formaction para apuntar a fixed-costs.report-pdf sin duplicar el form,
-    y se queda en la misma pestaña porque una descarga no necesita una
-    pestaña nueva que después quede en blanco.
+    Modal de opciones del reporte imprimible. Un solo form GET con dos envíos,
+    los dos en la misma pestaña: "Ver / Imprimir" navega a fixed-costs.report;
+    "Descargar PDF" usa formaction para apuntar a fixed-costs.report-pdf sin
+    duplicar el form. "Ver / Imprimir" tenía formtarget="_blank" para no tapar
+    la pantalla de origen, pero cada click abría una pestaña nueva sin cerrar
+    las anteriores -todas tituladas igual, "Reporte de gastos"-, así que al
+    probar varios rangos era fácil terminar mirando una pestaña vieja creyendo
+    que era la última. El reporte ya tiene un link "← Volver" para el caso de
+    querer regresar a la pantalla de origen.
 --}}
 {{--
     `context` decide dos cosas: qué checkboxes de sección vienen tildados por
@@ -95,7 +98,7 @@
         @endif
 
         <div class="flex gap-3 pt-2">
-            <x-secondary-button type="submit" formtarget="_blank">Ver / Imprimir</x-secondary-button>
+            <x-secondary-button type="submit">Ver / Imprimir</x-secondary-button>
             <x-primary-button type="submit" formaction="{{ route('fixed-costs.report-pdf') }}">Descargar PDF</x-primary-button>
             <button type="button"
                 x-on:click="$dispatch('close-modal', 'fixed-cost-report')"
