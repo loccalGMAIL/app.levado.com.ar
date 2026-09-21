@@ -7,33 +7,39 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ## [0.12.18] — 2026-09-21
 
-### Reporte de gastos imprimible
+### Reporte de gastos imprimible, con filtros por categoría
 
-Los gastos fijos no se podían imprimir ni exportar de ninguna forma: cuando el contador o un socio
-pedía "pasame los gastos de agosto" la única salida era una captura de pantalla. Con el histórico
-mensual ya andando desde la 0.12.17, los datos estaban; faltaba la salida en papel.
+Los gastos, fijos y variables, no se podían imprimir ni exportar de ninguna forma: cuando el
+contador o un socio pedía "pasame los gastos de agosto" la única salida era una captura de
+pantalla. Con el histórico mensual ya andando desde la 0.12.17, los datos estaban; faltaba la
+salida en papel — y de paso, Gastos Fijos no tenía filtro por categoría (Gastos Variables sí) y el
+de Gastos Variables sólo dejaba elegir una a la vez.
 
 #### Agregado
 
-- **Reporte de gastos**, con botón «Imprimir» en *Gastos → Gastos Fijos* y en *Historial*. Un
-  modal elige el mes, cuántos meses de histórico traer y qué secciones incluir:
-  - **Gastos fijos vigentes** del período, con su categoría, estado y el total al pie.
-  - **Histórico mensual comparativo**, con la variación porcentual mes a mes.
+- **Reporte de gastos**, con botón «Imprimir» en *Gastos → Gastos Fijos*, en *Historial* y en
+  *Gastos Variables*. Un modal elige un **rango de fechas** (Desde/Hasta) y qué secciones incluir:
+  - **Gastos fijos vigentes** al cierre del rango, con su categoría, estado y el total al pie.
+  - **Histórico mensual comparativo**, con la variación porcentual mes a mes en todo el rango.
   - **Detalle por gasto**: la línea de tiempo de cada gasto fijo con su variación, acotada a los
     50 gastos de mayor monto para no disparar un PDF gigante en un tenant con muchos.
-  - **Gastos variables del mismo período** (opcional), para un reporte de costos operativos
-    completo en una sola pasada.
+  - **Gastos variables del rango** (opcional), con granularidad de día -no acotados al mes
+    calendario-, para un reporte de costos operativos completo en una sola pasada.
   - Encabezado con el nombre y logo del negocio, razón social, CUIT y condición de IVA, fecha de
-    emisión y los filtros de búsqueda/estado aplicados, con la opción de heredar los que ya
-    estaban activos en la pantalla de Gastos Fijos.
-- **Dos salidas**: una vista imprimible (`window.print()`, abre en pestaña nueva) y una descarga
-  en PDF, con los mismos datos y el mismo diseño.
+    emisión y los filtros de la pantalla de origen aplicados (búsqueda/estado/categoría en Gastos
+    Fijos; búsqueda/categorías/proveedor en Gastos Variables), con nombres resueltos, no ids.
+- **Dos salidas**: una vista imprimible (`window.print()`, sin marcos: el contenido ocupa toda la
+  página) y una descarga en PDF, con los mismos datos y el mismo diseño.
+- **Filtro por categoría en Gastos Fijos**, para emparejar a Gastos Variables.
+- **Filtro por categoría en Gastos Variables acepta elegir varias a la vez**, con un dropdown de
+  checkboxes (tildar y destildar es la misma acción, con un «Limpiar» para vaciar todo de una).
 
 #### Cómo se comporta
 
 - El reporte respeta el tenant activo igual que el resto de la app: no hay forma de ver gastos de
   otro negocio a través de él.
-- Un mes sin gastos fijos cargados muestra el estado vacío en vez de una tabla en blanco.
+- Un rango sin gastos fijos cargados muestra el estado vacío en vez de una tabla en blanco. El
+  rango no puede invertirse (hasta anterior a desde) ni superar los 24 meses.
 - El PDF funciona igual con o sin logo cargado: sin uno, o si es SVG/WebP/pesa más de 512 KB, el
   encabezado cae al nombre del negocio en tipografía grande en vez de dejar un hueco roto.
 
@@ -44,10 +50,10 @@ mensual ya andando desde la 0.12.17, los datos estaban; faltaba la salida en pap
   (`resources/views/fixed-costs/report/_document.blade.php`), compartida por la vista de pantalla
   y el PDF, para que ambas salidas no puedan divergir en silencio.
 - `App\Services\FixedCostReport` es el único dueño del armado de datos: compone
-  `FixedCostHistory` (histórico) y `VariableExpense::scopeBetween()` (variables) sin repetir su
-  SQL, y le entrega a la vista sólo arrays y escalares -nunca un modelo Eloquent-, porque el
-  proyecto corre con `preventLazyLoading` y una excepción dentro del render de dompdf deja un PDF
-  corrupto en vez de un error legible.
+  `FixedCostHistory` (histórico) y `VariableExpense` (variables) sin repetir su SQL, y le entrega
+  a la vista sólo arrays y escalares -nunca un modelo Eloquent-, porque el proyecto corre con
+  `preventLazyLoading` y una excepción dentro del render de dompdf deja un PDF corrupto en vez de
+  un error legible.
 - `FixedCostHistory::timelinesFor()` trae el detalle de varios gastos en una sola query
   (`whereIn` + `groupBy` en memoria) en vez de repetir `timelineFor()` gasto por gasto.
 - El logo del tenant se resuelve como *data URI* (`FixedCostReport::logoDataUri()`): dompdf no
@@ -56,8 +62,18 @@ mensual ya andando desde la 0.12.17, los datos estaban; faltaba la salida en pap
 - Se agrega `print:hidden` al banner de instalación PWA, la barra inferior móvil, los mensajes
   flash y el banner de impersonación -ninguno se ocultaba al imprimir hasta ahora, aunque no
   hubiera antes ninguna pantalla con función de impresión que lo expusiera-.
-- Tope de 24 meses de histórico y 50 gastos en el detalle, para acotar memoria y tiempo del PDF en
-  un tenant con muchos gastos fijos o mucho historial.
+- Tope de 24 meses de rango y 50 gastos en el detalle, para acotar memoria y tiempo del PDF en un
+  tenant con muchos gastos fijos o mucho historial.
+- El modal del reporte es uno solo (`fixed-costs/modals/report.blade.php`), con un prop `context`
+  (`'fixed'` | `'variable'`) que decide qué secciones vienen tildadas por defecto y qué bloque de
+  "Aplicar los filtros de la pantalla" mostrar. Los filtros de Gastos Variables viajan prefijados
+  (`ve_search`/`ve_category`/`ve_supplier`) para no chocar con los de Gastos Fijos si algún día
+  conviven en el mismo request.
+- El botón «Ver / Imprimir» navega en la misma pestaña (antes abría una nueva por cada intento sin
+  cerrar las anteriores, todas tituladas igual, y era fácil terminar mirando una vieja).
+- El filtro de categoría de Gastos Variables usa un dropdown de checkboxes con Alpine en vez de un
+  `<select multiple>` con Tom Select: sin el plugin `remove_button`, sacar una categoría ya
+  elegida no tenía forma obvia (había que seleccionar el tag y apretar Backspace).
 
 ---
 
