@@ -36,6 +36,11 @@
                         class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                         Historial
                     </a>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'fixed-cost-report')"
+                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        Imprimir
+                    </button>
                     @can('manage-costs')
                         <button type="button"
                             @click="$dispatch('open-modal', 'fixed-cost-categories')"
@@ -61,6 +66,13 @@
                         placeholder="Buscar por nombre..."
                         class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
+                <select name="category"
+                    class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                    <option value="">Todas las categorías</option>
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat->id }}" @selected(request('category') == $cat->id)>{{ $cat->name }}</option>
+                    @endforeach
+                </select>
                 <select name="status"
                     class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                     <option value="">Todos</option>
@@ -70,7 +82,7 @@
                 <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
-                @if(request('search') || request('status'))
+                @if(request('search') || request('status') || request('category'))
                     <a href="{{ route('fixed-costs.index') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
                 @endif
             </form>
@@ -82,7 +94,7 @@
 
             @if($fixedCosts->isEmpty())
                 <x-empty-state>
-                    @if(request('search') || request('status'))
+                    @if(request('search') || request('status') || request('category'))
                         No se encontraron gastos con esos filtros.
                     @else
                         Todavía no hay gastos fijos. Agregá el primero.
@@ -279,6 +291,8 @@
                 update-route="fixed-cost-categories.update"
                 destroy-route="fixed-cost-categories.destroy" />
         @endcan
+
+        @include('fixed-costs.modals.report')
 
     </div>
 </x-app-layout>

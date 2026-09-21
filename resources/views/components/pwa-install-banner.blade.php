@@ -61,7 +61,7 @@
     x-transition:leave-start="translate-y-0 opacity-100"
     x-transition:leave-end="translate-y-full opacity-0"
     style="display: none"
-    class="sm:hidden fixed bottom-16 inset-x-0 z-40 px-3 pb-2"
+    class="print:hidden sm:hidden fixed bottom-16 inset-x-0 z-40 px-3 pb-2"
 >
     <div class="bg-white border border-miga rounded-xl shadow-lg p-3 flex items-start gap-3">
         <img src="/icons/icon-192.png" alt="{{ config('app.name') }}" class="w-11 h-11 rounded-lg border border-miga shrink-0">

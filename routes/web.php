@@ -14,6 +14,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\FixedCostHistoryController;
+use App\Http\Controllers\FixedCostReportController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LaborTypeController;
@@ -77,6 +78,11 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('fixed-costs', [FixedCostController::class, 'index'])->name('fixed-costs.index');
     // Antes de fixed-costs/{fixedCost}/history para no ambigüedad con el binding.
     Route::get('fixed-costs/history', [FixedCostHistoryController::class, 'index'])->name('fixed-costs.history');
+    // Antes de fixed-costs/{fixedCost}/... para que "report" no se tome como binding.
+    Route::get('fixed-costs/report', [FixedCostReportController::class, 'show'])->name('fixed-costs.report');
+    Route::get('fixed-costs/report/pdf', [FixedCostReportController::class, 'download'])
+        ->middleware('throttle:20,1')
+        ->name('fixed-costs.report-pdf');
     Route::get('fixed-costs/{fixedCost}/history', [FixedCostHistoryController::class, 'show'])->name('fixed-costs.show-history');
     Route::get('variable-expenses', [VariableExpenseController::class, 'index'])->name('variable-expenses.index');
     Route::get('variable-expenses/{variableExpense}/receipt', [VariableExpenseController::class, 'receipt'])->name('variable-expenses.receipt');
