@@ -63,6 +63,9 @@
                     $crumbs[] = ['label' => $order?->numberLabel() ?? 'Orden', 'href' => null];
                 } elseif (request()->routeIs('production-orders.*')) {
                     $crumbs[] = ['label' => 'Órdenes de producción', 'href' => null];
+                } elseif (request()->routeIs('production-requests.recurring.*')) {
+                    $crumbs[] = ['label' => 'Órdenes de producción', 'href' => route('production-orders.index')];
+                    $crumbs[] = ['label' => 'Pedidos recurrentes', 'href' => null];
                 } elseif (request()->routeIs('ingredients.*')) {
                     $crumbs[] = ['label' => 'Costos', 'href' => null];
                     $crumbs[] = ['label' => 'Ingredientes', 'href' => null];

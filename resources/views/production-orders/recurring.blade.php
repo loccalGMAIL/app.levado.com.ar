@@ -15,8 +15,7 @@
         <div class="space-y-6">
             <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <a href="{{ route('production-orders.index') }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">← Órdenes de producción</a>
-                    <h2 class="text-base font-semibold text-corteza mt-2">Pedidos recurrentes</h2>
+                    <h2 class="text-base font-semibold text-corteza">Órdenes de producción</h2>
                     <p class="text-sm text-masa-madre mt-0.5">
                         Se generan solos, hasta 7 días adelante, cada vez que alguien entra a Órdenes.
                         @if($tenant->recurring_materialized_at)
@@ -33,6 +32,8 @@
                     </form>
                 @endcan
             </div>
+
+            @include('production-orders.tabs')
 
             @if($recurring->isEmpty())
                 <x-empty-state>

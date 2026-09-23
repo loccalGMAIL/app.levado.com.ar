@@ -50,6 +50,26 @@ test('el índice muestra "Todavía no hay pedidos recurrentes" cuando no hay nin
         ->assertSee('Todavía no hay pedidos recurrentes');
 });
 
+test('el índice de recurrentes muestra las pestañas de Órdenes de producción', function () {
+    [$user] = productionSetup();
+
+    $this->actingAs($user)
+        ->get(route('production-requests.recurring.index'))
+        ->assertOk()
+        ->assertSee(route('production-orders.index'), false)
+        ->assertSee('Pedidos recurrentes');
+});
+
+test('el índice de órdenes muestra las pestañas hacia pedidos recurrentes', function () {
+    [$user] = productionSetup();
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertSee(route('production-requests.recurring.index'), false)
+        ->assertSee('Pedidos recurrentes');
+});
+
 test('owner edita los días, la vigencia y los artículos de un recurrente', function () {
     [$user, $tenant, $product] = productionSetup();
     $productB = Product::factory()->for($tenant)->manufactured()->create(['product_category_id' => $product->product_category_id]);
