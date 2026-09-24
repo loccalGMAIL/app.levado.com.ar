@@ -48,6 +48,43 @@ test('un viewer no ve el botón de cargar pedido', function () {
         ->assertDontSee('+ Nuevo pedido');
 });
 
+test('en el modal de "Nuevo pedido" los botones van arriba y el picker de artículos abajo', function () {
+    [$user] = productionSetup();
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertSeeInOrder([
+            'Cargar pedido',
+            'request_create_destination',
+            'x-ref="rows"',
+            'request-create-picker',
+        ], false);
+});
+
+test('en el modal de "Orden instantánea" los botones van arriba y el picker de artículos abajo', function () {
+    [$user] = productionSetup();
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertSeeInOrder([
+            'Producir ahora',
+            'instant_create_destination',
+            'x-ref="rows"',
+            'instant-create-picker',
+        ], false);
+});
+
+test('Enter en la cantidad de un renglón vuelve al picker en vez de enviar el formulario', function () {
+    [$user] = productionSetup();
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertSee('@keydown.enter.prevent="focusPicker()"', false);
+});
+
 test('el índice marca con 🔁 la orden que tiene un pedido recurrente', function () {
     [$user, $tenant, $product] = productionSetup();
     $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);

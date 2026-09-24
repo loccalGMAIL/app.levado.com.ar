@@ -25,6 +25,15 @@
         }">
         @csrf
 
+        <div class="flex gap-3 items-center pb-4 border-b border-miga">
+            <x-primary-button data-loading="Produciendo…" x-bind:disabled="! canSubmit">Producir ahora</x-primary-button>
+            <button type="button"
+                x-on:click="$dispatch('close-modal', 'production-instant-create')"
+                class="px-4 py-2 text-sm text-masa-madre hover:text-corteza">
+                Cancelar
+            </button>
+        </div>
+
         <!-- <p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-3 py-2">
             El destino es informativo, para la planilla de reparto — el stock producido entra igual al obrador, no se mueve al destino elegido.
         </p> -->
@@ -65,15 +74,6 @@
                     <x-input-error :messages="$errors->get('notes')" class="mt-1" />
                 </div>
             </template>
-        </div>
-
-        <div class="flex gap-3 pt-2">
-            <x-primary-button data-loading="Produciendo…" x-bind:disabled="! canSubmit">Producir ahora</x-primary-button>
-            <button type="button"
-                x-on:click="$dispatch('close-modal', 'production-instant-create')"
-                class="px-4 py-2 text-sm text-masa-madre hover:text-corteza">
-                Cancelar
-            </button>
         </div>
     </form>
 </x-crud-modal>

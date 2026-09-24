@@ -75,6 +75,19 @@ Alpine.data('productionOrderLines', (init = {}) => ({
         }
     },
 
+    /** Vuelve al picker para cargar otro artículo sin soltar el teclado —
+     *  enganchado al @keydown.enter.prevent de la cantidad (ver lines-grid). */
+    focusPicker() {
+        const el = this.$refs.picker;
+        if (!el) {
+            return;
+        }
+        // El picker del modal de recurrentes vive dentro de un x-if, así que
+        // el init global de TomSelect en app.js (corre una sola vez, al
+        // cargar la página) no llega a envolverlo — cae al <select> pelado.
+        (el._ts ?? el).focus();
+    },
+
     removeLine(i) {
         this.lines.splice(i, 1);
     },

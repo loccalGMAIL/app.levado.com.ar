@@ -23,10 +23,16 @@ $maxWidth = [
             // All focusable element types...
             let selector = 'a, button, input:not([type=\'hidden\']), textarea, select, details, [tabindex]:not([tabindex=\'-1\'])'
             return [...$el.querySelectorAll(selector)]
-                // All non-disabled elements...
-                .filter(el => ! el.hasAttribute('disabled'))
+                // All non-disabled elements, sin tabindex=-1 explícito (p. ej.
+                // el <select> que TomSelect deja oculto: sigue matcheando la
+                // palabra 'select' del selector, pero con tabIndex -1)...
+                .filter(el => ! el.hasAttribute('disabled') && el.tabIndex !== -1)
         },
         firstFocusable() { return this.focusables()[0] },
+        // El foco inicial no debe caer en un botón (algunos modales llevan
+        // sus acciones arriba, antes que los campos) — prioriza el primero
+        // que no lo sea.
+        firstNonButtonFocusable() { return this.focusables().find(el => el.tagName !== 'BUTTON') ?? this.firstFocusable() },
         lastFocusable() { return this.focusables().slice(-1)[0] },
         nextFocusable() { return this.focusables()[this.nextFocusableIndex()] || this.firstFocusable() },
         prevFocusable() { return this.focusables()[this.prevFocusableIndex()] || this.lastFocusable() },
@@ -36,7 +42,7 @@ $maxWidth = [
     x-init="$watch('show', value => {
         if (value) {
             document.body.classList.add('overflow-y-hidden');
-            {{ $attributes->has('focusable') ? 'setTimeout(() => firstFocusable().focus(), 100)' : '' }}
+            {{ $attributes->has('focusable') ? 'setTimeout(() => firstNonButtonFocusable().focus(), 100)' : '' }}
         } else {
             document.body.classList.remove('overflow-y-hidden');
         }
