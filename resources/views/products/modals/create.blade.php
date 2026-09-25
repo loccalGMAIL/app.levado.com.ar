@@ -80,42 +80,41 @@
             <x-input-error :messages="$errors->get('recipe_id')" class="mt-2" />
         </div>
 
-        <div>
-            <div class="flex items-center justify-between mb-1">
-                <x-input-label for="create_product_category" value="Categoría (opcional)" />
-                <button type="button" @click="showNewCat = !showNewCat"
-                    class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                    <span x-text="showNewCat ? 'Cancelar' : '+ Nueva categoría'"></span>
-                </button>
-            </div>
-
-            <div x-show="showNewCat" x-cloak class="mb-2">
-                <div class="flex items-center gap-2">
-                    <input type="text" x-model="newCatName"
-                        placeholder="Nombre de la categoría"
-                        @keydown.enter.prevent="createCategory()"
-                        class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm" />
-                    <button type="button" @click="createCategory()"
-                        :disabled="newCatLoading || !newCatName.trim()"
-                        class="px-3 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
-                        <span x-text="newCatLoading ? 'Creando…' : 'Crear'"></span>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <x-input-label for="create_product_category" value="Categoría (opcional)" />
+                    <button type="button" @click="showNewCat = !showNewCat"
+                        class="text-xs text-masa-madre hover:text-corteza hover:underline">
+                        <span x-text="showNewCat ? 'Cancelar' : '+ Nueva categoría'"></span>
                     </button>
                 </div>
-                <p x-show="newCatError" x-text="newCatError" class="mt-1 text-xs text-red-500"></p>
-                <!-- <p class="mt-1 text-xs text-masa-madre">La categoría nueva se crea con «se produce» activado; ajustalo en Categorías.</p> -->
+
+                <div x-show="showNewCat" x-cloak class="mb-2">
+                    <div class="flex items-center gap-2">
+                        <input type="text" x-model="newCatName"
+                            placeholder="Nombre de la categoría"
+                            @keydown.enter.prevent="createCategory()"
+                            class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm" />
+                        <button type="button" @click="createCategory()"
+                            :disabled="newCatLoading || !newCatName.trim()"
+                            class="px-3 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
+                            <span x-text="newCatLoading ? 'Creando…' : 'Crear'"></span>
+                        </button>
+                    </div>
+                    <p x-show="newCatError" x-text="newCatError" class="mt-1 text-xs text-red-500"></p>
+                    <!-- <p class="mt-1 text-xs text-masa-madre">La categoría nueva se crea con «se produce» activado; ajustalo en Categorías.</p> -->
+                </div>
+
+                <select id="create_product_category" name="product_category_id"
+                    class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
+                    <option value="">— Sin categoría —</option>
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat->id }}" @selected(old('product_category_id') == $cat->id)>{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+                <x-input-error :messages="$errors->get('product_category_id')" class="mt-2" />
             </div>
-
-            <select id="create_product_category" name="product_category_id"
-                class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
-                <option value="">— Sin categoría —</option>
-                @foreach($categories as $cat)
-                    <option value="{{ $cat->id }}" @selected(old('product_category_id') == $cat->id)>{{ $cat->name }}</option>
-                @endforeach
-            </select>
-            <x-input-error :messages="$errors->get('product_category_id')" class="mt-2" />
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
             <div>
                 <x-input-label for="create_product_unit" value="Unidad de venta" />
                 <select id="create_product_unit" name="unit" required
@@ -129,8 +128,11 @@
                 </select>
                 <x-input-error :messages="$errors->get('unit')" class="mt-2" />
             </div>
-            {{-- Reventa: el costo lo carga el usuario (luego lo mantendrá Compras). --}}
-            <div x-show="type === 'resale'" x-cloak>
+        </div>
+
+        {{-- Reventa: el costo lo carga el usuario (luego lo mantendrá Compras). --}}
+        <div class="grid grid-cols-2 gap-4" x-show="type === 'resale'" x-cloak>
+            <div>
                 <x-input-label for="create_product_cost" value="Costo por unidad" />
                 <x-text-input id="create_product_cost" name="cost_per_unit" type="number"
                     step="0.01" min="0"
@@ -139,36 +141,25 @@
                     x-bind:required="type === 'resale'" />
                 <x-input-error :messages="$errors->get('cost_per_unit')" class="mt-2" />
             </div>
+            <div>
+                <x-input-label for="create_product_costing" value="Método de costeo (opcional)" />
+                <select id="create_product_costing" name="costing_method"
+                    class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
+                    <option value="">— Usar el del negocio —</option>
+                    @foreach(\App\Enums\CostingMethod::cases() as $method)
+                        <option value="{{ $method->value }}" @selected(old('costing_method') === $method->value)>{{ $method->label() }}</option>
+                    @endforeach
+                </select>
+                <x-input-error :messages="$errors->get('costing_method')" class="mt-2" />
+            </div>
         </div>
 
-        <div x-show="type === 'resale'" x-cloak>
-            <x-input-label for="create_product_costing" value="Método de costeo (opcional)" />
-            <select id="create_product_costing" name="costing_method"
-                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
-                <option value="">— Usar el del negocio —</option>
-                @foreach(\App\Enums\CostingMethod::cases() as $method)
-                    <option value="{{ $method->value }}" @selected(old('costing_method') === $method->value)>{{ $method->label() }}</option>
-                @endforeach
-            </select>
-            <x-input-error :messages="$errors->get('costing_method')" class="mt-2" />
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <x-input-label for="create_product_sku" value="SKU (opcional)" />
-                <x-text-input id="create_product_sku" name="sku" type="text"
-                    class="mt-1 block w-full"
-                    :value="old('sku')" />
-                <x-input-error :messages="$errors->get('sku')" class="mt-2" />
-            </div>
-            <div>
-                <x-input-label for="create_product_barcode" value="Código de barras (opcional)" />
-                <x-text-input id="create_product_barcode" name="barcode" type="text"
-                    class="mt-1 block w-full"
-                    :value="old('barcode')" />
-                <x-input-error :messages="$errors->get('barcode')" class="mt-2" />
-                <!-- <p class="text-xs text-masa-madre mt-1">Si lo dejás vacío, se asigna un código interno automático (para el lector / punto de venta).</p> -->
-            </div>
+        <div>
+            <x-input-label for="create_product_barcode" value="Código de barras (opcional)" />
+            <x-text-input id="create_product_barcode" name="barcode" type="text"
+                class="mt-1 block w-full"
+                :value="old('barcode')" />
+            <x-input-error :messages="$errors->get('barcode')" class="mt-2" />
         </div>
 
         <div class="flex gap-3 pt-2">

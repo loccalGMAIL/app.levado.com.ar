@@ -251,6 +251,47 @@ test('el select de edición lista recetas inactivas para no perder la asociació
         ->and($editSelect)->toContain('value="'.$recipe->id.'"');
 });
 
+test('el modal de edición linkea a la receta del elaborado', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $recipe = Recipe::factory()->for($tenant)->create();
+    Product::factory()->for($tenant)->manufactured()->create(['recipe_id' => $recipe->id]);
+
+    $html = $this->actingAs($user)->get(route('products.index'))->assertOk()->getContent();
+
+    // Js::from() de un array json_encodea dos veces (la 2da envuelve todo en
+    // JSON.parse('...')), así que la URL viaja doblemente escapada en el HTML.
+    $flags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR;
+    $url = json_encode(route('recipes.show', $recipe), $flags);
+    $needle = substr(json_encode($url, $flags), 1, -1);
+
+    expect($html)->toContain($needle);
+});
+
+test('los modales de artículo no piden SKU', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    Product::factory()->for($tenant)->resale()->create();
+
+    $html = $this->actingAs($user)->get(route('products.index'))->assertOk()->getContent();
+
+    expect($html)->not->toContain('name="sku"');
+});
+
+test('editar sin enviar sku conserva el SKU existente', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $product = Product::factory()->for($tenant)->resale()->create(['sku' => 'ABC', 'cost_per_unit' => 100]);
+
+    $this->actingAs($user)
+        ->put(route('products.update', $product), [
+            'name' => $product->name,
+            'type' => ProductType::Resale->value,
+            'unit' => $product->unit->value,
+            'cost_per_unit' => '100',
+        ])
+        ->assertRedirect(route('products.index'));
+
+    expect($product->fresh()->sku)->toBe('ABC');
+});
+
 // --- Toggle ---
 
 test('owner puede desactivar un artículo', function () {

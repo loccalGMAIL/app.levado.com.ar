@@ -34,7 +34,7 @@
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <div class="flex-1 min-w-48">
                     <input type="text" name="search" value="{{ request('search') }}"
-                        placeholder="Buscar por nombre, SKU o código..."
+                        placeholder="Buscar por nombre o código..."
                         class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
                 <select name="type"
