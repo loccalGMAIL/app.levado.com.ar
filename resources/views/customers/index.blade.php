@@ -38,7 +38,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-base font-semibold text-corteza">Clientes</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">A quiénes se les entrega la mercadería.</p>
+                    <!-- <p class="text-sm text-masa-madre mt-0.5">A quiénes se les entrega la mercadería.</p> -->
                 </div>
                 <button type="button"
                     @click="$dispatch('open-modal', 'customer-create')"

@@ -41,13 +41,23 @@ class ProductionOrderRequestController extends Controller
             'destination_type' => ['required', Rule::enum(DeliveryDestinationType::class)],
             'destination_id' => ['required', 'integer', new ValidDestination($tenant, $request->input('destination_type'))],
             'notes' => ['nullable', 'string', 'max:1000'],
+            // Nullable, no present: el modal "Nuevo pedido" manda artículos,
+            // pero un pedido también puede cargarse vacío y completarse
+            // después vía la grilla (ProductionOrderLineController::sync()).
+            'lines' => ['nullable', 'array', 'max:200'],
+            'lines.*.product_id' => ['required', 'integer', Rule::in($tenant->products()->producible()->pluck('id'))],
+            'lines.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999'],
         ]);
 
-        $this->orders->addRequest($productionOrder, [
+        $productionOrderRequest = $this->orders->addRequest($productionOrder, [
             'destination_type' => $data['destination_type'],
             'destination_id' => $data['destination_id'],
             'notes' => $data['notes'] ?? null,
         ]);
+
+        if (! empty($data['lines'])) {
+            $this->orders->syncLines($productionOrderRequest, $data['lines']);
+        }
 
         return back(fallback: route('production-orders.show', $productionOrder))->with('status', 'Pedido agregado.');
     }

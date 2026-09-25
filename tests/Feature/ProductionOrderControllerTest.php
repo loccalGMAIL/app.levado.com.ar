@@ -39,6 +39,31 @@ test('el índice ofrece "Nuevo pedido" como acción principal, ya no "Nueva orde
         ->assertDontSee('+ Nueva orden');
 });
 
+test('el índice ofrece Planilla y Confirmar como acciones rápidas por fila', function () {
+    [$user, $tenant] = productionSetup();
+    $draft = ProductionOrder::factory()->for($tenant)->create();
+    $done = ProductionOrder::factory()->for($tenant)->done()->create();
+
+    $response = $this->actingAs($user)->get(route('production-orders.index'))->assertOk();
+    $response->assertSee('Planilla');
+    // "Confirmar" sólo tiene que aparecer para la orden en borrador, no para la ya terminada.
+    $response->assertSeeInOrder(['Confirmar'], false);
+    $response->assertSee(route('production-orders.transition', $draft), false);
+    $response->assertDontSee(route('production-orders.transition', $done), false);
+});
+
+test('confirmar una orden desde el índice la avanza a Confirmada', function () {
+    [$user, $tenant] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->create();
+
+    $this->actingAs($user)
+        ->from(route('production-orders.index'))
+        ->patch(route('production-orders.transition', $order), ['status' => 'confirmed'])
+        ->assertRedirect(route('production-orders.index'));
+
+    expect($order->fresh()->status)->toBe(ProductionOrderStatus::Confirmed);
+});
+
 test('un viewer no ve el botón de cargar pedido', function () {
     [$user] = productionSetup(TenantUserRole::Viewer);
 
@@ -48,15 +73,16 @@ test('un viewer no ve el botón de cargar pedido', function () {
         ->assertDontSee('+ Nuevo pedido');
 });
 
-test('en el modal de "Nuevo pedido" los botones van arriba y el picker de artículos abajo', function () {
+test('en el modal de "Nuevo pedido" destino, fecha y botones van en una fila, luego el picker de artículos', function () {
     [$user] = productionSetup();
 
     $this->actingAs($user)
         ->get(route('production-orders.index'))
         ->assertOk()
         ->assertSeeInOrder([
-            'Cargar pedido',
             'request_create_destination',
+            'request_create_scheduled_for',
+            'Cargar pedido',
             'x-ref="rows"',
             'request-create-picker',
         ], false);
@@ -154,6 +180,30 @@ test('armar un pedido con un artículo por syncLines y verlo en el detalle', fun
         ->assertOk()
         ->assertSee($product->name);
     expect($request->lines()->where('product_id', $product->id)->first()->quantity)->toEqualWithDelta(5, 0.001);
+});
+
+test('el modal "Agregar pedido" del detalle carga destino y artículos en un solo paso', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $order = ProductionOrder::factory()->for($tenant)->create(['location_id' => $tenant->defaultLocation()->id]);
+
+    $this->actingAs($user)
+        ->get(route('production-orders.show', $order))
+        ->assertOk()
+        ->assertSeeInOrder(['request_destination', 'Agregar pedido', 'x-ref="rows"'], false);
+
+    $this->actingAs($user)->post(route('production-orders.requests.store', $order), [
+        'destination_type' => 'location',
+        'destination_id' => $tenant->defaultLocation()->id,
+        'lines' => [['product_id' => $product->id, 'quantity' => 4]],
+    ])->assertRedirect();
+
+    // La orden sigue siendo una sola: el pedido se agregó a ÉSTA, no se
+    // creó (ni se buscó) otra por fecha — a diferencia de
+    // ProductionOrderService::placeRequest(), que sí hace ese find-or-create.
+    expect($tenant->productionOrders()->count())->toBe(1);
+
+    $request = $order->fresh()->productionOrderRequests()->first();
+    expect($request->lines()->where('product_id', $product->id)->first()->quantity)->toEqualWithDelta(4, 0.001);
 });
 
 test('el detalle de una orden terminada muestra las líneas de sólo lectura', function () {

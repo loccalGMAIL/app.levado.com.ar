@@ -15,12 +15,24 @@
     'emptyNote' => null,
 ])
 
-<div class="bg-white border border-miga rounded-lg shadow-sm overflow-hidden">
-    <div class="px-5 py-3 border-b border-miga flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-corteza">Insumos a consumir</h3>
+{{-- x-data propio (sólo `open`, no colisiona con lo que traiga el padre —
+     previewLines/loading/etc siguen resolviendo contra el x-data de arriba,
+     Alpine encadena scopes): acordeón cerrado por default, compacto. --}}
+<div class="bg-white border border-miga rounded-lg shadow-sm overflow-hidden" x-data="{ open: false }">
+    <button type="button" @click="open = ! open"
+        class="w-full px-5 py-3 flex items-center justify-between gap-3 text-left"
+        :class="open && 'border-b border-miga'">
+        <span class="flex items-center gap-2">
+            <svg class="w-3 h-3 shrink-0 text-masa-madre transition-transform" :class="open ? '' : '-rotate-90'"
+                fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+            <h3 class="text-sm font-semibold text-corteza">Insumos a consumir</h3>
+        </span>
         <span x-show="loading" class="text-xs text-masa-madre">Calculando…</span>
-    </div>
+    </button>
 
+    <div x-show="open" x-cloak>
     <template x-if="error">
         <p class="px-5 py-4 text-sm text-red-600" x-text="error"></p>
     </template>
@@ -78,4 +90,5 @@
             </table>
         </div>
     </template>
+    </div>
 </div>

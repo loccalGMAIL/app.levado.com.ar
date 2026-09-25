@@ -26,16 +26,7 @@
         }">
         @csrf
 
-        <div class="flex gap-3 items-center pb-4 border-b border-miga">
-            <x-primary-button data-loading="Cargando…">Cargar pedido</x-primary-button>
-            <button type="button"
-                x-on:click="$dispatch('close-modal', 'production-request-create')"
-                class="px-4 py-2 text-sm text-masa-madre hover:text-corteza">
-                Cancelar
-            </button>
-        </div>
-
-        <div class="flex flex-col md:flex-row md:items-start gap-4">
+        <div class="flex flex-col md:flex-row md:items-end gap-4 pb-4 border-b border-miga">
             <div class="flex-1">
                 <x-input-label for="request_create_destination" value="Destino" />
                 @include('production-orders.partials.destination-select', ['id' => 'request_create_destination', 'locations' => $locations, 'customers' => $customers])
@@ -49,6 +40,15 @@
                     value="{{ old('scheduled_for', now()->toDateString()) }}"
                     class="mt-1 w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 <x-input-error :messages="$errors->get('scheduled_for')" class="mt-2" />
+            </div>
+
+            <div class="flex gap-3 md:pb-0.5">
+                <x-primary-button data-loading="Cargando…">Cargar pedido</x-primary-button>
+                <button type="button"
+                    x-on:click="$dispatch('close-modal', 'production-request-create')"
+                    class="px-4 py-2 text-sm text-masa-madre hover:text-corteza">
+                    Cancelar
+                </button>
             </div>
         </div>
 

@@ -95,8 +95,7 @@
                 <x-responsive-table>
                     <x-slot:cards>
                     @foreach($orders as $order)
-                        <a href="{{ route('production-orders.show', $order) }}"
-                            class="block bg-white border border-miga rounded-lg p-4 shadow-sm {{ $order->isCancelled() ? 'opacity-60' : '' }}">
+                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $order->isCancelled() ? 'opacity-60' : '' }}">
                             <div class="flex items-start justify-between gap-2">
                                 <span class="font-medium text-corteza">
                                     {{ $orderNumber($order) }}
@@ -115,7 +114,30 @@
                             <div class="mt-1 text-sm text-corteza">
                                 {{ $order->production_order_requests_count }} pedido(s)
                             </div>
-                        </a>
+
+                            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
+                                <a href="{{ route('production-orders.show', $order) }}"
+                                    class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                    Ver
+                                </a>
+                                <a href="{{ route('production-orders.delivery-sheet', $order) }}" target="_blank"
+                                    class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                    Planilla
+                                </a>
+                                @can('manage-costs')
+                                    @if($order->isDraft())
+                                        <form method="POST" action="{{ route('production-orders.transition', $order) }}" class="flex-1">
+                                            @csrf @method('PATCH')
+                                            <input type="hidden" name="status" value="confirmed">
+                                            <button type="submit"
+                                                class="w-full py-1.5 px-3 text-sm border border-corteza text-corteza hover:bg-miga rounded transition-colors">
+                                                Confirmar
+                                            </button>
+                                        </form>
+                                    @endif
+                                @endcan
+                            </div>
+                        </div>
                     @endforeach
                     </x-slot:cards>
 
@@ -149,7 +171,19 @@
                                     <x-production-order-status-badge :status="$order->status" />
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <a href="{{ route('production-orders.show', $order) }}" class="text-sm text-horno hover:underline">Ver</a>
+                                    <div class="flex items-center justify-end gap-3">
+                                        <a href="{{ route('production-orders.show', $order) }}" class="text-sm text-horno hover:underline">Ver</a>
+                                        <a href="{{ route('production-orders.delivery-sheet', $order) }}" target="_blank" class="text-sm text-horno hover:underline">Planilla</a>
+                                        @can('manage-costs')
+                                            @if($order->isDraft())
+                                                <form method="POST" action="{{ route('production-orders.transition', $order) }}">
+                                                    @csrf @method('PATCH')
+                                                    <input type="hidden" name="status" value="confirmed">
+                                                    <button type="submit" class="text-sm text-horno hover:underline">Confirmar</button>
+                                                </form>
+                                            @endif
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
