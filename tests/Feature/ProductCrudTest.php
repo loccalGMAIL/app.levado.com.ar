@@ -45,6 +45,26 @@ test('el filtro «sin categoría» lista sólo los artículos sin categoría', f
         ->assertDontSee('ConCategoriaZZ');
 });
 
+test('un artículo inactivo no se manda al fondo del listado, respeta el orden alfabético', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    Product::factory()->for($tenant)->resale()->create(['name' => 'Alfajor', 'active' => false]);
+    Product::factory()->for($tenant)->resale()->create(['name' => 'Budín', 'active' => true]);
+
+    $this->actingAs($user)
+        ->get(route('products.index'))
+        ->assertOk()
+        ->assertSeeInOrder(['Alfajor', 'Budín']);
+});
+
+test('el catálogo no muestra la columna Estado', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    Product::factory()->for($tenant)->resale()->create();
+
+    $html = $this->actingAs($user)->get(route('products.index'))->assertOk()->getContent();
+
+    expect($html)->not->toContain('>Estado<');
+});
+
 // --- Crear reventa ---
 
 test('owner puede crear un producto de reventa con costo propio', function () {

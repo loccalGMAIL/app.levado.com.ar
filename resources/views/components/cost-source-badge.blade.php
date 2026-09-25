@@ -22,15 +22,24 @@
 
     @if($historyUrl)
         <button type="button"
-            title="{{ $title }} · ver historial"
+            title="{{ $title }} · ver historial" aria-label="{{ $title }} · ver historial"
             @click.stop="openCostHistory('{{ $historyUrl }}', @js($product->name))"
-            {{ $attributes->merge(['class' => $base.' hover:ring-1 hover:ring-current transition']) }}>{{ $label }}</button>
+            {{ $attributes->merge(['class' => 'p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors']) }}>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </button>
     @else
         <span title="{{ $title }}" {{ $attributes->merge(['class' => $base]) }}>{{ $label }}</span>
     @endif
 @elseif($historyUrl)
+    @php $title = 'El costo lo calcula la receta · ver historial de fabricaciones'; @endphp
     <button type="button"
-        title="El costo lo calcula la receta · ver historial de fabricaciones"
+        title="{{ $title }}" aria-label="{{ $title }}"
         @click.stop="openCostHistory('{{ $historyUrl }}', @js($product->name))"
-        {{ $attributes->merge(['class' => 'text-[10px] font-medium rounded px-1 py-0.5 bg-amber-50 text-amber-700 hover:ring-1 hover:ring-current transition']) }}>Receta</button>
+        {{ $attributes->merge(['class' => 'p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors']) }}>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    </button>
 @endif

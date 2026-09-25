@@ -2,20 +2,20 @@
     <x-slot name="title">Artículos</x-slot>
 
     @php
-        $errorFields = ['name', 'type', 'recipe_id', 'product_category_id', 'unit', 'cost_per_unit', 'costing_method', 'sku', 'barcode'];
+        $errorFields = ['name', 'type', 'recipe_id', 'product_category_id', 'unit', 'cost_per_unit', 'costing_method', 'barcode'];
         $errorsInCreate = $errors->hasAny($errorFields) && old('_form') === 'create';
         $errorsInEdit   = $errors->hasAny($errorFields) && old('_form') === 'edit';
-        $editingDefault = ['id' => null, 'name' => '', 'type' => '', 'recipe_id' => '', 'product_category_id' => '', 'unit' => '', 'cost_per_unit' => '', 'costing_method' => '', 'sku' => '', 'barcode' => ''];
+        $editingDefault = ['id' => null, 'name' => '', 'type' => '', 'recipe_id' => '', 'recipe_url' => null, 'product_category_id' => '', 'unit' => '', 'cost_per_unit' => '', 'costing_method' => '', 'barcode' => ''];
         $editingOnError = $errorsInEdit ? [
             'id'                  => old('product_id'),
             'name'                => old('name'),
             'type'                => old('type'),
             'recipe_id'           => old('recipe_id'),
+            'recipe_url'          => old('recipe_id') ? route('recipes.show', old('recipe_id')) : null,
             'product_category_id' => old('product_category_id'),
             'unit'                => old('unit'),
             'cost_per_unit'       => old('cost_per_unit'),
             'costing_method'      => old('costing_method'),
-            'sku'                 => old('sku'),
             'barcode'             => old('barcode'),
         ] : $editingDefault;
 
@@ -26,11 +26,11 @@
             'name'                => $product->name,
             'type'                => $product->type->value,
             'recipe_id'           => $product->recipe_id ?? '',
+            'recipe_url'          => $product->recipe_id ? route('recipes.show', $product->recipe_id) : null,
             'product_category_id' => $product->product_category_id ?? '',
             'unit'                => $product->unit->value,
             'cost_per_unit'       => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
             'costing_method'      => $product->costing_method?->value ?? '',
-            'sku'                 => $product->sku ?? '',
             'barcode'             => $product->barcode ?? '',
         ];
     @endphp
@@ -107,7 +107,7 @@
                 <input type="hidden" name="dir" value="{{ request('dir') }}">
                 <div class="flex-1 min-w-48">
                     <input type="text" name="search" value="{{ request('search') }}"
-                        placeholder="Buscar por nombre, SKU o código..."
+                        placeholder="Buscar por nombre o código..."
                         class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
                 <select name="type"
@@ -201,14 +201,10 @@
                                         @endif
                                     </div>
                                 </div>
-                                <x-status-badge :active="$product->active" />
                             </div>
                             <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
                                 <div>
-                                    <div class="text-masa-madre text-[11px] flex items-center gap-1">
-                                        Costo/u
-                                        <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" />
-                                    </div>
+                                    <div class="text-masa-madre text-[11px]">Costo/u</div>
                                     <div class="font-mono text-corteza">{{ $cost !== null ? '$ '.number_format($cost, 2, ',', '.') : '—' }}</div>
                                 </div>
                                 <div>
@@ -221,14 +217,12 @@
                                 </div>
                             </div>
                             <div class="mt-1 text-[11px] text-masa-madre">Precios: {{ $priceList->name }}</div>
-                            @if($product->sku || $product->barcode)
-                                <div class="mt-1 text-xs text-masa-madre">
-                                    {{ $product->sku ? 'SKU '.$product->sku : '' }}
-                                    {{ $product->barcode ? ' · '.$product->barcode : '' }}
-                                </div>
+                            @if($product->barcode)
+                                <div class="mt-1 text-xs text-masa-madre">{{ $product->barcode }}</div>
                             @endif
                             @can('manage-costs')
                                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
+                                    <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" />
                                     <button type="button"
                                         @click="openEdit({{ Js::from($editPayload($product)) }})"
                                         class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
@@ -257,6 +251,7 @@
                                         class="rounded border-gray-300 text-horno focus:ring-horno">
                                 </th>
                             @endcan
+                            <th class="px-4 py-3 font-medium">Código</th>
                             <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
                             <th class="px-4 py-3 font-medium">Tipo</th>
                             <th class="px-4 py-3 font-medium">Categoría</th>
@@ -264,8 +259,6 @@
                             <th class="px-4 py-3 font-medium text-right">Costo/u</th>
                             <th class="px-4 py-3 font-medium text-right">Precio ({{ $priceList->name }})/u</th>
                             <th class="px-4 py-3 font-medium text-right">Margen</th>
-                            <th class="px-4 py-3 font-medium">Código</th>
-                            <th class="px-4 py-3 font-medium">Estado</th>
                             @can('manage-costs')
                                 <th class="px-4 py-3"></th>
                             @endcan
@@ -300,6 +293,9 @@
                                             class="rounded border-gray-300 text-horno focus:ring-horno">
                                     </td>
                                 @endcan
+                                <td class="px-4 py-3 text-masa-madre text-xs font-mono">
+                                    {{ $product->barcode ?? ($product->sku ?? '—') }}
+                                </td>
                                 <td class="px-4 py-3 font-medium text-corteza">
                                     @can('manage-costs')
                                         <button type="button"
@@ -330,10 +326,7 @@
                                     {{ $product->unit->short() }}
                                 </td>
                                 <td class="px-4 py-3 text-right text-corteza font-mono">
-                                    <span class="inline-flex items-center gap-1.5 justify-end">
-                                        <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" class="font-sans" />
-                                        {{ $cost !== null ? number_format($cost, 2, ',', '.') : '—' }}
-                                    </span>
+                                    {{ $cost !== null ? number_format($cost, 2, ',', '.') : '—' }}
                                 </td>
                                 <td class="px-4 py-3 text-right text-corteza font-mono">
                                     @can('manage-costs')
@@ -355,15 +348,10 @@
                                     <span x-show="marginPct !== null" x-text="marginPctFormatted + '%'"></span>
                                     <span x-show="marginPct === null" class="text-masa-madre">—</span>
                                 </td>
-                                <td class="px-4 py-3 text-masa-madre text-xs font-mono">
-                                    {{ $product->barcode ?? ($product->sku ?? '—') }}
-                                </td>
-                                <td class="px-4 py-3">
-                                    <x-status-badge :active="$product->active" />
-                                </td>
                                 @can('manage-costs')
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-1">
+                                            <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" />
                                             <button type="button"
                                                 @click="openEdit({{ Js::from($editPayload($product)) }})"
                                                 aria-label="Editar artículo" title="Editar artículo"
@@ -384,8 +372,7 @@
                                                         </svg>
                                                     @else
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                                         </svg>
                                                     @endif
                                                 </button>
