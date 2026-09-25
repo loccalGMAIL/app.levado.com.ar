@@ -20,7 +20,7 @@ class CustomerController extends Controller
         $customers = $tenant->customers()->with('deliveryPerson')->orderBy('name')->get();
         $deliveryPeople = $tenant->deliveryPeople()->active()->orderBy('name')->get();
 
-        return view('customers.index', compact('customers', 'deliveryPeople'));
+        return view('reparto.clientes', compact('customers', 'deliveryPeople'));
     }
 
     public function store(StoreCustomerRequest $request): RedirectResponse
@@ -37,7 +37,7 @@ class CustomerController extends Controller
             tenantId: $tenant->id,
         );
 
-        return back(fallback: route('customers.index'))->with('status', 'Cliente creado.');
+        return back(fallback: route('reparto.clientes.index'))->with('status', 'Cliente creado.');
     }
 
     public function update(UpdateCustomerRequest $request, Customer $customer): RedirectResponse
@@ -55,7 +55,7 @@ class CustomerController extends Controller
             tenantId: $customer->tenant_id,
         );
 
-        return back(fallback: route('customers.index'))->with('status', 'Cliente actualizado.');
+        return back(fallback: route('reparto.clientes.index'))->with('status', 'Cliente actualizado.');
     }
 
     public function toggleActive(Customer $customer): RedirectResponse

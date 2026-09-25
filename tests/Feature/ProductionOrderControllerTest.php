@@ -39,14 +39,17 @@ test('el índice ofrece "Nuevo pedido" como acción principal, ya no "Nueva orde
         ->assertDontSee('+ Nueva orden');
 });
 
-test('el índice ofrece Producción, Reparto y Confirmar como acciones rápidas por fila', function () {
+test('el índice ofrece planillas de producción, reparto y Confirmar como acciones rápidas por fila', function () {
     [$user, $tenant] = productionSetup();
     $draft = ProductionOrder::factory()->for($tenant)->create();
     $done = ProductionOrder::factory()->for($tenant)->done()->create();
 
     $response = $this->actingAs($user)->get(route('production-orders.index'))->assertOk();
-    $response->assertSee('Producción');
-    $response->assertSee('Reparto');
+    // No se busca el texto "Reparto": desde que el sidebar tiene un ítem con
+    // ese mismo nombre, cualquier página lo matchea y el assert deja de
+    // probar el link de la fila -se verifica la URL de la planilla en su lugar-.
+    $response->assertSee(route('production-orders.production-sheet', $draft), false);
+    $response->assertSee(route('production-orders.delivery-sheet', $draft), false);
     // "Confirmar" sólo tiene que aparecer para la orden en borrador, no para la ya terminada.
     $response->assertSeeInOrder(['Confirmar'], false);
     $response->assertSee(route('production-orders.transition', $draft), false);

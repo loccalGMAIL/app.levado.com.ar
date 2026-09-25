@@ -1,5 +1,5 @@
 <x-crud-modal name="delivery-person-create" title="Nuevo repartidor" :show="$errorsInCreate">
-    <form method="POST" action="{{ route('delivery-people.store') }}" class="space-y-4">
+    <form method="POST" action="{{ route('reparto.repartidores.store') }}" class="space-y-4">
         @csrf
         <input type="hidden" name="_form" value="create">
 

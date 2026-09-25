@@ -1,6 +1,6 @@
 <x-crud-modal name="delivery-person-edit" title="Editar repartidor" :show="$errorsInEdit">
     <form method="POST"
-        :action="`/delivery-people/${editing.id}`"
+        :action="`/reparto/repartidores/${editing.id}`"
         class="space-y-4">
         @csrf
         <input type="hidden" name="_method" value="PUT">

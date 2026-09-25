@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="title">Clientes</x-slot>
+    <x-slot name="title">Reparto</x-slot>
 
     @php
         $customerFields = ['name', 'phone', 'email', 'address', 'city', 'notes', 'delivery_person_id', 'legal_name', 'tax_id', 'condicion_iva'];
@@ -38,7 +38,6 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-base font-semibold text-corteza">Clientes</h2>
-                    <!-- <p class="text-sm text-masa-madre mt-0.5">A quiénes se les entrega la mercadería.</p> -->
                 </div>
                 <button type="button"
                     @click="$dispatch('open-modal', 'customer-create')"
@@ -46,6 +45,8 @@
                     + Nuevo cliente
                 </button>
             </div>
+
+            @include('reparto.tabs')
 
             @if($customers->isEmpty())
                 <x-empty-state>Todavía no hay clientes. Creá el primero.</x-empty-state>
@@ -91,7 +92,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                     </svg>
                                 </button>
-                                <form method="POST" action="{{ route('customers.toggle-active', $customer) }}">
+                                <form method="POST" action="{{ route('reparto.clientes.toggle-active', $customer) }}">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit"
@@ -117,8 +118,8 @@
 
         </div>
 
-        @include('customers.modals.create')
-        @include('customers.modals.edit')
+        @include('reparto.modals.cliente-create')
+        @include('reparto.modals.cliente-edit')
 
     </div>
 </x-app-layout>

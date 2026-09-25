@@ -294,6 +294,115 @@ corto dentro del nuevo modelo de Órdenes.
 
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
+
+## [0.13.1] — 2026-09-25
+
+Rama `v0.13.1/produccion`, sobre lo cerrado en v0.13.0. Cliente reemplaza a Repartidor como destino del pedido
+(el repartidor pasa a ser quien **lleva** la mercadería, no quien la recibe); el pedido pasa a ser la unidad de
+carga diaria (la orden se arma sola); pedidos recurrentes sin cron; ajustes de UX sobre el rediseño; planillas
+imprimibles de producción y reparto; y una vista **Reparto** que unifica Clientes y Repartidores en el menú de
+Producción.
+
+### Cliente como destino, y el pedido como unidad de carga
+
+#### Agregado
+
+- **Cliente reemplaza a Repartidor como destino de un pedido**: el destino de un pedido de producción es
+  sucursal o **cliente** (antes: sucursal o repartidor). Un cliente puede tener un **repartidor a cargo**
+  asignado (opcional) — el repartidor dejó de ser un destino y pasó a ser quien reparte.
+- **El pedido se carga directo, sin crear la orden a mano primero.** El modal "+ Nuevo pedido" hace
+  find-or-create de la orden diaria de la fecha elegida (prioriza una en Borrador; nunca reusa una ya
+  Terminada/Anulada/espontánea/instantánea) — en la base nunca queda un pedido sin orden.
+- **Pedidos recurrentes** (frecuencia = días de la semana elegibles): se generan solos al entrar a Órdenes
+  (horizonte de 7 días, throttle de una corrida por hora por negocio, autocurativo si nadie entra un par de
+  días), con un botón "Generar ahora" como atajo manual. Pantalla propia de administración
+  (`production-requests/recurring`) para editar días/vigencia/artículos y pausar/reanudar.
+- **Se retiran las plantillas de orden completa y "repetir orden"** — la recurrencia por pedido las reemplaza.
+- **Números propios**: cada pedido tiene su propia numeración correlativa por negocio ("Pedido #123"),
+  independiente del número de la orden que lo contiene.
+
+#### Técnico
+
+- Modelos `RecurringProductionRequest` (molde: destino polimórfico, `weekdays` json ISO 1–7, vigencia,
+  `occursOn()`) y `RecurringProductionRequestLine`; vínculo instancia↔molde vía
+  `production_order_requests.recurring_production_request_id` (nullable). `production_order_requests` pasa a
+  `SoftDeletes` — necesario para que el materializador sepa que un pedido borrado a propósito no debe
+  regenerarse.
+- `RecurringProductionRequestMaterializer::materialize()` corre en `ProductionOrderController::index()`
+  (`materializeIfDue`, con `Cache::lock()` no bloqueante) y nunca propaga excepciones por instancia rota.
+- `ProductionOrderService::placeRequest()`/`orderForDate()` centralizan el alta; `is_template` y
+  `ExcludeTemplatesScope` quedan dormidos (sin borrar) tras retirar la UI de plantillas.
+- **`APP_TIMEZONE` faltaba en el `.env`** de desarrollo — sin él el borde del día del materializador corría
+  ~3 horas (UTC vs. Argentina). Falta confirmar que esté seteado también en producción al deployar.
+- **1041 tests verdes.** Queda un test preexistente y no relacionado en rojo
+  (`RecurringProductionRequestTest`, fecha hardcodeada contra el `weekdays` por defecto del factory —
+  bug del test, no de la feature; pendiente de arreglar en otra sesión).
+
+### Ajustes de UX y Dashboard
+
+#### Agregado
+
+- Modal "+ Nuevo pedido": destino + fecha en una sola fila (antes apiladas), ancho ampliado a `3xl`; sección
+  "Se repite" también en una fila, con atajos "Lunes a sábado"/"Todos los días"/"Lunes a viernes". Carga por
+  teclado en la grilla de artículos.
+- **"⚡ Orden instantánea" pasa de pantalla propia a modal**, con la misma grilla que "+ Nuevo pedido"
+  (sin el botón "Traer del pedido anterior", sin sentido para un alta de urgencia).
+- Columnas ordenables en el listado de Órdenes; el número de orden se ve sin el prefijo "Orden #" sólo en esa
+  lista.
+- **Fix de UI, afecta toda la app**: el desplegable de un `<select data-searchable>` (TomSelect) dentro de un
+  modal quedaba recortado por el borde redondeado del contenedor — se renderiza ahora como hijo de `body`.
+- Los **quick actions del saludo en el Dashboard** abren directamente los modales de "+ Nuevo pedido",
+  "⚡ Orden instantánea", receta y compra, sin pasar primero por la pantalla de Órdenes.
+
+### Planillas imprimibles de producción y reparto
+
+#### Agregado
+
+- **Planilla de producción**: productos totales a fabricar + insumos necesarios (con disponible/faltante),
+  por orden — en pantalla, para imprimir, y en PDF.
+- **Planilla de reparto**: agrupa los pedidos de la orden por repartidor; los clientes sin repartidor asignado
+  (y los pedidos a sucursal) se agrupan por sucursal ("retira en..."). Selector para imprimir/descargar sólo
+  lo de un repartidor puntual — cada grupo arranca en una hoja nueva al imprimir todos juntos.
+- Botones "Producción" y "Reparto" en cada fila del listado de Órdenes y en el detalle de una orden.
+
+#### Técnico
+
+- `ProductionOrderSheets` (arma ambas planillas como arrays/escalares, nunca modelos — necesario porque
+  dompdf con lazy loading deja un PDF corrupto) + `ProductionOrderSheetController`
+  (`production-orders/{order}/production-sheet` y `/delivery-sheet`, cada una con su ruta `/pdf`,
+  `throttle:20,1`). Reemplaza al `deliverySheet()` que sólo listaba pedidos sin agrupar.
+- `ReportLetterhead`: encabezado de negocio (nombre, razón social, CUIT, IVA, logo en data URI) extraído de
+  `FixedCostReport` para compartirlo entre el reporte de gastos y las planillas nuevas.
+- `DeliveryPerson::customers()` (hasMany) nueva.
+
+### Vista "Reparto" (Clientes + Repartidores) en el menú Producción
+
+Clientes y Repartidores eran dos pantallas sueltas, visibles sólo desde Administración (Owner/SuperAdmin) pese
+a ser datos de reparto de producción, no de administración del negocio.
+
+#### Agregado
+
+- Vista **"Reparto"** con dos pestañas, Clientes y Repartidores, movida al grupo **Producción** del menú
+  (antes en Administración).
+- **Acceso ampliado a Admin** (antes sólo Owner/SuperAdmin) — mismo criterio que el resto de Producción.
+
+#### Técnico
+
+- Rutas renombradas de `/customers` y `/delivery-people` a `/reparto/clientes` y `/reparto/repartidores`
+  (`reparto.clientes.*` / `reparto.repartidores.*`), en un grupo propio con middleware
+  `role:super_admin,owner,admin`. `CustomerController`/`DeliveryPersonController` sin cambios de
+  responsabilidad, sólo de vista/ruta de destino.
+- Vistas movidas a `resources/views/reparto/` con una pestañera compartida (mismo patrón que
+  Órdenes/Pedidos recurrentes); se borraron `resources/views/customers/` y `resources/views/delivery-people/`.
+- Sidebar, drawer móvil y breadcrumbs actualizados.
+
+#### Al deployar
+
+- `php artisan migrate` (tablas de recurrencia + soft-deletes de `production_order_requests` + numeración de
+  pedido, todas con backfill de los datos existentes antes de cada unique).
+- `npm run build`.
+- Confirmar `APP_TIMEZONE=America/Argentina/Buenos_Aires` en el `.env` de producción.
+
 ## [0.12.18] — 2026-09-21
 
 ### Reporte de gastos imprimible, con filtros por categoría

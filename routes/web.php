@@ -324,16 +324,19 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner'])->gro
     Route::post('locations', [LocationController::class, 'store'])->name('locations.store');
     Route::put('locations/{location}', [LocationController::class, 'update'])->name('locations.update');
     Route::patch('locations/{location}/toggle-active', [LocationController::class, 'toggleActive'])->name('locations.toggle-active');
+});
 
-    Route::get('delivery-people', [DeliveryPersonController::class, 'index'])->name('delivery-people.index');
-    Route::post('delivery-people', [DeliveryPersonController::class, 'store'])->name('delivery-people.store');
-    Route::put('delivery-people/{deliveryPerson}', [DeliveryPersonController::class, 'update'])->name('delivery-people.update');
-    Route::patch('delivery-people/{deliveryPerson}/toggle-active', [DeliveryPersonController::class, 'toggleActive'])->name('delivery-people.toggle-active');
+// Reparto: clientes y repartidores (owner, super_admin y admin)
+Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
+    Route::get('reparto/repartidores', [DeliveryPersonController::class, 'index'])->name('reparto.repartidores.index');
+    Route::post('reparto/repartidores', [DeliveryPersonController::class, 'store'])->name('reparto.repartidores.store');
+    Route::put('reparto/repartidores/{deliveryPerson}', [DeliveryPersonController::class, 'update'])->name('reparto.repartidores.update');
+    Route::patch('reparto/repartidores/{deliveryPerson}/toggle-active', [DeliveryPersonController::class, 'toggleActive'])->name('reparto.repartidores.toggle-active');
 
-    Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
-    Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
-    Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
-    Route::patch('customers/{customer}/toggle-active', [CustomerController::class, 'toggleActive'])->name('customers.toggle-active');
+    Route::get('reparto/clientes', [CustomerController::class, 'index'])->name('reparto.clientes.index');
+    Route::post('reparto/clientes', [CustomerController::class, 'store'])->name('reparto.clientes.store');
+    Route::put('reparto/clientes/{customer}', [CustomerController::class, 'update'])->name('reparto.clientes.update');
+    Route::patch('reparto/clientes/{customer}/toggle-active', [CustomerController::class, 'toggleActive'])->name('reparto.clientes.toggle-active');
 });
 
 // Mi equipo (requiere auth + tenant resuelto + rol manage-team)

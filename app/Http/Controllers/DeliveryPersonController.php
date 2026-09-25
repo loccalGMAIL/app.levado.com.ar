@@ -19,7 +19,7 @@ class DeliveryPersonController extends Controller
         $tenant = app(Tenant::class);
         $deliveryPeople = $tenant->deliveryPeople()->orderBy('name')->get();
 
-        return view('delivery-people.index', compact('deliveryPeople'));
+        return view('reparto.repartidores', compact('deliveryPeople'));
     }
 
     public function store(StoreDeliveryPersonRequest $request): RedirectResponse
@@ -36,7 +36,7 @@ class DeliveryPersonController extends Controller
             tenantId: $tenant->id,
         );
 
-        return back(fallback: route('delivery-people.index'))->with('status', 'Repartidor creado.');
+        return back(fallback: route('reparto.repartidores.index'))->with('status', 'Repartidor creado.');
     }
 
     public function update(UpdateDeliveryPersonRequest $request, DeliveryPerson $deliveryPerson): RedirectResponse
@@ -54,7 +54,7 @@ class DeliveryPersonController extends Controller
             tenantId: $deliveryPerson->tenant_id,
         );
 
-        return back(fallback: route('delivery-people.index'))->with('status', 'Repartidor actualizado.');
+        return back(fallback: route('reparto.repartidores.index'))->with('status', 'Repartidor actualizado.');
     }
 
     public function toggleActive(DeliveryPerson $deliveryPerson): RedirectResponse

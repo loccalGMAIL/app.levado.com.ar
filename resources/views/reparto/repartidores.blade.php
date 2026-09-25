@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="title">Repartidores</x-slot>
+    <x-slot name="title">Reparto</x-slot>
 
     @php
         $errorsInCreate = $errors->hasAny(['name', 'phone', 'notes']) && old('_form') === 'create';
@@ -36,6 +36,8 @@
                 </button>
             </div>
 
+            @include('reparto.tabs')
+
             @if($deliveryPeople->isEmpty())
                 <x-empty-state>Todavía no hay repartidores. Creá el primero.</x-empty-state>
             @else
@@ -67,7 +69,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                     </svg>
                                 </button>
-                                <form method="POST" action="{{ route('delivery-people.toggle-active', $deliveryPerson) }}">
+                                <form method="POST" action="{{ route('reparto.repartidores.toggle-active', $deliveryPerson) }}">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit"
@@ -93,8 +95,8 @@
 
         </div>
 
-        @include('delivery-people.modals.create')
-        @include('delivery-people.modals.edit')
+        @include('reparto.modals.repartidor-create')
+        @include('reparto.modals.repartidor-edit')
 
     </div>
 </x-app-layout>
