@@ -35,6 +35,7 @@ use App\Http\Controllers\ProductionHistoryController;
 use App\Http\Controllers\ProductionOrderController;
 use App\Http\Controllers\ProductionOrderLineController;
 use App\Http\Controllers\ProductionOrderRequestController;
+use App\Http\Controllers\ProductionOrderSheetController;
 use App\Http\Controllers\ProductionRequestController;
 use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
@@ -136,7 +137,14 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('production-orders', [ProductionOrderController::class, 'index'])->name('production-orders.index');
     Route::get('production-orders/{productionOrder}', [ProductionOrderController::class, 'show'])->name('production-orders.show');
     Route::get('production-orders/{productionOrder}/preview', [ProductionOrderController::class, 'preview'])->name('production-orders.preview');
-    Route::get('production-orders/{productionOrder}/delivery-sheet', [ProductionOrderController::class, 'deliverySheet'])->name('production-orders.delivery-sheet');
+    Route::get('production-orders/{productionOrder}/production-sheet', [ProductionOrderSheetController::class, 'production'])->name('production-orders.production-sheet');
+    Route::get('production-orders/{productionOrder}/production-sheet/pdf', [ProductionOrderSheetController::class, 'productionPdf'])
+        ->middleware('throttle:20,1')
+        ->name('production-orders.production-sheet.pdf');
+    Route::get('production-orders/{productionOrder}/delivery-sheet', [ProductionOrderSheetController::class, 'delivery'])->name('production-orders.delivery-sheet');
+    Route::get('production-orders/{productionOrder}/delivery-sheet/pdf', [ProductionOrderSheetController::class, 'deliveryPdf'])
+        ->middleware('throttle:20,1')
+        ->name('production-orders.delivery-sheet.pdf');
 
     Route::get('production-requests/recurring', [RecurringProductionRequestController::class, 'index'])->name('production-requests.recurring.index');
 

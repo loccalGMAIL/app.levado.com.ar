@@ -126,15 +126,6 @@ class ProductionOrderController extends Controller
         return response()->json($data);
     }
 
-    public function deliverySheet(ProductionOrder $productionOrder): View
-    {
-        $this->authorize('view', $productionOrder);
-
-        $productionOrder->load(['productionOrderRequests.destination', 'productionOrderRequests.lines.product']);
-
-        return view('production-orders.delivery-sheet', compact('productionOrder'));
-    }
-
     public function transition(Request $request, ProductionOrder $productionOrder): RedirectResponse
     {
         $this->authorize('update', $productionOrder);

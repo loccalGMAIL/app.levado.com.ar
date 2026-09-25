@@ -39,13 +39,14 @@ test('el índice ofrece "Nuevo pedido" como acción principal, ya no "Nueva orde
         ->assertDontSee('+ Nueva orden');
 });
 
-test('el índice ofrece Planilla y Confirmar como acciones rápidas por fila', function () {
+test('el índice ofrece Producción, Reparto y Confirmar como acciones rápidas por fila', function () {
     [$user, $tenant] = productionSetup();
     $draft = ProductionOrder::factory()->for($tenant)->create();
     $done = ProductionOrder::factory()->for($tenant)->done()->create();
 
     $response = $this->actingAs($user)->get(route('production-orders.index'))->assertOk();
-    $response->assertSee('Planilla');
+    $response->assertSee('Producción');
+    $response->assertSee('Reparto');
     // "Confirmar" sólo tiene que aparecer para la orden en borrador, no para la ya terminada.
     $response->assertSeeInOrder(['Confirmar'], false);
     $response->assertSee(route('production-orders.transition', $draft), false);

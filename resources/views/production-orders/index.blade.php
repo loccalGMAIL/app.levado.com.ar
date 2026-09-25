@@ -120,9 +120,13 @@
                                     class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
                                     Ver
                                 </a>
+                                <a href="{{ route('production-orders.production-sheet', $order) }}" target="_blank"
+                                    class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                    Producción
+                                </a>
                                 <a href="{{ route('production-orders.delivery-sheet', $order) }}" target="_blank"
                                     class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                    Planilla
+                                    Reparto
                                 </a>
                                 @can('manage-costs')
                                     @if($order->isDraft())
@@ -173,7 +177,8 @@
                                 <td class="px-4 py-3 text-right">
                                     <div class="flex items-center justify-end gap-3">
                                         <a href="{{ route('production-orders.show', $order) }}" class="text-sm text-horno hover:underline">Ver</a>
-                                        <a href="{{ route('production-orders.delivery-sheet', $order) }}" target="_blank" class="text-sm text-horno hover:underline">Planilla</a>
+                                        <a href="{{ route('production-orders.production-sheet', $order) }}" target="_blank" class="text-sm text-horno hover:underline">Producción</a>
+                                        <a href="{{ route('production-orders.delivery-sheet', $order) }}" target="_blank" class="text-sm text-horno hover:underline">Reparto</a>
                                         @can('manage-costs')
                                             @if($order->isDraft())
                                                 <form method="POST" action="{{ route('production-orders.transition', $order) }}">

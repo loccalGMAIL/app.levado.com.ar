@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\FixedCost;
 use App\Models\Tenant;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Único dueño del armado de datos del reporte imprimible de gastos
@@ -23,7 +22,10 @@ class FixedCostReport
 {
     private const MAX_DETAILS = 50;
 
-    public function __construct(private readonly FixedCostHistory $history) {}
+    public function __construct(
+        private readonly FixedCostHistory $history,
+        private readonly ReportLetterhead $letterhead,
+    ) {}
 
     /**
      * @param  array{from: Carbon, to: Carbon, sections: list<string>, search: ?string, status: ?string, category: ?int, ve_search: ?string, ve_category: list<int>, ve_supplier: ?int}  $options
@@ -54,14 +56,7 @@ class FixedCostReport
             : null;
 
         return [
-            'business' => [
-                'name' => $tenant->name,
-                'razon_social' => $tenant->razon_social,
-                'cuit' => $tenant->cuit,
-                'condicion_iva' => $tenant->condicion_iva?->label(),
-                'currency' => $tenant->currency ?? 'ARS',
-                'logo' => $this->logoDataUri($tenant),
-            ],
+            'business' => $this->letterhead->for($tenant),
             'meta' => [
                 'from' => $from->format('d/m/Y'),
                 'to' => $to->format('d/m/Y'),
@@ -254,34 +249,5 @@ class FixedCostReport
             'rows' => $rows,
             'total' => array_sum(array_column($rows, 'amount')),
         ];
-    }
-
-    /**
-     * dompdf no acepta `Storage::url()` (necesita filesystem local o data
-     * URI, no una URL relativa que dependa de APP_URL). Se resuelve acá una
-     * sola vez y sirve para las dos salidas -pantalla y PDF- sin ramas por
-     * formato en la vista.
-     */
-    private function logoDataUri(Tenant $tenant): ?string
-    {
-        if (! $tenant->logo_path) {
-            return null;
-        }
-
-        $disk = Storage::disk('public');
-
-        if (! $disk->exists($tenant->logo_path) || $disk->size($tenant->logo_path) > 512 * 1024) {
-            return null;
-        }
-
-        $mime = $disk->mimeType($tenant->logo_path);
-
-        // dompdf no renderiza SVG ni WebP; sin un tipo soportado, cae al
-        // fallback de nombre del negocio en vez de dejar un hueco roto.
-        if (! in_array($mime, ['image/png', 'image/jpeg', 'image/gif'], true)) {
-            return null;
-        }
-
-        return 'data:'.$mime.';base64,'.base64_encode($disk->get($tenant->logo_path));
     }
 }

@@ -53,6 +53,11 @@
                         @endif
                     @endcan
 
+                    <a href="{{ route('production-orders.production-sheet', $productionOrder) }}"
+                        class="px-4 py-2 border border-miga text-sm text-masa-madre rounded-md hover:bg-miga transition-colors">
+                        Planilla de producción
+                    </a>
+
                     <a href="{{ route('production-orders.delivery-sheet', $productionOrder) }}"
                         class="px-4 py-2 border border-miga text-sm text-masa-madre rounded-md hover:bg-miga transition-colors">
                         Planilla de reparto

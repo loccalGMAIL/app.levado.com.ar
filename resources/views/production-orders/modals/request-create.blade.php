@@ -102,9 +102,7 @@
                             <input type="date" x-model="endsOn" class="mt-1 border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                         </div>
                     </div>
-                    <p class="text-xs text-amber-700">
-                        Se van generando los próximos pedidos cada vez que entrás a Órdenes — no hace falta hacer nada más.
-                    </p>
+
                     <x-input-error :messages="$errors->get('recurrence.weekdays')" class="mt-1" />
 
                     <template x-for="d in weekdays" :key="d">
