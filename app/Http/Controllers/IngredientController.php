@@ -33,7 +33,8 @@ class IngredientController extends Controller
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
         $ingredients = $tenant->ingredients()
-            ->with(['supplier', 'convertedToProduct'])
+            ->with('supplier')
+            ->notConverted()
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
@@ -60,7 +61,7 @@ class IngredientController extends Controller
         // Lista completa (activos e inactivos) para el select del modal de
         // reemplazo masivo: el sustituto puede ser cualquier ingrediente,
         // no sólo los de la página actual.
-        $allIngredients = $tenant->ingredients()->orderBy('name')->get();
+        $allIngredients = $tenant->ingredients()->notConverted()->orderBy('name')->get();
 
         // Para el select opcional de categoría en el modal "Convertir a producto".
         $productCategories = $tenant->productCategories()->orderBy('name')->get();

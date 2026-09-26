@@ -47,6 +47,11 @@ class Ingredient extends Model
         $query->where('active', true);
     }
 
+    public function scopeNotConverted(Builder $query): void
+    {
+        $query->whereNull('converted_to_product_id');
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

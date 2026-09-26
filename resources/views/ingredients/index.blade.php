@@ -212,13 +212,7 @@
                                             <x-icon name="arrow-path" />
                                             <span class="dt-card-only">Reemplazar</span>
                                         </button>
-                                        @if($ingredient->converted_to_product_id)
-                                            <a href="{{ route('products.index', ['search' => $ingredient->convertedToProduct?->name]) }}"
-                                                title="Ver el producto de reventa" class="dt-action">
-                                                <x-icon name="shopping-bag" />
-                                                <span class="dt-card-only">Ver producto</span>
-                                            </a>
-                                        @elseif($ingredient->active)
+                                        @if($ingredient->active)
                                             <button type="button" @click="openConvert({{ Js::from(['id' => $ingredient->id, 'name' => $ingredient->name, 'cost_per_unit' => round((float) $ingredient->cost_per_unit, 2), 'unit' => $ingredient->unit->short(), 'stock' => $stockQty]) }})"
                                                 aria-label="Convertir a producto de reventa" title="Convertir a producto de reventa"
                                                 class="dt-action">

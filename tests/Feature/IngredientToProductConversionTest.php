@@ -123,11 +123,29 @@ test('owner puede convertir un insumo vía HTTP y elegir la categoría del produ
     expect($product->product_category_id)->toBe($category->id)
         ->and($ingredient->fresh()->converted_to_product_id)->toBe($product->id);
 
-    // El listado de Insumos tiene que seguir renderizando bien la rama "Ver
-    // producto" para el insumo ya convertido.
+    // Consume el flash "Insumo convertido: Agua con gas." de la redirección
+    // para que no contamine los asserts de abajo (session('status') se
+    // muestra en cualquier página, no sólo en la de destino).
+    $this->actingAs($user)->get(route('products.index'));
+
+    // El insumo convertido no debe verse más en el listado de Ingredientes,
+    // ni siquiera filtrando por inactivos.
+    $this->actingAs($user)->get(route('ingredients.index'))
+        ->assertOk()
+        ->assertDontSee('Agua con gas');
+
     $this->actingAs($user)->get(route('ingredients.index', ['status' => 'inactive']))
         ->assertOk()
-        ->assertSee('Ver producto');
+        ->assertDontSee('Agua con gas');
+});
+
+test('un insumo inactivo pero no convertido sigue viéndose en el listado', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'active' => false]);
+
+    $this->actingAs($user)->get(route('ingredients.index', ['status' => 'inactive']))
+        ->assertOk()
+        ->assertSee('Harina 000');
 });
 
 test('aislamiento: no se puede convertir un insumo de otro tenant', function () {
