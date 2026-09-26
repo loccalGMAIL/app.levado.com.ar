@@ -405,7 +405,7 @@ class PurchaseController extends Controller
         // renglón ya asociado a un ítem dado de baja debe seguir mostrando su
         // opción — si el select solo listara activos, caería en "— sin asociar —"
         // y guardar ese renglón revertiría stock y costo en silencio.
-        $ingredients = $tenant->ingredients()->orderBy('name')->get();
+        $ingredients = $tenant->ingredients()->notConverted()->orderBy('name')->get();
         $packagings = $tenant->packagings()->orderBy('name')->get();
         // Solo reventa: los elaborados obtienen su costo de la receta, no de una compra.
         $products = $tenant->products()->where('type', ProductType::Resale->value)->orderBy('name')->get();
