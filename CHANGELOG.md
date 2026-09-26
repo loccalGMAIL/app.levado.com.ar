@@ -295,6 +295,61 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.13.2] — 2026-09-25
+
+Rama `v0.13.2-articulos`, sobre v0.13.1. Ajustes de catálogo en Artículos e Insumos, y una función nueva para
+dar de baja insumos que en realidad son productos de reventa sin perder su historial.
+
+### Catálogo de Artículos: reordenar, sacar Estado, simplificar los modales
+
+#### Agregado
+
+- **Reordené las columnas** del catálogo: Código primero, luego Nombre, Tipo, Categoría, Unidad, Costo, Precio y
+  Margen. Se sacó la columna **Estado** (el ícono de activar/desactivar ya lo dice) y el badge de historial de
+  costo pasó de compartir la columna Costo a ser un **botón de acción con ícono**, junto a Editar y
+  Activar/Desactivar. Los artículos inactivos ya no se mandan al fondo del listado: quedan en gris, en su lugar
+  alfabético.
+- **Modales Crear/Editar simplificados**: se sacó el campo **SKU** (no aplica al rubro; alcanza con el código de
+  barras) y **Categoría + Unidad de venta**, **Costo + Método de costeo** pasaron a una sola fila cada uno. En
+  Editar, el **select de Receta sólo aparece** si el elaborado todavía no tiene una asignada (al re-tipear una
+  reventa a Elaborado); si ya la tiene, "(desde receta)" es un **link directo a esa receta** en vez de un select
+  para re-vincularla.
+
+#### Técnico
+
+- `ProductController::index()`: orden por defecto pasa a sólo `name` (sin `orderByDesc('active')`).
+- `<x-cost-source-badge>` renderiza un botón-ícono (en vez de badge de texto) cuando recibe `historyUrl`; el
+  `title`/`aria-label` conserva el origen del costo.
+- **1055/1056 tests verdes** (1 preexistente y no relacionado, ya señalado en 0.13.1).
+
+### Insumos: mismo tratamiento de Estado, y convertir un insumo en producto de reventa
+
+#### Agregado
+
+- **Convertir un Insumo en Producto de reventa**: botón nuevo en el listado de Insumos, para los que en realidad
+  se compran para vender sueltos (bebidas envasadas, snacks, sobres individuales de buffet) y quedaron cargados
+  como insumo por error. Migra costo, stock y el **historial completo de compras** al Producto nuevo; el Insumo
+  queda desactivado (no se borra) y trazado.
+- **Insumos**: se sacó la columna Estado y el ícono de reactivar pasó a un **tilde** (antes un ojo); los
+  inactivos ya no se mandan al fondo del listado — mismo tratamiento que Artículos.
+
+#### Técnico
+
+- `IngredientToProductConverter`: reapunta `purchase_lines`, `supplier_product_links` y `stock_levels`; reapunta
+  `stock_movements` con el query builder puro — **bypass deliberado y documentado** del guard de inmutabilidad
+  de `StockMovement::booted()` (que sólo salta vía eventos de Eloquent). Reconstruye `product_cost_logs`
+  distinguiendo compras reales (con link a la factura, sacado de `stock_movements`) de cargas manuales, porque
+  `ingredient_price_logs` no guardaba esa procedencia. Bloquea la conversión si el insumo se usa en cualquier
+  receta (activa o no) o si ya fue convertido.
+- Columna `ingredients.converted_to_product_id` (nullable, `nullOnDelete`) — trazabilidad e idempotencia.
+- Nuevo ícono `check` en `<x-icon>`, reusable donde haga falta un tilde en vez de un ojo.
+- **`IngredientToProductConversionTest` (8)** + 2 tests nuevos en `IngredientCrudTest` (orden alfabético, sin
+  columna Estado).
+
+#### Al deployar
+
+- `php artisan migrate` (columna `converted_to_product_id` en `ingredients`).
+
 ## [0.13.1] — 2026-09-25
 
 Rama `v0.13.1/produccion`, sobre lo cerrado en v0.13.0. Cliente reemplaza a Repartidor como destino del pedido

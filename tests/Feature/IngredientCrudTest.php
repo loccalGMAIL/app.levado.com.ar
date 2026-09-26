@@ -44,6 +44,26 @@ test('viewer puede ver la lista de ingredientes', function () {
         ->assertSee('Levadura');
 });
 
+test('un ingrediente inactivo no se manda al fondo del listado, respeta el orden alfabético', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    Ingredient::factory()->for($tenant)->create(['name' => 'Alfajor', 'active' => false]);
+    Ingredient::factory()->for($tenant)->create(['name' => 'Budín', 'active' => true]);
+
+    $this->actingAs($user)
+        ->get(route('ingredients.index'))
+        ->assertOk()
+        ->assertSeeInOrder(['Alfajor', 'Budín']);
+});
+
+test('el listado de ingredientes no muestra la columna Estado', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    Ingredient::factory()->for($tenant)->create();
+
+    $html = $this->actingAs($user)->get(route('ingredients.index'))->assertOk()->getContent();
+
+    expect($html)->not->toContain('>Estado<');
+});
+
 // --- Proveedor dado de baja ---
 
 test('editar un ingrediente cuyo proveedor está inactivo no borra el proveedor', function () {

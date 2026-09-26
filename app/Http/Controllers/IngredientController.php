@@ -9,9 +9,12 @@ use App\Models\Ingredient;
 use App\Models\StockLevel;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\IngredientToProductConverter;
 use App\Services\RecipeCostPropagator;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class IngredientController extends Controller
@@ -19,6 +22,7 @@ class IngredientController extends Controller
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly RecipeCostPropagator $propagator,
+        private readonly IngredientToProductConverter $converter,
     ) {}
 
     public function index(): View
@@ -29,7 +33,7 @@ class IngredientController extends Controller
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
         $ingredients = $tenant->ingredients()
-            ->with('supplier')
+            ->with(['supplier', 'convertedToProduct'])
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
@@ -37,7 +41,7 @@ class IngredientController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
+            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
         // Todos, no sólo los activos: el modal de alta filtra a activos, pero el de edición
@@ -58,7 +62,10 @@ class IngredientController extends Controller
         // no sólo los de la página actual.
         $allIngredients = $tenant->ingredients()->orderBy('name')->get();
 
-        return view('ingredients.index', compact('ingredients', 'suppliers', 'stockLevels', 'allIngredients'));
+        // Para el select opcional de categoría en el modal "Convertir a producto".
+        $productCategories = $tenant->productCategories()->orderBy('name')->get();
+
+        return view('ingredients.index', compact('ingredients', 'suppliers', 'stockLevels', 'allIngredients', 'productCategories'));
     }
 
     public function store(StoreIngredientRequest $request): RedirectResponse
@@ -169,5 +176,32 @@ class IngredientController extends Controller
         $label = $ingredient->active ? 'activado' : 'desactivado';
 
         return back()->with('status', "Ingrediente {$label}.");
+    }
+
+    public function convertToProduct(Ingredient $ingredient, Request $request): RedirectResponse
+    {
+        $this->authorize('update', $ingredient);
+
+        $request->validate([
+            'product_category_id' => [
+                'nullable', 'integer',
+                Rule::exists('product_categories', 'id')->where('tenant_id', $ingredient->tenant_id),
+            ],
+        ]);
+
+        $categoryId = $request->filled('product_category_id') ? (int) $request->input('product_category_id') : null;
+
+        $product = $this->converter->convert($ingredient, $categoryId);
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'ingredient',
+            targetId: $ingredient->id,
+            action: 'ingredient.converted_to_product',
+            payload: ['ingredient_name' => $ingredient->name, 'product_id' => $product->id],
+            tenantId: $ingredient->tenant_id,
+        );
+
+        return redirect()->route('products.index')->with('status', "Insumo convertido: {$product->name}.");
     }
 }

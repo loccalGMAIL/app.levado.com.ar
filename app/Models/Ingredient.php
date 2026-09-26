@@ -28,6 +28,7 @@ class Ingredient extends Model
         'subdivisions',
         'subdivision_label',
         'active',
+        'converted_to_product_id',
     ];
 
     protected function casts(): array
@@ -69,5 +70,10 @@ class Ingredient extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', CatalogItemType::Ingredient->value);
+    }
+
+    public function convertedToProduct(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'converted_to_product_id');
     }
 }

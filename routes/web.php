@@ -163,6 +163,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::put('ingredients/{ingredient}', [IngredientController::class, 'update'])->name('ingredients.update');
     Route::patch('ingredients/{ingredient}/toggle-active', [IngredientController::class, 'toggleActive'])->name('ingredients.toggle-active');
     Route::post('ingredients/{ingredient}/replace', [CatalogReplacementController::class, 'replaceIngredient'])->name('ingredients.replace');
+    Route::post('ingredients/{ingredient}/convert-to-product', [IngredientController::class, 'convertToProduct'])->name('ingredients.convert-to-product');
 
     Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
     Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
