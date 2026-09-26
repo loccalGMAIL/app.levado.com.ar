@@ -5,6 +5,8 @@ use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
+use App\Models\Product;
+use App\Models\Recipe;
 use App\Models\StockMovement;
 use App\Models\Tenant;
 use App\Models\TenantUser;
@@ -231,3 +233,65 @@ test('no se puede mover stock en una sucursal de otro tenant', function () {
 
     stockService()->registerAdjustment($ingredientA, $tenantB->defaultLocation(), 100, 'Cruce', $userA);
 })->throws(HttpException::class);
+
+// --- Valuación de un movimiento manual sobre un artículo ---
+
+test('un ajuste de un elaborado se valúa al costo de su receta, no a 0', function () {
+    [$user, $tenant] = stockTenantUser();
+    $recipe = Recipe::factory()->for($tenant)->create([
+        'yield_quantity' => 1,
+        'yield_unit' => Unit::Unidad->value,
+        'unit_cost' => 30,
+    ]);
+    // El elaborado tiene cost_per_unit en NULL: su costo vive en la receta.
+    $product = Product::factory()->for($tenant)->manufactured()->create([
+        'unit' => Unit::Unidad->value,
+        'recipe_id' => $recipe->id,
+    ]);
+
+    $movement = stockService()->registerAdjustment($product, $tenant->defaultLocation(), 10, 'Carga inicial', $user);
+
+    expect((float) $movement->unit_cost)->toBe(30.0);
+});
+
+test('un recuento de un elaborado se valúa al costo de su receta', function () {
+    [$user, $tenant] = stockTenantUser();
+    $recipe = Recipe::factory()->for($tenant)->create([
+        'yield_quantity' => 1,
+        'yield_unit' => Unit::Unidad->value,
+        'unit_cost' => 30,
+    ]);
+    $product = Product::factory()->for($tenant)->manufactured()->create([
+        'unit' => Unit::Unidad->value,
+        'recipe_id' => $recipe->id,
+    ]);
+
+    $movement = stockService()->applyCount($product, $tenant->defaultLocation(), 7, $user);
+
+    expect((float) $movement->unit_cost)->toBe(30.0);
+});
+
+test('un elaborado sin costo de receta se valúa 0', function () {
+    [$user, $tenant] = stockTenantUser();
+    $recipe = Recipe::factory()->for($tenant)->create(['unit_cost' => null]);
+    $product = Product::factory()->for($tenant)->manufactured()->create([
+        'unit' => Unit::Unidad->value,
+        'recipe_id' => $recipe->id,
+    ]);
+
+    $movement = stockService()->registerAdjustment($product, $tenant->defaultLocation(), 5, 'Sin costo', $user);
+
+    expect((float) $movement->unit_cost)->toBe(0.0);
+});
+
+test('un ajuste de un artículo de reventa se valúa a su cost_per_unit', function () {
+    [$user, $tenant] = stockTenantUser();
+    $product = Product::factory()->for($tenant)->resale()->create([
+        'unit' => Unit::Unidad->value,
+        'cost_per_unit' => 45,
+    ]);
+
+    $movement = stockService()->registerAdjustment($product, $tenant->defaultLocation(), 3, 'Carga', $user);
+
+    expect((float) $movement->unit_cost)->toBe(45.0);
+});

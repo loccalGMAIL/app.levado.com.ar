@@ -2,11 +2,15 @@
 
 namespace App\Services;
 
+use App\Enums\CatalogItemType;
 use App\Enums\NotificationType;
+use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\IngredientPriceLog;
 use App\Models\Notification;
 use App\Models\Packaging;
+use App\Models\Product;
+use App\Models\Production;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\StockLevel;
@@ -69,7 +73,11 @@ class NotificationService
             $activeKeys[] = $key;
 
             $qty = (float) $level->quantity;
-            $unit = $item->unit->short();
+            // Los descartables no tienen columna unit (siempre se cuentan por
+            // unidad) — $item->unit->short() sólo existe en Ingredient/Product.
+            $unit = $level->stockable_type === CatalogItemType::Packaging->value
+                ? Unit::Unidad->short()
+                : $item->unit->short();
             $body = $level->isNegative()
                 ? "Stock negativo: {$this->num($qty)} {$unit}."
                 : "Quedan {$this->num($qty)} {$unit} (mínimo {$this->num((float) $level->min_quantity)} {$unit}).";
@@ -191,7 +199,7 @@ class NotificationService
      * Alerta de evento: el costo de un ítem subió por encima del umbral al
      * imputar una compra. Dedup por línea para no duplicar al re-imputar.
      */
-    public function raiseCostSpike(PurchaseLine $line, Ingredient|Packaging $item, float $oldCost, float $newCost): void
+    public function raiseCostSpike(PurchaseLine $line, Ingredient|Packaging|Product $item, float $oldCost, float $newCost): void
     {
         if ($oldCost <= 0) {
             return; // sin baseline previo no hay "salto"
@@ -217,10 +225,60 @@ class NotificationService
             title: "Salto de costo: {$item->name}",
             body: 'El costo subió '.$this->num($pct, 1)."% (de \${$this->num($oldCost)} a \${$this->num($newCost)}).",
             actionUrl: route('purchases.show', $line->purchase),
-            subjectType: $line->isIngredient() ? 'ingredient' : 'packaging',
+            // purchaseable_type ya guarda los tres valores de CatalogItemType, que
+            // es lo que espera stock.show. El ternario dejaba a la reventa como
+            // 'packaging' y el enlace de la alerta llevaba a otro ítem.
+            subjectType: $line->purchaseable_type,
             subjectId: $item->id,
             meta: ['old_cost' => $oldCost, 'new_cost' => $newCost, 'pct' => round($pct, 2)],
         );
+    }
+
+    /**
+     * Alerta de evento: fabricar salió más caro que la producción anterior del
+     * mismo artículo, por encima del umbral. Mismo umbral y toggle que
+     * raiseCostSpike() (alerts.cost_spike.*) — no hay setting propio para
+     * producción. Sin baseline (primera producción del artículo) no alerta.
+     */
+    public function raiseProductionCostSpike(Production $production, Product $product, float $oldCost, float $newCost): void
+    {
+        if ($oldCost <= 0) {
+            return;
+        }
+
+        $tenant = $product->tenant;
+
+        if (! $this->enabled($tenant, NotificationType::CostSpike)) {
+            return;
+        }
+
+        $threshold = (float) $tenant->getSetting('alerts.cost_spike.threshold_pct', '15');
+        $pct = ($newCost - $oldCost) / $oldCost * 100;
+
+        if ($pct < $threshold) {
+            return;
+        }
+
+        $this->raise(
+            tenant: $tenant,
+            type: NotificationType::CostSpike,
+            dedupeKey: "cost_spike:production:{$production->id}",
+            title: "Salto de costo: {$product->name}",
+            body: 'Fabricarlo costó '.$this->num($pct, 1)."% más que la última vez (de \${$this->num($oldCost)} a \${$this->num($newCost)}).",
+            actionUrl: route('production.show', $production),
+            subjectType: 'product',
+            subjectId: $product->id,
+            meta: ['old_cost' => $oldCost, 'new_cost' => $newCost, 'pct' => round($pct, 2), 'production_id' => $production->id],
+        );
+    }
+
+    /** Resuelve, si existe, la alerta viva con esa dedupe_key (p.ej. al anular lo que la generó). */
+    public function resolveByDedupeKey(Tenant $tenant, string $dedupeKey): void
+    {
+        Notification::where('tenant_id', $tenant->id)
+            ->where('dedupe_key', $dedupeKey)
+            ->whereNull('resolved_at')
+            ->update(['resolved_at' => now()]);
     }
 
     public function markRead(Notification $notification): void

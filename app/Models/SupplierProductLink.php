@@ -49,8 +49,23 @@ class SupplierProductLink extends Model
         return $this->belongsTo(Supplier::class);
     }
 
+    public function itemType(): ?CatalogItemType
+    {
+        return CatalogItemType::tryFrom((string) $this->purchaseable_type);
+    }
+
     public function isIngredient(): bool
     {
-        return $this->purchaseable_type === CatalogItemType::Ingredient->value;
+        return $this->itemType() === CatalogItemType::Ingredient;
+    }
+
+    public function isPackaging(): bool
+    {
+        return $this->itemType() === CatalogItemType::Packaging;
+    }
+
+    public function isProduct(): bool
+    {
+        return $this->itemType() === CatalogItemType::Product;
     }
 }

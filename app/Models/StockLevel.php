@@ -50,6 +50,11 @@ class StockLevel extends Model
         return $this->morphTo();
     }
 
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'stockable_id');
+    }
+
     public function hasAlert(): bool
     {
         if ((float) $this->quantity < 0) {

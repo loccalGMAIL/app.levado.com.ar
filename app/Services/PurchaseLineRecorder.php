@@ -2,10 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\CostingMethod;
+use App\Enums\CostLogSource;
 use App\Enums\StockMovementType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
+use App\Models\Product;
+use App\Models\ProductCostLog;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +32,7 @@ class PurchaseLineRecorder
         private readonly StockService $stock,
         private readonly NotificationService $notifications,
         private readonly ProductLinkMemory $linkMemory,
+        private readonly ArticlePriceRecalculator $priceRecalculator,
     ) {}
 
     /**
@@ -106,7 +111,7 @@ class PurchaseLineRecorder
      * propagación a recetas y sin alerta de salto de costo — un obsequio de la
      * distribuidora no significa que el insumo ahora valga cero.
      */
-    public function apply(PurchaseLine $line, bool $propagate = true, ?float $pkgQtyOverride = null): Ingredient|Packaging
+    public function apply(PurchaseLine $line, bool $propagate = true, ?float $pkgQtyOverride = null): Ingredient|Packaging|Product
     {
         abort_unless($line->isMatched(), 422, 'La línea no tiene un ítem asociado.');
 
@@ -148,6 +153,33 @@ class PurchaseLineRecorder
             if (! $isBonus) {
                 $item->cost_per_package = $packagePrice;
                 $this->applyIngredientCost($item, $costPerUnit, $line, $propagate);
+            }
+        } elseif ($line->isProduct()) {
+            $item = Product::find($line->purchaseable_id);
+            abort_unless($item && $item->tenant_id === $line->purchase->tenant_id && $item->isResale(), 422, 'Producto de reventa no válido.');
+
+            // Un producto de reventa se compra como un ingrediente sin subdivisiones:
+            // se convierte la cantidad a su unidad y el costo se guarda por unidad.
+            $costPerUnit = $this->costPerUnit($purchaseUnit, $item->unit, (float) $line->unit_price);
+            $stockQuantity = $this->converter->convert((float) $line->quantity_purchased, $purchaseUnit, $item->unit);
+
+            if ($costPerUnit === null) {
+                // Mismo orden que la rama de ingrediente: el divisor confirmado a
+                // mano en una factura anterior gana sobre el que se adivina de la
+                // descripción. Sin esto, "Aplicar N sugerencias" saltea siempre los
+                // renglones de reventa de unidades incompatibles.
+                $pkgQty = $pkgQtyOverride
+                    ?? $this->rememberedPkgQty($line)
+                    ?? $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
+                abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del producto.');
+                $costPerUnit = (float) $line->unit_price / $pkgQty;
+                $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
+            }
+
+            // Igual que en la rama de ingrediente: un producto de reventa bonificado
+            // no imputa costo, sólo entra al stock más abajo.
+            if (! $isBonus) {
+                $this->applyProductCost($item, $costPerUnit, (float) $stockQuantity, $line);
             }
         } else {
             $item = Packaging::find($line->purchaseable_id);
@@ -234,6 +266,12 @@ class PurchaseLineRecorder
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Ingrediente no válido.');
             $item->cost_per_package = $this->packagePriceFor($item, $unitCost);
             $this->applyIngredientCost($item, $unitCost, $line);
+        } elseif ($line->isProduct()) {
+            $item = Product::find($line->purchaseable_id);
+            abort_unless($item && $item->tenant_id === $line->purchase->tenant_id && $item->isResale(), 422, 'Producto de reventa no válido.');
+            // Cantidad comprada en unidades del producto (mismo divisor que syncStockFromExplicitCost).
+            $purchasedQty = $unitCost > 0 ? (float) $line->quantity_purchased * ((float) $line->unit_price / $unitCost) : 0.0;
+            $this->applyProductCost($item, $unitCost, $purchasedQty, $line);
         } else {
             $item = Packaging::find($line->purchaseable_id);
             abort_unless($item && $item->tenant_id === $line->purchase->tenant_id, 422, 'Packaging no válido.');
@@ -265,7 +303,7 @@ class PurchaseLineRecorder
      * catálogo trae cada bulto. Si el costo no permite derivarlo, se imputa el
      * costo igual y la línea queda sin movimiento de stock.
      */
-    private function syncStockFromExplicitCost(PurchaseLine $line, Ingredient|Packaging $item, float $unitCost): void
+    private function syncStockFromExplicitCost(PurchaseLine $line, Ingredient|Packaging|Product $item, float $unitCost): void
     {
         if ($unitCost <= 0) {
             return;
@@ -302,6 +340,62 @@ class PurchaseLineRecorder
             $this->propagator->propagateFromPackaging($item->id);
         }
         $this->notifications->raiseCostSpike($line, $item, $oldCost, $costPerUnit);
+    }
+
+    /**
+     * Un producto de reventa no interviene en el costo de ninguna receta, así que
+     * comprarlo actualiza su cost_per_unit sin propagar a ninguna receta, pero sí
+     * deja historial (product_cost_logs) y evalúa la alerta de salto de costo.
+     * Según el método de costeo efectivo: último costo, o promedio ponderado entre el
+     * stock existente (a su costo vigente) y lo comprado. El promedio se calcula ANTES
+     * del alta de stock de esta compra (que ocurre después).
+     */
+    private function applyProductCost(Product $item, float $costPerUnit, float $purchasedQty, PurchaseLine $line): void
+    {
+        $item->loadMissing('tenant');
+        $tenant = $item->tenant;
+        $default = CostingMethod::tryFrom((string) $tenant->getSetting('resale.costing_method', CostingMethod::LastCost->value))
+            ?? CostingMethod::LastCost;
+
+        $oldCost = (float) $item->cost_per_unit;
+        $newCost = $costPerUnit;
+
+        if ($item->effectiveCostingMethod($default) === CostingMethod::WeightedAverage && $purchasedQty > 0) {
+            // Contra la sucursal default a propósito: es la misma en la que
+            // syncPurchaseLineEntry() va a dar de alta esta compra. El costo es
+            // por-negocio por decisión (decision-multi-sucursal): un promedio
+            // tenant-wide entre sucursales es justo el diseño que quedó diferido.
+            $qty = (float) ($this->stock->levelFor($item, $tenant->defaultLocation())?->quantity ?? 0);
+            if ($qty > 0) {
+                $newCost = ($qty * $oldCost + $purchasedQty * $costPerUnit) / ($qty + $purchasedQty);
+            }
+        }
+
+        $newCost = round($newCost, 4);
+        $item->update(['cost_per_unit' => $newCost]);
+
+        // Keyed por línea: apply() puede volver a correr sobre el mismo renglón
+        // (recompute() al reabrir una factura) y appendear duplicaría el historial.
+        // Mismo contrato de idempotencia que StockService::syncPurchaseLineEntry().
+        // tenant_id explícito: este servicio también corre en artisan y en tests,
+        // donde no hay Tenant bindeado y el trait dejaría la columna en null.
+        ProductCostLog::updateOrCreate(
+            ['purchase_line_id' => $line->id],
+            [
+                'tenant_id' => $item->tenant_id,
+                'product_id' => $item->id,
+                'cost_per_unit' => $newCost,
+                'source' => CostLogSource::Purchase,
+                'recorded_at' => now(),
+            ],
+        );
+
+        // Cambió el costo → recomputar los precios del artículo que tengan política.
+        $this->priceRecalculator->recompute($item);
+
+        // Se alerta contra el costo FINAL almacenado, no contra el de la factura:
+        // un promedio ponderado que amortigua el salto no es un salto de costo.
+        $this->notifications->raiseCostSpike($line, $item, $oldCost, $newCost);
     }
 
     /**

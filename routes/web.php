@@ -10,12 +10,15 @@ use App\Http\Controllers\AlertSettingsController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\CatalogReplacementController;
 use App\Http\Controllers\CreditNoteController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeliveryPersonController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\FixedCostHistoryController;
 use App\Http\Controllers\FixedCostReportController;
 use App\Http\Controllers\IngredientController;
+use App\Http\Controllers\InstantProductionOrderController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LaborTypeController;
 use App\Http\Controllers\LocationController;
@@ -23,12 +26,24 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\PackagingCostController;
 use App\Http\Controllers\PriceListController;
+use App\Http\Controllers\ProductBulkCategoryController;
+use App\Http\Controllers\ProductCategoryController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductCostHistoryController;
+use App\Http\Controllers\ProductionController;
+use App\Http\Controllers\ProductionHistoryController;
+use App\Http\Controllers\ProductionOrderController;
+use App\Http\Controllers\ProductionOrderLineController;
+use App\Http\Controllers\ProductionOrderRequestController;
+use App\Http\Controllers\ProductionOrderSheetController;
+use App\Http\Controllers\ProductionRequestController;
+use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeLineController;
-use App\Http\Controllers\RecipePriceController;
+use App\Http\Controllers\RecurringProductionRequestController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TeamController;
@@ -88,7 +103,6 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('variable-expenses/{variableExpense}/receipt', [VariableExpenseController::class, 'receipt'])->name('variable-expenses.receipt');
     Route::get('labor-types', [LaborTypeController::class, 'index'])->name('labor-types.index');
     Route::get('price-lists', [PriceListController::class, 'index'])->name('price-lists.index');
-    Route::get('price-lists/matrix', [PriceListController::class, 'matrix'])->name('price-lists.matrix');
 
     Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
@@ -107,11 +121,32 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('credit-notes', [CreditNoteController::class, 'index'])->name('credit-notes.index');
     Route::get('credit-notes/{creditNote}', [CreditNoteController::class, 'show'])->name('credit-notes.show');
 
+    Route::get('products', [ProductController::class, 'index'])->name('products.index');
+    Route::get('products/matrix', [ProductController::class, 'matrix'])->name('products.matrix');
+    Route::get('products/history', [ProductionHistoryController::class, 'index'])->name('products.history');
+    Route::get('products/{product}/cost-history', [ProductCostHistoryController::class, 'index'])->name('products.cost-history');
+
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     Route::get('stock/{type}/{id}', [StockController::class, 'show'])
-        ->whereIn('type', ['ingredient', 'packaging'])
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])
         ->whereNumber('id')
         ->name('stock.show');
+
+    Route::get('production/{production}', [ProductionController::class, 'show'])->name('production.show');
+
+    Route::get('production-orders', [ProductionOrderController::class, 'index'])->name('production-orders.index');
+    Route::get('production-orders/{productionOrder}', [ProductionOrderController::class, 'show'])->name('production-orders.show');
+    Route::get('production-orders/{productionOrder}/preview', [ProductionOrderController::class, 'preview'])->name('production-orders.preview');
+    Route::get('production-orders/{productionOrder}/production-sheet', [ProductionOrderSheetController::class, 'production'])->name('production-orders.production-sheet');
+    Route::get('production-orders/{productionOrder}/production-sheet/pdf', [ProductionOrderSheetController::class, 'productionPdf'])
+        ->middleware('throttle:20,1')
+        ->name('production-orders.production-sheet.pdf');
+    Route::get('production-orders/{productionOrder}/delivery-sheet', [ProductionOrderSheetController::class, 'delivery'])->name('production-orders.delivery-sheet');
+    Route::get('production-orders/{productionOrder}/delivery-sheet/pdf', [ProductionOrderSheetController::class, 'deliveryPdf'])
+        ->middleware('throttle:20,1')
+        ->name('production-orders.delivery-sheet.pdf');
+
+    Route::get('production-requests/recurring', [RecurringProductionRequestController::class, 'index'])->name('production-requests.recurring.index');
 
     // Centro de alertas (feed) — visible y accionable para todos los roles con tenant.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -128,6 +163,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::put('ingredients/{ingredient}', [IngredientController::class, 'update'])->name('ingredients.update');
     Route::patch('ingredients/{ingredient}/toggle-active', [IngredientController::class, 'toggleActive'])->name('ingredients.toggle-active');
     Route::post('ingredients/{ingredient}/replace', [CatalogReplacementController::class, 'replaceIngredient'])->name('ingredients.replace');
+    Route::post('ingredients/{ingredient}/convert-to-product', [IngredientController::class, 'convertToProduct'])->name('ingredients.convert-to-product');
 
     Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
     Route::put('suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
@@ -169,7 +205,6 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('recipes', [RecipeController::class, 'store'])->name('recipes.store');
     Route::post('recipes/{recipe}/copy', [RecipeController::class, 'copy'])->name('recipes.copy');
     Route::put('recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
-    Route::patch('recipes/{recipe}/prices/{priceList}', [RecipePriceController::class, 'update'])->name('recipes.prices.update');
     Route::patch('recipes/{recipe}/toggle-active', [RecipeController::class, 'toggleActive'])->name('recipes.toggle-active');
     Route::post('recipes/{recipe}/replace', [CatalogReplacementController::class, 'replaceRecipe'])->name('recipes.replace');
 
@@ -215,14 +250,59 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('credit-notes/{creditNote}/lines/{line}', [CreditNoteController::class, 'updateLine'])->scopeBindings()->name('credit-notes.lines.update');
     Route::delete('credit-notes/{creditNote}/lines/{line}', [CreditNoteController::class, 'destroyLine'])->scopeBindings()->name('credit-notes.lines.destroy');
 
+    Route::post('products', [ProductController::class, 'store'])->name('products.store');
+    // Antes de products/{product}: bulk-category no es un id de producto.
+    Route::patch('products/bulk-category', ProductBulkCategoryController::class)->name('products.bulk-category');
+    Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::patch('products/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('products.toggle-active');
+    Route::patch('products/{product}/prices/{priceList}', [ProductPriceController::class, 'update'])->name('products.prices.update');
+
+    Route::post('product-categories', [ProductCategoryController::class, 'store'])->name('product-categories.store');
+    Route::put('product-categories/{productCategory}', [ProductCategoryController::class, 'update'])->name('product-categories.update');
+    Route::delete('product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])->name('product-categories.destroy');
+
+    Route::patch('production/{production}/cancel', [ProductionController::class, 'cancel'])->name('production.cancel');
+
+    Route::post('production-orders', [ProductionOrderController::class, 'store'])->name('production-orders.store');
+
+    // Alta suelta de un pedido, sin pasar por crear una orden — ver
+    // ProductionRequestController/ProductionOrderService::placeRequest().
+    Route::get('production-requests/previous-lines', [ProductionRequestController::class, 'previousLines'])->name('production-requests.previous-lines');
+    Route::post('production-requests', [ProductionRequestController::class, 'store'])->name('production-requests.store');
+
+    // Administración de pedidos recurrentes — "generate" antes de
+    // {recurringProductionRequest} para que no se interprete como un id.
+    Route::post('production-requests/recurring/generate', [RecurringProductionRequestController::class, 'generateNow'])->name('production-requests.recurring.generate');
+    Route::patch('production-requests/recurring/{recurringProductionRequest}', [RecurringProductionRequestController::class, 'update'])->name('production-requests.recurring.update');
+    Route::patch('production-requests/recurring/{recurringProductionRequest}/toggle-active', [RecurringProductionRequestController::class, 'toggleActive'])->name('production-requests.recurring.toggle-active');
+
+    Route::post('production-orders/instant/preview', [InstantProductionOrderController::class, 'preview'])->name('production-orders.instant.preview');
+    Route::post('production-orders/instant', [InstantProductionOrderController::class, 'store'])->name('production-orders.instant.store');
+    Route::patch('production-orders/{productionOrder}/transition', [ProductionOrderController::class, 'transition'])->name('production-orders.transition');
+    Route::post('production-orders/{productionOrder}/produce', [ProductionOrderController::class, 'produce'])->name('production-orders.produce');
+    Route::patch('production-orders/{productionOrder}/cancel', [ProductionOrderController::class, 'cancel'])->name('production-orders.cancel');
+
+    Route::post('production-orders/{productionOrder}/requests', [ProductionOrderRequestController::class, 'store'])->name('production-orders.requests.store');
+    Route::delete('production-orders/{productionOrder}/requests/{productionOrderRequest}', [ProductionOrderRequestController::class, 'destroy'])
+        ->scopeBindings()->name('production-orders.requests.destroy');
+
+    // Reemplaza el set completo del pedido en una sola operación — ver
+    // ProductionOrderLineController::sync()/ProductionOrderService::syncLines().
+    Route::put('production-orders/{productionOrder}/requests/{productionOrderRequest}/lines', [ProductionOrderLineController::class, 'sync'])
+        ->scopeBindings()->name('production-orders.requests.lines.sync');
+    // No persiste: sólo trae renglones para precargar la grilla ("Traer del
+    // pedido anterior"). Ayuda de edición, no de lectura — mismo grupo que sync().
+    Route::get('production-orders/{productionOrder}/requests/{productionOrderRequest}/previous-lines', [ProductionOrderRequestController::class, 'previousLines'])
+        ->scopeBindings()->name('production-orders.requests.previous-lines');
+
     Route::post('stock/{type}/{id}/adjustments', [StockController::class, 'storeAdjustment'])
-        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.adjustments.store');
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.adjustments.store');
     Route::post('stock/{type}/{id}/counts', [StockController::class, 'storeCount'])
-        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.counts.store');
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.counts.store');
     Route::patch('stock/{type}/{id}/min', [StockController::class, 'updateMin'])
-        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.min.update');
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.min.update');
     Route::patch('stock/{type}/{id}/level', [StockController::class, 'updateLevel'])
-        ->whereIn('type', ['ingredient', 'packaging'])->whereNumber('id')->name('stock.level.update');
+        ->whereIn('type', ['ingredient', 'packaging', 'product'])->whereNumber('id')->name('stock.level.update');
 
     Route::post('fixed-cost-categories', [FixedCostCategoryController::class, 'store'])->name('fixed-cost-categories.store');
     Route::put('fixed-cost-categories/{fixedCostCategory}', [FixedCostCategoryController::class, 'update'])->name('fixed-cost-categories.update');
@@ -245,6 +325,19 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner'])->gro
     Route::post('locations', [LocationController::class, 'store'])->name('locations.store');
     Route::put('locations/{location}', [LocationController::class, 'update'])->name('locations.update');
     Route::patch('locations/{location}/toggle-active', [LocationController::class, 'toggleActive'])->name('locations.toggle-active');
+});
+
+// Reparto: clientes y repartidores (owner, super_admin y admin)
+Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
+    Route::get('reparto/repartidores', [DeliveryPersonController::class, 'index'])->name('reparto.repartidores.index');
+    Route::post('reparto/repartidores', [DeliveryPersonController::class, 'store'])->name('reparto.repartidores.store');
+    Route::put('reparto/repartidores/{deliveryPerson}', [DeliveryPersonController::class, 'update'])->name('reparto.repartidores.update');
+    Route::patch('reparto/repartidores/{deliveryPerson}/toggle-active', [DeliveryPersonController::class, 'toggleActive'])->name('reparto.repartidores.toggle-active');
+
+    Route::get('reparto/clientes', [CustomerController::class, 'index'])->name('reparto.clientes.index');
+    Route::post('reparto/clientes', [CustomerController::class, 'store'])->name('reparto.clientes.store');
+    Route::put('reparto/clientes/{customer}', [CustomerController::class, 'update'])->name('reparto.clientes.update');
+    Route::patch('reparto/clientes/{customer}/toggle-active', [CustomerController::class, 'toggleActive'])->name('reparto.clientes.toggle-active');
 });
 
 // Mi equipo (requiere auth + tenant resuelto + rol manage-team)

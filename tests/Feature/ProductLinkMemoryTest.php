@@ -4,6 +4,7 @@ use App\Enums\CatalogItemType;
 use App\Enums\TenantUserRole;
 use App\Models\Ingredient;
 use App\Models\Packaging;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Supplier;
@@ -446,6 +447,117 @@ test('la memoria también recuerda descartables', function () {
 
     expect($link->purchaseable_type)->toBe(CatalogItemType::Packaging->value)
         ->and($link->purchaseable_id)->toBe($packaging->id);
+});
+
+// --- Artículos de reventa ---
+
+test('la memoria también recuerda artículos de reventa', function () {
+    [$user, $tenant] = ownerForMemory();
+    $purchase = memoryPurchaseFor($tenant);
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'u', 'cost_per_unit' => 900]);
+    $line = memoryLineFor($purchase, ['raw_name' => 'GASEOSA COLA 500ML X 6', 'purchase_unit' => 'u']);
+
+    $this->actingAs($user)->post(route('purchases.lines.match', [$purchase, $line]), [
+        'match' => "product:{$product->id}",
+    ])->assertRedirect();
+
+    $link = SupplierProductLink::withoutGlobalScopes()->firstOrFail();
+
+    expect($link->purchaseable_type)->toBe(CatalogItemType::Product->value)
+        ->and($link->purchaseable_id)->toBe($product->id)
+        ->and($link->isProduct())->toBeTrue();
+});
+
+test('una factura nueva pre-vincula un artículo de reventa', function () {
+    [$user, $tenant] = ownerForMemory();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    // Sin ningún descartable en el negocio: antes ownedIds() buscaba el id del
+    // producto en la tabla de descartables y el vínculo se caía siempre.
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'kg', 'cost_per_unit' => 100]);
+    rememberedLink($tenant, $supplier, [
+        'purchaseable_type' => CatalogItemType::Product->value,
+        'purchaseable_id' => $product->id,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('purchases.scan.store'), scanStorePayload($supplier, [
+            'matched_type' => null,
+            'matched_id' => null,
+        ]))
+        ->assertRedirect();
+
+    expect(storedLineFor($tenant)->purchaseable_type)->toBe(CatalogItemType::Product->value)
+        ->and(storedLineFor($tenant)->purchaseable_id)->toBe($product->id);
+});
+
+test('un vínculo a un artículo elaborado no se pre-selecciona', function () {
+    [$user, $tenant] = ownerForMemory();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    // El descartable comparte el id con el elaborado: es exactamente el caso que
+    // la validación contra la tabla equivocada daba por bueno.
+    Packaging::factory()->for($tenant)->create(['cost_per_unit' => 50]);
+    $elaborado = Product::factory()->for($tenant)->manufactured()->create(['unit' => 'u']);
+    rememberedLink($tenant, $supplier, [
+        'purchaseable_type' => CatalogItemType::Product->value,
+        'purchaseable_id' => $elaborado->id,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('purchases.scan.store'), scanStorePayload($supplier))
+        ->assertRedirect();
+
+    // Pre-seleccionarlo dejaría un renglón que apply() rechaza con 422.
+    expect(storedLineFor($tenant)->purchaseable_id)->toBeNull();
+});
+
+test('un vínculo a un artículo de reventa de otro negocio no se pre-selecciona', function () {
+    [$user, $tenant] = ownerForMemory();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $ajeno = Product::factory()->for(Tenant::factory()->create())->resale()->create(['unit' => 'u']);
+    rememberedLink($tenant, $supplier, [
+        'purchaseable_type' => CatalogItemType::Product->value,
+        'purchaseable_id' => $ajeno->id,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('purchases.scan.store'), scanStorePayload($supplier))
+        ->assertRedirect();
+
+    expect(storedLineFor($tenant)->purchaseable_id)->toBeNull();
+});
+
+test('el divisor recordado permite aplicar en masa un renglón de reventa', function () {
+    [$user, $tenant] = ownerForMemory();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = memoryPurchaseFor($tenant, $supplier);
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'kg', 'cost_per_unit' => 100]);
+
+    // Sin "X 25 Kg" en el texto, parseDescPkgQty() no tiene de dónde deducir nada:
+    // el único divisor disponible es el que se confirmó a mano.
+    rememberedLink($tenant, $supplier, [
+        'raw_name_normalized' => 'bolson caramelos',
+        'raw_name_sample' => 'BOLSON CARAMELOS',
+        'purchaseable_type' => CatalogItemType::Product->value,
+        'purchaseable_id' => $product->id,
+        'pkg_qty' => 25,
+    ]);
+
+    memoryLineFor($purchase, [
+        'raw_name' => 'BOLSON CARAMELOS',
+        'purchase_unit' => 'u',
+        'quantity_purchased' => 2,
+        'unit_price' => 20000,
+        'purchaseable_type' => CatalogItemType::Product->value,
+        'purchaseable_id' => $product->id,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('purchases.apply-suggestions', $purchase))
+        ->assertRedirect();
+
+    // 20.000 el bolsón ÷ 25 kg = 800 el kg.
+    expect((float) $product->fresh()->cost_per_unit)->toBe(800.0)
+        ->and($purchase->lines()->firstOrFail()->isApplied())->toBeTrue();
 });
 
 // --- Backfill ---

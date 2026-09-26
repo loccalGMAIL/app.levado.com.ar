@@ -16,7 +16,12 @@
 
         $displayUnit = fn ($item) => $item->subdivisions && $item->subdivision_label
             ? $item->subdivision_label
-            : ($type === 'ingredient' ? $item->unit->short() : 'u');
+            : (in_array($type, ['ingredient', 'product'], true) ? $item->unit->short() : 'u');
+
+        // El elaborado deriva su costo de la receta (Product::currentCost()); insumos/descartables usan su cost_per_unit.
+        $unitCost = fn ($item) => $type === 'product'
+            ? ($item->currentCost() ?? 0)
+            : (float) $item->cost_per_unit;
 
         $rowPayload = fn ($item, $level) => [
             'type' => $type,
@@ -48,7 +53,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-base font-semibold text-corteza">Stock</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Stock de insumos y descartables en {{ $location->name }}.</p>
+                    <p class="text-sm text-masa-madre mt-0.5">Stock de insumos, descartables y productos en {{ $location->name }}.</p>
                 </div>
             </div>
 
@@ -61,6 +66,10 @@
                 <a href="{{ $tabUrl('packaging') }}"
                     class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors {{ $type === 'packaging' ? 'border-horno text-horno' : 'border-transparent text-masa-madre hover:text-corteza' }}">
                     Descartables
+                </a>
+                <a href="{{ $tabUrl('product') }}"
+                    class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors {{ $type === 'product' ? 'border-horno text-horno' : 'border-transparent text-masa-madre hover:text-corteza' }}">
+                    Productos
                 </a>
             </div>
 
@@ -86,7 +95,7 @@
                     @if(request('search'))
                         No se encontraron ítems con esos filtros.
                     @else
-                        Todavía no hay {{ $type === 'ingredient' ? 'insumos' : 'descartables' }} activos para mostrar.
+                        Todavía no hay {{ ['ingredient' => 'insumos', 'packaging' => 'descartables', 'product' => 'productos'][$type] ?? 'ítems' }} activos para mostrar.
                     @endif
                 </x-empty-state>
             @else
@@ -122,7 +131,7 @@
                                         </svg>
                                     </a>
                                 </span>
-                                <span class="text-xs text-masa-madre font-mono text-right [overflow-wrap:anywhere]">$ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}</span>
+                                <span class="text-xs text-masa-madre font-mono text-right [overflow-wrap:anywhere]">$ {{ number_format($qty * $unitCost($item), 2, ',', '.') }}</span>
                             </div>
                             @can('manage-costs')
                                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga text-sm">
@@ -175,7 +184,7 @@
                                         {{ $level?->min_quantity !== null ? number_format($level->min_quantity, 2, ',', '.') : '—' }}
                                     </td>
                                     <td class="px-4 py-3 text-right font-mono text-corteza">
-                                        $ {{ number_format($qty * (float) $item->cost_per_unit, 2, ',', '.') }}
+                                        $ {{ number_format($qty * $unitCost($item), 2, ',', '.') }}
                                     </td>
                                     <td class="px-4 py-3">
                                         @if($qty < 0)

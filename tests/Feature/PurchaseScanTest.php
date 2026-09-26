@@ -2,6 +2,7 @@
 
 use App\Enums\TenantUserRole;
 use App\Models\Ingredient;
+use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Models\TenantUser;
@@ -114,6 +115,115 @@ test('storing a scanned purchase captures lines without applying cost', function
 
     // Cost must NOT have changed yet.
     expect((float) $ingredient->fresh()->cost_per_unit)->toBe(100.0);
+});
+
+// --- Artículos de reventa en el escaneo ---
+
+test('confirmar un escaneo con un renglón de reventa lo guarda pendiente', function () {
+    [$user, $tenant] = ownerForScan();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'u', 'cost_per_unit' => 100]);
+
+    // Antes la regla del request era 'in:ingredient,packaging' y este POST daba
+    // un 422 que el usuario no tenía forma de resolver desde la pantalla.
+    $this->actingAs($user)->post(route('purchases.scan.store'), [
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-05-14',
+        'lines' => [[
+            'include' => '1',
+            'raw_name' => 'GASEOSA COLA X 6',
+            'matched_type' => 'product',
+            'matched_id' => $product->id,
+            'quantity_purchased' => '6',
+            'purchase_unit' => 'u',
+            'unit_price' => '900',
+        ]],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $line = $tenant->purchases()->firstOrFail()->lines()->firstOrFail();
+
+    expect($line->isProduct())->toBeTrue()
+        ->and($line->purchaseable_id)->toBe($product->id)
+        ->and($line->isPending())->toBeTrue()
+        ->and((float) $product->fresh()->cost_per_unit)->toBe(100.0);
+});
+
+test('una sugerencia de un artículo elaborado se descarta', function () {
+    [$user, $tenant] = ownerForScan();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $elaborado = Product::factory()->for($tenant)->manufactured()->create(['unit' => 'u']);
+
+    $this->actingAs($user)->post(route('purchases.scan.store'), [
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-05-14',
+        'lines' => [[
+            'include' => '1',
+            'raw_name' => 'BUDIN',
+            'matched_type' => 'product',
+            'matched_id' => $elaborado->id,
+            'quantity_purchased' => '1',
+            'purchase_unit' => 'u',
+            'unit_price' => '900',
+        ]],
+    ])->assertRedirect();
+
+    // Aceptarlo dejaría un renglón que apply() rechaza con 422.
+    expect($tenant->purchases()->firstOrFail()->lines()->firstOrFail()->purchaseable_id)->toBeNull();
+});
+
+test('una sugerencia de un artículo de otro negocio se descarta', function () {
+    [$user, $tenant] = ownerForScan();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $ajeno = Product::factory()->for(Tenant::factory()->create())->resale()->create(['unit' => 'u']);
+
+    $this->actingAs($user)->post(route('purchases.scan.store'), [
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-05-14',
+        'lines' => [[
+            'include' => '1',
+            'raw_name' => 'GASEOSA',
+            'matched_type' => 'product',
+            'matched_id' => $ajeno->id,
+            'quantity_purchased' => '1',
+            'purchase_unit' => 'u',
+            'unit_price' => '900',
+        ]],
+    ])->assertRedirect();
+
+    expect($tenant->purchases()->firstOrFail()->lines()->firstOrFail()->purchaseable_id)->toBeNull();
+});
+
+test('un negocio sin insumos pero con artículos de reventa puede escanear', function () {
+    Storage::fake('local');
+    [$user, $tenant] = ownerForScan();
+    $product = Product::factory()->for($tenant)->resale()->create(['name' => 'GaseosaKiosco', 'unit' => 'u']);
+
+    config(['services.anthropic.key' => 'test-key']);
+    Http::fake([
+        'api.anthropic.com/*' => Http::response([
+            'content' => [['type' => 'text', 'text' => json_encode([
+                'supplier_name' => 'Distribuidora',
+                'invoice_number' => '0012-9',
+                'invoice_date' => '2026-05-14',
+                'total' => 900,
+                'lines' => [[
+                    'raw_name' => 'GASEOSA COLA X 6',
+                    'quantity' => 6,
+                    'unit' => 'u',
+                    'unit_price' => 150,
+                    'matched_type' => 'product',
+                    'matched_id' => $product->id,
+                ]],
+            ])]],
+        ]),
+    ]);
+
+    $this->actingAs($user)->post(route('purchases.scan'), [
+        'invoice' => UploadedFile::fake()->image('factura.jpg', 800, 600),
+    ])
+        ->assertOk()
+        ->assertSee('Revisá lo que se leyó')
+        ->assertSee('GASEOSA COLA X 6');
 });
 
 test('matching a captured line imputes its cost', function () {

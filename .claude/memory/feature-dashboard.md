@@ -87,3 +87,34 @@ Lo específico del dashboard:
 y `=low` (assertan sobre el total del footer "de N recetas", no sobre todo el HTML), datos de
 gráficos presentes, y estado vacío (sin recetas con margen, el bloque barras+dona no se renderiza —
 "Sin datos suficientes" es inalcanzable porque vive dentro del `@if($topRecipesForChart)`).
+
+## v0.13.2 — Quick actions del saludo abren modales, no navegan (sesión 19/09/2026)
+Los 4 botones de arriba del saludo ("+ Nuevo pedido", "⚡ Orden instantánea", "+ Nueva receta",
+"Compra") abren los mismos modales `<x-crud-modal>` que sus páginas de origen (Producción, Recetas,
+Compras) en vez de navegar al índice — mismo patrón que [[feedback-crud-modals]]. Detalle en
+[[feature-articulos-produccion]] (producción) y en este archivo (recetas/compras, agregados después).
+
+- **Los 4 botones comparten un solo `@can('manage-costs')`** y el mismo estilo (outline neutro,
+  ícono SVG `w-3.5 h-3.5`, mismo padding). Antes "Nueva receta"/"Compra" eran links visibles a
+  cualquier rol (incluido Viewer) y sólo navegaban al índice; ahora, al ser altas reales, quedan
+  gateadas igual que en `recipes/index.blade.php` y `purchases/index.blade.php` — coherencia sobre
+  visibilidad para Viewer.
+- **Mobile: `grid grid-cols-2` fijo, no `flex-wrap`.** Con `flex-wrap` cada botón envuelve según el
+  largo de su propio texto — "Nuevo pedido"/"Orden instantánea" quedaban solos en su fila y "Nueva
+  receta"+"Compra" apareados, visualmente descompaginado. El grid 2×2 fuerza el mismo ancho para los
+  4 (`w-full sm:w-auto` en cada botón); desde `sm:` el contenedor vuelve a `flex flex-wrap` de ancho
+  natural.
+- **Colisión de variable al reusar dos modales ajenos en la misma página**: `recipes/modals/create.blade.php`
+  y `purchases/modals/create.blade.php` NO calculan su propio `$errorsInCreate` (a diferencia de los
+  modales de producción, que sí lo hacen con un `@php` propio) — esperan que la página que los
+  incluye ya lo haya definido, como hacen sus índices originales. Si el dashboard incluye ambos, no
+  puede tener una sola `$errorsInCreate` (los dos modales la pisarían). Se resolvió calculando
+  `$errorsInRecipeCreate`/`$errorsInPurchaseCreate` en el dashboard y pasándolos con
+  `@include('recipes.modals.create', ['errorsInCreate' => $errorsInRecipeCreate])` (mismo truco para
+  compras). Ver gotcha ampliado en [[feedback-crud-modals]].
+- El modal de compra trae en cascada `suppliers.modals.quick-create` (su "+ Nuevo proveedor") y
+  `$suppliers` (mismo query que `PurchaseController::index()`, sin extraer a servicio — es una sola
+  línea, no ameritaba compartir método como sí se hizo con `destinationAndCatalogData()`).
+- Los 3 stores (`recipes.store`, `purchases.store`, `production-requests.store`/`production-orders.instant.store`)
+  redirigen a su propio `show()` en éxito, nunca de vuelta al dashboard — igual que cuando se abren
+  desde su índice original, así que no hizo falta tocar los controllers de escritura.

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\CatalogItemType;
+use App\Enums\ProductType;
 use App\Models\PurchaseLine;
 use App\Models\SupplierProductLink;
 use App\Models\Tenant;
@@ -217,9 +218,13 @@ class ProductLinkMemory
                 continue;
             }
 
-            $relation = $itemType === CatalogItemType::Ingredient
-                ? $tenant->ingredients()
-                : $tenant->packagings();
+            $relation = match ($itemType) {
+                CatalogItemType::Ingredient => $tenant->ingredients(),
+                CatalogItemType::Packaging => $tenant->packagings(),
+                // Sólo reventa: un vínculo a un elaborado pre-seleccionaría un
+                // renglón que PurchaseLineRecorder::apply() rechaza con 422.
+                CatalogItemType::Product => $tenant->products()->where('type', ProductType::Resale->value),
+            };
 
             $owned[$type] = $relation
                 ->whereIn('id', $group->pluck('purchaseable_id')->all())

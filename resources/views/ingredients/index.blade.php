@@ -23,6 +23,7 @@
         x-data="{
             editing: {{ Js::from($editingOnError) }},
             replacing: null,
+            converting: null,
             openEdit(record) {
                 if (record.subdivisions && record.unit === 'u' && record.cost_per_package != null) {
                     record.cost_per_unit = record.cost_per_package;
@@ -33,6 +34,10 @@
             openReplace(item) {
                 this.replacing = item;
                 $dispatch('open-modal', 'ingredient-replace');
+            },
+            openConvert(item) {
+                this.converting = item;
+                $dispatch('open-modal', 'ingredient-convert-to-product');
             }
         }">
 
@@ -73,7 +78,6 @@
                         <th class="px-4 py-3 font-medium text-right">Por envase</th>
                         <x-sortable-th column="cost_per_unit" :sort="$sort" :dir="$dir" align="right">Costo / sub-unidad</x-sortable-th>
                         <th class="px-4 py-3 font-medium text-right">Stock</th>
-                        <th class="px-4 py-3 font-medium">Estado</th>
                         @can('manage-costs')
                             <th class="px-4 py-3"></th>
                         @endcan
@@ -193,10 +197,6 @@
                                 </span>
                             </x-data-table.cell>
 
-                            <x-data-table.cell role="badge">
-                                <x-status-badge :active="$ingredient->active" />
-                            </x-data-table.cell>
-
                             @can('manage-costs')
                                 <x-data-table.cell role="actions">
                                     <div class="dt-actions">
@@ -212,6 +212,20 @@
                                             <x-icon name="arrow-path" />
                                             <span class="dt-card-only">Reemplazar</span>
                                         </button>
+                                        @if($ingredient->converted_to_product_id)
+                                            <a href="{{ route('products.index', ['search' => $ingredient->convertedToProduct?->name]) }}"
+                                                title="Ver el producto de reventa" class="dt-action">
+                                                <x-icon name="shopping-bag" />
+                                                <span class="dt-card-only">Ver producto</span>
+                                            </a>
+                                        @elseif($ingredient->active)
+                                            <button type="button" @click="openConvert({{ Js::from(['id' => $ingredient->id, 'name' => $ingredient->name, 'cost_per_unit' => round((float) $ingredient->cost_per_unit, 2), 'unit' => $ingredient->unit->short(), 'stock' => $stockQty]) }})"
+                                                aria-label="Convertir a producto de reventa" title="Convertir a producto de reventa"
+                                                class="dt-action">
+                                                <x-icon name="shopping-bag" />
+                                                <span class="dt-card-only">Convertir</span>
+                                            </button>
+                                        @endif
                                         <form method="POST" action="{{ route('ingredients.toggle-active', $ingredient) }}">
                                             @csrf
                                             @method('PATCH')
@@ -219,7 +233,7 @@
                                                 aria-label="{{ $ingredient->active ? 'Desactivar' : 'Activar' }}"
                                                 title="{{ $ingredient->active ? 'Desactivar' : 'Activar' }}"
                                                 class="dt-action {{ $ingredient->active ? 'dt-action--danger' : 'dt-action--success' }}">
-                                                <x-icon :name="$ingredient->active ? 'eye-off' : 'eye'" />
+                                                <x-icon :name="$ingredient->active ? 'eye-off' : 'check'" />
                                                 <span class="dt-card-only">{{ $ingredient->active ? 'Desactivar' : 'Activar' }}</span>
                                             </button>
                                         </form>
@@ -237,6 +251,7 @@
             @include('ingredients.modals.create')
             @include('ingredients.modals.edit')
             @include('ingredients.modals.replace')
+            @include('ingredients.modals.convert-to-product')
             @include('suppliers.modals.quick-create')
         @endcan
 

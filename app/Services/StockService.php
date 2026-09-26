@@ -8,6 +8,7 @@ use App\Models\CreditNoteLine;
 use App\Models\Ingredient;
 use App\Models\Location;
 use App\Models\Packaging;
+use App\Models\Product;
 use App\Models\PurchaseLine;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
@@ -37,7 +38,7 @@ class StockService
      * concurrentes del mismo ítem/sucursal.
      */
     public function registerMovement(
-        Ingredient|Packaging $item,
+        Ingredient|Packaging|Product $item,
         Location $location,
         StockMovementType $type,
         float $quantity,
@@ -45,12 +46,14 @@ class StockService
         ?string $reason = null,
         ?User $user = null,
         PurchaseLine|CreditNoteLine|null $reference = null,
+        ?string $referenceType = null,
+        ?int $referenceId = null,
         ?StockMovement $reverses = null,
     ): StockMovement {
         abort_unless(! $type->requiresReason() || filled($reason), 422, 'El motivo es obligatorio para ajustes.');
         abort_unless($location->tenant_id === $item->tenant_id, 422, 'La sucursal no pertenece al tenant del ítem.');
 
-        return DB::transaction(function () use ($item, $location, $type, $quantity, $unitCost, $reason, $user, $reference, $reverses) {
+        return DB::transaction(function () use ($item, $location, $type, $quantity, $unitCost, $reason, $user, $reference, $referenceType, $referenceId, $reverses) {
             $level = $this->lockedLevelRow($item, $location);
 
             $movement = StockMovement::create([
@@ -62,8 +65,8 @@ class StockService
                 'quantity' => $quantity,
                 'unit_cost' => $unitCost,
                 'reason' => $reason,
-                'reference_type' => $this->referenceTypeFor($reference),
-                'reference_id' => $reference?->id,
+                'reference_type' => $this->referenceTypeFor($reference) ?? $referenceType,
+                'reference_id' => $reference?->id ?? $referenceId,
                 'reverses_movement_id' => $reverses?->id,
                 'user_id' => $user?->id,
             ]);
@@ -84,10 +87,27 @@ class StockService
     }
 
     /**
+     * Costo unitario vigente del ítem, para valuar un movimiento manual.
+     *
+     * Un artículo ELABORADO tiene cost_per_unit en null (su costo vive en la
+     * receta): leer la columna directo asentaba cada recuento y cada ajuste en
+     * el ledger a $0. Product::currentCost() es la única puerta al costo del
+     * artículo; los insumos no la tienen y siguen leyendo su columna.
+     */
+    private function unitCostOf(Ingredient|Packaging|Product $item): float
+    {
+        return $item instanceof Product
+            // Carga explícita: StockController resuelve el ítem sin eager-loadear
+            // la receta y preventLazyLoading() haría estallar la lectura.
+            ? ($item->loadMissing('recipe')->currentCost() ?? 0.0)
+            : (float) $item->cost_per_unit;
+    }
+
+    /**
      * Recuento físico: registra la diferencia entre lo contado y el cache.
      * Devuelve null si no hay diferencia.
      */
-    public function applyCount(Ingredient|Packaging $item, Location $location, float $countedQuantity, User $user): ?StockMovement
+    public function applyCount(Ingredient|Packaging|Product $item, Location $location, float $countedQuantity, User $user): ?StockMovement
     {
         $current = (float) ($this->levelFor($item, $location)?->quantity ?? 0);
         $delta = $countedQuantity - $current;
@@ -101,7 +121,7 @@ class StockService
             location: $location,
             type: StockMovementType::Count,
             quantity: $delta,
-            unitCost: (float) $item->cost_per_unit,
+            unitCost: $this->unitCostOf($item),
             reason: 'Recuento físico '.now()->format('d/m/Y'),
             user: $user,
         );
@@ -110,14 +130,14 @@ class StockService
     /**
      * Ajuste manual con signo (+ entrada / − salida), valuado al costo actual del ítem.
      */
-    public function registerAdjustment(Ingredient|Packaging $item, Location $location, float $signedQuantity, string $reason, User $user): StockMovement
+    public function registerAdjustment(Ingredient|Packaging|Product $item, Location $location, float $signedQuantity, string $reason, User $user): StockMovement
     {
         return $this->registerMovement(
             item: $item,
             location: $location,
             type: StockMovementType::Adjustment,
             quantity: $signedQuantity,
-            unitCost: (float) $item->cost_per_unit,
+            unitCost: $this->unitCostOf($item),
             reason: $reason,
             user: $user,
         );
@@ -136,7 +156,7 @@ class StockService
      */
     public function syncPurchaseLineEntry(
         PurchaseLine $line,
-        Ingredient|Packaging $item,
+        Ingredient|Packaging|Product $item,
         float $quantityInItemUnits,
         float $unitCost,
         ?User $user = null,
@@ -163,7 +183,8 @@ class StockService
             quantity: $quantityInItemUnits,
             unitCost: $unitCost,
             user: $user,
-            reference: $line,
+            referenceType: 'purchase_line',
+            referenceId: $line->id,
         );
     }
 
@@ -180,6 +201,34 @@ class StockService
         }
 
         return $this->reverseMovement($active, $user);
+    }
+
+    /**
+     * Revierte todos los movimientos activos asociados a una referencia (por
+     * ejemplo, todos los del alta de una producción: consumos + entrada del
+     * elaborado), con un contramovimiento exacto por cada uno. Ignora los que
+     * ya fueron revertidos. Devuelve cuántos contramovimientos generó.
+     */
+    public function reverseMovementsFor(string $referenceType, int $referenceId, ?User $user = null): int
+    {
+        $active = StockMovement::query()
+            ->with(['location', 'ingredient', 'packaging', 'product']) // reverseMovement() las lee; evita lazy load
+            ->where('reference_type', $referenceType)
+            ->where('reference_id', $referenceId)
+            ->whereNull('reverses_movement_id')
+            ->whereNotExists(function ($query) {
+                $query->selectRaw('1')
+                    ->from('stock_movements as reversals')
+                    ->whereColumn('reversals.reverses_movement_id', 'stock_movements.id');
+            })
+            ->orderBy('id')
+            ->get();
+
+        foreach ($active as $movement) {
+            $this->reverseMovement($movement, $user);
+        }
+
+        return $active->count();
     }
 
     /**
@@ -240,14 +289,14 @@ class StockService
         return $this->reverseMovement($active, $user);
     }
 
-    public function setMinQuantity(Ingredient|Packaging $item, Location $location, ?float $minQuantity): void
+    public function setMinQuantity(Ingredient|Packaging|Product $item, Location $location, ?float $minQuantity): void
     {
         DB::transaction(function () use ($item, $location, $minQuantity) {
             $this->lockedLevelRow($item, $location)->update(['min_quantity' => $minQuantity]);
         });
     }
 
-    public function levelFor(Ingredient|Packaging $item, Location $location): ?StockLevel
+    public function levelFor(Ingredient|Packaging|Product $item, Location $location): ?StockLevel
     {
         return StockLevel::query()
             ->where('tenant_id', $item->tenant_id)
@@ -263,7 +312,7 @@ class StockService
      */
     private function reverseMovement(StockMovement $original, ?User $user): StockMovement
     {
-        $item = $original->stockable;
+        $item = $original->stockable();
         abort_unless($item !== null, 422, 'El ítem del movimiento a revertir ya no existe.');
 
         return $this->registerMovement(
@@ -338,7 +387,7 @@ class StockService
      * Fila del cache con lock pesimista, creándola en cero si no existe.
      * Ante una carrera en la creación (violación del unique), reintenta el lock.
      */
-    private function lockedLevelRow(Ingredient|Packaging $item, Location $location): StockLevel
+    private function lockedLevelRow(Ingredient|Packaging|Product $item, Location $location): StockLevel
     {
         $attributes = [
             'tenant_id' => $item->tenant_id,
@@ -360,7 +409,7 @@ class StockService
         }
     }
 
-    private function typeFor(Ingredient|Packaging $item): string
+    private function typeFor(Ingredient|Packaging|Product $item): string
     {
         return CatalogItemType::for($item)->value;
     }

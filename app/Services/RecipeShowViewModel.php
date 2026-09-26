@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\ProductPrice;
 use App\Models\Recipe;
-use App\Models\RecipePrice;
 use App\Models\Tenant;
 use Illuminate\Support\Collection;
 
@@ -33,6 +33,7 @@ class RecipeShowViewModel
             'packagingLines.packaging',
             'laborLines.laborType',
             'subrecipeLines.childRecipe',
+            'manufacturedProduct',
         ]);
 
         $costs = $this->calculator->calculate($recipe);
@@ -46,18 +47,25 @@ class RecipeShowViewModel
             ->orderBy('name')
             ->get();
 
-        $allPrices = RecipePrice::where('recipe_id', $recipe->id)
-            ->whereIn('price_list_id', $priceLists->pluck('id'))
-            ->pluck('price', 'price_list_id')
-            ->map(fn ($p) => $p !== null ? (float) $p : null)
-            ->toArray();
+        // El precio de venta vive en el artículo elaborado (product_prices).
+        $product = $recipe->manufacturedProduct;
+        $priceRows = $product !== null
+            ? ProductPrice::where('product_id', $product->id)
+                ->whereIn('price_list_id', $priceLists->pluck('id'))
+                ->get()
+                ->keyBy('price_list_id')
+            : collect();
+        $allPrices = $priceRows->map(fn (ProductPrice $row) => $row->price !== null ? (float) $row->price : null)->toArray();
+        $allPolicies = $priceRows->map(fn (ProductPrice $row) => $row->policyPayload())->toArray();
 
         return [
             'recipe' => $recipe,
+            'manufacturedProduct' => $product,
             'defaultPriceList' => $defaultPriceList,
             'defaultPrice' => $allPrices[$defaultPriceList->id] ?? null,
             'priceLists' => $priceLists,
             'allPrices' => $allPrices,
+            'allPolicies' => $allPolicies,
             'ingredientCost' => $costs['ingredient_cost'],
             'packagingCost' => $costs['packaging_cost'],
             'laborCost' => $costs['labor_cost'],

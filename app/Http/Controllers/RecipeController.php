@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProductType;
 use App\Http\Requests\StoreRecipeRequest;
 use App\Http\Requests\UpdateRecipeRequest;
+use App\Models\ProductPrice;
 use App\Models\Recipe;
-use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
-use App\Services\RecipePriceWriter;
 use App\Services\RecipeShowViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +25,6 @@ class RecipeController extends Controller
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly RecipeCostPropagator $propagator,
-        private readonly RecipePriceWriter $priceWriter,
         private readonly RecipeShowViewModel $showViewModel,
     ) {}
 
@@ -42,7 +41,16 @@ class RecipeController extends Controller
             ?? $priceLists->first()
             ?? $tenant->defaultPriceList();
 
+        // El precio de venta vive en el artículo elaborado (product_prices) vinculado a la receta.
+        $priceSubquery = ProductPrice::select('product_prices.price')
+            ->join('products', 'products.id', '=', 'product_prices.product_id')
+            ->whereColumn('products.recipe_id', 'recipes.id')
+            ->where('products.type', ProductType::Manufactured->value)
+            ->where('product_prices.price_list_id', $priceList->id)
+            ->limit(1);
+
         $recipes = $tenant->recipes()
+            ->with('manufacturedProduct')
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
@@ -50,26 +58,27 @@ class RecipeController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($sort === 'selling_price', fn ($q) => $q->orderBy(
-                RecipePrice::select('price')
-                    ->whereColumn('recipe_id', 'recipes.id')
-                    ->where('price_list_id', $priceList->id),
-                $dir,
-            ))
+            ->when($sort === 'selling_price', fn ($q) => $q->orderBy($priceSubquery, $dir))
             ->when($sort && $sort !== 'selling_price', fn ($q) => $q->orderBy($sort, $dir))
             ->when(! $sort, fn ($q) => $q->orderByDesc('active')->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
 
-        $prices = RecipePrice::where('price_list_id', $priceList->id)
-            ->whereIn('recipe_id', $recipes->pluck('id'))
-            ->pluck('price', 'recipe_id');
+        // Mapas recipe_id → precio y política del artículo en la lista elegida.
+        $priceRows = ProductPrice::query()
+            ->join('products', 'products.id', '=', 'product_prices.product_id')
+            ->where('products.type', ProductType::Manufactured->value)
+            ->where('product_prices.price_list_id', $priceList->id)
+            ->whereIn('products.recipe_id', $recipes->pluck('id'))
+            ->get(['product_prices.price', 'product_prices.policy_type', 'product_prices.policy_value', 'products.recipe_id']);
+        $prices = $priceRows->pluck('price', 'recipe_id');
+        $policies = $priceRows->mapWithKeys(fn (ProductPrice $row) => [$row->recipe_id => $row->policyPayload()]);
 
         // Lista completa de sub-recetas para el select del modal de reemplazo
         // masivo: el sustituto tiene que ser un semielaborado, activo o no.
         $semiElaborateRecipes = $tenant->recipes()->where('is_semi_elaborate', true)->orderBy('name')->get();
 
-        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices', 'semiElaborateRecipes'));
+        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices', 'policies', 'semiElaborateRecipes'));
     }
 
     public function show(Recipe $recipe): View
@@ -83,15 +92,7 @@ class RecipeController extends Controller
     {
         $tenant = app(Tenant::class);
 
-        $data = $request->validated();
-        $sellingPrice = $data['selling_price'] ?? null;
-        unset($data['selling_price']);
-
-        $recipe = $tenant->recipes()->create($data);
-
-        if ($sellingPrice !== null) {
-            $this->priceWriter->set($recipe, $tenant->defaultPriceList(), (float) $sellingPrice);
-        }
+        $recipe = $tenant->recipes()->create($request->validated());
 
         if ($tenant->onboarding_completed_at === null) {
             $tenant->update(['onboarding_completed_at' => now()]);
@@ -113,21 +114,8 @@ class RecipeController extends Controller
     {
         $this->authorize('update', $recipe);
 
-        $data = $request->validated();
-        $sellingPrice = $data['selling_price'] ?? null;
-        $sellingPriceSent = array_key_exists('selling_price', $data);
-        unset($data['selling_price']);
-
-        $recipe->update($data);
+        $recipe->update($request->validated());
         $this->propagator->propagateFrom($recipe);
-
-        if ($sellingPriceSent) {
-            $this->priceWriter->set(
-                $recipe,
-                app(Tenant::class)->defaultPriceList(),
-                $sellingPrice !== null ? (float) $sellingPrice : null,
-            );
-        }
 
         $this->recorder->record(
             actor: $request->user(),
@@ -179,9 +167,6 @@ class RecipeController extends Controller
                     'quantity_used' => $line->quantity_used,
                     'unit' => $line->unit,
                 ]);
-            }
-            foreach ($recipe->prices()->with('priceList')->get() as $recipePrice) {
-                $this->priceWriter->set($newRecipe, $recipePrice->priceList, (float) $recipePrice->price);
             }
 
             $this->propagator->propagateFrom($newRecipe);

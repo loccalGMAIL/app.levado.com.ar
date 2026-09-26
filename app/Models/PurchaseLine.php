@@ -67,6 +67,11 @@ class PurchaseLine extends Model
         return $this->purchaseable_type === CatalogItemType::Packaging->value;
     }
 
+    public function isProduct(): bool
+    {
+        return $this->purchaseable_type === CatalogItemType::Product->value;
+    }
+
     public function isMatched(): bool
     {
         return $this->purchaseable_type !== null && $this->purchaseable_id !== null;

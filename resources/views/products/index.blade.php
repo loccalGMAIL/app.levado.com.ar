@@ -1,0 +1,418 @@
+<x-app-layout>
+    <x-slot name="title">Artículos</x-slot>
+
+    @php
+        $errorFields = ['name', 'type', 'recipe_id', 'product_category_id', 'unit', 'cost_per_unit', 'costing_method', 'barcode'];
+        $errorsInCreate = $errors->hasAny($errorFields) && old('_form') === 'create';
+        $errorsInEdit   = $errors->hasAny($errorFields) && old('_form') === 'edit';
+        $editingDefault = ['id' => null, 'name' => '', 'type' => '', 'recipe_id' => '', 'recipe_url' => null, 'product_category_id' => '', 'unit' => '', 'cost_per_unit' => '', 'costing_method' => '', 'barcode' => ''];
+        $editingOnError = $errorsInEdit ? [
+            'id'                  => old('product_id'),
+            'name'                => old('name'),
+            'type'                => old('type'),
+            'recipe_id'           => old('recipe_id'),
+            'recipe_url'          => old('recipe_id') ? route('recipes.show', old('recipe_id')) : null,
+            'product_category_id' => old('product_category_id'),
+            'unit'                => old('unit'),
+            'cost_per_unit'       => old('cost_per_unit'),
+            'costing_method'      => old('costing_method'),
+            'barcode'             => old('barcode'),
+        ] : $editingDefault;
+
+        // Payload de edición en un solo lugar: los tres disparadores (card, nombre e
+        // ícono) lo reusan para que no se desincronicen y borren campos al guardar.
+        $editPayload = fn ($product) => [
+            'id'                  => $product->id,
+            'name'                => $product->name,
+            'type'                => $product->type->value,
+            'recipe_id'           => $product->recipe_id ?? '',
+            'recipe_url'          => $product->recipe_id ? route('recipes.show', $product->recipe_id) : null,
+            'product_category_id' => $product->product_category_id ?? '',
+            'unit'                => $product->unit->value,
+            'cost_per_unit'       => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
+            'costing_method'      => $product->costing_method?->value ?? '',
+            'barcode'             => $product->barcode ?? '',
+        ];
+    @endphp
+
+    <div class="py-8 px-6 lg:px-8"
+        x-data="{
+            mobileExpanded: false,
+            // Asignación masiva de categoría: sólo en la tabla (no en las
+            // cards) — clasificar 190+ artículos es tarea de escritorio.
+            // x-model en checkbox de array guarda strings, por eso pageIds
+            // se siembra como strings (comparar contra números da siempre
+            // falso). No sobrevive el cambio de página, a propósito.
+            selectedIds: [],
+            pageIds: {{ Js::from($products->pluck('id')->map(fn ($id) => (string) $id)->all()) }},
+            get allPageSelected() { return this.pageIds.length > 0 && this.pageIds.every(id => this.selectedIds.includes(id)); },
+            togglePage(on) {
+                this.selectedIds = on
+                    ? [...new Set([...this.selectedIds, ...this.pageIds])]
+                    : this.selectedIds.filter(id => ! this.pageIds.includes(id));
+            },
+            clearSelection() { this.selectedIds = []; },
+            editing: {{ Js::from($editingOnError) }},
+            openEdit(record) {
+                this.editing = record;
+                $dispatch('open-modal', 'product-edit');
+            },
+            // El historial se trae a demanda: son N filas por artículo y viajar en
+            // el payload del listado inflaría el HTML para algo que casi no se abre.
+            costHistory: { name: '', isResale: true, loading: false, failed: false, rows: [] },
+            async openCostHistory(url, name) {
+                this.costHistory = { name, isResale: true, loading: true, failed: false, rows: [] };
+                $dispatch('open-modal', 'product-cost-history');
+                try {
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (!res.ok) throw new Error(res.status);
+                    const data = await res.json();
+                    this.costHistory.isResale = data.is_resale;
+                    this.costHistory.rows = data.rows;
+                } catch (e) {
+                    this.costHistory.failed = true;
+                } finally {
+                    this.costHistory.loading = false;
+                }
+            }
+        }">
+
+        <div class="space-y-6">
+
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-semibold text-corteza">Artículos</h2>
+                    <p class="text-sm text-masa-madre mt-0.5">Productos que vendés: elaborados (desde una receta) y de reventa.</p>
+                </div>
+                <div class="flex items-center gap-3 shrink-0">
+                    @can('manage-costs')
+                        <button type="button"
+                            @click="$dispatch('open-modal', 'product-categories')"
+                            class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                            Categorías
+                        </button>
+                        <button type="button" id="btn-nuevo-producto"
+                            @click="$dispatch('open-modal', 'product-create')"
+                            class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                            + Nuevo artículo
+                        </button>
+                    @endcan
+                </div>
+            </div>
+
+            @include('products.tabs')
+
+            <form method="GET" class="flex gap-3 items-end flex-wrap">
+                <input type="hidden" name="sort" value="{{ request('sort') }}">
+                <input type="hidden" name="dir" value="{{ request('dir') }}">
+                <div class="flex-1 min-w-48">
+                    <input type="text" name="search" value="{{ request('search') }}"
+                        placeholder="Buscar por nombre o código..."
+                        class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                </div>
+                <select name="type"
+                    class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                    <option value="">Todos los tipos</option>
+                    <option value="manufactured" @selected(request('type') === 'manufactured')>Elaborados</option>
+                    <option value="resale"       @selected(request('type') === 'resale')>Reventa</option>
+                </select>
+                @if($categories->isNotEmpty())
+                    <select name="category"
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                        <option value="">Todas las categorías</option>
+                        <option value="sin" @selected(request('category') === 'sin')>Sin categoría</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}" @selected((string) request('category') === (string) $cat->id)>{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+                <select name="status"
+                    class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                    <option value="">Todos</option>
+                    <option value="active"   @selected(request('status') === 'active')>Activos</option>
+                    <option value="inactive" @selected(request('status') === 'inactive')>Inactivos</option>
+                </select>
+                @if($priceLists->count() > 1)
+                    <select name="price_list" onchange="this.form.submit()"
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno"
+                        title="Lista de precios">
+                        @foreach($priceLists as $list)
+                            <option value="{{ $list->id }}" @selected($priceList->id === $list->id)>{{ $list->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                    Filtrar
+                </button>
+                @if(request('search') || request('status') || request('type') || request('category'))
+                    <a href="{{ route('products.index') }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
+                @endif
+            </form>
+
+            @can('manage-costs')
+                <div x-show="selectedIds.length > 0" x-cloak
+                    class="flex items-center gap-3 bg-miga rounded-md px-4 py-2 text-sm">
+                    <span class="text-corteza"><span x-text="selectedIds.length"></span> artículo(s) seleccionados (de esta página)</span>
+                    <button type="button" @click="$dispatch('open-modal', 'product-bulk-category')"
+                        class="px-3 py-1 bg-corteza text-white text-xs rounded-md hover:bg-horno transition-colors">
+                        Asignar categoría
+                    </button>
+                    <button type="button" @click="clearSelection()" class="text-masa-madre hover:text-corteza hover:underline">
+                        Limpiar selección
+                    </button>
+                </div>
+            @endcan
+
+            @php
+                $sort = request('sort', 'name');
+                $dir  = request('dir', 'asc');
+            @endphp
+
+            @if($products->isEmpty())
+                <x-empty-state>
+                    @if(request('search') || request('status') || request('type') || request('category'))
+                        No se encontraron artículos con esos filtros.
+                    @else
+                        Todavía no hay artículos. Agregá el primero.
+                    @endif
+                </x-empty-state>
+            @else
+                <x-responsive-table>
+                    <x-slot:cards>
+                    @foreach($products as $product)
+                        @php
+                            $cost = $product->fullCost($overheadPerHour);
+                            $price = isset($priceMap[$product->id]) ? (float) $priceMap[$product->id] : null;
+                            $marginPct = ($price !== null && $cost !== null && $price > 0) ? ($price - $cost) / $price * 100 : null;
+                            $marginColor = $marginPct === null ? 'text-masa-madre' : ($marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500'));
+                        @endphp
+                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $product->active ? '' : 'opacity-50' }}">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="font-medium text-corteza">{{ $product->name }}</div>
+                                    <div class="text-xs text-masa-madre mt-0.5">
+                                        <x-product-type-badge :type="$product->type" />
+                                        · {{ $product->unit->short() }}
+                                        @if($product->category)
+                                            · {{ $product->category->name }}
+                                        @endif
+                                        @if($product->isManufactured() && $product->recipe)
+                                            · {{ $product->recipe->name }}
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
+                                <div>
+                                    <div class="text-masa-madre text-[11px]">Costo/u</div>
+                                    <div class="font-mono text-corteza">{{ $cost !== null ? '$ '.number_format($cost, 2, ',', '.') : '—' }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-masa-madre text-[11px]">Precio</div>
+                                    <div class="font-mono text-corteza">{{ $price !== null ? '$ '.number_format($price, 2, ',', '.') : '—' }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-masa-madre text-[11px]">Margen</div>
+                                    <div class="font-mono {{ $marginColor }}">{{ $marginPct !== null ? number_format($marginPct, 1, ',', '.').'%' : '—' }}</div>
+                                </div>
+                            </div>
+                            <div class="mt-1 text-[11px] text-masa-madre">Precios: {{ $priceList->name }}</div>
+                            @if($product->barcode)
+                                <div class="mt-1 text-xs text-masa-madre">{{ $product->barcode }}</div>
+                            @endif
+                            @can('manage-costs')
+                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
+                                    <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" />
+                                    <button type="button"
+                                        @click="openEdit({{ Js::from($editPayload($product)) }})"
+                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
+                                        Editar
+                                    </button>
+                                    <form method="POST" action="{{ route('products.toggle-active', $product) }}" class="flex-1">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                            class="w-full py-1.5 px-3 text-sm rounded transition-colors {{ $product->active ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-600 hover:bg-green-50' }}">
+                                            {{ $product->active ? 'Desactivar' : 'Activar' }}
+                                        </button>
+                                    </form>
+                                </div>
+                            @endcan
+                        </div>
+                    @endforeach
+                    </x-slot:cards>
+
+                    <thead class="bg-miga text-masa-madre border-b border-miga">
+                        <tr>
+                            @can('manage-costs')
+                                <th class="px-4 py-3 w-8">
+                                    <input type="checkbox" :checked="allPageSelected" @change="togglePage($event.target.checked)"
+                                        aria-label="Seleccionar todos los de esta página"
+                                        class="rounded border-gray-300 text-horno focus:ring-horno">
+                                </th>
+                            @endcan
+                            <th class="px-4 py-3 font-medium">Código</th>
+                            <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
+                            <th class="px-4 py-3 font-medium">Tipo</th>
+                            <th class="px-4 py-3 font-medium">Categoría</th>
+                            <th class="px-4 py-3 font-medium">Unidad</th>
+                            <th class="px-4 py-3 font-medium text-right">Costo/u</th>
+                            <th class="px-4 py-3 font-medium text-right">Precio ({{ $priceList->name }})/u</th>
+                            <th class="px-4 py-3 font-medium text-right">Margen</th>
+                            @can('manage-costs')
+                                <th class="px-4 py-3"></th>
+                            @endcan
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-miga">
+                        @foreach($products as $product)
+                            @php
+                                $cost = $product->fullCost($overheadPerHour);
+                                $price = isset($priceMap[$product->id]) ? (float) $priceMap[$product->id] : null;
+                                $marginPct = ($price !== null && $cost !== null && $price > 0) ? ($price - $cost) / $price * 100 : null;
+                                $marginColor = $marginPct === null ? 'text-masa-madre' : ($marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500'));
+                                $initPriceFormatted = $price !== null ? number_format($price, 2, ',', '.') : '';
+                                $initMarginPctFormatted = $marginPct !== null ? number_format($marginPct, 1, ',', '.') : '';
+                                $policy = $policyMap[$product->id] ?? ['type' => 'manual', 'value' => null];
+                            @endphp
+                            <tr class="{{ $product->active ? '' : 'opacity-50' }}"
+                                x-data="priceCell({
+                                    url: @js(route('products.prices.update', [$product, $priceList])),
+                                    price: {{ $price ?? 'null' }},
+                                    priceFormatted: '{{ $initPriceFormatted }}',
+                                    marginPct: {{ $marginPct ?? 'null' }},
+                                    marginPctFormatted: '{{ $initMarginPctFormatted }}',
+                                    marginColor: '{{ $marginColor }}',
+                                    policyType: '{{ $policy['type'] }}',
+                                    policyValue: {{ $policy['value'] ?? 'null' }},
+                                })">
+                                @can('manage-costs')
+                                    <td class="px-4 py-3">
+                                        <input type="checkbox" value="{{ $product->id }}" x-model="selectedIds"
+                                            aria-label="Seleccionar {{ $product->name }}"
+                                            class="rounded border-gray-300 text-horno focus:ring-horno">
+                                    </td>
+                                @endcan
+                                <td class="px-4 py-3 text-masa-madre text-xs font-mono">
+                                    {{ $product->barcode ?? ($product->sku ?? '—') }}
+                                </td>
+                                <td class="px-4 py-3 font-medium text-corteza">
+                                    @can('manage-costs')
+                                        <button type="button"
+                                            @click="openEdit({{ Js::from($editPayload($product)) }})"
+                                            class="hover:underline text-left">
+                                            {{ $product->name }}
+                                        </button>
+                                    @else
+                                        {{ $product->name }}
+                                    @endcan
+                                </td>
+                                <td class="px-4 py-3">
+                                    <x-product-type-badge :type="$product->type" />
+                                </td>
+                                <td class="px-4 py-3 text-masa-madre text-xs">
+                                    @if($product->category)
+                                        <span class="inline-flex items-center gap-1">
+                                            {{ $product->category->name }}
+                                            @unless($product->category->producible)
+                                                <span class="text-[10px] text-gray-400 whitespace-nowrap" title="Excluido de los selectores de Producción">no se produce</span>
+                                            @endunless
+                                        </span>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-masa-madre">
+                                    {{ $product->unit->short() }}
+                                </td>
+                                <td class="px-4 py-3 text-right text-corteza font-mono">
+                                    {{ $cost !== null ? number_format($cost, 2, ',', '.') : '—' }}
+                                </td>
+                                <td class="px-4 py-3 text-right text-corteza font-mono">
+                                    @can('manage-costs')
+                                        <div @click="startEdit($event)" class="cursor-pointer hover:text-horno select-none inline-flex flex-col items-end gap-0.5">
+                                            <span x-show="!saving">
+                                                <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
+                                                <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
+                                            </span>
+                                            <span x-show="saving" class="text-xs text-masa-madre">…</span>
+                                            <span x-show="hasPolicy" x-text="policyBadge"
+                                                class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
+                                        </div>
+                                        <x-price-cell-editor />
+                                    @else
+                                        {{ $price !== null ? '$ '.number_format($price, 2, ',', '.') : '—' }}
+                                    @endcan
+                                </td>
+                                <td class="px-4 py-3 text-right font-mono" :class="marginColor">
+                                    <span x-show="marginPct !== null" x-text="marginPctFormatted + '%'"></span>
+                                    <span x-show="marginPct === null" class="text-masa-madre">—</span>
+                                </td>
+                                @can('manage-costs')
+                                    <td class="px-4 py-3">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" />
+                                            <button type="button"
+                                                @click="openEdit({{ Js::from($editPayload($product)) }})"
+                                                aria-label="Editar artículo" title="Editar artículo"
+                                                class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                                </svg>
+                                            </button>
+                                            <form method="POST" action="{{ route('products.toggle-active', $product) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit"
+                                                    aria-label="{{ $product->active ? 'Desactivar' : 'Activar' }}" title="{{ $product->active ? 'Desactivar' : 'Activar' }}"
+                                                    class="p-1.5 rounded transition-colors {{ $product->active ? 'text-red-500 hover:text-red-700 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50' }}">
+                                                    @if($product->active)
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                        </svg>
+                                                    @else
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                        </svg>
+                                                    @endif
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                @endcan
+                            </tr>
+                        @endforeach
+                    </tbody>
+
+                    <x-slot:footer>
+                        @if($products->hasPages())
+                            <div class="px-4 py-3 border-t border-miga">
+                                {{ $products->links() }}
+                            </div>
+                        @endif
+                    </x-slot:footer>
+                </x-responsive-table>
+
+                <p class="text-xs text-masa-madre">{{ $products->total() }} artículo(s) en total.</p>
+            @endif
+
+        </div>
+
+        @can('manage-costs')
+            @include('products.modals.create')
+            @include('products.modals.edit')
+            @include('products.modals.cost-history')
+            @include('products.modals.bulk-category')
+
+            <x-product-categories-modal
+                name="product-categories"
+                title="Categorías de artículos"
+                :categories="$categories"
+                :show="$showCategories"
+                store-route="product-categories.store"
+                update-route="product-categories.update"
+                destroy-route="product-categories.destroy" />
+        @endcan
+
+    </div>
+</x-app-layout>

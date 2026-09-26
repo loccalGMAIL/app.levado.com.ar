@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateFixedCostRequest;
 use App\Models\FixedCost;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\ArticlePriceRecalculator;
 use App\Services\FixedCostHistory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
@@ -17,6 +18,7 @@ class FixedCostController extends Controller
 {
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
+        private readonly ArticlePriceRecalculator $priceRecalculator,
         private readonly FixedCostHistory $history,
     ) {}
 
@@ -65,6 +67,9 @@ class FixedCostController extends Controller
             tenantId: $tenant->id,
         );
 
+        // Cambió el overhead → recomputar los precios de artículos con política.
+        $this->priceRecalculator->recomputeForTenant($tenant);
+
         return back(fallback: route('fixed-costs.index'))->with('status', 'Gasto fijo creado.');
     }
 
@@ -88,6 +93,8 @@ class FixedCostController extends Controller
             payload: ['name' => $fixedCost->name, 'monthly_amount' => (float) $fixedCost->monthly_amount],
             tenantId: $fixedCost->tenant_id,
         );
+
+        $this->priceRecalculator->recomputeForTenant(app(Tenant::class));
 
         return back(fallback: route('fixed-costs.index'))->with('status', 'Gasto fijo actualizado.');
     }
@@ -113,6 +120,8 @@ class FixedCostController extends Controller
             payload: ['name' => $fixedCost->name],
             tenantId: $fixedCost->tenant_id,
         );
+
+        $this->priceRecalculator->recomputeForTenant(app(Tenant::class));
 
         $label = $fixedCost->active ? 'activado' : 'desactivado';
 

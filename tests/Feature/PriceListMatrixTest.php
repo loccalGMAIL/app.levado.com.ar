@@ -1,16 +1,22 @@
 <?php
 
+use App\Enums\ProductType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\PriceList;
+use App\Models\Product;
 use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
-use App\Models\RecipePrice;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
+use App\Services\ProductPriceWriter;
 
+/**
+ * La matriz vive dentro de Artículos (products.matrix) y es product-céntrica:
+ * filas = artículos (elaborados y de reventa), columnas = listas de precios.
+ */
 function userForMatrix(string $role = 'owner'): array
 {
     $tenant = Tenant::factory()->create();
@@ -23,6 +29,22 @@ function userForMatrix(string $role = 'owner'): array
     ]);
 
     return [$user, $tenant];
+}
+
+/** Crea el artículo elaborado de una receta con su precio en una lista (helper local). */
+function matrixArticle(Recipe $recipe, PriceList $list, float $price): Product
+{
+    $product = Product::factory()->create([
+        'tenant_id' => $recipe->tenant_id,
+        'name' => $recipe->name,
+        'type' => ProductType::Manufactured->value,
+        'recipe_id' => $recipe->id,
+        'cost_per_unit' => null,
+        'unit' => $recipe->yield_unit->value,
+    ]);
+    app(ProductPriceWriter::class)->set($product, $list, $price);
+
+    return $product;
 }
 
 test('la matriz muestra una columna por lista activa y el costo por unidad', function () {
@@ -44,12 +66,13 @@ test('la matriz muestra una columna por lista activa y el costo por unidad', fun
         'unit' => Unit::Unidad->value,
     ]);
     propagateRecipeCosts($recipe);
+    matrixArticle($recipe, $tenant->defaultPriceList(), 1000); // crea el artículo elaborado
 
     PriceList::factory()->for($tenant)->create(['name' => 'Mayorista']);
     PriceList::factory()->for($tenant)->create(['name' => 'ListaInactiva', 'active' => false]);
 
     $this->actingAs($user)
-        ->get(route('price-lists.matrix'))
+        ->get(route('products.matrix'))
         ->assertOk()
         ->assertSee('Pan flauta')
         ->assertSee('General')
@@ -58,19 +81,31 @@ test('la matriz muestra una columna por lista activa y el costo por unidad', fun
         ->assertSee('50,00'); // costo/u
 });
 
+test('un artículo de reventa aparece en la matriz', function () {
+    [$user, $tenant] = userForMatrix();
+
+    Product::factory()->for($tenant)->create([
+        'name' => 'Gaseosa 500ml',
+        'type' => ProductType::Resale->value,
+        'recipe_id' => null,
+        'cost_per_unit' => 300,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('products.matrix'))
+        ->assertOk()
+        ->assertSee('Gaseosa 500ml');
+});
+
 test('una celda vacía muestra la sugerencia calculada con el % de la lista', function () {
     [$user, $tenant] = userForMatrix();
 
     $recipe = Recipe::factory()->for($tenant)->create();
-    RecipePrice::factory()->for($tenant)->create([
-        'price_list_id' => $tenant->defaultPriceList()->id,
-        'recipe_id' => $recipe->id,
-        'price' => 1000,
-    ]);
+    matrixArticle($recipe, $tenant->defaultPriceList(), 1000);
     PriceList::factory()->for($tenant)->create(['name' => 'Mayorista', 'adjustment_pct' => -15]);
 
     $this->actingAs($user)
-        ->get(route('price-lists.matrix'))
+        ->get(route('products.matrix'))
         ->assertOk()
         ->assertSee('850,00'); // 1000 - 15%
 });
@@ -78,38 +113,30 @@ test('una celda vacía muestra la sugerencia calculada con el % de la lista', fu
 test('sin precio base o sin % no hay sugerencia', function () {
     [$user, $tenant] = userForMatrix();
 
-    Recipe::factory()->for($tenant)->create(['name' => 'Sin precio']);
+    $recipe = Recipe::factory()->for($tenant)->create(['name' => 'Sin precio']);
+    Product::factory()->for($tenant)->create([
+        'type' => ProductType::Manufactured->value,
+        'recipe_id' => $recipe->id,
+        'cost_per_unit' => null,
+        'unit' => Unit::Unidad->value,
+    ]);
     PriceList::factory()->for($tenant)->create(['name' => 'Mayorista', 'adjustment_pct' => -15]);
-    PriceList::factory()->for($tenant)->create(['name' => 'Cafeterías', 'adjustment_pct' => null]);
 
     $response = $this->actingAs($user)
-        ->get(route('price-lists.matrix'))
+        ->get(route('products.matrix'))
         ->assertOk();
 
     expect($response->getContent())->not->toMatch('/suggested: \d/');
 });
 
-test('las recetas semi-elaboradas no aparecen en la matriz', function () {
+test('la búsqueda filtra artículos por nombre', function () {
     [$user, $tenant] = userForMatrix();
 
-    Recipe::factory()->for($tenant)->create(['name' => 'Pan de venta']);
-    Recipe::factory()->for($tenant)->semiElaborate()->create(['name' => 'Masa madre interna']);
+    matrixArticle(Recipe::factory()->for($tenant)->create(['name' => 'Medialunas']), $tenant->defaultPriceList(), 100);
+    matrixArticle(Recipe::factory()->for($tenant)->create(['name' => 'Chipá']), $tenant->defaultPriceList(), 100);
 
     $this->actingAs($user)
-        ->get(route('price-lists.matrix'))
-        ->assertOk()
-        ->assertSee('Pan de venta')
-        ->assertDontSee('Masa madre interna');
-});
-
-test('la búsqueda filtra recetas por nombre', function () {
-    [$user, $tenant] = userForMatrix();
-
-    Recipe::factory()->for($tenant)->create(['name' => 'Medialunas']);
-    Recipe::factory()->for($tenant)->create(['name' => 'Chipá']);
-
-    $this->actingAs($user)
-        ->get(route('price-lists.matrix', ['search' => 'Media']))
+        ->get(route('products.matrix', ['search' => 'Media']))
         ->assertOk()
         ->assertSee('Medialunas')
         ->assertDontSee('Chipá');
@@ -119,28 +146,24 @@ test('viewer accede a la matriz en solo lectura', function () {
     [$user, $tenant] = userForMatrix(TenantUserRole::Viewer->value);
 
     $recipe = Recipe::factory()->for($tenant)->create(['name' => 'Pan lactal']);
-    RecipePrice::factory()->for($tenant)->create([
-        'price_list_id' => $tenant->defaultPriceList()->id,
-        'recipe_id' => $recipe->id,
-        'price' => 700,
-    ]);
+    matrixArticle($recipe, $tenant->defaultPriceList(), 700);
 
     $this->actingAs($user)
-        ->get(route('price-lists.matrix'))
+        ->get(route('products.matrix'))
         ->assertOk()
         ->assertSee('Pan lactal')
         ->assertSee('700,00')
-        ->assertDontSee('savePrice');
+        ->assertDontSee('priceCell('); // sin editor para el viewer
 });
 
-test('aislamiento: recetas y listas de otro tenant no aparecen', function () {
+test('aislamiento: artículos y listas de otro tenant no aparecen', function () {
     [$user] = userForMatrix();
     $other = Tenant::factory()->create();
-    Recipe::factory()->for($other)->create(['name' => 'RecetaAjena']);
+    matrixArticle(Recipe::factory()->for($other)->create(['name' => 'RecetaAjena']), $other->defaultPriceList(), 500);
     PriceList::factory()->for($other)->create(['name' => 'ListaAjena']);
 
     $this->actingAs($user)
-        ->get(route('price-lists.matrix'))
+        ->get(route('products.matrix'))
         ->assertOk()
         ->assertDontSee('RecetaAjena')
         ->assertDontSee('ListaAjena');

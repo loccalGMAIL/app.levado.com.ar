@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\RecipeFactory;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Recipe extends Model
 {
@@ -78,6 +80,12 @@ class Recipe extends Model
     public function prices(): HasMany
     {
         return $this->hasMany(RecipePrice::class);
+    }
+
+    /** El artículo elaborado que produce esta receta (el precio de venta vive ahí). */
+    public function manufacturedProduct(): HasOne
+    {
+        return $this->hasOne(Product::class)->where('type', ProductType::Manufactured->value);
     }
 
     public function priceLogs(): HasMany

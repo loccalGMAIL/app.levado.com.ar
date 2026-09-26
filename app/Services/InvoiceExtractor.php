@@ -6,6 +6,7 @@ use App\Enums\CatalogItemType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
+use App\Models\Product;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -24,12 +25,13 @@ class InvoiceExtractor
     /**
      * @param  Collection<int, Ingredient>  $ingredients
      * @param  Collection<int, Packaging>  $packagings
+     * @param  Collection<int, Product>  $products  Sólo reventa; vacía si el negocio no tiene.
      * @return array{
      *     header: array{supplier_name: ?string, cuit: ?string, invoice_number: ?string, invoice_date: ?string, total: ?float},
      *     lines: array<int, array{raw_name: ?string, quantity: ?float, unit: ?string, unit_price: ?float, matched_type: ?string, matched_id: ?int}>
      * }
      */
-    public function extract(string $base64, string $mimeType, Collection $ingredients, Collection $packagings): array
+    public function extract(string $base64, string $mimeType, Collection $ingredients, Collection $packagings, Collection $products): array
     {
         $apiKey = config('services.anthropic.key');
 
@@ -52,7 +54,7 @@ class InvoiceExtractor
                 'role' => 'user',
                 'content' => [
                     $sourceBlock,
-                    ['type' => 'text', 'text' => $this->buildPrompt($ingredients, $packagings)],
+                    ['type' => 'text', 'text' => $this->buildPrompt($ingredients, $packagings, $products)],
                 ],
             ]],
         ]);
@@ -67,14 +69,14 @@ class InvoiceExtractor
             throw new RuntimeException('No se pudo leer la respuesta de la IA. Probá con una foto más nítida.');
         }
 
-        return $this->normalize($this->decodeJson($text), $ingredients, $packagings);
+        return $this->normalize($this->decodeJson($text), $ingredients, $packagings, $products);
     }
 
     /**
      * @param  Collection<int, Ingredient>  $ingredients
      * @param  Collection<int, Packaging>  $packagings
      */
-    private function buildPrompt(Collection $ingredients, Collection $packagings): string
+    private function buildPrompt(Collection $ingredients, Collection $packagings, Collection $products): string
     {
         $ingredientCatalog = $ingredients
             ->map(fn (Ingredient $i) => "- id={$i->id} | {$i->name}".($i->brand ? " | marca: {$i->brand}" : ''))
@@ -84,7 +86,31 @@ class InvoiceExtractor
             ->map(fn (Packaging $p) => "- id={$p->id} | {$p->name}".($p->brand ? " | marca: {$p->brand}" : ''))
             ->implode("\n");
 
+        $resaleCatalog = $products
+            ->map(fn (Product $p) => "- id={$p->id} | {$p->name}")
+            ->implode("\n");
+
         $units = collect(Unit::cases())->map(fn (Unit $u) => $u->value)->implode(', ');
+
+        // El catálogo de reventa y su tipo en el esquema sólo se emiten si el
+        // negocio tiene artículos de reventa: si no los tiene, el modelo ni
+        // siquiera ve la opción y no puede sugerirla. Es la mitigación más fuerte
+        // contra la sobre-sugerencia, porque no depende de que obedezca el prompt.
+        $resaleBlock = $products->isEmpty() ? '' : <<<RESALE
+
+            CATÁLOGO DE ARTÍCULOS DE REVENTA del cliente (se compran hechos y se revenden tal cual):
+            {$resaleCatalog}
+
+            Cómo distinguir un INSUMO de un artículo de REVENTA: si el renglón es materia prima
+            que entra en una receta (harina, azúcar, levadura, manteca), es un INSUMO aunque el
+            nombre se parezca a algo que también se vende. Sólo es REVENTA si es un producto
+            terminado que el negocio revende sin transformarlo (gaseosas, golosinas, cápsulas de
+            café). Ante la duda entre insumo y reventa, elegí INSUMO.
+            RESALE;
+
+        $matchedTypes = $products->isEmpty()
+            ? '"ingredient"|"packaging"|null'
+            : '"ingredient"|"packaging"|"product"|null';
 
         return <<<PROMPT
             Sos un asistente que DIGITALIZA (transcribe) facturas de compra de una panadería argentina.
@@ -97,6 +123,7 @@ class InvoiceExtractor
 
             CATÁLOGO DE DESCARTABLES (envases) del cliente:
             {$packagingCatalog}
+            {$resaleBlock}
 
             Por cada renglón de la factura devolvé:
             - raw_name: la descripción COMPLETA tal como figura (incluí el tamaño del envase si aparece, ej. "HARINA 3/0 X 25 Kg").
@@ -147,7 +174,7 @@ class InvoiceExtractor
                   "quantity": number|null,
                   "unit": string|null,
                   "unit_price": number|null,
-                  "matched_type": "ingredient"|"packaging"|null,
+                  "matched_type": {$matchedTypes},
                   "matched_id": number|null
                 }
               ]
@@ -185,20 +212,24 @@ class InvoiceExtractor
      * @param  Collection<int, Ingredient>  $ingredients
      * @param  Collection<int, Packaging>  $packagings
      */
-    private function normalize(array $data, Collection $ingredients, Collection $packagings): array
+    private function normalize(array $data, Collection $ingredients, Collection $packagings, Collection $products): array
     {
         $ingredientIds = $ingredients->pluck('id')->all();
         $packagingIds = $packagings->pluck('id')->all();
+        $productIds = $products->pluck('id')->all();
 
         $lines = collect($data['lines'] ?? [])
             ->filter(fn ($line) => is_array($line))
-            ->map(function (array $line) use ($ingredientIds, $packagingIds) {
+            ->map(function (array $line) use ($ingredientIds, $packagingIds, $productIds) {
                 $type = CatalogItemType::tryFrom((string) ($line['matched_type'] ?? ''))?->value;
                 $id = is_numeric($line['matched_id'] ?? null) ? (int) $line['matched_id'] : null;
 
                 // Drop the suggestion if it doesn't belong to the tenant's catalog.
+                // Fail-closed en código, no en el prompt: un id de reventa que no
+                // está en $productIds (catálogo vacío incluido) se descarta acá.
                 $valid = ($type === CatalogItemType::Ingredient->value && in_array($id, $ingredientIds, true))
-                    || ($type === CatalogItemType::Packaging->value && in_array($id, $packagingIds, true));
+                    || ($type === CatalogItemType::Packaging->value && in_array($id, $packagingIds, true))
+                    || ($type === CatalogItemType::Product->value && in_array($id, $productIds, true));
 
                 if (! $valid) {
                     $type = null;

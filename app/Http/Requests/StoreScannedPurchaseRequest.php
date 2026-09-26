@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CatalogItemType;
 use App\Enums\Unit;
 use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
@@ -32,7 +33,10 @@ class StoreScannedPurchaseRequest extends FormRequest
             'lines' => ['array'],
             'lines.*.include' => ['nullable', 'boolean'],
             'lines.*.raw_name' => ['nullable', 'string', 'max:255'],
-            'lines.*.matched_type' => ['nullable', 'in:ingredient,packaging'],
+            // Fuente única: la memoria de vínculos puede devolver 'product' y el
+            // hidden del review lo reenvía tal cual. Con la lista escrita a mano
+            // ese renglón daba un 422 que el usuario no podía resolver.
+            'lines.*.matched_type' => ['nullable', Rule::enum(CatalogItemType::class)],
             'lines.*.matched_id' => ['nullable', 'integer'],
             'lines.*.quantity_purchased' => ['nullable', 'numeric', 'min:0.0001'],
             'lines.*.purchase_unit' => ['nullable', Rule::enum(Unit::class)],

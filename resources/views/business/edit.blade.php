@@ -207,6 +207,18 @@
                         </label>
                     </fieldset>
                     <x-input-error :messages="$errors->get('purchase_price_includes_iva')" class="mt-2" />
+
+                    <div class="pt-4 border-t border-miga">
+                        <x-input-label for="resale_costing_method" value="Costeo de productos de reventa" />
+                        <select id="resale_costing_method" name="resale_costing_method"
+                            class="mt-1 block w-full sm:w-72 border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
+                            @foreach(\App\Enums\CostingMethod::cases() as $method)
+                                <option value="{{ $method->value }}" @selected(old('resale_costing_method', $resaleCostingMethod->value) === $method->value)>{{ $method->label() }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-masa-madre">Cómo se calcula el costo de un producto de reventa al comprarlo. Se puede sobreescribir por artículo.</p>
+                        <x-input-error :messages="$errors->get('resale_costing_method')" class="mt-2" />
+                    </div>
                 </div>
 
                 {{-- Capacidad productiva --}}

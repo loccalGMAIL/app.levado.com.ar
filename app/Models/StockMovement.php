@@ -7,7 +7,6 @@ use App\Enums\StockMovementType;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use LogicException;
 
 /**
@@ -64,6 +63,21 @@ class StockMovement extends Model
         return $this->belongsTo(Location::class);
     }
 
+    public function ingredient(): BelongsTo
+    {
+        return $this->belongsTo(Ingredient::class, 'stockable_id');
+    }
+
+    public function packaging(): BelongsTo
+    {
+        return $this->belongsTo(Packaging::class, 'stockable_id');
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'stockable_id');
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -74,9 +88,14 @@ class StockMovement extends Model
         return $this->belongsTo(self::class, 'reverses_movement_id');
     }
 
-    public function stockable(): MorphTo
+    public function stockable(): Ingredient|Packaging|Product|null
     {
-        return $this->morphTo();
+        return match ($this->stockable_type) {
+            CatalogItemType::Ingredient->value => $this->ingredient,
+            CatalogItemType::Packaging->value => $this->packaging,
+            CatalogItemType::Product->value => $this->product,
+            default => null,
+        };
     }
 
     /**
@@ -116,6 +135,11 @@ class StockMovement extends Model
     public function isPackaging(): bool
     {
         return $this->stockable_type === CatalogItemType::Packaging->value;
+    }
+
+    public function isProduct(): bool
+    {
+        return $this->stockable_type === CatalogItemType::Product->value;
     }
 
     public function isReversal(): bool

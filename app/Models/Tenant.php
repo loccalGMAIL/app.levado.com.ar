@@ -33,6 +33,7 @@ class Tenant extends Model
             'productive_hours_month' => 'integer',
             'condicion_iva' => CondicionIva::class,
             'onboarding_completed_at' => 'datetime',
+            'recurring_materialized_at' => 'datetime',
         ];
     }
 
@@ -44,6 +45,26 @@ class Tenant extends Model
     public function locations(): HasMany
     {
         return $this->hasMany(Location::class);
+    }
+
+    public function deliveryPeople(): HasMany
+    {
+        return $this->hasMany(DeliveryPerson::class);
+    }
+
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+
+    public function productionOrders(): HasMany
+    {
+        return $this->hasMany(ProductionOrder::class);
+    }
+
+    public function recurringProductionRequests(): HasMany
+    {
+        return $this->hasMany(RecurringProductionRequest::class);
     }
 
     /** @var Location|null Cache por instancia: defaultLocation() se llama una vez por ítem en los bucles de compra */
@@ -103,6 +124,21 @@ class Tenant extends Model
     public function recipes(): HasMany
     {
         return $this->hasMany(Recipe::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    public function productCategories(): HasMany
+    {
+        return $this->hasMany(ProductCategory::class);
+    }
+
+    public function productions(): HasMany
+    {
+        return $this->hasMany(Production::class);
     }
 
     public function priceLists(): HasMany

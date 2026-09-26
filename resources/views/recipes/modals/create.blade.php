@@ -47,16 +47,6 @@
             </div>
         </div>
 
-        <div>
-            <x-input-label for="create_recipe_price" value="Precio de venta por unidad (opcional)" />
-            <x-text-input id="create_recipe_price" name="selling_price" type="number"
-                step="0.01" min="0"
-                class="mt-1 block w-full"
-                :value="old('selling_price')"
-                placeholder="Ej: 350.00" />
-            <x-input-error :messages="$errors->get('selling_price')" class="mt-2" />
-        </div>
-
         <div class="flex items-start gap-3 pt-1">
             <input type="hidden" name="is_semi_elaborate" value="0">
             <input id="create_recipe_semi" name="is_semi_elaborate" type="checkbox" value="1"

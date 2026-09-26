@@ -5,6 +5,459 @@ Versiones siguiendo [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [Unreleased] — Artículos y Producción (v0.13.0)
+
+Rama `v0.13.0/articulos-produccion`. Módulo **product-céntrico**: un **Producto** es el SKU vendible/stockeable y la **Receta** es su fórmula (BOM). En curso.
+
+### Catálogo de Artículos, pricing y stock (etapas 1–2B)
+
+#### Agregado
+
+- **Catálogo de Productos**: artículos **elaborados** (ligados a una receta) y de **reventa** (comprados para revender), con SKU, código de barras (único por negocio) y estado activo. CRUD con modales; el tipo togglea receta vs. costo.
+- **Producto como ítem stockeable**: pestaña **Productos** en `/stock` (stock, mínimo, kardex, ajuste/recuento).
+- **Compra de productos de reventa**: el match de compras permite asociar renglones a productos de reventa, actualizando su stock y su costo.
+
+#### Técnico
+
+- Tabla `products`, enum `ProductType` (manufactured/resale), `CatalogItemType` +Product. `StockService` y `PurchaseLineRecorder` ampliados a `Ingredient|Packaging|Product`. (Las tablas `product_prices`/`product_price_logs` quedaron sin uso al retirar la matriz de reventa — ver más abajo.)
+
+### Producción — fabricación de elaborados
+
+#### Agregado
+
+- **Nueva sección Producción** (grupo Producción del menú): registrá la fabricación de un elaborado y mirá el historial de producciones con su estado y costo.
+- **Producir un elaborado** descuenta del stock los **insumos** de su receta y suma **unidades del producto** terminado. La cantidad se ingresa en unidades del producto; el sistema escala el consumo contra el rendimiento de la receta.
+- **Vista previa en vivo**: al elegir el producto y la cantidad, la pantalla muestra los insumos que se van a consumir, cuáles no alcanzan (aviso de faltante) y el costo total, antes de confirmar.
+- Las **sub-recetas** se explotan al vuelo (phantom): se descuentan sus ingredientes y descartables reales, recursivamente, y no la sub-receta como ítem.
+- Una producción se puede **anular**: revierte exactamente los movimientos de stock que generó (insumos e ingreso del elaborado).
+- **Comando `products:from-recipes`**: crea de una vez un producto elaborado por cada receta vendible con precio que todavía no lo tenga, para poder producirla. Muestra una tabla de lo que va a crear y pide confirmación; admite `--all` (incluir recetas sin precio), `--tenant=`, `--dry-run` y `--force`.
+
+#### Técnico
+
+- **`RecipeExploder`**: aplana el BOM a insumos base escalados por un factor, explotando sub-recetas recursivamente (`childFactor = factor × convert(quantity_used, unit, child.yield_unit) / child.yield_quantity`) y agregando por ítem; ignora la mano de obra.
+- **`StockService` generalizó la referencia** de `registerMovement` (de `PurchaseLine` a `referenceType`/`referenceId` escalares) y sumó `reverseMovementsFor(type, id)`, base de la anulación. La valuación no cambió: **el elaborado no toma costo de inventario por ahora** (solo las compras pisan el último costo).
+- Tabla `productions` (cabezal/snapshot) + enum `ProductionStatus`; modelo `Production` (movimientos atados por `reference_type='production'`). **`ProductionService`**: `preview()` (marca faltantes, sin escribir), `produce()` (emite los movimientos **ordenados por `(stockable_type, stockable_id)`** para evitar deadlocks, en una transacción) y `cancel()`.
+- `ProductionController` (index/create/preview JSON/store/show/cancel) + `ProductionPolicy` + `StoreProductionRequest`; producir requiere rol owner/admin. Preview con Alpine.js (fetch al endpoint, sin JS de build nuevo).
+- `CreateProductsFromRecipes` (`products:from-recipes`): filtra recetas no-semi activas con precio (`recipe_prices`) y sin producto elaborado asociado; el producto hereda `unit = yield_unit`, `cost_per_unit = null`. No migra precios (siguen en la receta).
+- **`ProductionTest` (12) + `ProductionControllerTest` (8) + `CreateProductsFromRecipesTest` (8)**: explosión phantom, conversión de unidades, anulación e idempotencia, guards, stock negativo permitido, capa HTTP, aislamiento entre tenants y la conversión receta→producto. **556 tests, todos verdes.**
+
+#### Al deployar
+
+1. `php artisan migrate` (tabla `productions`)
+2. `npm run build` (assets del menú y la pantalla de producción)
+3. `php artisan products:from-recipes` (crea los productos elaborados de las recetas vendibles existentes; pide confirmación)
+
+### Categorías de artículos + visibilidad en Producción
+
+#### Agregado
+
+- **Categorías de artículos** por negocio (Panadería, Cafetería, Pastelería…), gestionables desde un botón "Categorías" en Artículos. Cada categoría tiene un flag **"Se produce"**.
+- **El select de Producción muestra solo los elaborados de una categoría marcada "se produce"**: los de una categoría no-producible (o sin categoría) quedan fuera. Sirve para costear áreas que todavía no se fabrican desde el sistema (ej. cafetería) sin que aparezcan al producir.
+- Los modales de alta/edición de artículo tienen un `<select>` de categoría (con "+ nueva categoría" al vuelo); el índice suma columna y filtro por categoría.
+- `products:from-recipes` acepta `--category=NOMBRE` para clasificar los productos creados en la misma corrida.
+- **Se quitó la matriz/solapa de «Reventa»** de las listas de precios (vista, rutas, controller y botón «Precios de reventa»): los artículos se organizan por categoría y los de reventa mantienen su costo (de Compras) sin una pantalla de precio de venta dedicada. Las tablas `product_prices`/`product_price_logs` quedan latentes (sin borrar datos) por si se retoma.
+
+### Modelo de dominio: costo del Artículo (Fase 1)
+
+#### Agregado
+
+- **Costo vigente unificado del artículo** (`Product::currentCost()`): un solo lugar responde el costo por unidad según origen — elaborado desde su receta, reventa desde su último costo de compra.
+- **Los productos elaborados ahora se valúan en Stock** (antes figuraban en $0): la valuación del tab Productos de `/stock` y su kardex usan el costo derivado de la receta.
+- **El catálogo de Artículos muestra costo, precio y margen** por artículo (con selector de lista de precios), consistente con el Dashboard y Recetas: costo total con overhead, precio y margen con semáforo, editable inline.
+- **El precio de venta pasó a vivir en el Artículo** (`product_prices`), como fuente única. Se edita inline desde el catálogo, el Dashboard, `/recipes`, el detalle de receta y la matriz de precios — todas escribiendo el mismo lugar (vía el artículo elaborado vinculado). La **Receta quedó como fórmula/BOM**: se le quitó el campo "precio de venta". Las recetas sin artículo elaborado no tienen precio editable (hay que crear el artículo primero). Migración: se copiaron los precios de receta existentes al artículo. Se retiró el endpoint/servicio de precio de receta; `recipe_prices` queda latente (dato preservado).
+
+#### Técnico
+
+- Ratificación del modelo Insumos/Artículos (ADR en memoria): el **Artículo es el dueño único de costo y precio**; la Receta queda como BOM; el precio del elaborado migrará de `recipe_prices` al Artículo en una fase posterior. `Product::currentCost()`/`currentCostSource()` extraen la regla que estaba inline; `StockController` eager-loada `recipe` para valuar sin N+1. Valuación a nivel de lectura (no toca el ledger). **`ProductCostTest` (5). 566 tests, todos verdes.**
+
+#### Técnico
+
+- Tabla `product_categories` (tenant_id, name, `producible` bool, unique tenant+name) + `products.product_category_id` (nullable, `nullOnDelete`). `ProductCategory` modelo + `Tenant::productCategories()` + `Product::category()`.
+- `ProductCategoryController` (store/update/destroy) espejo del de categorías de gastos: guard de borrado si tiene artículos, `wantsJson` para el alta rápida, unicidad `Rule::unique` scoped. Componente `product-categories-modal` (con toggle "se produce"; sin tocar el de gastos). Filtro en `ProductionController::create` con `whereHas('category', producible=true)`.
+- **`ProductCategoryTest` (10) + filtro en `ProductionControllerTest` (3) + `--category` en `CreateProductsFromRecipesTest` (1)**. **570 tests, todos verdes.**
+
+#### Al deployar
+
+- `php artisan migrate` (tablas `product_categories` + columna en `products`). Luego, para producir: clasificar los elaborados con una categoría marcada "se produce" (o correr `products:from-recipes --category=…`).
+
+### Políticas de precio y costeo de reventa (P3)
+
+#### Agregado
+
+- **Política de precio por artículo × lista**: cada precio de venta puede ser **Manual**, **Margen %** (precio = costo ÷ (1 − margen)) o **Recargo %** (precio = costo × (1 + recargo)), calculado sobre el costo total con overhead. Se edita desde un popover en las **5 superficies** de precio (catálogo, Dashboard, `/recipes`, detalle de receta y matriz), con un badge que muestra la política vigente. Escribir un precio a mano vuelve la celda a **Manual**. Los precios con política se recalculan solos cuando cambia el costo del artículo (compra de reventa, costo de receta u overhead).
+- **Método de costeo de reventa configurable** (último costo / promedio ponderado): default por negocio (Mi negocio) con override por artículo. El promedio se recalcula al momento de comprar.
+
+#### Técnico
+
+- Enum `PricingPolicy` (manual|margin|markup) + columnas `product_prices.policy_type`/`policy_value` (`price` pasó a NULLABLE = precio efectivo cacheado). `ProductPriceWriter::setPolicy` computa y cachea; `ArticlePriceRecalculator` mantiene el cache al día (triggers: compra de reventa, propagación de costo de receta, cambio de overhead); comando `products:refresh-prices`. Enum `CostingMethod` (last|average) + `products.costing_method` + setting `resale.costing_method`.
+- **UI compartida**: factory `Alpine.data('priceCell')` (`resources/js/pricing/price-cell.js`) + componente `<x-price-cell-editor>` (popover **teletransportado a `body`** para no quedar recortado por el `overflow` de las tablas). Los 5 controllers/viewmodels pasan la política junto al precio; el endpoint `PATCH products.prices.update` acepta `policy_type`/`policy_value` y devuelve el precio efectivo + margen.
+- **`ProductCostingTest` (9) + `ProductPricingPolicyTest` (7) + `BackfillProductPricesTest` (6)**.
+
+#### Al deployar (⚠️ orden importante)
+
+El precio de venta vive en `product_prices`, **fuente única de toda la UI de precios**. En un deploy nuevo la tabla `products` se crea vacía, así que la migración de backfill copia **cero** precios: hay que copiarlos **después** de crear los productos, o las listas se ven sin valores (los precios siguen intactos en `recipe_prices`, solo no llegaron a `product_prices`). Secuencia:
+
+1. `php artisan migrate`
+2. `npm run build`
+3. `php artisan products:from-recipes` (crea los artículos elaborados de las recetas vendibles)
+4. **`php artisan products:backfill-prices`** (copia los precios de receta a los artículos — idempotente; **sin este paso las listas de precios aparecen vacías**)
+5. `php artisan products:assign-codes` (asigna un código EAN-13 interno a los artículos sin código de barras — idempotente)
+6. `php artisan products:refresh-prices` (recalcula las celdas con política; no-op si todas son manual)
+7. Clasificar los elaborados con una categoría "se produce" (o `products:from-recipes --category=…`)
+
+### Artículos como hub de precios e identidad (Fase A + B)
+
+#### Agregado
+
+- **La matriz de precios ahora vive dentro de Artículos** (pestañas **Catálogo | Matriz de precios**), es product-céntrica y muestra **todos** los artículos —elaborados y de reventa— con su costo y el precio de cada lista, editable en el lugar. Se sacó "Lista de precios" del menú de Costos; la **gestión de las listas** (crear, % de ajuste, default) pasó a **Administración**.
+- **Código único para todos los artículos**: los que traen código de barras real lo usan; a los demás (elaborados y reventa sin código) se les asigna automáticamente un **EAN-13 interno** válido y escaneable (prefijo 2, reservado para códigos de tienda). Queda como identificador único por negocio, base del futuro lector / punto de venta. Se asigna solo al crear un artículo desde el catálogo (si dejás el campo vacío) y al correr `products:from-recipes`.
+
+#### Técnico
+
+- `ProductController::matrix` product-céntrico (reusa el editor `priceCell`); vistas `products/matrix` + `products/tabs`. Se eliminó la matriz receta-céntrica de `PriceListController`. `Ean13Generator` (genera y valida EAN-13 con dígito verificador) + `ProductCodeAssigner` (código único por negocio, reintenta ante colisión). Comando `products:assign-codes` (backfill idempotente, `--tenant`, `--dry-run`).
+- **`Ean13GeneratorTest` (3) + `AssignProductCodesTest` (6) + matriz product-céntrica reescrita + store con auto-código**. **665 tests, todos verdes.**
+
+### Origen del costo del artículo y la reventa de primera clase (P4)
+
+#### Agregado
+
+- **El origen del costo, visible**: una etiqueta junto al Costo/u del catálogo y en la valuación de la ficha de stock dice de dónde sale — **Receta**, **Compra** o **Manual**.
+- **Historial de costo de los artículos de reventa**: cada vez que cambia el costo queda registrado con su procedencia y, si vino de una factura, el enlace a esa compra. Se abre desde la etiqueta del catálogo.
+- **Alerta de salto de costo también para reventa**: comprar un artículo mucho más caro levanta la misma alerta que ya existía para insumos y descartables. Con promedio ponderado la alerta se evalúa contra el costo final, así que una compra cara diluida contra el stock existente no alerta.
+- **La IA sugiere artículos de reventa** al escanear una factura, cuando el negocio los tiene. Un negocio que sólo revende (sin insumos ni descartables) ya puede escanear.
+
+#### Corregido
+
+- **La memoria de vínculos ya recuerda los artículos de reventa**: validaba sus ids contra la tabla de descartables, así que el vínculo se perdía y había que re-asociar el mismo artículo en cada factura. Con divisor confirmado a mano, ahora también se puede aplicar en masa.
+- **Aplicar sugerencias en masa** ya no propaga las recetas del descartable que compartía id con el artículo de reventa.
+- **La vista de vinculación** ya no muestra los datos de envase de un descartable ajeno bajo el nombre del artículo aplicado.
+- **Confirmar una factura escaneada con un renglón de reventa** ya no da un error de validación irresoluble.
+- **Editar el costo de un artículo de reventa a mano** ahora recalcula los precios con política de margen/recargo, como ya hacía cualquier otro cambio de costo.
+- **El recuento físico y el ajuste manual de un elaborado** ya no se asientan en el kardex valuados a $0.
+
+#### Técnico
+
+- Tabla `product_cost_logs` (tenant_id, product_id, purchase_line_id nullable, cost_per_unit 14,4, source, recorded_at) + modelo `ProductCostLog` + enum `CostLogSource`. Rompe el precedente de `*_price_logs` en tenant_id y el vínculo a la factura porque **esta tabla sí se lee desde la UI**; mantiene filas inmutables sin `timestamps()`. Escritura idempotente por `purchase_line_id` (`updateOrCreate`), espejando el contrato de `StockService::syncPurchaseLineEntry()`.
+- `Product::costLogs()` y `latestCostLog()` (`latestOfMany`, eager-loadeado por el catálogo y `StockController::show`). Ojo: `priceLogs()` ya existía y es el precio de **venta**.
+- `ProductCostHistoryController` + ruta `products.cost-history` (JSON a demanda, precedente `ProductionController::preview`); componente `x-cost-source-badge`. La **regla** sigue en `currentCostSource()` y la **procedencia** sale del último log: son dos preguntas distintas.
+- `ProductLinkMemory::ownedIds()` y `PurchaseScanController::validSuggestion()` pasan a `match` de tres ramas (la de producto filtra reventa); `StoreScannedPurchaseRequest` usa `Rule::enum(CatalogItemType::class)` como fuente única. `InvoiceExtractor::extract()` recibe el catálogo de reventa y emite el bloque y el tipo `"product"` **sólo si el negocio tiene artículos de reventa** (fail-closed en `normalize()`, no en el prompt). Se borró `PurchaseLine::product()` (belongsTo sin guard de tipo y sin llamadores).
+- `StockService::unitCostOf()`: los movimientos manuales sobre un `Product` pasan por `currentCost()`. No es valuación de producción — `StockService:76` no se toca.
+- **`ProductCostLogTest` (9) + `ProductCostSourceTest` (8) + regresiones en `ProductLinkMemoryTest` (6), `ProductPurchaseTest` (2), `PurchaseScanTest` (4), `InvoiceExtractorTest` (5), `NotificationAlertsTest` (3), `ProductPricingPolicyTest` (3) y `StockServiceTest` (4)**. **708 tests, todos verdes.**
+
+#### Al deployar
+
+- `php artisan migrate` (tabla `product_cost_logs`) y `npm run build`. El historial arranca vacío: se puebla desde la primera compra o edición de costo posterior.
+
+### Órdenes de producción, pedidos y destino (P5)
+
+El siguiente paso natural tras tener Producción: el obrador no fabrica "un elaborado a la vez", arma **órdenes** —
+la del día (los pedidos normales que salen esa mañana) o **espontáneas** (lo que hay que hacer en el momento)— y
+cada orden agrupa **pedidos**, uno por destino.
+
+#### Agregado
+
+- **Órdenes de producción**: nueva sección (grupo Producción del menú) con órdenes **diarias** o **espontáneas**, un
+  ciclo de estados **Borrador → Confirmada → (En producción) → Terminada**, y **Anular** en cualquier momento
+  (revierte el stock si ya se había producido).
+- **Pedidos con destino**: dentro de una orden se arman uno o más pedidos, cada uno con un destino — una
+  **sucursal** o un **repartidor**— y sus artículos con cantidad. El destino es informativo por ahora (organiza la
+  planilla), no mueve stock entre sucursales.
+- **Resumen agregado y producir de una**: la pantalla suma la cantidad pedida de cada artículo a través de todos
+  los pedidos (si dos destinos piden el mismo pan, se suma) y muestra el consumo combinado de insumos con
+  faltantes, igual que la pantalla de producir. **Producir la orden** genera una `Production` por artículo, todas
+  atadas a la orden, en una sola operación.
+- **Repartidores**: nueva entidad simple en Administración (nombre, teléfono, notas, activo) — CRUD en modales.
+- **Repetir una orden** (copia sus pedidos a una fecha nueva) y **plantillas preestablecidas** ("Guardar como
+  plantilla" desde una orden, "Usar" desde una pantalla de Plantillas para instanciarla como orden del día).
+- **Planilla de reparto**: vista imprimible de una orden, agrupada por destino.
+
+#### Técnico
+
+- Tablas `production_orders`, `production_order_requests` (el pedido; **tenant_id propio** — se lee desde la UI
+  por fuera de su orden, precedente `product_cost_logs`) y `production_order_lines` (artículo + cantidad, sin
+  tenant_id, hereda por el pedido). Columna `productions.production_order_id` nullable — las producciones ad-hoc
+  de "producir ahora" (sin cambios) siguen con NULL.
+- Enums `ProductionOrderType` (daily/spontaneous), `ProductionOrderStatus` (con `canTransitionTo()` como dueño
+  único de las transiciones válidas: `Done`/`Cancelled` tienen su propia puerta — sólo se llega vía producir/anular,
+  nunca por el cambio de estado genérico) y `DeliveryDestinationType` (location/delivery_person, polimórfico,
+  pensado para sumar `Customer` el día que el repartidor tenga clientes propios). Fusionado en el mismo
+  `Relation::enforceMorphMap()` que `CatalogItemType` (llamarlo dos veces pisaría el primero).
+- **Plantillas en la misma tabla** (`is_template`, sin tablas espejo): `ProductionOrder` lleva un **global scope**
+  (`ExcludeTemplatesScope`) que las excluye por defecto de cualquier listado, con `withTemplates()`/`onlyTemplates()`
+  para optar explícito — la misma trampa que paga hoy `is_semi_elaborate` sin scope, evitada acá a propósito.
+- **`ProductionOrderService`**: `aggregate()` (suma por artículo), `preview()` (combina el consumo de varios
+  artículos — insumo repetido entre recetas se suma), `produce()` (una `Production` por artículo, ordenadas por
+  `product_id` para el mismo orden de locks entre órdenes concurrentes que ya usa `ProductionService::produce()`) y
+  `cancel()` (revierte cada producción vía `ProductionService::cancel()`, ya idempotente). Reusa el motor existente
+  sin duplicarlo: `ProductionService` expone `baseConsumption()` y `summarize()` (refactor de su propio `preview()`)
+  para que el preview combinado arme sus líneas con el mismo código.
+- `ProductionOrderDuplicator`: una sola operación de copia profunda cubre "repetir" e "instanciar una plantilla".
+- `Product::scopeProducible()`: el filtro compartido (activo + elaborado + con receta + categoría "se produce") que
+  antes vivía sólo inline en `ProductionController::create` — ahora también lo usan las líneas de una orden.
+- **`DeliveryPersonCrudTest` (8) + `ProductionOrderModelTest` (7) + `ProductionOrderTest` (10, servicio) +
+  `ProductionOrderControllerTest` (15, HTTP) + `ProductionOrderDuplicatorTest` (3) + `DeliverySheetTest` (3)**.
+  `ProductionTest`/`ProductionControllerTest` (la pantalla "producir ahora") siguen verdes **sin cambios de
+  comportamiento** — el refactor de reuso no le movió el contrato. **755 tests, todos verdes.**
+
+#### Al deployar
+
+- `php artisan migrate` (4 tablas/columnas nuevas) y `npm run build` (vistas y componentes nuevos).
+
+### Costo de producción con mano de obra, historial del elaborado y alerta al fabricar
+
+El costo del artículo vigente **sigue saliendo de la receta** — esto no lo toca. Cierra en cambio tres huecos
+reales de Producción: el costo que mostraba esa pantalla no incluía mano de obra (más bajo que el del catálogo,
+para el mismo artículo); un elaborado no tenía historial de costo (la reventa sí); y no había alerta si el costo de
+fabricar algo pegaba un salto.
+
+#### Agregado
+
+- **El costo de producción ahora incluye mano de obra** (la de la receta y la de sus sub-recetas), no sólo
+  insumos. La pantalla de una producción y el preview (pantalla "producir ahora" y orden de producción) muestran
+  Insumos / Mano de obra / Costo total por separado.
+- **Historial de fabricaciones del elaborado**: el mismo botón de historial que ya tenía la reventa (badge junto al
+  Costo/u del catálogo) ahora también funciona para elaborados — dice **Receta** y abre la lista de producciones
+  con fecha, cantidad, costo y link a cada una; las anuladas quedan marcadas.
+- **Alerta de salto de costo al fabricar**: si producir un elaborado sale más caro que la vez anterior por encima
+  del umbral configurado, aparece en el centro de alertas con link a la producción. Primera producción de un
+  artículo: sin baseline, no alerta.
+
+#### Técnico
+
+- `RecipeExploder::explodeWithLabor()`: mismo recorrido del BOM que `explode()` (sub-recetas phantom, escalado
+  recursivo), sumando además `labor_cost`/`labor_hours` por nivel. `explode()` queda como wrapper sin cambios de
+  contrato para el resto de los consumidores.
+- `ProductionService`: `baseConsumption()`/`summarize()`/`preview()`/`produce()` propagan el desglose
+  `material_cost`/`labor_cost`/`total_cost`. El movimiento de stock de entrada del elaborado pasa a valuarse al
+  costo **completo** (antes sólo insumos) — es un snapshot del evento en el ledger, no toca `stock_levels.unit_cost`
+  (el guard de `StockService` que sólo lo pisan las compras sigue intacto) ni el costo vigente del artículo.
+- Columnas `productions.material_cost`/`labor_cost` (`decimal(14,4)`), con backfill honesto: las producciones
+  anteriores a este cambio eran efectivamente insumos-only. Índice `[product_id, produced_at]` para el historial y
+  el baseline de la alerta.
+- **Sin tabla de log nueva para el elaborado**: el historial de fabricaciones sale directo de `productions` (ya
+  tiene todo — cantidad, costo, fecha, estado) vía `Product::productions()`; no se duplica en `product_cost_logs`,
+  que sigue siendo sólo de reventa. `ProductCostHistoryController` branchea por tipo.
+- `NotificationService::raiseProductionCostSpike()`: mismo umbral y toggle que la alerta de compra
+  (`alerts.cost_spike.*`, sin setting propio), dedupe por producción. Se dispara **al producir**, comparando contra
+  la producción confirmada anterior del mismo artículo — no desde la propagación de costo de receta, que recalcula
+  el cierre completo de ancestros en un lote y hubiera disparado una tormenta de alertas por un solo cambio de
+  insumo. Al anular una producción se resuelve su alerta si la generó.
+- **777 tests, todos verdes** (22 nuevos).
+
+#### Al deployar
+
+- `php artisan migrate` (2 columnas + 1 índice sobre `productions`).
+
+### Numeración de órdenes y pedidos, pestaña Historial en Artículos, y Órdenes instantáneas
+
+El listado `/production` (un renglón por cada fabricación, de todos los artículos mezclados) se llenaba
+rapidísimo sin ninguna forma de acotarlo, ni las órdenes ni los pedidos tenían un número legible para hablar con
+un repartidor o mirar la planilla, y fabricar un solo artículo sin armar una orden completa no tenía un camino
+corto dentro del nuevo modelo de Órdenes.
+
+#### Agregado
+
+- **Numeración**: cada orden de producción tiene un número por negocio ("Orden #7"), y cada pedido dentro de
+  ella un número propio que arranca de nuevo en cada orden ("Pedido 1", "Pedido 2"...). Visible en el índice, el
+  detalle, la planilla de reparto y los breadcrumbs. Las plantillas no consumen número.
+- **Pestaña Historial en Artículos**: junto a Catálogo y Matriz de precios — tabla global de todas las
+  producciones (fabricado/anulado) de todos los artículos, la más reciente primero, filtrable por
+  artículo/estado/fecha. Reemplaza al listado `/production`, que se retira.
+- **Orden instantánea**: un solo paso — un destino (sucursal o repartidor) + uno o más artículos con cantidad —
+  y un botón único crea la orden, la confirma y la produce, quedando numerada y **Terminada** sin pasos
+  intermedios. Absorbe a "Producir suelto" (la pantalla vieja de producir un solo artículo), que se retira.
+  El destino sigue siendo informativo (arma la planilla): el stock entra igual al obrador, no al destino
+  elegido — mismo comportamiento que las órdenes normales, aclarado en la pantalla.
+
+#### Técnico
+
+- Contador `tenants.next_production_order_number` (lock pesimista dentro de la transacción, unique de respaldo
+  en `production_orders.number`) — mismo patrón de concurrencia que `StockService::lockedLevelRow()`. El
+  número de pedido reusa la columna `production_order_requests.position` (existía, estaba muerta), calculado
+  como `MAX(position)+1` contra la orden padre lockeada.
+- `ProductionOrderService::createOrder()`/`addRequest()` son el único punto de alta de órdenes/pedidos —
+  `ProductionOrderController::store()`, `ProductionOrderRequestController::store()` y
+  `ProductionOrderDuplicator` (repetir orden, guardar/usar plantilla) pasan todos por ahí, así que la
+  numeración nunca se calcula en dos lugares.
+- `ProductionOrderService::previewFor()`: extracción del cuerpo de `preview(order)` para trabajar sobre pares
+  artículo+cantidad en memoria, sin que exista una orden persistida — lo usa el preview de la orden
+  instantánea. `preview(order)` queda como `previewFor(aggregate(order), order->location)`, sin cambio de
+  comportamiento.
+- `ProductionHistoryController` nuevo (la tabla es de `Production`, no de `Product`). Nuevo
+  `ProductionOrderType::Instant`, excluido del alta manual (`selectable()`).
+- **Retirado**: `production.index`/`create`/`store`/`preview`, `ProductionController::index/create/preview/store`,
+  `StoreProductionRequest`, las vistas `production/index` y `production/create`. Quedan intactos
+  `production.show`/`cancel` y todo `ProductionService`, que sigue siendo el motor de `ProductionOrderService`.
+- **811 tests, todos verdes** (34 nuevos).
+
+#### Al deployar
+
+- `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
+  `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
+
+## [0.13.2] — 2026-09-25
+
+Rama `v0.13.2-articulos`, sobre v0.13.1. Ajustes de catálogo en Artículos e Insumos, y una función nueva para
+dar de baja insumos que en realidad son productos de reventa sin perder su historial.
+
+### Catálogo de Artículos: reordenar, sacar Estado, simplificar los modales
+
+#### Agregado
+
+- **Reordené las columnas** del catálogo: Código primero, luego Nombre, Tipo, Categoría, Unidad, Costo, Precio y
+  Margen. Se sacó la columna **Estado** (el ícono de activar/desactivar ya lo dice) y el badge de historial de
+  costo pasó de compartir la columna Costo a ser un **botón de acción con ícono**, junto a Editar y
+  Activar/Desactivar. Los artículos inactivos ya no se mandan al fondo del listado: quedan en gris, en su lugar
+  alfabético.
+- **Modales Crear/Editar simplificados**: se sacó el campo **SKU** (no aplica al rubro; alcanza con el código de
+  barras) y **Categoría + Unidad de venta**, **Costo + Método de costeo** pasaron a una sola fila cada uno. En
+  Editar, el **select de Receta sólo aparece** si el elaborado todavía no tiene una asignada (al re-tipear una
+  reventa a Elaborado); si ya la tiene, "(desde receta)" es un **link directo a esa receta** en vez de un select
+  para re-vincularla.
+
+#### Técnico
+
+- `ProductController::index()`: orden por defecto pasa a sólo `name` (sin `orderByDesc('active')`).
+- `<x-cost-source-badge>` renderiza un botón-ícono (en vez de badge de texto) cuando recibe `historyUrl`; el
+  `title`/`aria-label` conserva el origen del costo.
+- **1055/1056 tests verdes** (1 preexistente y no relacionado, ya señalado en 0.13.1).
+
+### Insumos: mismo tratamiento de Estado, y convertir un insumo en producto de reventa
+
+#### Agregado
+
+- **Convertir un Insumo en Producto de reventa**: botón nuevo en el listado de Insumos, para los que en realidad
+  se compran para vender sueltos (bebidas envasadas, snacks, sobres individuales de buffet) y quedaron cargados
+  como insumo por error. Migra costo, stock y el **historial completo de compras** al Producto nuevo; el Insumo
+  queda desactivado (no se borra) y trazado.
+- **Insumos**: se sacó la columna Estado y el ícono de reactivar pasó a un **tilde** (antes un ojo); los
+  inactivos ya no se mandan al fondo del listado — mismo tratamiento que Artículos.
+
+#### Técnico
+
+- `IngredientToProductConverter`: reapunta `purchase_lines`, `supplier_product_links` y `stock_levels`; reapunta
+  `stock_movements` con el query builder puro — **bypass deliberado y documentado** del guard de inmutabilidad
+  de `StockMovement::booted()` (que sólo salta vía eventos de Eloquent). Reconstruye `product_cost_logs`
+  distinguiendo compras reales (con link a la factura, sacado de `stock_movements`) de cargas manuales, porque
+  `ingredient_price_logs` no guardaba esa procedencia. Bloquea la conversión si el insumo se usa en cualquier
+  receta (activa o no) o si ya fue convertido.
+- Columna `ingredients.converted_to_product_id` (nullable, `nullOnDelete`) — trazabilidad e idempotencia.
+- Nuevo ícono `check` en `<x-icon>`, reusable donde haga falta un tilde en vez de un ojo.
+- **`IngredientToProductConversionTest` (8)** + 2 tests nuevos en `IngredientCrudTest` (orden alfabético, sin
+  columna Estado).
+
+#### Al deployar
+
+- `php artisan migrate` (columna `converted_to_product_id` en `ingredients`).
+
+## [0.13.1] — 2026-09-25
+
+Rama `v0.13.1/produccion`, sobre lo cerrado en v0.13.0. Cliente reemplaza a Repartidor como destino del pedido
+(el repartidor pasa a ser quien **lleva** la mercadería, no quien la recibe); el pedido pasa a ser la unidad de
+carga diaria (la orden se arma sola); pedidos recurrentes sin cron; ajustes de UX sobre el rediseño; planillas
+imprimibles de producción y reparto; y una vista **Reparto** que unifica Clientes y Repartidores en el menú de
+Producción.
+
+### Cliente como destino, y el pedido como unidad de carga
+
+#### Agregado
+
+- **Cliente reemplaza a Repartidor como destino de un pedido**: el destino de un pedido de producción es
+  sucursal o **cliente** (antes: sucursal o repartidor). Un cliente puede tener un **repartidor a cargo**
+  asignado (opcional) — el repartidor dejó de ser un destino y pasó a ser quien reparte.
+- **El pedido se carga directo, sin crear la orden a mano primero.** El modal "+ Nuevo pedido" hace
+  find-or-create de la orden diaria de la fecha elegida (prioriza una en Borrador; nunca reusa una ya
+  Terminada/Anulada/espontánea/instantánea) — en la base nunca queda un pedido sin orden.
+- **Pedidos recurrentes** (frecuencia = días de la semana elegibles): se generan solos al entrar a Órdenes
+  (horizonte de 7 días, throttle de una corrida por hora por negocio, autocurativo si nadie entra un par de
+  días), con un botón "Generar ahora" como atajo manual. Pantalla propia de administración
+  (`production-requests/recurring`) para editar días/vigencia/artículos y pausar/reanudar.
+- **Se retiran las plantillas de orden completa y "repetir orden"** — la recurrencia por pedido las reemplaza.
+- **Números propios**: cada pedido tiene su propia numeración correlativa por negocio ("Pedido #123"),
+  independiente del número de la orden que lo contiene.
+
+#### Técnico
+
+- Modelos `RecurringProductionRequest` (molde: destino polimórfico, `weekdays` json ISO 1–7, vigencia,
+  `occursOn()`) y `RecurringProductionRequestLine`; vínculo instancia↔molde vía
+  `production_order_requests.recurring_production_request_id` (nullable). `production_order_requests` pasa a
+  `SoftDeletes` — necesario para que el materializador sepa que un pedido borrado a propósito no debe
+  regenerarse.
+- `RecurringProductionRequestMaterializer::materialize()` corre en `ProductionOrderController::index()`
+  (`materializeIfDue`, con `Cache::lock()` no bloqueante) y nunca propaga excepciones por instancia rota.
+- `ProductionOrderService::placeRequest()`/`orderForDate()` centralizan el alta; `is_template` y
+  `ExcludeTemplatesScope` quedan dormidos (sin borrar) tras retirar la UI de plantillas.
+- **`APP_TIMEZONE` faltaba en el `.env`** de desarrollo — sin él el borde del día del materializador corría
+  ~3 horas (UTC vs. Argentina). Falta confirmar que esté seteado también en producción al deployar.
+- **1041 tests verdes.** Queda un test preexistente y no relacionado en rojo
+  (`RecurringProductionRequestTest`, fecha hardcodeada contra el `weekdays` por defecto del factory —
+  bug del test, no de la feature; pendiente de arreglar en otra sesión).
+
+### Ajustes de UX y Dashboard
+
+#### Agregado
+
+- Modal "+ Nuevo pedido": destino + fecha en una sola fila (antes apiladas), ancho ampliado a `3xl`; sección
+  "Se repite" también en una fila, con atajos "Lunes a sábado"/"Todos los días"/"Lunes a viernes". Carga por
+  teclado en la grilla de artículos.
+- **"⚡ Orden instantánea" pasa de pantalla propia a modal**, con la misma grilla que "+ Nuevo pedido"
+  (sin el botón "Traer del pedido anterior", sin sentido para un alta de urgencia).
+- Columnas ordenables en el listado de Órdenes; el número de orden se ve sin el prefijo "Orden #" sólo en esa
+  lista.
+- **Fix de UI, afecta toda la app**: el desplegable de un `<select data-searchable>` (TomSelect) dentro de un
+  modal quedaba recortado por el borde redondeado del contenedor — se renderiza ahora como hijo de `body`.
+- Los **quick actions del saludo en el Dashboard** abren directamente los modales de "+ Nuevo pedido",
+  "⚡ Orden instantánea", receta y compra, sin pasar primero por la pantalla de Órdenes.
+
+### Planillas imprimibles de producción y reparto
+
+#### Agregado
+
+- **Planilla de producción**: productos totales a fabricar + insumos necesarios (con disponible/faltante),
+  por orden — en pantalla, para imprimir, y en PDF.
+- **Planilla de reparto**: agrupa los pedidos de la orden por repartidor; los clientes sin repartidor asignado
+  (y los pedidos a sucursal) se agrupan por sucursal ("retira en..."). Selector para imprimir/descargar sólo
+  lo de un repartidor puntual — cada grupo arranca en una hoja nueva al imprimir todos juntos.
+- Botones "Producción" y "Reparto" en cada fila del listado de Órdenes y en el detalle de una orden.
+
+#### Técnico
+
+- `ProductionOrderSheets` (arma ambas planillas como arrays/escalares, nunca modelos — necesario porque
+  dompdf con lazy loading deja un PDF corrupto) + `ProductionOrderSheetController`
+  (`production-orders/{order}/production-sheet` y `/delivery-sheet`, cada una con su ruta `/pdf`,
+  `throttle:20,1`). Reemplaza al `deliverySheet()` que sólo listaba pedidos sin agrupar.
+- `ReportLetterhead`: encabezado de negocio (nombre, razón social, CUIT, IVA, logo en data URI) extraído de
+  `FixedCostReport` para compartirlo entre el reporte de gastos y las planillas nuevas.
+- `DeliveryPerson::customers()` (hasMany) nueva.
+
+### Vista "Reparto" (Clientes + Repartidores) en el menú Producción
+
+Clientes y Repartidores eran dos pantallas sueltas, visibles sólo desde Administración (Owner/SuperAdmin) pese
+a ser datos de reparto de producción, no de administración del negocio.
+
+#### Agregado
+
+- Vista **"Reparto"** con dos pestañas, Clientes y Repartidores, movida al grupo **Producción** del menú
+  (antes en Administración).
+- **Acceso ampliado a Admin** (antes sólo Owner/SuperAdmin) — mismo criterio que el resto de Producción.
+
+#### Técnico
+
+- Rutas renombradas de `/customers` y `/delivery-people` a `/reparto/clientes` y `/reparto/repartidores`
+  (`reparto.clientes.*` / `reparto.repartidores.*`), en un grupo propio con middleware
+  `role:super_admin,owner,admin`. `CustomerController`/`DeliveryPersonController` sin cambios de
+  responsabilidad, sólo de vista/ruta de destino.
+- Vistas movidas a `resources/views/reparto/` con una pestañera compartida (mismo patrón que
+  Órdenes/Pedidos recurrentes); se borraron `resources/views/customers/` y `resources/views/delivery-people/`.
+- Sidebar, drawer móvil y breadcrumbs actualizados.
+
+#### Al deployar
+
+- `php artisan migrate` (tablas de recurrencia + soft-deletes de `production_order_requests` + numeración de
+  pedido, todas con backfill de los datos existentes antes de cada unique).
+- `npm run build`.
+- Confirmar `APP_TIMEZONE=America/Argentina/Buenos_Aires` en el `.env` de producción.
+
 ## [0.12.18] — 2026-09-21
 
 ### Reporte de gastos imprimible, con filtros por categoría

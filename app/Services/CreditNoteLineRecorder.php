@@ -93,7 +93,7 @@ class CreditNoteLineRecorder
         $proportion = (float) $line->quantity / (float) $purchaseLine->quantity_purchased;
         $quantityInItemUnits = abs((float) $entry->quantity) * $proportion;
 
-        $item = $entry->stockable;
+        $item = $entry->stockable();
         abort_unless($item !== null, 422, 'El ítem de la compra de origen ya no existe.');
 
         $movement = $this->stock->syncCreditNoteLineExit(

@@ -17,9 +17,18 @@
 
         $donutHasData = array_sum($costDistributionForChart) > 0;
         $gaugeValue   = $avgMarginPct !== null ? round((float) $avgMarginPct, 1) : 0;
+
+        // Mismo chequeo que recipes/index.blade.php y purchases/index.blade.php
+        // — acá con nombres propios porque los dos modales conviven en esta
+        // misma página (ambos esperan una variable $errorsInCreate).
+        $errorsInRecipeCreate   = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit']) && old('_form') === 'create';
+        $errorsInPurchaseCreate = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'invoice']) && old('_form') === 'create';
     @endphp
 
-    <div class="py-6 px-6 lg:px-8 space-y-5">
+    {{-- products viaja una sola vez acá (root x-data) y los modales "+ Nuevo
+         pedido" / "Orden instantánea" lo leen por referencia — mismo patrón
+         que production-orders/index.blade.php. --}}
+    <div class="py-6 px-6 lg:px-8 space-y-5" x-data="{ products: @js($products) }">
 
         {{-- ═══════════════════════════════════════════════
              GREETING + QUICK ACTIONS
@@ -34,21 +43,46 @@
                     &nbsp;·&nbsp; Actualizado al {{ now()->format('d/m/Y') }}
                 </p>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <a href="{{ route('recipes.index') }}"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Nueva receta
-                </a>
-                <a href="{{ route('purchases.index') }}"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
-                    Compra
-                </a>
+            {{-- grid 2x2 en mobile: los 4 botones quedan del mismo tamaño en vez de
+                 envolver según el largo de cada texto (ver flex-wrap original,
+                 dejaba "Nuevo pedido"/"Orden instantánea" solos en su fila y
+                 "Nueva receta"+"Compra" apareados, descompaginado). A partir de
+                 sm vuelve a fila única con ancho natural. --}}
+            <div class="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:flex-wrap">
+                @can('manage-costs')
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'production-request-create')"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Nuevo pedido
+                    </button>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'production-instant-create')"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
+                        </svg>
+                        Orden instantánea
+                    </button>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'recipe-create')"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Nueva receta
+                    </button>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'purchase-create')"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        Compra
+                    </button>
+                @endcan
             </div>
         </div>
 
@@ -485,74 +519,16 @@
                                     $initMarginPctFormatted = $pct !== null ? number_format($pct, 1, ',', '.') : '';
                                 @endphp
                                 <tr
-                                    x-data="{
-                                        editing: false,
-                                        saving: false,
-                                        isDirty: false,
+                                    x-data="priceCell({
+                                        url: @js($row['product'] ? route('products.prices.update', [$row['product'], $priceList]) : ''),
                                         price: {{ $row['selling_price'] ?? 'null' }},
                                         priceFormatted: '{{ $initPriceFormatted }}',
-                                        margin: {{ $row['margin'] ?? 'null' }},
-                                        marginFormatted: '{{ $initMarginFormatted }}',
                                         marginPct: {{ $row['margin_pct'] ?? 'null' }},
                                         marginPctFormatted: '{{ $initMarginPctFormatted }}',
                                         marginColor: '{{ $initMarginColor }}',
-                                        get barColor() {
-                                            if (this.marginPct === null) return 'bg-miga';
-                                            if (this.marginPct >= 60) return 'bg-green-500';
-                                            if (this.marginPct >= 40) return 'bg-amber-500';
-                                            if (this.marginPct >= 20) return 'bg-orange-400';
-                                            return 'bg-red-500';
-                                        },
-                                        get badgeClass() {
-                                            if (this.marginPct === null) return 'bg-miga text-masa-madre';
-                                            if (this.marginPct >= 60) return 'bg-green-100 text-green-700';
-                                            if (this.marginPct >= 40) return 'bg-amber-100 text-amber-700';
-                                            if (this.marginPct >= 20) return 'bg-orange-100 text-orange-700';
-                                            return 'bg-red-100 text-red-700';
-                                        },
-                                        get badgeLabel() {
-                                            if (this.marginPct === null) return '—';
-                                            if (this.marginPct >= 60) return 'Alta';
-                                            if (this.marginPct >= 40) return 'Media';
-                                            if (this.marginPct >= 20) return 'Regular';
-                                            return 'Baja';
-                                        },
-                                        startEdit() {
-                                            this.isDirty = false;
-                                            this.$refs.priceInput.value = this.price !== null ? parseFloat(this.price).toFixed(2) : '';
-                                            this.editing = true;
-                                            this.$nextTick(() => this.$refs.priceInput.select());
-                                        },
-                                        async savePrice() {
-                                            if (this.saving) return;
-                                            if (!this.isDirty) { this.editing = false; return; }
-                                            const raw = this.$refs.priceInput.value.trim();
-                                            const payload = raw !== '' ? raw : null;
-                                            this.saving = true;
-                                            this.editing = false;
-                                            try {
-                                                const res = await fetch('{{ route('recipes.prices.update', [$recipe, $priceList]) }}', {
-                                                    method: 'PATCH',
-                                                    headers: {
-                                                        'Content-Type': 'application/json',
-                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                        'Accept': 'application/json',
-                                                    },
-                                                    body: JSON.stringify({ price: payload })
-                                                });
-                                                const data = await res.json();
-                                                this.price = data.selling_price;
-                                                this.priceFormatted = data.selling_price_formatted ?? '';
-                                                this.margin = data.margin;
-                                                this.marginFormatted = data.margin_formatted ?? '';
-                                                this.marginPct = data.margin_pct;
-                                                this.marginPctFormatted = data.margin_pct_formatted ?? '';
-                                                this.marginColor = data.margin_color ?? 'text-masa-madre';
-                                            } finally {
-                                                this.saving = false;
-                                            }
-                                        }
-                                    }"
+                                        policyType: '{{ $row['policy']['type'] }}',
+                                        policyValue: {{ $row['policy']['value'] ?? 'null' }},
+                                    })"
                                     class="hover:bg-harina/70 transition-colors {{ $recipe->active ? '' : 'opacity-40' }}"
                                 >
                                     {{-- Nombre --}}
@@ -587,30 +563,28 @@
                                         @endif
                                     </td>
 
-                                    {{-- Precio de venta (editable) --}}
+                                    {{-- Precio de venta (editable si la receta tiene artículo elaborado) --}}
                                     <td class="px-4 py-3.5 text-right font-mono text-[13px]">
                                         @can('manage-costs')
-                                            <div x-show="!editing && !saving"
-                                                @click="startEdit()"
-                                                class="cursor-pointer text-corteza hover:text-horno transition-colors select-none">
-                                                <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
-                                                <span x-show="price === null"
-                                                    class="text-[12px] text-masa-madre/50 hover:text-masa-madre">
-                                                    Agregar →
-                                                </span>
-                                            </div>
-                                            <input
-                                                x-show="editing"
-                                                x-ref="priceInput"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                @input="isDirty = true"
-                                                @keydown.enter.prevent="savePrice()"
-                                                @keydown.escape="editing = false; isDirty = false"
-                                                @blur="savePrice()"
-                                                class="w-28 text-right text-sm border border-brown-300 rounded-lg px-2 py-1 focus:border-brown-400 focus:ring-1 focus:ring-brown-200 outline-none font-mono bg-harina">
-                                            <span x-show="saving" class="text-[11.5px] text-masa-madre/60">guardando…</span>
+                                            @if($row['product'])
+                                                <div @click="startEdit($event)"
+                                                    class="cursor-pointer text-corteza hover:text-horno transition-colors select-none inline-flex flex-col items-end gap-0.5">
+                                                    <span x-show="!saving">
+                                                        <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
+                                                        <span x-show="price === null"
+                                                            class="text-[12px] text-masa-madre/50 hover:text-masa-madre">
+                                                            Agregar →
+                                                        </span>
+                                                    </span>
+                                                    <span x-show="saving" class="text-[11.5px] text-masa-madre/60">guardando…</span>
+                                                    <span x-show="hasPolicy" x-text="policyBadge"
+                                                        class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
+                                                </div>
+                                                <x-price-cell-editor />
+                                            @else
+                                                {{-- Sin artículo elaborado: el precio se carga en Artículos --}}
+                                                <span class="text-[11px] text-masa-madre/50" title="Creá el artículo elaborado para ponerle precio">—</span>
+                                            @endif
                                         @else
                                             @if($row['selling_price'] !== null)
                                                 <span class="text-corteza">$&nbsp;{{ $initPriceFormatted }}</span>
@@ -628,7 +602,7 @@
                                                 <div class="h-1.5 rounded-full bg-miga overflow-hidden">
                                                     <div
                                                         class="h-full rounded-full transition-all duration-500"
-                                                        :class="barColor"
+                                                        :class="marginPct === null ? 'bg-miga' : (marginPct >= 60 ? 'bg-green-500' : (marginPct >= 40 ? 'bg-amber-500' : (marginPct >= 20 ? 'bg-orange-400' : 'bg-red-500')))"
                                                         :style="'width: ' + Math.min(Math.max(marginPct ?? 0, 0), 100) + '%'">
                                                     </div>
                                                 </div>
@@ -644,9 +618,9 @@
                                             {{-- Badge estado --}}
                                             <span
                                                 x-show="marginPct !== null"
-                                                :class="badgeClass"
+                                                :class="marginPct === null ? 'bg-miga text-masa-madre' : (marginPct >= 60 ? 'bg-green-100 text-green-700' : (marginPct >= 40 ? 'bg-amber-100 text-amber-700' : (marginPct >= 20 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700')))"
                                                 class="hidden lg:inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold"
-                                                x-text="badgeLabel">
+                                                x-text="marginPct === null ? '—' : (marginPct >= 60 ? 'Alta' : (marginPct >= 40 ? 'Media' : (marginPct >= 20 ? 'Regular' : 'Baja')))">
                                             </span>
                                         </div>
                                     </td>
@@ -682,6 +656,13 @@
         </div>
         {{-- fin tabla --}}
 
+        @can('manage-costs')
+            @include('production-orders.modals.request-create')
+            @include('production-orders.modals.instant-create')
+            @include('recipes.modals.create', ['errorsInCreate' => $errorsInRecipeCreate])
+            @include('purchases.modals.create', ['errorsInCreate' => $errorsInPurchaseCreate])
+            @include('suppliers.modals.quick-create')
+        @endcan
     </div>
 
     {{-- Datos para los gráficos del dashboard (los renderiza resources/js/dashboard-charts.js) --}}

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Enums\CatalogItemType;
+use App\Enums\DeliveryDestinationType;
 use App\Enums\TenantUserRole;
 use App\Models\Tenant;
 use App\Models\User;
@@ -22,14 +23,18 @@ class AppServiceProvider extends ServiceProvider
     {
         Model::preventLazyLoading();
 
-        // Morph map real para stockable/purchaseable (N5): los discriminadores
-        // 'ingredient'/'packaging' ya persistidos en BD coinciden exactamente
-        // con las claves que necesita un morph map, así que no requiere
-        // migración de datos. Desbloquea with()/whereHasMorph() sobre
-        // StockLevel, StockMovement y PurchaseLine.
+        // Morph map real (N5 + P5): un solo enforceMorphMap() para los dos
+        // discriminadores polimórficos del dominio — llamarlo dos veces pisaría
+        // el primero. CatalogItemType (stockable/purchaseable, 'ingredient'/
+        // 'packaging'/'product') + DeliveryDestinationType (destino del pedido
+        // de producción, 'location'/'customer'). Desbloquea with()/whereHasMorph().
         Relation::enforceMorphMap(
             collect(CatalogItemType::cases())
                 ->mapWithKeys(fn (CatalogItemType $type) => [$type->value => $type->modelClass()])
+                ->merge(
+                    collect(DeliveryDestinationType::cases())
+                        ->mapWithKeys(fn (DeliveryDestinationType $type) => [$type->value => $type->modelClass()])
+                )
                 ->all(),
         );
 
