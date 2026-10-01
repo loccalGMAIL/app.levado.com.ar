@@ -42,10 +42,16 @@ class UserController extends Controller
 
         $userExists = User::where('email', $request->validated('email'))->exists();
 
+        $password = $request->validated('password');
+
         $user = User::firstOrCreate(
             ['email' => $request->validated('email')],
-            ['name' => $request->validated('name'), 'password' => Str::random(32)],
+            ['name' => $request->validated('name'), 'password' => $password ?? Str::random(32)],
         );
+
+        if ($user->wasRecentlyCreated && $password !== null) {
+            $user->forceFill(['email_verified_at' => now()])->save();
+        }
 
         if (TenantUser::where('tenant_id', $tenant->id)->where('user_id', $user->id)->exists()) {
             return back()
@@ -59,21 +65,37 @@ class UserController extends Controller
             'role' => $request->validated('role'),
         ]);
 
-        Password::sendResetLink(['email' => $user->email]);
+        $sendsResetLink = $password === null;
+
+        if ($sendsResetLink) {
+            Password::sendResetLink(['email' => $user->email]);
+        }
 
         $this->recorder->record(
             actor: $request->user(),
             targetType: 'user',
             targetId: $user->id,
             action: $userExists ? 'user.tenant_associated' : 'user.created',
-            payload: ['email' => $user->email, 'tenant' => $tenant->name, 'role' => $request->validated('role')],
+            payload: [
+                'email' => $user->email,
+                'tenant' => $tenant->name,
+                'role' => $request->validated('role'),
+                'password_set_by_admin' => $password !== null && ! $userExists,
+            ],
             tenantId: $tenant->id,
         );
 
         $action = $userExists ? 'asociado a' : 'creado y asociado a';
 
-        return back(fallback: route('admin.users.index'))
-            ->with('status', "Usuario {$user->email} {$action} {$tenant->name}. Se envió el correo para establecer la contraseña.");
+        $message = "Usuario {$user->email} {$action} {$tenant->name}.";
+
+        if ($sendsResetLink) {
+            $message .= ' Se envió el correo para establecer la contraseña.';
+        } elseif (! $userExists) {
+            $message .= ' Ya puede ingresar con la contraseña asignada.';
+        }
+
+        return back(fallback: route('admin.users.index'))->with('status', $message);
     }
 
     public function update(Request $request, User $user): RedirectResponse
