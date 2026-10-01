@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Enums\TenantUserRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class StoreUserRequest extends FormRequest
 {
@@ -20,6 +21,7 @@ class StoreUserRequest extends FormRequest
             'email' => ['required', 'email', 'max:255'],
             'tenant_id' => ['required', 'integer', 'exists:tenants,id'],
             'role' => ['required', Rule::enum(TenantUserRole::class)],
+            'password' => ['nullable', 'confirmed', Password::defaults()],
         ];
     }
 }

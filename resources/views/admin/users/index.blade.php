@@ -225,9 +225,25 @@
                         @enderror
                     </div>
 
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-corteza mb-1">Contraseña <span class="text-masa-madre font-normal">(opcional)</span></label>
+                        <input type="password" id="password" name="password" autocomplete="new-password"
+                            class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                        @error('password')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="password_confirmation" class="block text-sm font-medium text-corteza mb-1">Confirmar contraseña</label>
+                        <input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password"
+                            class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                    </div>
+
                     <p class="text-xs text-masa-madre">
-                        Si el usuario ya existe, solo se lo asociará al comercio seleccionado.
-                        En ambos casos se enviará un correo para establecer la contraseña.
+                        Si cargás una contraseña, el usuario podrá ingresar directamente y no se enviará correo.
+                        Si la dejás vacía, se le enviará un correo para que la defina.
+                        Si el usuario ya existe, solo se lo asociará al comercio (se mantiene su contraseña).
                     </p>
 
                     <div class="flex justify-end gap-3 pt-2">
@@ -237,7 +253,7 @@
                         </button>
                         <button type="submit"
                             class="px-4 py-2 text-sm bg-horno text-white rounded-md hover:bg-corteza transition-colors">
-                            Crear y enviar correo
+                            Crear usuario
                         </button>
                     </div>
                 </form>

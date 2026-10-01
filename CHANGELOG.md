@@ -295,6 +295,34 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.13.3] — 2026-10-01
+
+Rama `v0.13.3-usuarios-password`, sobre v0.13.2. Alta de usuarios con contraseña desde el portal de administración.
+
+### Admin: crear usuarios con contraseña, sin correo de confirmación
+
+#### Agregado
+
+- **Contraseña opcional al crear un usuario** (Admin › Usuarios › "+ Crear usuario"): el modal suma los campos
+  *Contraseña* y *Confirmar contraseña*. Si se cargan, el usuario se crea con esa contraseña y con el email
+  **marcado como verificado**, así que puede ingresar directo y **no se manda ningún correo**. Si se dejan
+  vacíos, se mantiene el flujo anterior (correo para que el usuario defina su contraseña).
+- Si el email **ya existe** (solo se lo asocia a otro comercio), la contraseña cargada se ignora: conserva la
+  suya y no se envía correo.
+
+#### Cambiado
+
+- El botón del modal pasa de "Crear y enviar correo" a "Crear usuario", y el texto de ayuda explica los dos casos.
+- El registro de actividad del alta incluye `password_set_by_admin` (nunca la contraseña).
+
+#### Técnico
+
+- `StoreUserRequest`: regla `password` (`nullable`, `confirmed`, `Password::defaults()`).
+- `Admin\UserController::store()`: `Password::sendResetLink()` solo si no se cargó contraseña; `email_verified_at`
+  se setea con `forceFill` (no es `fillable`) únicamente cuando el usuario se creó en esa llamada.
+- **5 tests nuevos** en `AdminUserCreationTest` (con contraseña + login, sin contraseña, confirmación que no
+  coincide, usuario existente, no super admin).
+
 ## [0.13.2] — 2026-09-25
 
 Rama `v0.13.2-articulos`, sobre v0.13.1. Ajustes de catálogo en Artículos e Insumos, y una función nueva para
