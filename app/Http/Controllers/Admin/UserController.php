@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -100,23 +101,28 @@ class UserController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
-        $validated = $request->validate([
+        $validated = $request->validateWithBag('updateUser', [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
+            'password' => ['nullable', 'confirmed', PasswordRule::defaults()],
         ]);
 
-        $user->update($validated);
+        $passwordChanged = ($validated['password'] ?? null) !== null;
+
+        $user->update(array_filter($validated, fn ($value) => $value !== null));
 
         $this->recorder->record(
             actor: $request->user(),
             targetType: 'user',
             targetId: $user->id,
             action: 'user.updated',
-            payload: ['name' => $user->name, 'email' => $user->email],
+            payload: ['name' => $user->name, 'email' => $user->email, 'password_changed' => $passwordChanged],
         );
 
         return back(fallback: route('admin.users.index'))
-            ->with('status', "Usuario {$user->email} actualizado.");
+            ->with('status', $passwordChanged
+                ? "Usuario {$user->email} actualizado. Se cambió su contraseña."
+                : "Usuario {$user->email} actualizado.");
     }
 
     public function toggleActive(Request $request, User $user): RedirectResponse

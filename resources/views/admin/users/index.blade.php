@@ -7,7 +7,7 @@
 
     <div class="py-10" x-data="{
         showCreate: false,
-        editUser: null,
+        editUser: @js($errors->updateUser->any() ? ['id' => (int) old('_edit_user_id'), 'name' => old('name'), 'email' => old('email')] : null),
         openEdit(user) { this.editUser = user; },
         closeEdit() { this.editUser = null; }
     }">
@@ -193,36 +193,38 @@
                         @enderror
                     </div>
 
-                    <div>
-                        <label for="tenant_id" class="block text-sm font-medium text-corteza mb-1">Comercio</label>
-                        <select id="tenant_id" name="tenant_id" required
-                            class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                            <option value="">— Seleccionar comercio —</option>
-                            @foreach($tenants as $tenant)
-                                <option value="{{ $tenant->id }}" {{ old('tenant_id') == $tenant->id ? 'selected' : '' }}>
-                                    {{ $tenant->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('tenant_id')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="tenant_id" class="block text-sm font-medium text-corteza mb-1">Comercio</label>
+                            <select id="tenant_id" name="tenant_id" required
+                                class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                                <option value="">— Seleccionar —</option>
+                                @foreach($tenants as $tenant)
+                                    <option value="{{ $tenant->id }}" {{ old('tenant_id') == $tenant->id ? 'selected' : '' }}>
+                                        {{ $tenant->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('tenant_id')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
 
-                    <div>
-                        <label for="role" class="block text-sm font-medium text-corteza mb-1">Rol</label>
-                        <select id="role" name="role" required
-                            class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                            <option value="">— Seleccionar rol —</option>
-                            @foreach(\App\Enums\TenantUserRole::cases() as $role)
-                                <option value="{{ $role->value }}" {{ old('role') === $role->value ? 'selected' : '' }}>
-                                    {{ $role->label() }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('role')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
+                        <div>
+                            <label for="role" class="block text-sm font-medium text-corteza mb-1">Rol</label>
+                            <select id="role" name="role" required
+                                class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                                <option value="">— Seleccionar —</option>
+                                @foreach(\App\Enums\TenantUserRole::cases() as $role)
+                                    <option value="{{ $role->value }}" {{ old('role') === $role->value ? 'selected' : '' }}>
+                                        {{ $role->label() }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('role')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
 
                     <div>
@@ -239,12 +241,6 @@
                         <input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password"
                             class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                     </div>
-
-                    <p class="text-xs text-masa-madre">
-                        Si cargás una contraseña, el usuario podrá ingresar directamente y no se enviará correo.
-                        Si la dejás vacía, se le enviará un correo para que la defina.
-                        Si el usuario ya existe, solo se lo asociará al comercio (se mantiene su contraseña).
-                    </p>
 
                     <div class="flex justify-end gap-3 pt-2">
                         <button type="button" @click="showCreate = false"
@@ -277,6 +273,7 @@
                     <form method="POST" :action="`/admin/users/${editUser.id}`" class="space-y-4">
                         @csrf
                         @method('PATCH')
+                        <input type="hidden" name="_edit_user_id" :value="editUser.id">
 
                         <div>
                             <label class="block text-sm font-medium text-corteza mb-1">Nombre</label>
@@ -287,6 +284,24 @@
                         <div>
                             <label class="block text-sm font-medium text-corteza mb-1">Email</label>
                             <input type="email" name="email" :value="editUser.email" required
+                                class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                            @error('email', 'updateUser')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-corteza mb-1">Nueva contraseña <span class="text-masa-madre font-normal">(dejar vacío para no cambiarla)</span></label>
+                            <input type="password" name="password" autocomplete="new-password"
+                                class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                            @error('password', 'updateUser')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-corteza mb-1">Confirmar nueva contraseña</label>
+                            <input type="password" name="password_confirmation" autocomplete="new-password"
                                 class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                         </div>
 
