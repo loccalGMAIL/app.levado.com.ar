@@ -310,18 +310,24 @@ Rama `v0.13.3-usuarios-password`, sobre v0.13.2. Alta de usuarios con contraseñ
 - Si el email **ya existe** (solo se lo asocia a otro comercio), la contraseña cargada se ignora: conserva la
   suya y no se envía correo.
 
+- **Cambiar la contraseña al editar un usuario**: el modal Editar suma *Nueva contraseña* y *Confirmar nueva
+  contraseña* (vacías = no se cambia). Si la validación falla, el modal se reabre con el error.
+
 #### Cambiado
 
-- El botón del modal pasa de "Crear y enviar correo" a "Crear usuario", y el texto de ayuda explica los dos casos.
+- Modal Crear: **Comercio y Rol van en la misma fila** (modal más corto) y se sacó el texto de ayuda.
+- El botón del modal pasa de "Crear y enviar correo" a "Crear usuario".
 - El registro de actividad del alta incluye `password_set_by_admin` (nunca la contraseña).
 
 #### Técnico
 
+- `Admin\UserController::update()`: `validateWithBag('updateUser')` con `password` opcional; el registro de
+  actividad suma `password_changed`.
 - `StoreUserRequest`: regla `password` (`nullable`, `confirmed`, `Password::defaults()`).
 - `Admin\UserController::store()`: `Password::sendResetLink()` solo si no se cargó contraseña; `email_verified_at`
   se setea con `forceFill` (no es `fillable`) únicamente cuando el usuario se creó en esa llamada.
-- **5 tests nuevos** en `AdminUserCreationTest` (con contraseña + login, sin contraseña, confirmación que no
-  coincide, usuario existente, no super admin).
+- **8 tests nuevos** en `AdminUserCreationTest` (alta: con contraseña + login, sin contraseña, confirmación que no
+  coincide, usuario existente, no super admin; edición: cambia la contraseña, la conserva, confirmación inválida).
 
 ## [0.13.2] — 2026-09-25
 

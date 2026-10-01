@@ -124,3 +124,52 @@ test('un usuario que no es super admin no puede crear usuarios', function () {
 
     expect(User::where('email', 'nuevo@example.com')->exists())->toBeFalse();
 });
+
+test('editar usuario con nueva contraseña la cambia', function () {
+    $user = User::factory()->create(['password' => 'Clave-original-1']);
+
+    $this->actingAs(adminUserCreationSuperAdmin())
+        ->patch(route('admin.users.update', $user), [
+            'name' => 'Nombre Editado',
+            'email' => $user->email,
+            'password' => 'Clave-nueva-456',
+            'password_confirmation' => 'Clave-nueva-456',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('status');
+
+    $user->refresh();
+
+    expect($user->name)->toBe('Nombre Editado')
+        ->and(Hash::check('Clave-nueva-456', $user->password))->toBeTrue();
+});
+
+test('editar usuario sin contraseña conserva la actual', function () {
+    $user = User::factory()->create(['password' => 'Clave-original-1']);
+
+    $this->actingAs(adminUserCreationSuperAdmin())
+        ->patch(route('admin.users.update', $user), [
+            'name' => 'Nombre Editado',
+            'email' => $user->email,
+            'password' => '',
+            'password_confirmation' => '',
+        ])
+        ->assertRedirect();
+
+    expect(Hash::check('Clave-original-1', $user->fresh()->password))->toBeTrue();
+});
+
+test('editar usuario con confirmación distinta falla en el bag updateUser', function () {
+    $user = User::factory()->create(['password' => 'Clave-original-1']);
+
+    $this->actingAs(adminUserCreationSuperAdmin())
+        ->patch(route('admin.users.update', $user), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'password' => 'Clave-nueva-456',
+            'password_confirmation' => 'otra-cosa',
+        ])
+        ->assertSessionHasErrorsIn('updateUser', 'password');
+
+    expect(Hash::check('Clave-original-1', $user->fresh()->password))->toBeTrue();
+});
