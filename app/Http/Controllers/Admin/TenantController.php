@@ -32,7 +32,7 @@ class TenantController extends Controller
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->latest()
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         return view('admin.tenants.index', compact('tenants'));

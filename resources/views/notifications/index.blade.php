@@ -103,9 +103,14 @@
                 @endforeach
             </div>
 
-            @if($notifications->hasPages())
-                <div>{{ $notifications->links() }}</div>
-            @endif
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    @if($notifications->hasPages())
+                        {{ $notifications->links() }}
+                    @endif
+                </div>
+                <x-per-page-select :paginator="$notifications" />
+            </div>
         @endif
 
     </div>

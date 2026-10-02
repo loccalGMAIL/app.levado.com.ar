@@ -55,5 +55,8 @@
         Ver tabla completa ↓
     </button>
 
-    <p class="text-xs text-masa-madre mt-3">{{ $paginator->total() }} {{ $totalLabel }}(s) en total.</p>
+    <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
+        <p class="text-xs text-masa-madre">{{ $paginator->total() }} {{ $totalLabel }}(s) en total.</p>
+        <x-per-page-select :paginator="$paginator" />
+    </div>
 </div>

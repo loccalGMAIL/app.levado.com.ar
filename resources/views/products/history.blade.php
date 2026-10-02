@@ -136,7 +136,10 @@
                     </x-slot:footer>
                 </x-responsive-table>
 
-                <p class="text-xs text-masa-madre">{{ $productions->total() }} producción(es) en total.</p>
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <p class="text-xs text-masa-madre">{{ $productions->total() }} producción(es) en total.</p>
+                    <x-per-page-select :paginator="$productions" />
+                </div>
             @endif
 
         </div>

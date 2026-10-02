@@ -111,7 +111,7 @@ class DashboardController extends Controller
             ->orderByRaw("({$sortExpr}) is null", $sortBindings)
             ->orderByRaw("({$sortExpr}) {$dir}", $sortBindings)
             ->orderBy('recipes.name')
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString()
             ->through(function ($recipe) use ($overheadPerHour) {
                 $sellingPrice = $recipe->dashboard_selling_price !== null

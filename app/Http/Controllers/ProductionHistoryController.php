@@ -30,7 +30,7 @@ class ProductionHistoryController extends Controller
             ->when(request('to'), fn ($q, $date) => $q->whereDate('produced_at', '<=', $date))
             ->latest('produced_at')
             ->latest('id')
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         $products = $tenant->products()->orderBy('name')->get();

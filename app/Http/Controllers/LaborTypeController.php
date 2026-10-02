@@ -33,7 +33,7 @@ class LaborTypeController extends Controller
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         return view('labor-types.index', compact('laborTypes'));

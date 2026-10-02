@@ -220,7 +220,10 @@
                     </x-slot:footer>
                 </x-responsive-table>
 
-                <p class="text-xs text-masa-madre">{{ $items->total() }} ítem(s) en total. La valuación usa el último costo de cada ítem.</p>
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <p class="text-xs text-masa-madre">{{ $items->total() }} ítem(s) en total. La valuación usa el último costo de cada ítem.</p>
+                    <x-per-page-select :paginator="$items" />
+                </div>
             @endif
 
         </div>

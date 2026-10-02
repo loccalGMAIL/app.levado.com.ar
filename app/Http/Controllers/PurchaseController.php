@@ -86,7 +86,7 @@ class PurchaseController extends Controller
             default => $query->orderBy('invoice_date', $sortDir)->orderByDesc('id'),
         };
 
-        $purchases = $query->paginate(20)->withQueryString();
+        $purchases = $query->paginate($this->perPage())->withQueryString();
 
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
         $includeIva = filter_var($tenant->getSetting('purchase_price_includes_iva', '1'), FILTER_VALIDATE_BOOLEAN);
