@@ -463,7 +463,10 @@
                     </x-slot:footer>
                 </x-responsive-table>
 
-                <p class="text-xs text-masa-madre">{{ $packagings->total() }} envase(s) en total.</p>
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <p class="text-xs text-masa-madre">{{ $packagings->total() }} envase(s) en total.</p>
+                    <x-per-page-select :paginator="$packagings" />
+                </div>
             @endif
 
         </div>

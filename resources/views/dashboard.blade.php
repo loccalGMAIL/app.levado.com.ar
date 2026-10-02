@@ -645,11 +645,14 @@
                     <span class="text-[12.5px] text-masa-madre">
                         Mostrando {{ $recipeRows->firstItem() }}–{{ $recipeRows->lastItem() }} de {{ $recipeRows->total() }} recetas
                     </span>
-                    @if($recipeRows->hasPages())
-                        <div class="text-sm">
-                            {{ $recipeRows->fragment('tabla-recetas')->links() }}
-                        </div>
-                    @endif
+                    <div class="flex items-center gap-4 flex-wrap justify-end">
+                        <x-per-page-select :paginator="$recipeRows" fragment="tabla-recetas" />
+                        @if($recipeRows->hasPages())
+                            <div class="text-sm">
+                                {{ $recipeRows->fragment('tabla-recetas')->links() }}
+                            </div>
+                        @endif
+                    </div>
                 </div>
             @endif
 

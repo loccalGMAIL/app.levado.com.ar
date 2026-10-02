@@ -50,7 +50,7 @@ class ProductController extends Controller
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderBy('name'))
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         // Todas, no sólo las activas: el modal de edición debe poder mostrar una receta
@@ -106,7 +106,7 @@ class ProductController extends Controller
             ->when(request('type') === ProductType::Resale->value, fn ($q) => $q->where('type', ProductType::Resale->value))
             ->when(request('category'), fn ($q, $category) => $q->where('product_category_id', $category))
             ->orderBy('name', $dir)
-            ->paginate(30)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         $productIds = collect($products->items())->pluck('id');

@@ -195,10 +195,11 @@
                     </tbody>
 
                     <x-slot:footer>
-                        @if($orders->hasPages())
-                            <div class="px-4 py-3 border-t border-miga">
-                                {{ $orders->links() }}
-                            </div>
+                        @if($orders->total() > 20)
+                        <div class="px-4 py-3 border-t border-miga flex items-center justify-between gap-3 flex-wrap">
+                            <div>{{ $orders->hasPages() ? $orders->links() : '' }}</div>
+                            <x-per-page-select :paginator="$orders" />
+                        </div>
                         @endif
                     </x-slot:footer>
                 </x-responsive-table>

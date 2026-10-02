@@ -131,10 +131,11 @@
                     </tbody>
                 </table>
 
-                @if($logs->hasPages())
-                    <div class="px-4 py-3 border-t border-miga">
-                        {{ $logs->links() }}
-                    </div>
+                @if($logs->total() > 20)
+                <div class="px-4 py-3 border-t border-miga flex items-center justify-between gap-3 flex-wrap">
+                    <div>{{ $logs->hasPages() ? $logs->links() : '' }}</div>
+                    <x-per-page-select :paginator="$logs" />
+                </div>
                 @endif
             </div>
 

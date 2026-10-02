@@ -71,7 +71,7 @@ class StockController extends Controller
                 fn ($q) => $q->orderBy($sortable[$sort], $dir),
                 fn ($q) => $q->orderBy($sortable['name'], 'asc')
             )
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         $levels = StockLevel::query()
@@ -108,7 +108,7 @@ class StockController extends Controller
             // queries por renglón.
             ->with(['user', 'purchaseLine.purchase.supplier', 'creditNoteLine.creditNote.supplier'])
             ->latest('id')
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         $level = $this->stock->levelFor($item, $location);

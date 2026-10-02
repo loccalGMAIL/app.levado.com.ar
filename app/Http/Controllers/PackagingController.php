@@ -38,7 +38,7 @@ class PackagingController extends Controller
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
         // Todos, no sólo los activos: el modal de alta filtra a activos, pero el de edición
         // debe poder mostrar un proveedor ya dado de baja o el select caería en «Ninguno»

@@ -59,7 +59,7 @@ class ProductionOrderController extends Controller
             default => $query->orderBy('number', $dir)->orderByDesc('id'),
         };
 
-        $orders = $query->paginate(20)->withQueryString();
+        $orders = $query->paginate($this->perPage())->withQueryString();
 
         // Para el modal "+ Nuevo pedido": mismos datos que ya junta show(),
         // acá vive el punto de entrada nuevo (crear el pedido sin abrir

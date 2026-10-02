@@ -176,10 +176,11 @@
                         </tbody>
                     </table>
 
-                    @if($movements->hasPages())
-                        <div class="px-4 py-3 border-t border-miga">
-                            {{ $movements->links() }}
-                        </div>
+                    @if($movements->total() > 20)
+                    <div class="px-4 py-3 border-t border-miga flex items-center justify-between gap-3 flex-wrap">
+                        <div>{{ $movements->hasPages() ? $movements->links() : '' }}</div>
+                        <x-per-page-select :paginator="$movements" />
+                    </div>
                     @endif
                 </div>
             @endif

@@ -29,7 +29,7 @@ class UserController extends Controller
                     ->orWhere('email', 'like', "%{$escaped}%");
             })
             ->latest()
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         $tenants = Tenant::orderBy('name')->get(['id', 'name']);

@@ -23,7 +23,7 @@ class NotificationController extends Controller
             ->active()
             ->when($filter === 'unread', fn ($q) => $q->unread())
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         $unreadCount = Notification::where('tenant_id', $tenant->id)->active()->unread()->count();

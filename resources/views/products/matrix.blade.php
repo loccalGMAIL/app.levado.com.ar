@@ -184,10 +184,11 @@
                         </tbody>
                     </table>
 
-                    @if($products->hasPages())
-                        <div class="px-4 py-3 border-t border-miga">
-                            {{ $products->links() }}
-                        </div>
+                    @if($products->total() > 20)
+                    <div class="px-4 py-3 border-t border-miga flex items-center justify-between gap-3 flex-wrap">
+                        <div>{{ $products->hasPages() ? $products->links() : '' }}</div>
+                        <x-per-page-select :paginator="$products" />
+                    </div>
                     @endif
                 </div>
 

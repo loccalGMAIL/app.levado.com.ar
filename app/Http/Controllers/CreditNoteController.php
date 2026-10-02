@@ -53,7 +53,7 @@ class CreditNoteController extends Controller
             default => $query->orderBy('note_date', $sortDir)->orderByDesc('id'),
         };
 
-        $creditNotes = $query->paginate(20)->withQueryString();
+        $creditNotes = $query->paginate($this->perPage())->withQueryString();
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
         // Acota el picker del modal de alta a compras recientes: elegir la compra
         // de origen entre miles de facturas históricas no es un caso de uso real.

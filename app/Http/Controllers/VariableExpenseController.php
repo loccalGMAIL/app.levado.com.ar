@@ -47,7 +47,7 @@ class VariableExpenseController extends Controller
         $variableExpenses = $filtered
             ->with(['category', 'supplier'])
             ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('expense_date')->orderBy('name'))
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         $categories = $tenant->variableExpenseCategories()->orderBy('name')->get();

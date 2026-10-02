@@ -61,7 +61,7 @@ class RecipeController extends Controller
             ->when($sort === 'selling_price', fn ($q) => $q->orderBy($priceSubquery, $dir))
             ->when($sort && $sort !== 'selling_price', fn ($q) => $q->orderBy($sort, $dir))
             ->when(! $sort, fn ($q) => $q->orderByDesc('active')->orderBy('name'))
-            ->paginate(20)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         // Mapas recipe_id → precio y política del artículo en la lista elegida.

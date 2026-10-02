@@ -102,10 +102,11 @@
                     </tbody>
                 </table>
 
-                @if($tenants->hasPages())
-                    <div class="px-4 py-3 border-t border-miga">
-                        {{ $tenants->links() }}
-                    </div>
+                @if($tenants->total() > 20)
+                <div class="px-4 py-3 border-t border-miga flex items-center justify-between gap-3 flex-wrap">
+                    <div>{{ $tenants->hasPages() ? $tenants->links() : '' }}</div>
+                    <x-per-page-select :paginator="$tenants" />
+                </div>
                 @endif
             </div>
 
