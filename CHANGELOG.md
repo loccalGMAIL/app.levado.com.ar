@@ -295,6 +295,64 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.13.4] — 2026-10-02
+
+Rama `v0.13.4-recetas-impresion-paginado`, sobre v0.13.3. Receta imprimible con el membrete del negocio y selector de
+filas por página en los listados.
+
+### Recetas: impresión con encabezado del negocio
+
+#### Agregado
+
+- **Imprimir una receta** desde el botón **Imprimir** del detalle y desde un ícono de impresora en cada fila del
+  listado de Recetas. Abre una vista imprimible con **Imprimir** (diálogo del navegador) y **Descargar PDF**.
+- **Encabezado del negocio**: logo, razón social (o nombre) y CUIT del comercio, más el nombre de la receta
+  ("Receta" o "Sub-receta"), el rendimiento y la fecha de emisión.
+- **Hoja de cocina, sin costos ni precios**: descripción, ingredientes, sub-recetas, envases y mano de obra
+  (horas); cada sección se omite si está vacía. Pensada para entregar a quien produce.
+- Disponible para todos los roles (incluido viewer); la receta de otro negocio devuelve 404.
+
+#### Técnico
+
+- `RecipePrintSheet` arma un array plano (como `ProductionOrderSheets`, para no hacer lazy load dentro del render
+  de dompdf) y reutiliza `ReportLetterhead`. `RecipePrintController` (`show` / `pdf`), rutas `recipes.print` y
+  `recipes.print.pdf` (`throttle:20,1`), vistas en `resources/views/recipes/print/` con los estilos de
+  `fixed-costs.report._styles`.
+- **6 tests nuevos** en `RecipePrintTest` (encabezado e ingredientes sin costos, envases y mano de obra, PDF, viewer,
+  aislamiento entre negocios, botón en el listado).
+
+### Listados: elegir cuántas filas ver
+
+#### Agregado
+
+- **Selector "Mostrar 20 / 50 / 100 / 200"** en todos los listados paginados (recetas, insumos, envases, artículos,
+  compras, proveedores, gastos, stock y kardex, órdenes de producción, historial, notas de crédito, notificaciones,
+  tabla de recetas del dashboard y listados de admin). El valor por defecto sigue siendo 20.
+- La elección se **recuerda por listado** durante la sesión (elegir 100 en Recetas no cambia Insumos), vuelve a la
+  página 1 y conserva filtros, búsqueda y orden.
+- El selector se oculta cuando el listado tiene 20 filas o menos, y queda visible aunque todo entre en una sola
+  página para poder volver a una cantidad menor.
+
+#### Cambiado
+
+- La matriz de artículos paginaba de a 30; ahora usa las mismas opciones (20 por defecto).
+
+#### Técnico
+
+- Trait `ResolvesPerPage` en el `Controller` base: `perPage()` valida `?per_page=` contra `PER_PAGE_OPTIONS`, lo
+  guarda en sesión bajo `per_page.{ruta}` y cae al valor recordado o al default. Los ~21 `->paginate(20|30)` pasan a
+  `->paginate($this->perPage())`.
+- Componente `x-per-page-select` (con `fragment` opcional para el dashboard), integrado en `x-data-table` y en los
+  listados con paginación propia. Las constantes se leen desde `Controller` (PHP no permite acceder a la constante de
+  un trait directamente).
+- **5 tests nuevos** en `PerPageTest` (default, elección, valor inválido, memoria por listado, selector oculto).
+- **1076 tests, 1075 verdes**: el que falla (`RecurringProductionRequestTest`, "recurrente inactivo…") es preexistente
+  y no relacionado: usa una fecha fija (`2026-09-21`).
+
+#### Al deployar
+
+- Sin migraciones. `npm run build`.
+
 ## [0.13.3] — 2026-10-01
 
 Rama `v0.13.3-usuarios-password`, sobre v0.13.2. Alta de usuarios con contraseña desde el portal de administración.
