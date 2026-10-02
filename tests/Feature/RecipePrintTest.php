@@ -78,6 +78,16 @@ test('el PDF de la receta se descarga', function () {
         ->assertHeader('content-type', 'application/pdf');
 });
 
+test('el listado de recetas tiene un botón de impresión por receta', function () {
+    [$user, $tenant] = recipePrintUser(TenantUserRole::Viewer);
+    $recipe = recipeToPrint($tenant);
+
+    $this->actingAs($user)
+        ->get(route('recipes.index'))
+        ->assertOk()
+        ->assertSee(route('recipes.print', $recipe), false);
+});
+
 test('viewer puede ver la receta imprimible', function () {
     [$user, $tenant] = recipePrintUser(TenantUserRole::Viewer);
     $recipe = recipeToPrint($tenant);
