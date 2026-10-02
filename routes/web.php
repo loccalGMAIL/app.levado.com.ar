@@ -43,6 +43,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeLineController;
+use App\Http\Controllers\RecipePrintController;
 use App\Http\Controllers\RecurringProductionRequestController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
@@ -106,6 +107,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
+    Route::get('recipes/{recipe}/print', [RecipePrintController::class, 'show'])->name('recipes.print');
+    Route::get('recipes/{recipe}/print/pdf', [RecipePrintController::class, 'pdf'])
+        ->middleware('throttle:20,1')
+        ->name('recipes.print.pdf');
 
     Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     // La pantalla de escaneo se registra antes que purchases/{purchase} para que
