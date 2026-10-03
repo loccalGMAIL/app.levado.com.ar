@@ -112,7 +112,7 @@ class RecipeCostPropagator
             'packagingLines.packaging',
             'laborLines.laborType',
             'subrecipeLines.childRecipe',
-            'manufacturedProduct',
+            'manufacturedProducts',
         ])
             ->whereIn('id', $closure)
             ->get()
@@ -141,8 +141,8 @@ class RecipeCostPropagator
             $recipe->save();
 
             // Cambió el costo del elaborado → recomputar los precios con política de su artículo.
-            if ($recipe->manufacturedProduct !== null) {
-                $this->priceRecalculator->recompute($recipe->manufacturedProduct);
+            foreach ($recipe->manufacturedProducts as $product) {
+                $this->priceRecalculator->recompute($product);
             }
         }
     }

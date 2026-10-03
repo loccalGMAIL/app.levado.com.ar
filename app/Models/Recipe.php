@@ -82,10 +82,18 @@ class Recipe extends Model
         return $this->hasMany(RecipePrice::class);
     }
 
-    /** El artículo elaborado que produce esta receta (el precio de venta vive ahí). */
+    /** El artículo base que produce esta receta (el precio de venta vive ahí); excluye las presentaciones. */
     public function manufacturedProduct(): HasOne
     {
-        return $this->hasOne(Product::class)->where('type', ProductType::Manufactured->value);
+        return $this->hasOne(Product::class)
+            ->where('type', ProductType::Manufactured->value)
+            ->whereNull('recipe_quantity');
+    }
+
+    /** Todos los artículos elaborados de la receta: el base y sus presentaciones (packs). */
+    public function manufacturedProducts(): HasMany
+    {
+        return $this->hasMany(Product::class)->where('type', ProductType::Manufactured->value);
     }
 
     public function priceLogs(): HasMany

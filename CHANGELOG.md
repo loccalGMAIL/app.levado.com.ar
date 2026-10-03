@@ -295,6 +295,38 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.14.0] — 2026-10-03
+
+Rama `v0.14.0-ArticulosConCantidadDeReceta`, sobre v0.13.4. Artículos de venta que toman una cantidad de una receta
+(packs / presentaciones).
+
+### Artículos: cantidad de la receta
+
+#### Agregado
+
+- **Cantidad de la receta** (opcional) en los artículos elaborados: permite crear una presentación con código de barras,
+  costo y precio propios que contiene N unidades del rendimiento de una receta (ej. "Pack de medialunas" = 6 unidades
+  de la receta *Facturas*, que rinde 56).
+- **Costo derivado**: el costo de la presentación es el costo por unidad de la receta × la cantidad; el overhead de
+  gastos fijos también se multiplica.
+- En el listado, la presentación muestra "6 u de Facturas".
+
+#### Cambiado
+
+- Producción sigue trabajando con el artículo base y el rendimiento de la receta: las presentaciones no se listan como
+  producibles y producirlas se rechaza (422).
+- Al cambiar el costo de una receta se recalculan los precios con política de **todos** sus artículos (base y
+  presentaciones). El listado de Recetas y el Dashboard siguen mostrando el artículo base.
+
+#### Técnico
+
+- Columna `products.recipe_quantity` (decimal, nullable; `null` = artículo base). `Recipe::manufacturedProducts()`;
+  `Recipe::manufacturedProduct()` excluye las presentaciones. Estado de factory `ProductFactory::presentationOf()`.
+
+#### Al deployar
+
+- `php artisan migrate`. `npm run build`.
+
 ## [0.13.4] — 2026-10-02
 
 Rama `v0.13.4-recetas-impresion-paginado`, sobre v0.13.3. Receta imprimible con el membrete del negocio y selector de
