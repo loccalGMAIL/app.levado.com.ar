@@ -67,7 +67,7 @@
             <x-text-input id="edit_product_recipe_quantity" name="recipe_quantity" type="number"
                 step="0.001" min="0.001" class="mt-1 block w-full"
                 x-model="editing.recipe_quantity" placeholder="Vacío = artículo base" />
-            <p class="mt-1 text-xs text-masa-madre">Para un pack o presentación: cuántas unidades de la receta contiene (ej. 6). Se produce el artículo base.</p>
+            <!-- <p class="mt-1 text-xs text-masa-madre">Para un pack o presentación: cuántas unidades de la receta contiene (ej. 6). Se produce el artículo base.</p> -->
             <x-input-error :messages="$errors->get('recipe_quantity')" class="mt-2" />
         </div>
 
