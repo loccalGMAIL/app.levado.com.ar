@@ -25,6 +25,7 @@ class Product extends Model
         'name',
         'type',
         'recipe_id',
+        'recipe_quantity',
         'product_category_id',
         'unit',
         'cost_per_unit',
@@ -39,6 +40,7 @@ class Product extends Model
         return [
             'type' => ProductType::class,
             'unit' => Unit::class,
+            'recipe_quantity' => 'decimal:3',
             'cost_per_unit' => 'decimal:4',
             'costing_method' => CostingMethod::class,
             'active' => 'boolean',
@@ -72,6 +74,7 @@ class Product extends Model
         $query->active()
             ->where('type', ProductType::Manufactured->value)
             ->whereNotNull('recipe_id')
+            ->whereNull('recipe_quantity')
             // El closure agrupa el OR: sin paréntesis el orWhereHas se
             // aplicaría contra toda la cadena de arriba y un artículo de
             // reventa en categoría producible se colaría en el resultado.
@@ -83,6 +86,22 @@ class Product extends Model
     public function isManufactured(): bool
     {
         return $this->type === ProductType::Manufactured;
+    }
+
+    /**
+     * Presentación de venta: artículo con código/precio propio que toma N
+     * unidades del rendimiento de una receta (ej. "Pack de 6 medialunas" de
+     * la receta Facturas). No se produce: se produce el artículo base.
+     */
+    public function isRecipePresentation(): bool
+    {
+        return $this->isManufactured() && $this->recipe_quantity !== null;
+    }
+
+    /** Unidades de rendimiento de la receta que contiene 1 unidad del artículo. */
+    public function recipeUnitsPerItem(): float
+    {
+        return $this->recipe_quantity !== null ? (float) $this->recipe_quantity : 1.0;
     }
 
     public function isResale(): bool
@@ -99,11 +118,13 @@ class Product extends Model
      */
     public function currentCost(): ?float
     {
-        $cost = $this->isManufactured()
-            ? $this->recipe?->unit_cost
-            : $this->cost_per_unit;
+        if (! $this->isManufactured()) {
+            return $this->cost_per_unit !== null ? (float) $this->cost_per_unit : null;
+        }
 
-        return $cost !== null ? (float) $cost : null;
+        $recipeCost = $this->recipe?->unit_cost;
+
+        return $recipeCost !== null ? (float) $recipeCost * $this->recipeUnitsPerItem() : null;
     }
 
     /** Origen del costo vigente, para etiquetar en la UI. */
@@ -129,7 +150,7 @@ class Product extends Model
         $laborHours = (float) ($this->recipe?->labor_hours ?? 0);
         $overheadPerUnit = $yield > 0 ? $laborHours * $overheadPerHour / $yield : 0.0;
 
-        return $direct + $overheadPerUnit;
+        return $direct + $overheadPerUnit * $this->recipeUnitsPerItem();
     }
 
     /** Precio de venta del artículo en una lista (única fuente de verdad). Null si no tiene. */

@@ -44,6 +44,18 @@ class ProductFactory extends Factory
         ]);
     }
 
+    /** Presentación de venta de una receta existente (ej. pack de N unidades). */
+    public function presentationOf(Recipe $recipe, float $quantity): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => ProductType::Manufactured->value,
+            'recipe_id' => $recipe->id,
+            'recipe_quantity' => $quantity,
+            'tenant_id' => $recipe->tenant_id,
+            'cost_per_unit' => null,
+        ]);
+    }
+
     public function resale(): static
     {
         return $this->state(['type' => ProductType::Resale->value]);

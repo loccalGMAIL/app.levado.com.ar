@@ -157,7 +157,7 @@ class ProductController extends Controller
         // reemplaza el changeset y wasChanged() dejaría de ver el costo.
         // `type` y `recipe_id` entran porque normalizeByType() nulea cost_per_unit
         // al pasar a elaborado: el costo cambia de origen aunque la columna no.
-        $costChanged = $product->wasChanged(['cost_per_unit', 'type', 'recipe_id']);
+        $costChanged = $product->wasChanged(['cost_per_unit', 'type', 'recipe_id', 'recipe_quantity']);
         $costValueChanged = $product->wasChanged('cost_per_unit');
 
         $this->codeAssigner->assignIfMissing($product);
@@ -241,6 +241,7 @@ class ProductController extends Controller
             $data['costing_method'] = null;
         } else {
             $data['recipe_id'] = null;
+            $data['recipe_quantity'] = null;
         }
 
         return $data;

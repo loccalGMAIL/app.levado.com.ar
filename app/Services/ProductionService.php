@@ -220,6 +220,7 @@ class ProductionService
     private function guardProducible(Product $product, float $quantity): Recipe
     {
         abort_unless($product->isManufactured(), 422, 'Solo se pueden producir productos elaborados.');
+        abort_if($product->isRecipePresentation(), 422, 'Las presentaciones de una receta no se producen: producí el artículo base.');
         abort_unless($quantity > 0, 422, 'La cantidad a producir debe ser mayor a cero.');
 
         $recipe = $product->recipe;
