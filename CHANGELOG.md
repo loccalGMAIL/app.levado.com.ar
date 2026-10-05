@@ -304,15 +304,21 @@ Rama `v0.14.0-ArticulosConCantidadDeReceta`, sobre v0.13.4. Artículos de venta 
 
 #### Agregado
 
-- **Cantidad de la receta** (opcional) en los artículos elaborados: permite crear una presentación con código de barras,
+- **Cantidad de la receta** en los artículos elaborados: permite crear una presentación con código de barras,
   costo y precio propios que contiene N unidades del rendimiento de una receta (ej. "Pack de medialunas" = 6 unidades
   de la receta *Facturas*, que rinde 56).
+- **Cantidad obligatoria, mínimo 1** (arranca en 1). Con 1 el artículo es el base (el que se produce); con más de 1 es
+  una presentación.
+- **Cambiar la receta al editar**: el selector de receta ahora se muestra siempre en los elaborados, también cuando el
+  artículo ya tiene receta.
 - **Costo derivado**: el costo de la presentación es el costo por unidad de la receta × la cantidad; el overhead de
   gastos fijos también se multiplica.
 - En el listado, la presentación muestra "6 u de Facturas".
 
 #### Cambiado
 
+- **Modales de artículo más compactos**: Receta y Cantidad van en una misma fila, la etiqueta es solo "Cantidad" y se
+  quitaron los textos de ayuda ("El costo del elaborado se toma de la receta.", "Cantidad de la receta (opcional…)").
 - Producción sigue trabajando con el artículo base y el rendimiento de la receta: las presentaciones no se listan como
   producibles y producirlas se rechaza (422).
 - Al cambiar el costo de una receta se recalculan los precios con política de **todos** sus artículos (base y
@@ -322,6 +328,8 @@ Rama `v0.14.0-ArticulosConCantidadDeReceta`, sobre v0.13.4. Artículos de venta 
 
 - Columna `products.recipe_quantity` (decimal, nullable; `null` = artículo base). `Recipe::manufacturedProducts()`;
   `Recipe::manufacturedProduct()` excluye las presentaciones. Estado de factory `ProductFactory::presentationOf()`.
+- Validación `recipe_quantity` `min:1` en `StoreProductRequest` / `UpdateProductRequest`; `ProductController::normalizeByType()`
+  guarda cantidad 1 como `null` para conservar la semántica de artículo base.
 
 #### Al deployar
 
