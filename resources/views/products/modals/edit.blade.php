@@ -40,24 +40,30 @@
             <x-input-error :messages="$errors->get('type')" class="mt-2" />
         </div>
 
-        {{-- Sólo aparece cuando un artículo sin receta (reventa) pasa a Elaborado.
-             Si ya tiene receta, editing.recipe_url la reemplaza por el link de arriba
-             y este select se oculta — reasignarla no es un flujo real. Sigue en el
-             DOM (no removido con @if) para que recipe_id siga viajando en el submit. --}}
-        <div x-show="editing.type === 'manufactured' && !editing.recipe_url" x-cloak>
-            <x-input-label for="edit_product_recipe" value="Receta" />
-            <select id="edit_product_recipe" name="recipe_id"
-                x-model="editing.recipe_id" x-bind:required="editing.type === 'manufactured' && !editing.recipe_url"
-                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
-                <option value="">— Seleccioná una receta —</option>
-                @foreach($recipes as $recipe)
-                    <option value="{{ $recipe->id }}">
-                        {{ $recipe->name }}{{ $recipe->active ? '' : ' (inactiva)' }}
-                    </option>
-                @endforeach
-            </select>
-            <p class="mt-1 text-xs text-masa-madre">El costo del elaborado se toma de la receta.</p>
-            <x-input-error :messages="$errors->get('recipe_id')" class="mt-2" />
+        {{-- Elaborado: receta que lo produce (editable) y cuántas unidades de ella contiene. --}}
+        <div class="grid grid-cols-3 gap-4" x-show="editing.type === 'manufactured'" x-cloak>
+            <div class="col-span-2">
+                <x-input-label for="edit_product_recipe" value="Receta" />
+                <select id="edit_product_recipe" name="recipe_id"
+                    x-model="editing.recipe_id" x-bind:required="editing.type === 'manufactured'"
+                    class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
+                    <option value="">— Seleccioná una receta —</option>
+                    @foreach($recipes as $recipe)
+                        <option value="{{ $recipe->id }}">
+                            {{ $recipe->name }}{{ $recipe->active ? '' : ' (inactiva)' }}
+                        </option>
+                    @endforeach
+                </select>
+                <x-input-error :messages="$errors->get('recipe_id')" class="mt-2" />
+            </div>
+            <div>
+                <x-input-label for="edit_product_recipe_quantity" value="Cantidad" />
+                <x-text-input id="edit_product_recipe_quantity" name="recipe_quantity" type="number"
+                    step="0.001" min="1" class="mt-1 block w-full"
+                    x-model="editing.recipe_quantity"
+                    x-bind:required="editing.type === 'manufactured'" />
+                <x-input-error :messages="$errors->get('recipe_quantity')" class="mt-2" />
+            </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">

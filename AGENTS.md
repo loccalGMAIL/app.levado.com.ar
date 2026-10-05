@@ -1,3 +1,12 @@
+## Flujo de trabajo con Git
+
+- Para cada nueva función, corrección o cambio en el sistema, crear una rama nueva a partir de `master`.
+- Formato del nombre de la rama: `vxx.xx.xx-TemaDelFix` (ej.: `v0.13.5-CorreccionImpresionRecetas`).
+
+## Pruebas en el navegador
+
+- Para probar en el navegador, iniciar sesión con el usuario `owner@demo.com` y la contraseña `demo123`.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

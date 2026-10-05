@@ -64,20 +64,29 @@
             <x-input-error :messages="$errors->get('type')" class="mt-2" />
         </div>
 
-        {{-- Elaborado: se elige la receta que lo produce. --}}
-        <div x-show="type === 'manufactured'" x-cloak>
-            <x-input-label for="create_product_recipe" value="Receta" />
-            <select id="create_product_recipe" name="recipe_id" x-bind:required="type === 'manufactured'"
-                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
-                <option value="">— Seleccioná una receta —</option>
-                @foreach($recipes->where('active', true) as $recipe)
-                    <option value="{{ $recipe->id }}" @selected(old('recipe_id') == $recipe->id)>
-                        {{ $recipe->name }}
-                    </option>
-                @endforeach
-            </select>
-            <p class="mt-1 text-xs text-masa-madre">El costo del elaborado se toma de la receta.</p>
-            <x-input-error :messages="$errors->get('recipe_id')" class="mt-2" />
+        {{-- Elaborado: se elige la receta que lo produce y cuántas unidades de ella contiene. --}}
+        <div class="grid grid-cols-3 gap-4" x-show="type === 'manufactured'" x-cloak>
+            <div class="col-span-2">
+                <x-input-label for="create_product_recipe" value="Receta" />
+                <select id="create_product_recipe" name="recipe_id" x-bind:required="type === 'manufactured'"
+                    class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
+                    <option value="">— Seleccioná una receta —</option>
+                    @foreach($recipes->where('active', true) as $recipe)
+                        <option value="{{ $recipe->id }}" @selected(old('recipe_id') == $recipe->id)>
+                            {{ $recipe->name }}
+                        </option>
+                    @endforeach
+                </select>
+                <x-input-error :messages="$errors->get('recipe_id')" class="mt-2" />
+            </div>
+            <div>
+                <x-input-label for="create_product_recipe_quantity" value="Cantidad" />
+                <x-text-input id="create_product_recipe_quantity" name="recipe_quantity" type="number"
+                    step="0.001" min="1" class="mt-1 block w-full"
+                    :value="old('recipe_quantity', 1)"
+                    x-bind:required="type === 'manufactured'" />
+                <x-input-error :messages="$errors->get('recipe_quantity')" class="mt-2" />
+            </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
