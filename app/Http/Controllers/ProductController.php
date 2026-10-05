@@ -239,6 +239,10 @@ class ProductController extends Controller
         if (($data['type'] ?? null) === ProductType::Manufactured->value) {
             $data['cost_per_unit'] = null;
             $data['costing_method'] = null;
+            // Cantidad 1 = artículo base (el que se produce), no una presentación.
+            if (isset($data['recipe_quantity']) && (float) $data['recipe_quantity'] === 1.0) {
+                $data['recipe_quantity'] = null;
+            }
         } else {
             $data['recipe_id'] = null;
             $data['recipe_quantity'] = null;

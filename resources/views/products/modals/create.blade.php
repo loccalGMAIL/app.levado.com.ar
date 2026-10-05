@@ -2,7 +2,6 @@
     <form method="POST" action="{{ route('products.store') }}" class="space-y-4"
           x-data="{
               type: '{{ old('type') }}',
-              recipeUnit: '',
               showNewCat: false,
               newCatName: '',
               newCatLoading: false,
@@ -65,31 +64,27 @@
             <x-input-error :messages="$errors->get('type')" class="mt-2" />
         </div>
 
-        {{-- Elaborado: se elige la receta que lo produce. --}}
-        <div x-show="type === 'manufactured'" x-cloak>
-            <x-input-label for="create_product_recipe" value="Receta" />
-            <select id="create_product_recipe" name="recipe_id" x-bind:required="type === 'manufactured'"
-                x-init="recipeUnit = $el.selectedOptions[0]?.dataset.unit ?? ''"
-                @change="recipeUnit = $el.selectedOptions[0]?.dataset.unit ?? ''"
-                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
-                <option value="">— Seleccioná una receta —</option>
-                @foreach($recipes->where('active', true) as $recipe)
-                    <option value="{{ $recipe->id }}" data-unit="{{ $recipe->yield_unit->short() }}" @selected(old('recipe_id') == $recipe->id)>
-                        {{ $recipe->name }}
-                    </option>
-                @endforeach
-            </select>
-            <p class="mt-1 text-xs text-masa-madre">El costo del elaborado se toma de la receta.</p>
-            <x-input-error :messages="$errors->get('recipe_id')" class="mt-2" />
-
-            <div class="mt-3">
-                <label for="create_product_recipe_quantity" class="block font-medium text-sm text-gray-700">
-                    Cantidad de la receta <span class="text-xs text-masa-madre">(opcional, en <span x-text="recipeUnit || 'unidades'"></span>)</span>
-                </label>
+        {{-- Elaborado: se elige la receta que lo produce y cuántas unidades de ella contiene. --}}
+        <div class="grid grid-cols-3 gap-4" x-show="type === 'manufactured'" x-cloak>
+            <div class="col-span-2">
+                <x-input-label for="create_product_recipe" value="Receta" />
+                <select id="create_product_recipe" name="recipe_id" x-bind:required="type === 'manufactured'"
+                    class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
+                    <option value="">— Seleccioná una receta —</option>
+                    @foreach($recipes->where('active', true) as $recipe)
+                        <option value="{{ $recipe->id }}" @selected(old('recipe_id') == $recipe->id)>
+                            {{ $recipe->name }}
+                        </option>
+                    @endforeach
+                </select>
+                <x-input-error :messages="$errors->get('recipe_id')" class="mt-2" />
+            </div>
+            <div>
+                <x-input-label for="create_product_recipe_quantity" value="Cantidad" />
                 <x-text-input id="create_product_recipe_quantity" name="recipe_quantity" type="number"
-                    step="0.001" min="0.001" class="mt-1 block w-full"
-                    :value="old('recipe_quantity')" placeholder="Vacío = artículo base" />
-                <!-- <p class="mt-1 text-xs text-masa-madre">Para un pack o presentación: cuántas unidades de la receta contiene (ej. 6). Se vende con costo y código propios; se produce el artículo base.</p> -->
+                    step="0.001" min="1" class="mt-1 block w-full"
+                    :value="old('recipe_quantity', 1)"
+                    x-bind:required="type === 'manufactured'" />
                 <x-input-error :messages="$errors->get('recipe_quantity')" class="mt-2" />
             </div>
         </div>

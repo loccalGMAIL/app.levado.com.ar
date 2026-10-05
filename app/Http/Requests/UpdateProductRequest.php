@@ -31,8 +31,8 @@ class UpdateProductRequest extends FormRequest
                 'integer',
                 Rule::exists('recipes', 'id')->where('tenant_id', $tenantId),
             ],
-            // Opcional: unidades de la receta que contiene 1 unidad del artículo (presentación/pack).
-            'recipe_quantity' => ['nullable', 'numeric', 'min:0.001', 'max:99999'],
+            // Unidades de la receta que contiene 1 unidad del artículo (1 = artículo base, >1 = pack).
+            'recipe_quantity' => ['nullable', 'numeric', 'min:1', 'max:99999'],
             'product_category_id' => [
                 'nullable',
                 'integer',

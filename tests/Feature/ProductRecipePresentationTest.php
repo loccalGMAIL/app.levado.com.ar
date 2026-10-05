@@ -133,7 +133,7 @@ test('owner puede crear una presentación indicando la cantidad de la receta', f
         ->and($pack->isRecipePresentation())->toBeTrue();
 });
 
-test('la cantidad de la receta debe ser mayor a cero', function () {
+test('la cantidad de la receta debe ser al menos 1', function () {
     [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
     $recipe = facturasRecipe($tenant);
 
@@ -142,10 +142,58 @@ test('la cantidad de la receta debe ser mayor a cero', function () {
             'name' => 'Pack inválido',
             'type' => ProductType::Manufactured->value,
             'recipe_id' => $recipe->id,
-            'recipe_quantity' => '0',
+            'recipe_quantity' => '0.5',
             'unit' => Unit::Unidad->value,
         ])
         ->assertSessionHasErrors('recipe_quantity');
+});
+
+test('cantidad 1 se guarda como artículo base, no como presentación', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $recipe = facturasRecipe($tenant);
+
+    $this->actingAs($user)
+        ->post(route('products.store'), [
+            'name' => 'Medialuna base',
+            'type' => ProductType::Manufactured->value,
+            'recipe_id' => $recipe->id,
+            'recipe_quantity' => '1',
+            'unit' => Unit::Unidad->value,
+        ])
+        ->assertRedirect(route('products.index'));
+
+    $base = $tenant->products()->where('name', 'Medialuna base')->first();
+
+    expect($base->recipe_quantity)->toBeNull()
+        ->and($base->isRecipePresentation())->toBeFalse();
+});
+
+test('se puede cambiar la receta de un artículo al editarlo', function () {
+    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
+    $pack = Product::factory()->presentationOf(facturasRecipe($tenant), 6)->create();
+    $otherRecipe = facturasRecipe($tenant);
+
+    $this->actingAs($user)
+        ->put(route('products.update', $pack), [
+            'name' => $pack->name,
+            'type' => ProductType::Manufactured->value,
+            'recipe_id' => $otherRecipe->id,
+            'recipe_quantity' => '6',
+            'unit' => Unit::Unidad->value,
+        ])
+        ->assertRedirect();
+
+    expect($pack->fresh()->recipe_id)->toBe($otherRecipe->id);
+});
+
+test('el modal de edición no muestra los textos viejos de receta', function () {
+    [$user] = tenantUserAs(TenantUserRole::Owner);
+
+    $this->actingAs($user)
+        ->get(route('products.index'))
+        ->assertOk()
+        ->assertDontSee('El costo del elaborado se toma de la receta.')
+        ->assertDontSee('Cantidad de la receta');
 });
 
 test('pasar un artículo a reventa anula su cantidad de receta', function () {

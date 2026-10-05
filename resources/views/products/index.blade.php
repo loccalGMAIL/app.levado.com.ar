@@ -5,15 +5,14 @@
         $errorFields = ['name', 'type', 'recipe_id', 'recipe_quantity', 'product_category_id', 'unit', 'cost_per_unit', 'costing_method', 'barcode'];
         $errorsInCreate = $errors->hasAny($errorFields) && old('_form') === 'create';
         $errorsInEdit   = $errors->hasAny($errorFields) && old('_form') === 'edit';
-        $editingDefault = ['id' => null, 'name' => '', 'type' => '', 'recipe_id' => '', 'recipe_quantity' => '', 'recipe_unit' => '', 'recipe_url' => null, 'product_category_id' => '', 'unit' => '', 'cost_per_unit' => '', 'costing_method' => '', 'barcode' => ''];
+        $editingDefault = ['id' => null, 'name' => '', 'type' => '', 'recipe_id' => '', 'recipe_quantity' => 1, 'recipe_url' => null, 'product_category_id' => '', 'unit' => '', 'cost_per_unit' => '', 'costing_method' => '', 'barcode' => ''];
         $editingOnError = $errorsInEdit ? [
             'id'                  => old('product_id'),
             'name'                => old('name'),
             'type'                => old('type'),
             'recipe_id'           => old('recipe_id'),
             'recipe_url'          => old('recipe_id') ? route('recipes.show', old('recipe_id')) : null,
-            'recipe_quantity'     => old('recipe_quantity'),
-            'recipe_unit'         => $recipes->firstWhere('id', old('recipe_id'))?->yield_unit->short() ?? '',
+            'recipe_quantity'     => old('recipe_quantity', 1),
             'product_category_id' => old('product_category_id'),
             'unit'                => old('unit'),
             'cost_per_unit'       => old('cost_per_unit'),
@@ -29,8 +28,7 @@
             'type'                => $product->type->value,
             'recipe_id'           => $product->recipe_id ?? '',
             'recipe_url'          => $product->recipe_id ? route('recipes.show', $product->recipe_id) : null,
-            'recipe_quantity'     => $product->recipe_quantity !== null ? (float) $product->recipe_quantity : '',
-            'recipe_unit'         => $product->recipe?->yield_unit->short() ?? '',
+            'recipe_quantity'     => $product->recipe_quantity !== null ? (float) $product->recipe_quantity : 1,
             'product_category_id' => $product->product_category_id ?? '',
             'unit'                => $product->unit->value,
             'cost_per_unit'       => $product->cost_per_unit !== null ? round((float) $product->cost_per_unit, 2) : '',
