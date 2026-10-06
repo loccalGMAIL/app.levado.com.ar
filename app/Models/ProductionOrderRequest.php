@@ -22,6 +22,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * "se generó y lo borraron" — con DELETE físico no podría, y regeneraría lo
  * que alguien borró a mano en la próxima corrida.
  */
+/**
+ * Alias de select() en RecurringProductionRequestMaterializer.
+ *
+ * @property-read string|null $date
+ * @property-read int|null $rid
+ */
 class ProductionOrderRequest extends Model
 {
     /** @use HasFactory<ProductionOrderRequestFactory> */

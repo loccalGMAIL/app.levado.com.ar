@@ -210,7 +210,7 @@ class CatalogItemReplacer
         $incompatible = $lines->filter(fn ($line) => ! $this->converter->compatible($line->unit, $targetUnit));
 
         if ($incompatible->isNotEmpty()) {
-            $names = $incompatible->map(fn ($line) => $line->recipe?->name ?? "receta #{$line->recipe_id}")->unique()->implode(', ');
+            $names = $incompatible->map(fn ($line) => $line->recipe->name ?? "receta #{$line->recipe_id}")->unique()->implode(', ');
             abort(422, "La unidad del ítem destino no es compatible con: {$names}.");
         }
     }
@@ -221,14 +221,14 @@ class CatalogItemReplacer
      */
     private function preview(Collection $lines, ?string $targetUnitValue, int $toId, string $lineClass, string $foreignKey): array
     {
-        $recipeNames = $lines->map(fn ($line) => $line->recipe?->name ?? "receta #{$line->recipe_id}")->unique()->values()->all();
+        $recipeNames = $lines->map(fn ($line) => $line->recipe->name ?? "receta #{$line->recipe_id}")->unique()->values()->all();
 
         $incompatibleNames = [];
         if ($targetUnitValue !== null) {
             $targetUnit = Unit::from($targetUnitValue);
             $incompatibleNames = $lines
                 ->filter(fn ($line) => ! $this->converter->compatible($line->unit, $targetUnit))
-                ->map(fn ($line) => $line->recipe?->name ?? "receta #{$line->recipe_id}")
+                ->map(fn ($line) => $line->recipe->name ?? "receta #{$line->recipe_id}")
                 ->unique()->values()->all();
         }
 

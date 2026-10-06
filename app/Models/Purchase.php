@@ -9,6 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Atributo agregado por un join en NotificationService.
+ *
+ * @property-read int|string|null $pending_lines_count
+ */
 class Purchase extends Model
 {
     use BelongsToTenant;

@@ -79,7 +79,7 @@ class RecurringProductionRequestMaterializer
             // Destino dado de baja: no se generan pedidos hacia un lugar que
             // ya no existe operativamente. Se saltea en silencio — no es un
             // error del recurrente, es un estado válido del negocio.
-            if (! ($r->destination?->active ?? false)) {
+            if (! ($r->destination->active ?? false)) {
                 continue;
             }
 

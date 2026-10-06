@@ -61,7 +61,7 @@ class ProductPriceController extends Controller
         return response()->json([
             'selling_price' => $sellingPrice,
             'selling_price_formatted' => $sellingPrice !== null ? number_format($sellingPrice, 2, ',', '.') : null,
-            'policy_type' => $saved?->policy_type?->value ?? PricingPolicy::Manual->value,
+            'policy_type' => $saved?->policy_type->value ?? PricingPolicy::Manual->value,
             'policy_value' => $saved && $saved->policy_value !== null ? (float) $saved->policy_value : null,
             'margin' => $margin,
             'margin_formatted' => $margin !== null ? number_format($margin, 2, ',', '.') : null,

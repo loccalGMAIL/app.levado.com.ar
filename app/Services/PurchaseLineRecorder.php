@@ -365,7 +365,7 @@ class PurchaseLineRecorder
             // syncPurchaseLineEntry() va a dar de alta esta compra. El costo es
             // por-negocio por decisión (decision-multi-sucursal): un promedio
             // tenant-wide entre sucursales es justo el diseño que quedó diferido.
-            $qty = (float) ($this->stock->levelFor($item, $tenant->defaultLocation())?->quantity ?? 0);
+            $qty = (float) ($this->stock->levelFor($item, $tenant->defaultLocation())->quantity ?? 0);
             if ($qty > 0) {
                 $newCost = ($qty * $oldCost + $purchasedQty * $costPerUnit) / ($qty + $purchasedQty);
             }

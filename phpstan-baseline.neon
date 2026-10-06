@@ -13,34 +13,10 @@ parameters:
 			path: app/Console/Commands/CreateProductsFromRecipes.php
 
 		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Console/Commands/CreateProductsFromRecipes.php
-
-		-
 			message: '#^Match arm comparison between \$this\(App\\Enums\\PricingPolicy\)&App\\Enums\\PricingPolicy\:\:Markup and App\\Enums\\PricingPolicy\:\:Markup is always true\.$#'
 			identifier: match.alwaysTrue
 			count: 1
 			path: app/Enums/PricingPolicy.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$active_users\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/TenantController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$pending_invitations\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/TenantController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$total_users\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/TenantController.php
 
 		-
 			message: '#^Parameter \#1 \$user of class Illuminate\\Auth\\Events\\Verified constructor expects Illuminate\\Contracts\\Auth\\MustVerifyEmail, App\\Models\\User\|null given\.$#'
@@ -53,12 +29,6 @@ parameters:
 			identifier: match.unhandled
 			count: 1
 			path: app/Http/Controllers/CatalogReplacementController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Recipe\:\:\$dashboard_selling_price\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/DashboardController.php
 
 		-
 			message: '#^Method App\\Http\\Controllers\\InstantProductionOrderController\:\:pairsFrom\(\) should return Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product, quantity\: float\}\> but returns Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product\|null, quantity\: float\}\>\.$#'
@@ -79,66 +49,6 @@ parameters:
 			path: app/Http/Controllers/ProductPriceController.php
 
 		-
-			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Http/Controllers/ProductPriceController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\PurchaseLine\:\:\$total_iva\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/PurchaseController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\PurchaseLine\:\:\$total_percepcion\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/PurchaseController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\PurchaseLine\:\:\$total_subtotal\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/PurchaseController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\ProductPrice\:\:\$recipe_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/RecipeController.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Http/Controllers/StockController.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>footer_note" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Mail/TeamInvitation.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>subject" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Mail/TeamInvitation.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>footer_note" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Mail/WelcomeMail.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>subject" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Mail/WelcomeMail.php
-
-		-
 			message: '#^Strict comparison using \!\=\= between Carbon\\Carbon and null will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
 			count: 1
@@ -151,40 +61,10 @@ parameters:
 			path: app/Models/Product.php
 
 		-
-			message: '#^Using nullsafe property access "\?\-\>labor_hours" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Models/Product.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>yield_quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Models/Product.php
-
-		-
 			message: '#^Expression on left side of \?\? is not nullable\.$#'
 			identifier: nullCoalesce.expr
 			count: 1
 			path: app/Models/ProductPrice.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$fixed_costs_exists\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Providers/AppServiceProvider.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$ingredients_exists\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Providers/AppServiceProvider.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$labor_types_exists\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Providers/AppServiceProvider.php
 
 		-
 			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:assertCompatible\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeIngredientLine\> given\.$#'
@@ -217,12 +97,6 @@ parameters:
 			path: app/Services/CatalogItemReplacer.php
 
 		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 3
-			path: app/Services/CatalogItemReplacer.php
-
-		-
 			message: '#^Parameter \#1 \$points of method App\\Services\\FixedCostHistory\:\:withChangePct\(\) expects Illuminate\\Support\\Collection\<int, array\{period\: Illuminate\\Support\\Carbon, amount\: float\}\>, Illuminate\\Support\\Collection\<int, array\{period\: Carbon\\Carbon, amount\: float\}\> given\.$#'
 			identifier: argument.type
 			count: 2
@@ -241,26 +115,8 @@ parameters:
 			path: app/Services/FixedCostReport.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Purchase\:\:\$pending_lines_count\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/NotificationService.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Services/NotificationService.php
-
-		-
 			message: '#^Method App\\Services\\ProductionOrderService\:\:aggregate\(\) should return Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product, quantity\: float\}\> but returns Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product\|null, quantity\: float\}\>\.$#'
 			identifier: return.type
-			count: 1
-			path: app/Services/ProductionOrderService.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/ProductionOrderService.php
 
@@ -283,20 +139,8 @@ parameters:
 			path: app/Services/ProductionOrderSheets.php
 
 		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 2
-			path: app/Services/ProductionOrderSheets.php
-
-		-
 			message: '#^Parameter \#1 \.\.\.\$values of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Ingredient\|App\\Models\\Packaging\|float\|string\>\>\:\:push\(\) expects array\{sort\: string, item\: App\\Models\\Ingredient\|App\\Models\\Packaging, quantity\: float, unit_cost\: float\}, array\{sort\: string, item\: App\\Models\\Product, quantity\: float, unit_cost\: float\} given\.$#'
 			identifier: argument.type
-			count: 1
-			path: app/Services/ProductionService.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/ProductionService.php
 
@@ -337,34 +181,10 @@ parameters:
 			path: app/Services/PurchaseLineRecorder.php
 
 		-
-			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
 			message: '#^Parameter \#1 \$string of function str_pad expects string, int\<0, max\> given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/RecipeShowViewModel.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\ProductionOrderRequest\:\:\$date\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/RecurringProductionRequestMaterializer.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\ProductionOrderRequest\:\:\$rid\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/RecurringProductionRequestMaterializer.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$active\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/RecurringProductionRequestMaterializer.php
 
 		-
 			message: '#^Method App\\Services\\RecurringProductionRequestMaterializer\:\:existingInstances\(\) should return Illuminate\\Support\\Collection\<int, string\> but returns Illuminate\\Support\\Collection\<int, non\-falsy\-string\>\.$#'
@@ -383,21 +203,3 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Services/RecurringProductionRequestMaterializer.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>active" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Services/RecurringProductionRequestMaterializer.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Services/StockService.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Services/StockService.php

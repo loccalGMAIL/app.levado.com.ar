@@ -9,6 +9,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Atributos agregados por withCount()/withExists() en las queries que los usan.
+ *
+ * @property-read int|null $total_users
+ * @property-read int|null $active_users
+ * @property-read int|null $pending_invitations
+ * @property-read bool|null $fixed_costs_exists
+ * @property-read bool|null $labor_types_exists
+ * @property-read bool|null $ingredients_exists
+ */
 class Tenant extends Model
 {
     use HasFactory;

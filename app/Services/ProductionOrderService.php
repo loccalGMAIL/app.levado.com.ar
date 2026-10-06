@@ -282,7 +282,7 @@ class ProductionOrderService
                 'unit' => $line->unit->short(),
                 'quantity' => (float) $line->quantity,
             ])->all(),
-            'skipped' => $skipped->map(fn (ProductionOrderLine $line) => $line->product?->name ?? '—')->values()->all(),
+            'skipped' => $skipped->map(fn (ProductionOrderLine $line) => $line->product->name ?? '—')->values()->all(),
         ];
     }
 

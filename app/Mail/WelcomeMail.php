@@ -37,7 +37,7 @@ class WelcomeMail extends Mailable
     public function envelope(): Envelope
     {
         $tpl = $this->template();
-        $subject = $tpl?->subject ?? "Bienvenido/a a {$this->tenant->name} en Levado";
+        $subject = $tpl->subject ?? "Bienvenido/a a {$this->tenant->name} en Levado";
 
         return new Envelope(subject: $subject);
     }
@@ -53,7 +53,7 @@ class WelcomeMail extends Mailable
                 'tenantName' => $this->tenant->name,
                 'loginUrl' => route('login'),
                 'introText' => $tpl?->intro_text,
-                'footerNote' => $tpl?->footer_note ?? 'Que tu panadería siga creciendo.',
+                'footerNote' => $tpl->footer_note ?? 'Que tu panadería siga creciendo.',
             ],
         );
     }

@@ -146,8 +146,8 @@ class Product extends Model
             return $direct;
         }
 
-        $yield = (float) ($this->recipe?->yield_quantity ?? 0);
-        $laborHours = (float) ($this->recipe?->labor_hours ?? 0);
+        $yield = (float) ($this->recipe->yield_quantity ?? 0);
+        $laborHours = (float) ($this->recipe->labor_hours ?? 0);
         $overheadPerUnit = $yield > 0 ? $laborHours * $overheadPerHour / $yield : 0.0;
 
         return $direct + $overheadPerUnit * $this->recipeUnitsPerItem();

@@ -13,6 +13,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * Atributo agregado por selectRaw() en el dashboard.
+ *
+ * @property-read float|string|null $dashboard_selling_price
+ */
 class Recipe extends Model
 {
     /** @use HasFactory<RecipeFactory> */

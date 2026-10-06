@@ -148,7 +148,7 @@ class ProductionOrderSheets
 
         return [
             'number' => $request->numberLabel(),
-            'destination' => $destination?->name ?? '—',
+            'destination' => $destination->name ?? '—',
             'address' => $destination?->address,
             'city' => $destination?->city,
             'notes' => $pickupAtLocation
@@ -156,7 +156,7 @@ class ProductionOrderSheets
                 : $request->notes,
             'lines' => $request->lines
                 ->map(fn ($line) => [
-                    'product' => $line->product?->name ?? '—',
+                    'product' => $line->product->name ?? '—',
                     'quantity' => (float) $line->quantity,
                     'unit' => $line->unit->short(),
                 ])

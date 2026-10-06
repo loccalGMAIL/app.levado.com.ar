@@ -177,7 +177,7 @@ class NotificationService
             $activeKeys[] = $key;
 
             $pending = (int) $purchase->pending_lines_count;
-            $label = trim(($purchase->supplier?->name ?? 'Compra').' '.($purchase->invoice_number ? "#{$purchase->invoice_number}" : ''));
+            $label = trim(($purchase->supplier->name ?? 'Compra').' '.($purchase->invoice_number ? "#{$purchase->invoice_number}" : ''));
 
             $candidates[] = [
                 'dedupe_key' => $key,
