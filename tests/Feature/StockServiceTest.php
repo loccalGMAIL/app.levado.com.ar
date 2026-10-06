@@ -1,37 +1,13 @@
 <?php
 
 use App\Enums\StockMovementType;
-use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
 use App\Models\Product;
 use App\Models\Recipe;
 use App\Models\StockMovement;
-use App\Models\Tenant;
-use App\Models\TenantUser;
-use App\Models\User;
-use App\Services\StockService;
 use Symfony\Component\HttpKernel\Exception\HttpException;
-
-function stockTenantUser(TenantUserRole $role = TenantUserRole::Owner): array
-{
-    $tenant = Tenant::factory()->create();
-    $user = User::factory()->create();
-    TenantUser::create([
-        'tenant_id' => $tenant->id,
-        'user_id' => $user->id,
-        'role' => $role->value,
-        'active' => true,
-    ]);
-
-    return [$user, $tenant];
-}
-
-function stockService(): StockService
-{
-    return app(StockService::class);
-}
 
 // --- Location default ---
 

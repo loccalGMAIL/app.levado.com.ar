@@ -10,21 +10,6 @@ use App\Models\User;
 use App\Services\FixedCostHistory;
 use Illuminate\Support\Carbon;
 
-function ownerForFixedCost(): array
-{
-    $tenant = Tenant::factory()->create();
-    $user = User::factory()->create();
-    TenantUser::create([
-        'tenant_id' => $tenant->id,
-        'user_id' => $user->id,
-        'role' => TenantUserRole::Owner->value,
-        'active' => true,
-    ]);
-    $category = $tenant->fixedCostCategories()->create(['name' => 'General']);
-
-    return [$user, $tenant, $category];
-}
-
 // --- CRUD ---
 
 test('owner puede listar gastos fijos', function () {

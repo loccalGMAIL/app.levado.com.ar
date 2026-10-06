@@ -1,29 +1,12 @@
 <?php
 
-use App\Enums\TenantUserRole;
 use App\Models\Ingredient;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\Tenant;
-use App\Models\TenantUser;
-use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-
-function ownerForScan(): array
-{
-    $tenant = Tenant::factory()->create();
-    $user = User::factory()->create();
-    TenantUser::create([
-        'tenant_id' => $tenant->id,
-        'user_id' => $user->id,
-        'role' => TenantUserRole::Owner->value,
-        'active' => true,
-    ]);
-
-    return [$user, $tenant];
-}
 
 test('scan renders the review with detected lines', function () {
     Storage::fake('local');

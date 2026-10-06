@@ -9,19 +9,6 @@ use App\Services\StockService;
 // stockPurchaseOwner(), stockPurchaseFor(), stockLineFor() y lineRecorder() son
 // helpers globales (definidos en StockPurchaseIntegrationTest).
 
-/** Compra de $qty unidades del producto a $unitPrice/u, ya imputada. */
-function buyResale(Product $product, $tenant, float $qty, float $unitPrice): void
-{
-    $line = stockLineFor(stockPurchaseFor($tenant), [
-        'purchaseable_type' => 'product',
-        'purchaseable_id' => $product->id,
-        'quantity_purchased' => $qty,
-        'purchase_unit' => 'u',
-        'unit_price' => $unitPrice,
-    ]);
-    lineRecorder()->apply($line);
-}
-
 test('effectiveCostingMethod usa el override del producto o el default del negocio', function () {
     [, $tenant] = stockPurchaseOwner();
     $product = Product::factory()->for($tenant)->resale()->create();

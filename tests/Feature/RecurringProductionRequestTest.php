@@ -68,5 +68,5 @@ test('un recurrente inactivo se filtra por scopeActive, no por occursOn', functi
     $inactive = RecurringProductionRequest::factory()->for($tenant)->inactive()->create();
 
     expect(RecurringProductionRequest::active()->pluck('id')->all())->toBe([$active->id])
-        ->and($inactive->occursOn(Carbon::parse('2026-09-21')))->toBeTrue(); // occursOn no mira active
+        ->and($inactive->occursOn(now()->next(Carbon::MONDAY)))->toBeTrue(); // occursOn no mira active
 });

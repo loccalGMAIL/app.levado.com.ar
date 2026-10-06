@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\ProductionStatus;
-use App\Enums\ProductType;
 use App\Enums\StockMovementType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
@@ -9,33 +8,10 @@ use App\Models\LaborType;
 use App\Models\Packaging;
 use App\Models\Product;
 use App\Models\Recipe;
-use App\Services\ProductionService;
 use App\Services\StockService;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 // stockTenantUser() y stockService() son helpers globales (definidos en StockServiceTest).
-
-function productionService(): ProductionService
-{
-    return app(ProductionService::class);
-}
-
-/** Producto elaborado (unidad u) ligado a una receta, en el tenant dado. */
-function manufacturedProduct($tenant, Recipe $recipe): Product
-{
-    return Product::factory()->for($tenant)->create([
-        'type' => ProductType::Manufactured->value,
-        'cost_per_unit' => null,
-        'unit' => Unit::Unidad->value,
-        'recipe_id' => $recipe->id,
-    ]);
-}
-
-/** Deja stock inicial de un ítem en la sucursal default del tenant. */
-function seedStock(Ingredient|Packaging|Product $item, float $quantity, $user): void
-{
-    app(StockService::class)->registerAdjustment($item, $item->tenant->defaultLocation(), $quantity, 'Carga inicial test', $user);
-}
 
 // --- Happy path: descuenta insumos (con conversión de unidad) y suma el elaborado ---
 
