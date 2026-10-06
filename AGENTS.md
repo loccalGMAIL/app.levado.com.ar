@@ -7,6 +7,11 @@
 
 - Para probar en el navegador, iniciar sesión con el usuario `owner@demo.com` y la contraseña `demo123`.
 
+## Análisis estático (Larastan)
+
+- Si modificaste archivos PHP, correr `composer analyse` antes de dar el cambio por terminado. Tiene que pasar sin errores nuevos.
+- No agregar entradas a `phpstan-baseline.neon`: arreglar el código. Regenerar el baseline solo se justifica si el error se documenta (por qué queda y por qué no se puede arreglar sin cambiar comportamiento).
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
