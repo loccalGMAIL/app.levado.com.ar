@@ -38,7 +38,7 @@ class PurchaseLineRecorder
     /**
      * Create a line and impute its cost immediately (manual line form).
      *
-     * @param  array{purchaseable_type: string, purchaseable_id: int|string, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string, is_bonus?: bool}  $data
+     * @param  array{purchaseable_type: string, purchaseable_id: int|string, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string, is_bonus?: bool, iva_rate?: float|string|null, percepcion_rate?: float|string|null}  $data
      */
     public function record(Purchase $purchase, array $data): PurchaseLine
     {
@@ -54,7 +54,7 @@ class PurchaseLineRecorder
      * Capture a line as read from the invoice, without imputing any cost.
      * The match (purchaseable_*) is optional — it can be a suggestion or null.
      *
-     * @param  array{raw_name?: ?string, purchaseable_type?: ?string, purchaseable_id?: int|string|null, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string, is_bonus?: bool}  $data
+     * @param  array{raw_name?: ?string, purchaseable_type?: ?string, purchaseable_id?: int|string|null, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string, is_bonus?: bool, iva_rate?: float|string|null, percepcion_rate?: float|string|null}  $data
      */
     public function storePending(Purchase $purchase, array $data): PurchaseLine
     {
@@ -224,7 +224,7 @@ class PurchaseLineRecorder
     /**
      * Update an existing line (description + amounts) and re-impute its cost.
      *
-     * @param  array{raw_name?: ?string, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string, is_bonus?: bool}  $data
+     * @param  array{raw_name?: ?string, quantity_purchased: float|string, purchase_unit: string, unit_price: float|string, is_bonus?: bool, iva_rate?: float|string|null, percepcion_rate?: float|string|null}  $data
      */
     public function recompute(PurchaseLine $line, array $data): void
     {

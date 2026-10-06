@@ -30,7 +30,7 @@ enum PricingPolicy: string
      */
     public function priceFor(?float $cost, ?float $value): ?float
     {
-        if ($this === self::Manual || $cost === null || $value === null) {
+        if ($cost === null || $value === null) {
             return null;
         }
 

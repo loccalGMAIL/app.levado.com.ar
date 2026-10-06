@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ProductionOrderRequest;
 use App\Models\Tenant;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -70,8 +71,10 @@ class RecurringProductionRequestMaterializer
             return 0;
         }
 
-        $dates = CarbonPeriod::create(now()->startOfDay(), now()->startOfDay()->addDays(($horizonDays ?? self::HORIZON_DAYS) - 1));
-        $existing = $this->existingInstances($tenant, $dates->getStartDate(), $dates->getEndDate());
+        $windowStart = now()->startOfDay();
+        $windowEnd = now()->startOfDay()->addDays(($horizonDays ?? self::HORIZON_DAYS) - 1);
+        $dates = CarbonPeriod::create($windowStart, $windowEnd);
+        $existing = $this->existingInstances($tenant, $windowStart, $windowEnd);
 
         $generated = 0;
 
@@ -124,9 +127,9 @@ class RecurringProductionRequestMaterializer
      * ProductionOrder (al revés de previousRequestFor(), que sí lo aplica
      * vía whereHas) — por eso el is_template=false explícito.
      *
-     * @return Collection<int, string> claves "{recurringId}:{fecha}"
+     * @return Collection<int, non-falsy-string> claves "{recurringId}:{fecha}"
      */
-    private function existingInstances(Tenant $tenant, Carbon $from, Carbon $to): Collection
+    private function existingInstances(Tenant $tenant, CarbonInterface $from, CarbonInterface $to): Collection
     {
         return ProductionOrderRequest::withTrashed()
             ->where('production_order_requests.tenant_id', $tenant->id)

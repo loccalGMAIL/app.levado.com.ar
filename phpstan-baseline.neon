@@ -1,52 +1,16 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Parameter \$rows of function Laravel\\Prompts\\table expects array\<int, array\<int, string\>\>\|Illuminate\\Support\\Collection\<int, array\<int, string\>\>\|null, array\<int, array\{int, int, string, string\}\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Console/Commands/BackfillProductLinks.php
-
-		-
-			message: '#^Parameter \#2 \$rows of function Laravel\\Prompts\\table expects array\<int, array\<int, string\>\>\|Illuminate\\Support\\Collection\<int, array\<int, string\>\>\|null, array\<int, array\{Negocio\: int\<0, max\>\|string, Receta\: string, Rinde\: non\-falsy\-string, ''Costo/u''\: non\-falsy\-string\}\> given\.$#'
+			message: '#^Parameter \#2 \$rows of function Laravel\\Prompts\\table expects array\<int, array\<int, string\>\>\|Illuminate\\Support\\Collection\<int, array\<int, string\>\>\|null, array\<int, array\{Negocio\: string, Receta\: string, Rinde\: non\-falsy\-string, ''Costo/u''\: non\-falsy\-string\}\> given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Console/Commands/CreateProductsFromRecipes.php
 
 		-
-			message: '#^Match arm comparison between \$this\(App\\Enums\\PricingPolicy\)&App\\Enums\\PricingPolicy\:\:Markup and App\\Enums\\PricingPolicy\:\:Markup is always true\.$#'
-			identifier: match.alwaysTrue
-			count: 1
-			path: app/Enums/PricingPolicy.php
-
-		-
-			message: '#^Parameter \#1 \$user of class Illuminate\\Auth\\Events\\Verified constructor expects Illuminate\\Contracts\\Auth\\MustVerifyEmail, App\\Models\\User\|null given\.$#'
+			message: '#^Parameter \#1 \$user of class Illuminate\\Auth\\Events\\Verified constructor expects Illuminate\\Contracts\\Auth\\MustVerifyEmail, App\\Models\\User given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/Auth/VerifyEmailController.php
-
-		-
-			message: '#^Match expression does not handle remaining value\: mixed$#'
-			identifier: match.unhandled
-			count: 1
-			path: app/Http/Controllers/CatalogReplacementController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\InstantProductionOrderController\:\:pairsFrom\(\) should return Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product, quantity\: float\}\> but returns Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product\|null, quantity\: float\}\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Http/Controllers/InstantProductionOrderController.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Http/Controllers/ProductPriceController.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/ProductPriceController.php
 
 		-
 			message: '#^Strict comparison using \!\=\= between Carbon\\Carbon and null will always evaluate to true\.$#'
@@ -55,46 +19,10 @@ parameters:
 			path: app/Models/Invitation.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:active\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Models/Product.php
-
-		-
 			message: '#^Expression on left side of \?\? is not nullable\.$#'
 			identifier: nullCoalesce.expr
 			count: 1
 			path: app/Models/ProductPrice.php
-
-		-
-			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:assertCompatible\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeIngredientLine\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/CatalogItemReplacer.php
-
-		-
-			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:assertCompatible\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeSubrecipeLine\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/CatalogItemReplacer.php
-
-		-
-			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:preview\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipePackagingLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeIngredientLine\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/CatalogItemReplacer.php
-
-		-
-			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:preview\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipePackagingLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipePackagingLine\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/CatalogItemReplacer.php
-
-		-
-			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:preview\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipePackagingLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeSubrecipeLine\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/CatalogItemReplacer.php
 
 		-
 			message: '#^Parameter \#1 \$points of method App\\Services\\FixedCostHistory\:\:withChangePct\(\) expects Illuminate\\Support\\Collection\<int, array\{period\: Illuminate\\Support\\Carbon, amount\: float\}\>, Illuminate\\Support\\Collection\<int, array\{period\: Carbon\\Carbon, amount\: float\}\> given\.$#'
@@ -103,37 +31,13 @@ parameters:
 			path: app/Services/FixedCostHistory.php
 
 		-
-			message: '#^Method App\\Services\\FixedCostReport\:\:build\(\) should return array\{business\: array\{name\: string, razon_social\: string\|null, cuit\: string\|null, condicion_iva\: string\|null, currency\: string, logo\: string\|null\}, meta\: array\{from\: string, to\: string, from_ymd\: string, to_ymd\: string, snapshot_label\: string, generated_at\: string, months\: int, sections\: list\<string\>, \.\.\.\}, current\: array\{rows\: list\<array\{id\: int, name\: string, category\: string\|null, active\: bool, amount\: float, carried\: bool\}\>, total\: float, count\: int\}, monthly\: array\{rows\: list\<array\{label\: string, total\: float, change_pct\: float\|null\}\>, average\: float, min\: float, max\: float\}\|null, details\: array\{rows\: list\<array\{name\: string, category\: string\|null, timeline\: list\<array\{label\: string, amount\: float, change_pct\: float\|null\}\>\}\>, truncated\: bool, total_count\: int\}\|null, variable\: array\{rows\: list\<array\{date\: string, name\: string, category\: string\|null, supplier\: string\|null, description\: string\|null, amount\: float\}\>, total\: float\}\|null, totals\: array\{fixed\: float, variable\: float, grand\: float, productive_hours\: int\|null, overhead_per_hour\: float\|null\}\} but returns array\{business\: array\{name\: string, razon_social\: string\|null, cuit\: string\|null, condicion_iva\: string\|null, currency\: string, logo\: string\|null\}, meta\: array\{from\: non\-falsy\-string, to\: non\-falsy\-string, from_ymd\: non\-falsy\-string, to_ymd\: non\-falsy\-string, snapshot_label\: string, generated_at\: non\-falsy\-string, months\: float, sections\: list\<string\>, \.\.\.\}, current\: array\{rows\: list\<array\{id\: int, name\: string, category\: string\|null, active\: bool, amount\: float, carried\: bool\}\>, total\: float, count\: int\}, monthly\: array\{rows\: list\<array\{label\: string, total\: float, change_pct\: float\|null\}\>, average\: float, min\: float, max\: float\}\|null, details\: array\{rows\: list\<array\{name\: string, category\: string\|null, timeline\: list\<array\{label\: string, amount\: float, change_pct\: float\|null\}\>\}\>, truncated\: bool, total_count\: int\}\|null, variable\: array\{rows\: list\<array\{date\: string, name\: string, category\: string\|null, supplier\: string\|null, description\: string\|null, amount\: float\}\>, total\: float\}\|null, totals\: array\{fixed\: float, variable\: float, grand\: float, productive_hours\: int\<0, max\>\|null, overhead_per_hour\: float\|null\}\}\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/FixedCostReport.php
-
-		-
-			message: '#^Parameter \#4 \$months of method App\\Services\\FixedCostReport\:\:buildDetails\(\) expects int, float given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/FixedCostReport.php
-
-		-
-			message: '#^Method App\\Services\\ProductionOrderService\:\:aggregate\(\) should return Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product, quantity\: float\}\> but returns Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product\|null, quantity\: float\}\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/ProductionOrderService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\Relation\<\*, \*, \*\>\:\:morphWith\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/ProductionOrderSheets.php
-
-		-
-			message: '#^Method App\\Services\\ProductionOrderSheets\:\:groupRequests\(\) should return Illuminate\\Support\\Collection\<int, array\{key\: string, kind\: string, title\: string, subtitle\: string\|null, requests\: list\<array\<string, mixed\>\>, totals\: list\<array\<string, mixed\>\>\}\> but returns Illuminate\\Support\\Collection\<int, array\{key\: mixed, kind\: mixed, title\: mixed, subtitle\: mixed, requests\: mixed, totals\: list\<array\{product\: string, quantity\: float, unit\: string\}\>\}\>\.$#'
+			message: '#^Method App\\Services\\ProductionOrderSheets\:\:groupRequests\(\) should return Illuminate\\Support\\Collection\<int, array\{key\: string, kind\: string, title\: string, subtitle\: string\|null, requests\: list\<array\<string, mixed\>\>, totals\: list\<array\<string, mixed\>\>\}\> but returns Illuminate\\Support\\Collection\<int, array\{key\: string, kind\: string, title\: string, subtitle\: string\|null, requests\: array\<int, array\<string, mixed\>\>, totals\: list\<array\{product\: string, quantity\: float, unit\: string\}\>\}\>\.$#'
 			identifier: return.type
 			count: 1
 			path: app/Services/ProductionOrderSheets.php
 
 		-
-			message: '#^Parameter \#2 \$destination of method App\\Services\\ProductionOrderSheets\:\:requestPayload\(\) expects App\\Models\\Customer\|App\\Models\\Location\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			message: '#^Parameter \#1 \$relations of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\ProductionOrderRequest\>\:\:with\(\) expects array\<array\|\(Closure\(Illuminate\\Database\\Eloquent\\Relations\\Relation\<\*, \*, \*\>\)\: mixed\)\|string\>\|string, array\{0\: ''lines\.product'', destination\: Closure\(Illuminate\\Database\\Eloquent\\Relations\\MorphTo\)\: Illuminate\\Database\\Eloquent\\Relations\\MorphTo\} given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/ProductionOrderSheets.php
@@ -143,63 +47,3 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Services/ProductionService.php
-
-		-
-			message: '#^Call to function array_key_exists\(\) with ''percepcion_rate'' and array\{raw_name\?\: string\|null, quantity_purchased\: float\|string, purchase_unit\: string, unit_price\: float\|string, is_bonus\?\: bool\} will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Offset ''iva_rate'' on array\{raw_name\?\: string\|null, purchaseable_type\?\: string\|null, purchaseable_id\?\: int\|string\|null, quantity_purchased\: float\|string, purchase_unit\: string, unit_price\: float\|string, is_bonus\?\: bool\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Offset ''iva_rate'' on array\{raw_name\?\: string\|null, quantity_purchased\: float\|string, purchase_unit\: string, unit_price\: float\|string, is_bonus\?\: bool\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Offset ''percepcion_rate'' on \*NEVER\* in isset\(\) always exists and is not nullable\.$#'
-			identifier: isset.offset
-			count: 1
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Offset ''percepcion_rate'' on array\{raw_name\?\: string\|null, purchaseable_type\?\: string\|null, purchaseable_id\?\: int\|string\|null, quantity_purchased\: float\|string, purchase_unit\: string, unit_price\: float\|string, is_bonus\?\: bool\} in isset\(\) does not exist\.$#'
-			identifier: isset.offset
-			count: 1
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Parameter \#1 \$string of function str_pad expects string, int\<0, max\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/RecipeShowViewModel.php
-
-		-
-			message: '#^Method App\\Services\\RecurringProductionRequestMaterializer\:\:existingInstances\(\) should return Illuminate\\Support\\Collection\<int, string\> but returns Illuminate\\Support\\Collection\<int, non\-falsy\-string\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/RecurringProductionRequestMaterializer.php
-
-		-
-			message: '#^Parameter \#2 \$from of method App\\Services\\RecurringProductionRequestMaterializer\:\:existingInstances\(\) expects Carbon\\Carbon, Carbon\\CarbonInterface given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/RecurringProductionRequestMaterializer.php
-
-		-
-			message: '#^Parameter \#3 \$to of method App\\Services\\RecurringProductionRequestMaterializer\:\:existingInstances\(\) expects Carbon\\Carbon, Carbon\\CarbonInterface\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/RecurringProductionRequestMaterializer.php

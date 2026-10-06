@@ -93,7 +93,7 @@ class RecipeShowViewModel
             return [
                 'id' => $line->id,
                 'name' => $ingredient->name,
-                'code' => 'ING-'.str_pad($ingredient->id, 3, '0', STR_PAD_LEFT),
+                'code' => 'ING-'.str_pad((string) $ingredient->id, 3, '0', STR_PAD_LEFT),
                 'supplier' => $ingredient->supplier?->name,
                 'quantity' => (float) $line->quantity,
                 'unit' => $line->unit->value,

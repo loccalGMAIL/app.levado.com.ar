@@ -68,6 +68,8 @@ class Product extends Model
      * sirve para EXCLUIR un área que se costea pero no se fabrica desde acá
      * (ej. cafetería). Único filtro compartido por la orden instantánea y
      * las órdenes de producción — no repetir la cadena en dos lugares.
+     *
+     * @param  Builder<Product>  $query
      */
     public function scopeProducible(Builder $query): void
     {

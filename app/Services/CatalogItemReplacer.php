@@ -201,7 +201,9 @@ class CatalogItemReplacer
      * destino. Sólo aplica a ingredientes y sub-recetas: el packaging no
      * lleva unidad de línea (siempre es "unidad").
      *
-     * @param  Collection<int, RecipeIngredientLine|RecipeSubrecipeLine>  $lines
+     * @template TLine of RecipeIngredientLine|RecipeSubrecipeLine
+     *
+     * @param  Collection<int, TLine>  $lines
      */
     private function assertCompatible(Collection $lines, string $targetUnitValue): void
     {
@@ -216,7 +218,9 @@ class CatalogItemReplacer
     }
 
     /**
-     * @param  Collection<int, RecipeIngredientLine|RecipePackagingLine|RecipeSubrecipeLine>  $lines
+     * @template TLine of RecipeIngredientLine|RecipePackagingLine|RecipeSubrecipeLine
+     *
+     * @param  Collection<int, TLine>  $lines
      * @return array{recipes: array<int, string>, incompatible: array<int, string>, merges: int}
      */
     private function preview(Collection $lines, ?string $targetUnitValue, int $toId, string $lineClass, string $foreignKey): array
