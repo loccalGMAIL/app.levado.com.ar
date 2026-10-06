@@ -7,18 +7,6 @@ parameters:
 			path: app/Console/Commands/BackfillProductLinks.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Console/Commands/CreateProductsFromRecipes.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Console/Commands/CreateProductsFromRecipes.php
-
-		-
 			message: '#^Parameter \#2 \$rows of function Laravel\\Prompts\\table expects array\<int, array\<int, string\>\>\|Illuminate\\Support\\Collection\<int, array\<int, string\>\>\|null, array\<int, array\{Negocio\: int\<0, max\>\|string, Receta\: string, Rinde\: non\-falsy\-string, ''Costo/u''\: non\-falsy\-string\}\> given\.$#'
 			identifier: argument.type
 			count: 1
@@ -35,12 +23,6 @@ parameters:
 			identifier: match.alwaysTrue
 			count: 1
 			path: app/Enums/PricingPolicy.php
-
-		-
-			message: '#^Property App\\Models\\Invitation\:\:\$role \(string\) does not accept App\\Enums\\TenantUserRole\:\:Admin\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: app/Http/Controllers/Admin/MailPreviewController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$active_users\.$#'
@@ -79,64 +61,10 @@ parameters:
 			path: app/Http/Controllers/DashboardController.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/IngredientController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/InstantProductionOrderController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\InstantProductionOrderController\:\:pairsFrom\(\) should return Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product, quantity\: float\}\> but returns Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product\|null, quantity\: float\}\>\.$#'
 			identifier: return.type
 			count: 1
 			path: app/Http/Controllers/InstantProductionOrderController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/ProductCostHistoryController.php
-
-		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Controllers/ProductCostHistoryController.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/ProductCostHistoryController.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/ProductCostHistoryController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\ProductCostLog\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/ProductCostHistoryController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Production\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/ProductCostHistoryController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/ProductPriceController.php
 
 		-
 			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
@@ -157,42 +85,6 @@ parameters:
 			path: app/Http/Controllers/ProductPriceController.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/ProductionOrderController.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/ProductionOrderController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Product\|float\>\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/ProductionOrderController.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Controllers/ProductionOrderLineController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\ProductionOrderLine\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/ProductionOrderLineController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Product\|float\>\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/ProductionOrderLineController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\PurchaseLine\:\:\$total_iva\.$#'
 			identifier: property.notFound
 			count: 1
@@ -211,82 +103,10 @@ parameters:
 			path: app/Http/Controllers/PurchaseController.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: app/Http/Controllers/PurchaseController.php
-
-		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/PurchaseController.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Controllers/PurchaseController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Ingredient\>\:\:mapWithKeys\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/PurchaseController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Product\>\:\:mapWithKeys\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/PurchaseController.php
-
-		-
-			message: '#^Parameter \#1 \$items of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:merge\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 2
-			path: app/Http/Controllers/PurchaseController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\ProductPrice\:\:\$recipe_id\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/RecipeController.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Controllers/RecipeLineController.php
-
-		-
-			message: '#^Parameter \#2 \$b of method App\\Services\\UnitConverter\:\:compatible\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 3
-			path: app/Http/Controllers/RecipeLineController.php
-
-		-
-			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/RecipeLineController.php
-
-		-
-			message: '#^Parameter \#3 \$to of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/RecipeLineController.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/RecurringProductionRequestController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Product\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/RecurringProductionRequestController.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -295,18 +115,6 @@ parameters:
 			path: app/Http/Controllers/StockController.php
 
 		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Mail/TeamInvitation.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Mail/TeamInvitation.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>footer_note" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -331,13 +139,7 @@ parameters:
 			path: app/Mail/WelcomeMail.php
 
 		-
-			message: '#^Cannot call method isPast\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Models/Invitation.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
+			message: '#^Strict comparison using \!\=\= between Carbon\\Carbon and null will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Models/Invitation.php
@@ -345,18 +147,6 @@ parameters:
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:active\(\)\.$#'
 			identifier: method.notFound
-			count: 1
-			path: app/Models/Product.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductType\:\:Manufactured will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/Product.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductType\:\:Resale will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Models/Product.php
 
@@ -373,64 +163,10 @@ parameters:
 			path: app/Models/Product.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
 			count: 1
 			path: app/Models/ProductPrice.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Models/ProductPrice.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionStatus\:\:Cancelled will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/Production.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionStatus\:\:Confirmed will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/Production.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionOrderStatus\:\:Cancelled will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/ProductionOrder.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionOrderStatus\:\:Done will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/ProductionOrder.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionOrderStatus\:\:Draft will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/ProductionOrder.php
-
-		-
-			message: '#^Parameter \#2 \$haystack of function in_array expects array, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Models/RecurringProductionRequest.php
-
-		-
-			message: '#^Method App\\Models\\User\:\:roleInTenant\(\) should return App\\Enums\\TenantUserRole\|null but returns string\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/User.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\TenantUserRole\:\:SuperAdmin will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/User.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$fixed_costs_exists\.$#'
@@ -449,24 +185,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Providers/AppServiceProvider.php
-
-		-
-			message: '#^Cannot call method priceFor\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/ArticlePriceRecalculator.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 4
-			path: app/Services/CatalogItemReplacer.php
-
-		-
-			message: '#^Parameter \#1 \$a of method App\\Services\\UnitConverter\:\:compatible\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/CatalogItemReplacer.php
 
 		-
 			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:assertCompatible\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeIngredientLine\> given\.$#'
@@ -499,38 +217,20 @@ parameters:
 			path: app/Services/CatalogItemReplacer.php
 
 		-
-			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/CatalogItemReplacer.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 3
 			path: app/Services/CatalogItemReplacer.php
 
 		-
-			message: '#^Parameter \#1 \$points of method App\\Services\\FixedCostHistory\:\:withChangePct\(\) expects Illuminate\\Support\\Collection\<int, array\{period\: Illuminate\\Support\\Carbon, amount\: float\}\>, Illuminate\\Support\\Collection\<int, array\{period\: string, amount\: float\}\> given\.$#'
+			message: '#^Parameter \#1 \$points of method App\\Services\\FixedCostHistory\:\:withChangePct\(\) expects Illuminate\\Support\\Collection\<int, array\{period\: Illuminate\\Support\\Carbon, amount\: float\}\>, Illuminate\\Support\\Collection\<int, array\{period\: Carbon\\Carbon, amount\: float\}\> given\.$#'
 			identifier: argument.type
 			count: 2
 			path: app/Services/FixedCostHistory.php
 
 		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedCostReport.php
-
-		-
 			message: '#^Method App\\Services\\FixedCostReport\:\:build\(\) should return array\{business\: array\{name\: string, razon_social\: string\|null, cuit\: string\|null, condicion_iva\: string\|null, currency\: string, logo\: string\|null\}, meta\: array\{from\: string, to\: string, from_ymd\: string, to_ymd\: string, snapshot_label\: string, generated_at\: string, months\: int, sections\: list\<string\>, \.\.\.\}, current\: array\{rows\: list\<array\{id\: int, name\: string, category\: string\|null, active\: bool, amount\: float, carried\: bool\}\>, total\: float, count\: int\}, monthly\: array\{rows\: list\<array\{label\: string, total\: float, change_pct\: float\|null\}\>, average\: float, min\: float, max\: float\}\|null, details\: array\{rows\: list\<array\{name\: string, category\: string\|null, timeline\: list\<array\{label\: string, amount\: float, change_pct\: float\|null\}\>\}\>, truncated\: bool, total_count\: int\}\|null, variable\: array\{rows\: list\<array\{date\: string, name\: string, category\: string\|null, supplier\: string\|null, description\: string\|null, amount\: float\}\>, total\: float\}\|null, totals\: array\{fixed\: float, variable\: float, grand\: float, productive_hours\: int\|null, overhead_per_hour\: float\|null\}\} but returns array\{business\: array\{name\: string, razon_social\: string\|null, cuit\: string\|null, condicion_iva\: string\|null, currency\: string, logo\: string\|null\}, meta\: array\{from\: non\-falsy\-string, to\: non\-falsy\-string, from_ymd\: non\-falsy\-string, to_ymd\: non\-falsy\-string, snapshot_label\: string, generated_at\: non\-falsy\-string, months\: float, sections\: list\<string\>, \.\.\.\}, current\: array\{rows\: list\<array\{id\: int, name\: string, category\: string\|null, active\: bool, amount\: float, carried\: bool\}\>, total\: float, count\: int\}, monthly\: array\{rows\: list\<array\{label\: string, total\: float, change_pct\: float\|null\}\>, average\: float, min\: float, max\: float\}\|null, details\: array\{rows\: list\<array\{name\: string, category\: string\|null, timeline\: list\<array\{label\: string, amount\: float, change_pct\: float\|null\}\>\}\>, truncated\: bool, total_count\: int\}\|null, variable\: array\{rows\: list\<array\{date\: string, name\: string, category\: string\|null, supplier\: string\|null, description\: string\|null, amount\: float\}\>, total\: float\}\|null, totals\: array\{fixed\: float, variable\: float, grand\: float, productive_hours\: int\<0, max\>\|null, overhead_per_hour\: float\|null\}\}\.$#'
 			identifier: return.type
-			count: 1
-			path: app/Services/FixedCostReport.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\VariableExpense\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
 			count: 1
 			path: app/Services/FixedCostReport.php
 
@@ -547,86 +247,14 @@ parameters:
 			path: app/Services/NotificationService.php
 
 		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/NotificationService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/NotificationService.php
 
 		-
-			message: '#^Left side of && is always true\.$#'
-			identifier: booleanAnd.leftAlwaysTrue
-			count: 1
-			path: app/Services/ProductPriceWriter.php
-
-		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
-			count: 2
-			path: app/Services/ProductPriceWriter.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\PricingPolicy will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Services/ProductPriceWriter.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Services/ProductionOrderService.php
-
-		-
-			message: '#^Cannot call method canTransitionTo\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Services/ProductionOrderService.php
-
-		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/ProductionOrderService.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/ProductionOrderService.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Services/ProductionOrderService.php
-
-		-
 			message: '#^Method App\\Services\\ProductionOrderService\:\:aggregate\(\) should return Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product, quantity\: float\}\> but returns Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product\|null, quantity\: float\}\>\.$#'
 			identifier: return.type
-			count: 1
-			path: app/Services/ProductionOrderService.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Product\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/ProductionOrderService.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\ProductionOrderLine\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/ProductionOrderService.php
-
-		-
-			message: '#^Parameter \#2 \$type of method App\\Services\\ProductionOrderService\:\:previousRequestForDestination\(\) expects App\\Enums\\DeliveryDestinationType, string given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Services/ProductionOrderService.php
 
@@ -643,44 +271,8 @@ parameters:
 			path: app/Services/ProductionOrderSheets.php
 
 		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/ProductionOrderSheets.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/ProductionOrderSheets.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Services/ProductionOrderSheets.php
-
-		-
 			message: '#^Method App\\Services\\ProductionOrderSheets\:\:groupRequests\(\) should return Illuminate\\Support\\Collection\<int, array\{key\: string, kind\: string, title\: string, subtitle\: string\|null, requests\: list\<array\<string, mixed\>\>, totals\: list\<array\<string, mixed\>\>\}\> but returns Illuminate\\Support\\Collection\<int, array\{key\: mixed, kind\: mixed, title\: mixed, subtitle\: mixed, requests\: mixed, totals\: list\<array\{product\: string, quantity\: float, unit\: string\}\>\}\>\.$#'
 			identifier: return.type
-			count: 1
-			path: app/Services/ProductionOrderSheets.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\ProductionOrderLine\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/ProductionOrderSheets.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Product\|float\>\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/ProductionOrderSheets.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:sortBy\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
 			count: 1
 			path: app/Services/ProductionOrderSheets.php
 
@@ -697,37 +289,7 @@ parameters:
 			path: app/Services/ProductionOrderSheets.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Services/ProductionService.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Enums\\CatalogItemType\|App\\Models\\Ingredient\|App\\Models\\Packaging\|float\>\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/ProductionService.php
-
-		-
 			message: '#^Parameter \#1 \.\.\.\$values of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Ingredient\|App\\Models\\Packaging\|float\|string\>\>\:\:push\(\) expects array\{sort\: string, item\: App\\Models\\Ingredient\|App\\Models\\Packaging, quantity\: float, unit_cost\: float\}, array\{sort\: string, item\: App\\Models\\Product, quantity\: float, unit_cost\: float\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/ProductionService.php
-
-		-
-			message: '#^Parameter \#3 \$to of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/ProductionService.php
@@ -737,12 +299,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/ProductionService.php
-
-		-
-			message: '#^Call to function abort_unless\(\) with arguments false, 422 and ''El packaging solo…'' will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Services/PurchaseLineRecorder.php
 
 		-
 			message: '#^Call to function array_key_exists\(\) with ''percepcion_rate'' and array\{raw_name\?\: string\|null, quantity_purchased\: float\|string, purchase_unit\: string, unit_price\: float\|string, is_bonus\?\: bool\} will always evaluate to false\.$#'
@@ -775,45 +331,9 @@ parameters:
 			path: app/Services/PurchaseLineRecorder.php
 
 		-
-			message: '#^Parameter \#1 \$purchaseUnit of method App\\Services\\PurchaseLineRecorder\:\:costPerUnit\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Parameter \#2 \$ingredientUnit of method App\\Services\\PurchaseLineRecorder\:\:costPerUnit\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Parameter \#2 \$ingredientUnit of method App\\Services\\PurchaseLineRecorder\:\:parseDescPkgQty\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Parameter \#3 \$to of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
-			count: 3
-			path: app/Services/PurchaseLineRecorder.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\Unit\:\:Unidad will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 4
+			count: 1
 			path: app/Services/PurchaseLineRecorder.php
 
 		-
@@ -823,87 +343,9 @@ parameters:
 			path: app/Services/PurchaseLineRecorder.php
 
 		-
-			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/RecipeCostCalculator.php
-
-		-
-			message: '#^Parameter \#3 \$to of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/RecipeCostCalculator.php
-
-		-
-			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/RecipeExploder.php
-
-		-
-			message: '#^Parameter \#3 \$to of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/RecipeExploder.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 3
-			path: app/Services/RecipePrintSheet.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\RecipeIngredientLine\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/RecipePrintSheet.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\RecipeSubrecipeLine\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/RecipePrintSheet.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: app/Services/RecipeShowViewModel.php
-
-		-
-			message: '#^Cannot call method short\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 4
-			path: app/Services/RecipeShowViewModel.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\RecipeIngredientLine\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/RecipeShowViewModel.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\RecipeSubrecipeLine\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/RecipeShowViewModel.php
-
-		-
 			message: '#^Parameter \#1 \$string of function str_pad expects string, int\<0, max\> given\.$#'
 			identifier: argument.type
 			count: 1
-			path: app/Services/RecipeShowViewModel.php
-
-		-
-			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/RecipeShowViewModel.php
-
-		-
-			message: '#^Parameter \#3 \$to of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
-			identifier: argument.type
-			count: 2
 			path: app/Services/RecipeShowViewModel.php
 
 		-
@@ -921,18 +363,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$active\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Services/RecurringProductionRequestMaterializer.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Services/RecurringProductionRequestMaterializer.php
-
-		-
-			message: '#^Cannot call method gt\(\) on string\.$#'
-			identifier: method.nonObject
 			count: 1
 			path: app/Services/RecurringProductionRequestMaterializer.php
 
@@ -959,36 +389,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/RecurringProductionRequestMaterializer.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Services/RecurringProductionRequestService.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/ReportLetterhead.php
-
-		-
-			message: '#^Parameter \$type of method App\\Services\\StockService\:\:registerMovement\(\) expects App\\Enums\\StockMovementType, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/StockService.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Services/StockService.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\StockMovementType will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Services/StockService.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
