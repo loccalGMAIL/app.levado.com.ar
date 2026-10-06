@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PurchaseScanController extends Controller
 {
@@ -36,6 +37,21 @@ class PurchaseScanController extends Controller
     public function create(): View
     {
         return view('purchases.scan.create');
+    }
+
+    /**
+     * Sirve la foto recién escaneada para la pantalla de revisión. Está en el disco
+     * privado, así que no hay URL pública (/storage) que la alcance: pasa por la app.
+     */
+    public function image(Request $request): StreamedResponse
+    {
+        $path = $this->safeImagePath($request->string('path')->toString(), app(Tenant::class));
+
+        abort_if($path === null, 404);
+
+        $disk = Storage::disk('local')->exists($path) ? 'local' : 'public';
+
+        return Storage::disk($disk)->response($path);
     }
 
     public function scan(Request $request): View|RedirectResponse

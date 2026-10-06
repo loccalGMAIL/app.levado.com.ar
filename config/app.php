@@ -18,6 +18,12 @@ return [
     'version' => '0.14.1',
 
     /*
+    | Umbral (ms) a partir del cual LogSlowRequests registra un request lento.
+    */
+
+    'slow_request_ms' => (int) env('SLOW_REQUEST_MS', 5000),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

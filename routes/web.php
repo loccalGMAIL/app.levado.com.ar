@@ -239,6 +239,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('purchases/scan', [PurchaseScanController::class, 'scan'])
         ->middleware('throttle:10,1')
         ->name('purchases.scan');
+    Route::get('purchases/scan/image', [PurchaseScanController::class, 'image'])->name('purchases.scan.image');
     Route::post('purchases/scan/confirm', [PurchaseScanController::class, 'store'])->name('purchases.scan.store');
     Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
     Route::post('purchases/{purchase}/lines', [PurchaseController::class, 'storeLine'])->name('purchases.lines.store');

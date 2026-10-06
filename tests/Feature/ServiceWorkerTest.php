@@ -33,3 +33,10 @@ test('las fuentes de la version no se desincronizan', function () {
 
     expect($package['version'])->toBe(config('app.version'));
 });
+
+test('el timeout de navegacion tolera los picos de lentitud del hosting', function () {
+    // Con 10 s el service worker mostraba "Sin conexión" con el servidor vivo pero lento.
+    $this->get('/sw.js')
+        ->assertSee('const NAVIGATION_TIMEOUT_MS = 30000;', false)
+        ->assertSee('El servidor está tardando en responder', false);
+});

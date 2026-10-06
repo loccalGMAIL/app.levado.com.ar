@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\VariableExpenseCategory;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -33,21 +34,27 @@ class ExpenseReceiptExtractor
             ? ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $base64]]
             : ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $mimeType, 'data' => $base64]];
 
-        $response = Http::withHeaders([
-            'x-api-key' => $apiKey,
-            'anthropic-version' => config('services.anthropic.version', '2023-06-01'),
-            'content-type' => 'application/json',
-        ])->timeout(60)->post('https://api.anthropic.com/v1/messages', [
-            'model' => config('services.anthropic.model', 'claude-haiku-4-5'),
-            'max_tokens' => 1024,
-            'messages' => [[
-                'role' => 'user',
-                'content' => [
-                    $sourceBlock,
-                    ['type' => 'text', 'text' => $this->buildPrompt($categories)],
-                ],
-            ]],
-        ]);
+        // Por debajo del timeout del gateway del hosting: si Anthropic cuelga, mejor un
+        // error legible acá que un 504 del proxy.
+        try {
+            $response = Http::withHeaders([
+                'x-api-key' => $apiKey,
+                'anthropic-version' => config('services.anthropic.version', '2023-06-01'),
+                'content-type' => 'application/json',
+            ])->connectTimeout(10)->timeout(45)->post('https://api.anthropic.com/v1/messages', [
+                'model' => config('services.anthropic.model', 'claude-haiku-4-5'),
+                'max_tokens' => 1024,
+                'messages' => [[
+                    'role' => 'user',
+                    'content' => [
+                        $sourceBlock,
+                        ['type' => 'text', 'text' => $this->buildPrompt($categories)],
+                    ],
+                ]],
+            ]);
+        } catch (ConnectionException) {
+            throw new RuntimeException('La IA tardó demasiado en responder. Probá de nuevo en un momento.');
+        }
 
         if ($response->failed()) {
             throw new RuntimeException('La API de Anthropic respondió con un error ('.$response->status().'). Probá de nuevo en un momento.');

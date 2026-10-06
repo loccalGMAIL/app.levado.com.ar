@@ -15,8 +15,10 @@ const OFFLINE_URL = '/offline.html';
 
 // Sin esto, una red que cuelga sin cortar deja el respondWith de la navegación
 // sin resolver y la página no termina de cargar nunca: al interponerse el
-// service worker, el browser ya no aplica sus propios timeouts.
-const NAVIGATION_TIMEOUT_MS = 10000;
+// service worker, el browser ya no aplica sus propios timeouts. 30 s y no menos:
+// el hosting compartido tiene picos donde una página tarda 10-30 s en responder,
+// y cortar antes mostraba "Sin conexión" con el servidor funcionando.
+const NAVIGATION_TIMEOUT_MS = 30000;
 
 const PRECACHE = [
     OFFLINE_URL,
@@ -90,12 +92,32 @@ const staleWhileRevalidate = async (request) => {
     return cached || network;
 };
 
-const offlineFallback = async () => {
-    const cached = await caches.match(OFFLINE_URL);
+const TIMEOUT_MESSAGE = 'El servidor está tardando en responder. Intentá de nuevo en unos segundos.';
 
-    return cached ?? new Response('Sin conexión.', {
+const offlineFallback = async (error) => {
+    const cached = await caches.match(OFFLINE_URL);
+    const timedOut = error?.message === 'sw-timeout';
+
+    if (!cached) {
+        return new Response(timedOut ? TIMEOUT_MESSAGE : 'Sin conexión.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+    }
+
+    if (!timedOut) {
+        return cached;
+    }
+
+    // Lentitud del servidor, no falta de red: no culpar a la conexión del usuario.
+    const html = (await cached.text())
+        .replace('<title>Sin conexión', '<title>Servidor lento')
+        .replace('<h1>Sin conexión</h1>', '<h1>El servidor tarda en responder</h1>')
+        .replace(/<p>[^<]*<\/p>/, `<p>${TIMEOUT_MESSAGE}</p>`);
+
+    return new Response(html, {
         status: 503,
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
 };
 
@@ -109,7 +131,7 @@ self.addEventListener('fetch', (event) => {
     // Navegaciones (HTML): siempre red; si no hay conexión, página offline.
     if (request.mode === 'navigate') {
         event.respondWith(
-            withTimeout(fetch(request), NAVIGATION_TIMEOUT_MS).catch(() => offlineFallback())
+            withTimeout(fetch(request), NAVIGATION_TIMEOUT_MS).catch((error) => offlineFallback(error))
         );
 
         return;

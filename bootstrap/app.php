@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckTenantRole;
 use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\LogSlowRequests;
 use App\Http\Middleware\SetTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => CheckTenantRole::class,
             'super-admin' => EnsureSuperAdmin::class,
         ]);
+
+        $middleware->web(append: [LogSlowRequests::class]);
 
         // El tenant debe quedar resuelto ANTES de que se resuelva el
         // route-model binding: así el global scope de BelongsToTenant aplica

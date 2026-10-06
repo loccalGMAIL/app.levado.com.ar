@@ -4,6 +4,7 @@ use App\Models\Ingredient;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\Tenant;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -384,4 +385,63 @@ test('apply-suggestions imputes all pending matched lines', function () {
 
     expect($line->refresh()->isApplied())->toBeTrue()
         ->and((float) $ingredient->fresh()->cost_per_unit)->toBe(500.0);
+});
+
+test('la vista previa del escaneo se sirve por la app y no por /storage', function () {
+    // El escaneo guarda en el disco privado: Storage::url() apuntaba a /storage/...,
+    // que no existe para ese disco y daba 403 en producción.
+    Storage::fake('local');
+    [$user, $tenant] = ownerForScan();
+    $path = "purchases/{$tenant->id}/factura.jpg";
+    Storage::disk('local')->put($path, 'imgbytes');
+
+    $this->actingAs($user)->get(route('purchases.scan.image', ['path' => $path]))->assertOk();
+});
+
+test('la vista previa del escaneo no sirve archivos de otro negocio ni inexistentes', function () {
+    Storage::fake('local');
+    [$user, $tenant] = ownerForScan();
+    $other = Tenant::factory()->create();
+    Storage::disk('local')->put("purchases/{$other->id}/ajena.jpg", 'imgbytes');
+
+    $this->actingAs($user)->get(route('purchases.scan.image', ['path' => "purchases/{$other->id}/ajena.jpg"]))->assertNotFound();
+    $this->actingAs($user)->get(route('purchases.scan.image', ['path' => "purchases/{$tenant->id}/no-existe.jpg"]))->assertNotFound();
+    $this->actingAs($user)->get(route('purchases.scan.image'))->assertNotFound();
+});
+
+test('la revision del escaneo apunta la foto a la ruta de la app', function () {
+    Storage::fake('local');
+    [$user, $tenant] = ownerForScan();
+    Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => 'kg']);
+
+    config(['services.anthropic.key' => 'test-key']);
+    Http::fake([
+        'api.anthropic.com/*' => Http::response([
+            'content' => [['type' => 'text', 'text' => json_encode([
+                'supplier_name' => 'Molino', 'invoice_number' => '1', 'invoice_date' => '2026-05-14', 'total' => 1, 'lines' => [],
+            ])]],
+        ]),
+    ]);
+
+    $this->actingAs($user)->post(route('purchases.scan'), [
+        'invoice' => UploadedFile::fake()->image('factura.jpg', 800, 600),
+    ])
+        ->assertOk()
+        ->assertSee('purchases/scan/image?path=', false)
+        ->assertDontSee('/storage/purchases', false);
+});
+
+test('un corte de conexion con la IA devuelve un error legible y no deja archivos', function () {
+    Storage::fake('local');
+    [$user, $tenant] = ownerForScan();
+    Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => 'kg']);
+
+    config(['services.anthropic.key' => 'test-key']);
+    Http::fake(['api.anthropic.com/*' => fn () => throw new ConnectionException('cURL error 28: timed out')]);
+
+    $this->actingAs($user)->post(route('purchases.scan'), [
+        'invoice' => UploadedFile::fake()->image('factura.jpg', 800, 600),
+    ])->assertSessionHas('error', 'La IA tardó demasiado en responder. Probá de nuevo en un momento.');
+
+    expect(Storage::disk('local')->allFiles())->toBeEmpty();
 });
