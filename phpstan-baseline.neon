@@ -1,0 +1,2305 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$supplier_id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Console/Commands/BackfillProductLinks.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Console/Commands/BackfillProductLinks.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<string,array\<string, mixed\>\>\:\:reject\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Console/Commands/BackfillProductLinks.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Console/Commands/BackfillProductLinks.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/CreateProductsFromRecipes.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Console/Commands/CreateProductsFromRecipes.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Console/Commands/CreateProductsFromRecipes.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Recipe\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Console/Commands/CreateProductsFromRecipes.php
+
+		-
+			message: '#^Parameter \#2 \$rows of function Laravel\\Prompts\\table expects array\<int, array\<int, string\>\>\|Illuminate\\Support\\Collection\<int, array\<int, string\>\>\|null, array\<int, array\{Negocio\: mixed, Receta\: string, Rinde\: non\-falsy\-string, ''Costo/u''\: non\-falsy\-string\}\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Console/Commands/CreateProductsFromRecipes.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Console/Commands/CreateProductsFromRecipes.php
+
+		-
+			message: '#^Match arm comparison between \$this\(App\\Enums\\PricingPolicy\)&App\\Enums\\PricingPolicy\:\:Markup and App\\Enums\\PricingPolicy\:\:Markup is always true\.$#'
+			identifier: match.alwaysTrue
+			count: 1
+			path: app/Enums/PricingPolicy.php
+
+		-
+			message: '#^Property App\\Models\\Invitation\:\:\$role \(string\) does not accept App\\Enums\\TenantUserRole\:\:Admin\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Http/Controllers/Admin/MailPreviewController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$active_users\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/TenantController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$pending_invitations\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/TenantController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$total_users\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/TenantController.php
+
+		-
+			message: '#^Parameter \#1 \$user of class Illuminate\\Auth\\Events\\Verified constructor expects Illuminate\\Contracts\\Auth\\MustVerifyEmail, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/VerifyEmailController.php
+
+		-
+			message: '#^Match expression does not handle remaining value\: mixed$#'
+			identifier: match.unhandled
+			count: 1
+			path: app/Http/Controllers/CatalogReplacementController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\CatalogReplacementController\:\:findIngredient\(\) should return App\\Models\\Ingredient but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/CatalogReplacementController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\CatalogReplacementController\:\:findPackaging\(\) should return App\\Models\\Packaging but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/CatalogReplacementController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\CatalogReplacementController\:\:findRecipe\(\) should return App\\Models\\Recipe but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/CatalogReplacementController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/CreditNoteController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$note_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/CreditNoteController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:lines\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/CreditNoteController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/CreditNoteController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\CreditNoteLine\)\: \(App\\Models\\StockMovement\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/CreditNoteController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/CustomerController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/CustomerController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/CustomerController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 6
+			path: app/Http/Controllers/DashboardController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/DeliveryPersonController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/DeliveryPersonController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/FixedCostCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/FixedCostCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/FixedCostController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$monthly_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/FixedCostController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/FixedCostController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/FixedCostController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/FixedCostController.php
+
+		-
+			message: '#^Parameter \#1 \$fixedCost of method App\\Services\\FixedCostHistory\:\:record\(\) expects App\\Models\\FixedCost, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/FixedCostController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{fixedCost\: App\\Models\\FixedCost, amount\: float\|null, carried\: bool\}, Closure\(App\\Models\\FixedCost\)\: array\{fixedCost\: App\\Models\\FixedCost, amount\: float\|null, carried\: bool\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/FixedCostHistoryController.php
+
+		-
+			message: '#^Parameter \#1 \$fixedCost of method App\\Services\\FixedCostHistory\:\:record\(\) expects App\\Models\\FixedCost, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/FixedCostHistoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cost_per_unit\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/IngredientController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/IngredientController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/IngredientController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:priceLogs\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/IngredientController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:notConverted\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/IngredientController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/IngredientController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:producible\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/InstantProductionOrderController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/InstantProductionOrderController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\InstantProductionOrderController\:\:pairsFrom\(\) should return Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product, quantity\: float\}\> but returns Illuminate\\Support\\Collection\<int, array\{product\: mixed, quantity\: float\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/InstantProductionOrderController.php
+
+		-
+			message: '#^Parameter \#2 \$tenant of class App\\Mail\\WelcomeMail constructor expects App\\Models\\Tenant, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/InvitationController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/LaborTypeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/LaborTypeController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/LaborTypeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/LocationController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/LocationController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cost_per_unit\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PackagingController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PackagingController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PackagingController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/PackagingController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:priceLogs\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/PackagingController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PriceListController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PriceListController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/PriceListController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/PriceListController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\PriceListController\:\:sellableManufacturedProducts\(\) should return Illuminate\\Support\\Collection\<int, App\\Models\\Product\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/PriceListController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductBulkCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductBulkCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductBulkCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/ProductCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/ProductCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/ProductController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Http/Controllers/ProductController.php
+
+		-
+			message: '#^Parameter \#1 \$product of method App\\Http\\Controllers\\ProductController\:\:logManualCost\(\) expects App\\Models\\Product, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/ProductController.php
+
+		-
+			message: '#^Parameter \#1 \$product of method App\\Services\\ProductCodeAssigner\:\:assignIfMissing\(\) expects App\\Models\\Product, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/ProductController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$purchase\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductCostHistoryController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/ProductCostHistoryController.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/ProductCostHistoryController.php
+
+		-
+			message: '#^Cannot call method label\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/ProductCostHistoryController.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/ProductCostHistoryController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Http/Controllers/ProductCostHistoryController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{cost\: float, cost_formatted\: string, source\: ''produccion'', source_label\: ''Producción'', recorded_at\: mixed, supplier\: null, purchase_url\: null, production_url\: string, production_label\: non\-falsy\-string, cancelled\: bool\}, Closure\(App\\Models\\Production\)\: array\{cost\: float, cost_formatted\: string, source\: ''produccion'', source_label\: ''Producción'', recorded_at\: mixed, supplier\: null, purchase_url\: null, production_url\: string, production_label\: non\-falsy\-string, cancelled\: bool\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/ProductCostHistoryController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{cost\: float, cost_formatted\: string, source\: mixed, source_label\: mixed, recorded_at\: mixed, supplier\: mixed, purchase_url\: string\|null, production_url\: null, production_label\: null, cancelled\: false\}, Closure\(App\\Models\\ProductCostLog\)\: array\{cost\: float, cost_formatted\: string, source\: mixed, source_label\: mixed, recorded_at\: mixed, supplier\: mixed, purchase_url\: string\|null, production_url\: null, production_label\: null, cancelled\: false\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/ProductCostHistoryController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/ProductPriceController.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/ProductPriceController.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/ProductPriceController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/ProductPriceController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductionController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/ProductionOrderController.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/ProductionOrderController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Product\|float\>\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/ProductionOrderController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductionOrderLineController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductionOrderLineController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductionOrderLineController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductionOrderLineController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/ProductionOrderLineController.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/ProductionOrderLineController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/ProductionOrderLineController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Product\|float\>\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/ProductionOrderLineController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:producible\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/ProductionOrderRequestController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:numberLabel\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/ProductionRequestController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$invoice_date\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$invoice_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$subdivision_label\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$subdivisions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$total_iva\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$total_percepcion\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$total_subtotal\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isBonus\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:notConverted\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Cannot call method toDateString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:mapWithKeys\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:mapWithKeys\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\<int\<0, max\>, array\{selection\: non\-falsy\-string, pkgQty\: float\}\|null\>, Closure\(App\\Models\\PurchaseLine\)\: non\-empty\-array\<int\<0, max\>, array\{selection\: non\-falsy\-string, pkgQty\: float\}\|null\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\PurchaseLine\)\: \(App\\Models\\StockMovement\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Parameter \#1 \$items of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:merge\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Parameter \#1 \$line of method App\\Services\\ProductLinkMemory\:\:remember\(\) expects App\\Models\\PurchaseLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Parameter \#1 \$line of method App\\Services\\PurchaseLineRecorder\:\:apply\(\) expects App\\Models\\PurchaseLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseScanController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$invoice_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/PurchaseScanController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 4
+			path: app/Http/Controllers/PurchaseScanController.php
+
+		-
+			message: '#^Parameter \#1 \$purchase of method App\\Services\\PurchaseLineRecorder\:\:storePending\(\) expects App\\Models\\Purchase, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/PurchaseScanController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ProductPrice\:\:\$recipe_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$child_recipe_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$hours\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ingredient_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$labor_type_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$packaging_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity_used\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$cost_per_unit\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeLineController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$subdivisions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RecipeLineController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/RecipeLineController.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/RecipeLineController.php
+
+		-
+			message: '#^Parameter \#2 \$b of method App\\Services\\UnitConverter\:\:compatible\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/RecipeLineController.php
+
+		-
+			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/RecipeLineController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:producible\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/RecurringProductionRequestController.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/RecurringProductionRequestController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 5
+			path: app/Http/Controllers/StockController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\StockController\:\:resolveStockable\(\) should return App\\Models\\Ingredient\|App\\Models\\Packaging\|App\\Models\\Product but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/StockController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/StockController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/SupplierController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/SupplierController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/SupplierController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/VariableExpenseCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/VariableExpenseCategoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/VariableExpenseController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/VariableExpenseController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:between\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/VariableExpenseController.php
+
+		-
+			message: '#^Parameter \#1 \$tenant of method App\\Http\\Controllers\\VariableExpenseController\:\:folderFor\(\) expects App\\Models\\Tenant, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/VariableExpenseController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/VariableExpenseScanController.php
+
+		-
+			message: '#^Parameter \#3 \$categories of method App\\Services\\ExpenseReceiptExtractor\:\:extract\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\VariableExpenseCategory\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/VariableExpenseScanController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/SetTenantContext.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:producible\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Requests/StoreInstantProductionOrderRequest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:producible\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Requests/StorePlaceRequestRequest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:producible\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Requests/SyncProductionOrderLinesRequest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:producible\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Requests/UpdateRecurringProductionRequestRequest.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mail/TeamInvitation.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:getSetting\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mail/TeamInvitation.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mail/TeamInvitation.php
+
+		-
+			message: '#^Cannot call method label\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mail/TeamInvitation.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>footer_note" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mail/TeamInvitation.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>subject" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mail/TeamInvitation.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>footer_note" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mail/WelcomeMail.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>subject" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mail/WelcomeMail.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/Invitation.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Models/Invitation.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$labor_hours\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit_cost\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$yield_quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductType\:\:Manufactured will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductType\:\:Resale will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>labor_hours" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>yield_quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Models/ProductPrice.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/ProductPrice.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionStatus\:\:Cancelled will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/Production.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionStatus\:\:Confirmed will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/Production.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionOrderStatus\:\:Cancelled will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/ProductionOrder.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionOrderStatus\:\:Done will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/ProductionOrder.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\ProductionOrderStatus\:\:Draft will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/ProductionOrder.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of function in_array expects array, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/RecurringProductionRequest.php
+
+		-
+			message: '#^Method App\\Models\\StockMovement\:\:stockable\(\) should return App\\Models\\Ingredient\|App\\Models\\Packaging\|App\\Models\\Product\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/StockMovement.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Models/Tenant.php
+
+		-
+			message: '#^Method App\\Models\\Tenant\:\:defaultLocation\(\) should return App\\Models\\Location but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/Tenant.php
+
+		-
+			message: '#^Method App\\Models\\Tenant\:\:defaultPriceList\(\) should return App\\Models\\PriceList but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/Tenant.php
+
+		-
+			message: '#^Property App\\Models\\Tenant\:\:\$cachedDefaultLocation \(App\\Models\\Location\|null\) does not accept Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Models/Tenant.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:first\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Models\\TenantUser\)\: bool given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Parameter \#1 \$key of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:contains\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|Illuminate\\Database\\Eloquent\\Model\|int\|string, Closure\(App\\Models\\TenantUser\)\: false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\TenantUserRole\:\:SuperAdmin will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$fixed_costs_exists\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$ingredients_exists\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$labor_types_exists\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:overheadPerHour\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/ArticlePriceRecalculator.php
+
+		-
+			message: '#^Cannot call method priceFor\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ArticlePriceRecalculator.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\Product\)\: void given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ArticlePriceRecalculator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Parameter \#1 \$a of method App\\Services\\UnitConverter\:\:compatible\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:assertCompatible\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeIngredientLine\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:assertCompatible\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeSubrecipeLine\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:preview\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipePackagingLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeIngredientLine\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:preview\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipePackagingLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipePackagingLine\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Parameter \#1 \$lines of method App\\Services\\CatalogItemReplacer\:\:preview\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\RecipeIngredientLine\|App\\Models\\RecipePackagingLine\|App\\Models\\RecipeSubrecipeLine\>, Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\RecipeSubrecipeLine\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Services/CatalogItemReplacer.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity_purchased\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/CreditNoteLineRecorder.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:affectsStock\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/CreditNoteLineRecorder.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isApplied\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/CreditNoteLineRecorder.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isExcluded\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/CreditNoteLineRecorder.php
+
+		-
+			message: '#^Method App\\Services\\CreditNoteLineRecorder\:\:storeLine\(\) should return App\\Models\\CreditNoteLine but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/CreditNoteLineRecorder.php
+
+		-
+			message: '#^Parameter \#1 \$line of method App\\Services\\CreditNoteLineRecorder\:\:applyStock\(\) expects App\\Models\\CreditNoteLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CreditNoteLineRecorder.php
+
+		-
+			message: '#^Parameter \#1 \$line of method App\\Services\\StockService\:\:activePurchaseEntryFor\(\) expects App\\Models\\PurchaseLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/CreditNoteLineRecorder.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{period\: string, amount\: float\}, Closure\(App\\Models\\FixedCostLog\)\: array\{period\: string, amount\: float\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/FixedCostHistory.php
+
+		-
+			message: '#^Parameter \#1 \$points of method App\\Services\\FixedCostHistory\:\:withChangePct\(\) expects Illuminate\\Support\\Collection\<int, array\{period\: Illuminate\\Support\\Carbon, amount\: float\}\>, Illuminate\\Support\\Collection\<int, array\{period\: string, amount\: float\}\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/FixedCostHistory.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/FixedCostReport.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/FixedCostReport.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:between\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/FixedCostReport.php
+
+		-
+			message: '#^Method App\\Services\\FixedCostReport\:\:build\(\) should return array\{business\: array\{name\: string, razon_social\: string\|null, cuit\: string\|null, condicion_iva\: string\|null, currency\: string, logo\: string\|null\}, meta\: array\{from\: string, to\: string, from_ymd\: string, to_ymd\: string, snapshot_label\: string, generated_at\: string, months\: int, sections\: list\<string\>, \.\.\.\}, current\: array\{rows\: list\<array\{id\: int, name\: string, category\: string\|null, active\: bool, amount\: float, carried\: bool\}\>, total\: float, count\: int\}, monthly\: array\{rows\: list\<array\{label\: string, total\: float, change_pct\: float\|null\}\>, average\: float, min\: float, max\: float\}\|null, details\: array\{rows\: list\<array\{name\: string, category\: string\|null, timeline\: list\<array\{label\: string, amount\: float, change_pct\: float\|null\}\>\}\>, truncated\: bool, total_count\: int\}\|null, variable\: array\{rows\: list\<array\{date\: string, name\: string, category\: string\|null, supplier\: string\|null, description\: string\|null, amount\: float\}\>, total\: float\}\|null, totals\: array\{fixed\: float, variable\: float, grand\: float, productive_hours\: int\|null, overhead_per_hour\: float\|null\}\} but returns array\{business\: array\{name\: string, razon_social\: string\|null, cuit\: string\|null, condicion_iva\: string\|null, currency\: string, logo\: string\|null\}, meta\: array\{from\: non\-falsy\-string, to\: non\-falsy\-string, from_ymd\: non\-falsy\-string, to_ymd\: non\-falsy\-string, snapshot_label\: string, generated_at\: non\-falsy\-string, months\: float, sections\: list\<string\>, \.\.\.\}, current\: array\{rows\: list\<array\{id\: int, name\: string, category\: string\|null, active\: bool, amount\: float, carried\: bool\}\>, total\: float, count\: int\}, monthly\: array\{rows\: list\<array\{label\: string, total\: float, change_pct\: float\|null\}\>, average\: float, min\: float, max\: float\}\|null, details\: array\{rows\: list\<array\{name\: string, category\: string\|null, timeline\: list\<array\{label\: string, amount\: float, change_pct\: float\|null\}\>\}\>, truncated\: bool, total_count\: int\}\|null, variable\: array\{rows\: list\<array\{date\: string, name\: string, category\: string\|null, supplier\: string\|null, description\: string\|null, amount\: float\}\>, total\: float\}\|null, totals\: array\{fixed\: float, variable\: float, grand\: float, productive_hours\: int\<0, max\>\|null, overhead_per_hour\: float\|null\}\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/FixedCostReport.php
+
+		-
+			message: '#^Parameter \#4 \$months of method App\\Services\\FixedCostReport\:\:buildDetails\(\) expects int, float given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/FixedCostReport.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/IngredientToProductConverter.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Purchase\:\:\$pending_lines_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/NotificationService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/NotificationService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tenant\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/NotificationService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:getSetting\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/NotificationService.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/NotificationService.php
+
+		-
+			message: '#^Parameter \#1 \$tenant of method App\\Services\\NotificationService\:\:enabled\(\) expects App\\Models\\Tenant, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/NotificationService.php
+
+		-
+			message: '#^Parameter \$tenant of method App\\Services\\NotificationService\:\:raise\(\) expects App\\Models\\Tenant, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/NotificationService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/NotificationService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$supplier_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductLinkMemory.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/ProductLinkMemory.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:overheadPerHour\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/ProductPriceWriter.php
+
+		-
+			message: '#^Left side of && is always true\.$#'
+			identifier: booleanAnd.leftAlwaysTrue
+			count: 1
+			path: app/Services/ProductPriceWriter.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 2
+			path: app/Services/ProductPriceWriter.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\PricingPolicy will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Services/ProductPriceWriter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$scheduled_for\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:numberLabel\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:producible\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:withTrashed\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Cannot call method canTransitionTo\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Cannot call method label\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Method App\\Services\\ProductionOrderService\:\:addRequest\(\) should return App\\Models\\ProductionOrderRequest but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Method App\\Services\\ProductionOrderService\:\:aggregate\(\) should return Illuminate\\Support\\Collection\<int, array\{product\: App\\Models\\Product, quantity\: float\}\> but returns Illuminate\\Support\\Collection\<int, array\{product\: Illuminate\\Database\\Eloquent\\Model\|null, quantity\: float\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Method App\\Services\\ProductionOrderService\:\:createOrder\(\) should return App\\Models\\ProductionOrder but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Method App\\Services\\ProductionOrderService\:\:orderForDate\(\) should return App\\Models\\ProductionOrder but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{product_id\: int\<0, max\>, name\: mixed, unit\: mixed, quantity\: float\}, Closure\(App\\Models\\ProductionOrderLine\)\: array\{product_id\: int\<0, max\>, name\: mixed, unit\: mixed, quantity\: float\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{product_id\: int\<0, max\>, quantity\: float\}, Closure\(App\\Models\\ProductionOrderLine\)\: array\{product_id\: int\<0, max\>, quantity\: float\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\ProductionOrderLine\)\: mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:sortBy\(\) expects array\<array\{string, ''asc''\|''desc''\|SortDirection\}\|\(callable\(Illuminate\\Database\\Eloquent\\Model, Illuminate\\Database\\Eloquent\\Model\)\: mixed\)\|\(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed\)\|string\>\|\(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed\)\|int\|string, Closure\(App\\Models\\ProductionOrder\)\: false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Parameter \#1 \$production of method App\\Services\\ProductionService\:\:cancel\(\) expects App\\Models\\Production, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Parameter \#1 \$tenant of method App\\Services\\ProductionOrderService\:\:previousRequestForDestination\(\) expects App\\Models\\Tenant, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Parameter \#2 \$location of method App\\Services\\ProductionOrderService\:\:previewFor\(\) expects App\\Models\\Location, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Parameter \#2 \$type of method App\\Services\\ProductionOrderService\:\:previousRequestForDestination\(\) expects App\\Enums\\DeliveryDestinationType, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/ProductionOrderService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\Relation\<\*, \*, \*\>\:\:morphWith\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Cannot call method label\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Method App\\Services\\ProductionOrderSheets\:\:groupRequests\(\) should return Illuminate\\Support\\Collection\<int, array\{key\: string, kind\: string, title\: string, subtitle\: string\|null, requests\: list\<array\<string, mixed\>\>, totals\: list\<array\<string, mixed\>\>\}\> but returns Illuminate\\Support\\Collection\<int, array\{key\: mixed, kind\: mixed, title\: mixed, subtitle\: mixed, requests\: mixed, totals\: list\<array\{product\: string, quantity\: float, unit\: string\}\>\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Product\|float\>\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:sortBy\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Parameter \#1 \$requests of method App\\Services\\ProductionOrderSheets\:\:groupRequests\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\ProductionOrderRequest\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Parameter \#1 \$tenant of method App\\Services\\ReportLetterhead\:\:for\(\) expects App\\Models\\Tenant, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Parameter \#2 \$destination of method App\\Services\\ProductionOrderSheets\:\:requestPayload\(\) expects App\\Models\\Customer\|App\\Models\\Location\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Parameter \#2 \$location of method App\\Services\\ProductionOrderService\:\:previewFor\(\) expects App\\Models\\Location, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Parameter \#2 \$orderLocation of method App\\Services\\ProductionOrderSheets\:\:groupRequests\(\) expects App\\Models\\Location, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:defaultLocation\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:productions\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Method App\\Services\\ProductionService\:\:guardProducible\(\) should return App\\Models\\Recipe but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Enums\\CatalogItemType\|App\\Models\\Ingredient\|App\\Models\\Packaging\|float\>\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Parameter \#1 \.\.\.\$values of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Ingredient\|App\\Models\\Packaging\|float\|string\>\>\:\:push\(\) expects array\{sort\: string, item\: App\\Models\\Ingredient\|App\\Models\\Packaging, quantity\: float, unit_cost\: float\}, array\{sort\: string, item\: App\\Models\\Product, quantity\: float, unit_cost\: float\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Parameter \#3 \$to of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/ProductionService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$supplier_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tenant\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:defaultLocation\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:getSetting\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Call to function abort_unless\(\) with arguments false, 422 and ''El packaging solo…'' will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Call to function array_key_exists\(\) with ''percepcion_rate'' and array\{raw_name\?\: string\|null, quantity_purchased\: float\|string, purchase_unit\: string, unit_price\: float\|string, is_bonus\?\: bool\} will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Method App\\Services\\PurchaseLineRecorder\:\:storePending\(\) should return App\\Models\\PurchaseLine but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Offset ''iva_rate'' on array\{raw_name\?\: string\|null, purchaseable_type\?\: string\|null, purchaseable_id\?\: int\|string\|null, quantity_purchased\: float\|string, purchase_unit\: string, unit_price\: float\|string, is_bonus\?\: bool\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Offset ''iva_rate'' on array\{raw_name\?\: string\|null, quantity_purchased\: float\|string, purchase_unit\: string, unit_price\: float\|string, is_bonus\?\: bool\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Offset ''percepcion_rate'' on \*NEVER\* in isset\(\) always exists and is not nullable\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Offset ''percepcion_rate'' on array\{raw_name\?\: string\|null, purchaseable_type\?\: string\|null, purchaseable_id\?\: int\|string\|null, quantity_purchased\: float\|string, purchase_unit\: string, unit_price\: float\|string, is_bonus\?\: bool\} in isset\(\) does not exist\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Parameter \#1 \$purchaseUnit of method App\\Services\\PurchaseLineRecorder\:\:costPerUnit\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Parameter \#2 \$from of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Parameter \#2 \$ingredientUnit of method App\\Services\\PurchaseLineRecorder\:\:costPerUnit\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Parameter \#2 \$ingredientUnit of method App\\Services\\PurchaseLineRecorder\:\:parseDescPkgQty\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Parameter \#3 \$to of method App\\Services\\UnitConverter\:\:convert\(\) expects App\\Enums\\Unit, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 3
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\Unit\:\:Unidad will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 4
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/PurchaseLineRecorder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$childRecipe\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeCostCalculator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$hours\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeCostCalculator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ingredient\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeCostCalculator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$laborType\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeCostCalculator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$packaging\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeCostCalculator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeCostCalculator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity_used\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeCostCalculator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeCostCalculator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$child_recipe_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeCostPropagator.php
+
+		-
+			message: '#^Parameter \#1 \$product of method App\\Services\\ArticlePriceRecalculator\:\:recompute\(\) expects App\\Models\\Product, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/RecipeCostPropagator.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$childRecipe\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeExploder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$hours\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeExploder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ingredient\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeExploder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$laborType\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeExploder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$packaging\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeExploder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeExploder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity_used\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeExploder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeExploder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$childRecipe\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$hours\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ingredient\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$laborType\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$packaging\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity_used\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Cannot call method short\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Parameter \#1 \$tenant of method App\\Services\\ReportLetterhead\:\:for\(\) expects App\\Models\\Tenant, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/RecipePrintSheet.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$childRecipe\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$hours\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ingredient\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$laborType\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$packaging\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity_used\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 5
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 4
+			path: app/Services/RecipeShowViewModel.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ProductionOrderRequest\:\:\$date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecurringProductionRequestMaterializer.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ProductionOrderRequest\:\:\$rid\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecurringProductionRequestMaterializer.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/RecurringProductionRequestMaterializer.php
+
+		-
+			message: '#^Cannot call method gt\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/RecurringProductionRequestMaterializer.php
+
+		-
+			message: '#^Method App\\Services\\RecurringProductionRequestMaterializer\:\:existingInstances\(\) should return Illuminate\\Support\\Collection\<int, string\> but returns Illuminate\\Support\\Collection\<int, non\-falsy\-string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/RecurringProductionRequestMaterializer.php
+
+		-
+			message: '#^Parameter \#2 \$from of method App\\Services\\RecurringProductionRequestMaterializer\:\:existingInstances\(\) expects Carbon\\Carbon, Carbon\\CarbonInterface given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/RecurringProductionRequestMaterializer.php
+
+		-
+			message: '#^Parameter \#3 \$to of method App\\Services\\RecurringProductionRequestMaterializer\:\:existingInstances\(\) expects Carbon\\Carbon, Carbon\\CarbonInterface\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/RecurringProductionRequestMaterializer.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>active" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/RecurringProductionRequestMaterializer.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecurringProductionRequestService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RecurringProductionRequestService.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Services/RecurringProductionRequestService.php
+
+		-
+			message: '#^Method App\\Services\\RecurringProductionRequestService\:\:create\(\) should return App\\Models\\RecurringProductionRequest but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/RecurringProductionRequestService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/RecurringProductionRequestService.php
+
+		-
+			message: '#^Parameter \#1 \$recurring of method App\\Services\\RecurringProductionRequestService\:\:replaceLines\(\) expects App\\Models\\RecurringProductionRequest, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/RecurringProductionRequestService.php
+
+		-
+			message: '#^Cannot call method label\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/ReportLetterhead.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:defaultLocation\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/StockService.php
+
+		-
+			message: '#^Parameter \$location of method App\\Services\\StockService\:\:registerMovement\(\) expects App\\Models\\Location, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/StockService.php
+
+		-
+			message: '#^Parameter \$type of method App\\Services\\StockService\:\:registerMovement\(\) expects App\\Enums\\StockMovementType, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/StockService.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Services/StockService.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\StockMovementType will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/StockService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/StockService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>quantity" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/StockService.php
