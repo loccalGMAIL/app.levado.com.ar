@@ -15,7 +15,7 @@
         Mostrar
         <select aria-label="Filas por página"
             class="rounded-md border-miga bg-white py-1 pl-2 pr-7 text-xs text-corteza focus:border-masa-madre focus:ring-masa-madre"
-            onchange="const url = new URL(window.location.href); url.searchParams.set('per_page', this.value); url.searchParams.delete(@js($paginator->getPageName())); url.hash = @js($fragment ?? ''); window.location.href = url.toString();">
+            onchange="const url = new window.URL(window.location.href); url.searchParams.set('per_page', this.value); url.searchParams.delete(@js($paginator->getPageName())); url.hash = @js($fragment ?? ''); window.location.href = url.toString();">
             @foreach(\App\Http\Controllers\Controller::PER_PAGE_OPTIONS as $option)
                 <option value="{{ $option }}" @selected($paginator->perPage() === $option)>{{ $option }}</option>
             @endforeach

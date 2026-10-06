@@ -29,7 +29,8 @@ test('el listado pagina de a 20 por defecto y muestra el selector', function () 
         ->get(route('recipes.index'))
         ->assertOk()
         ->assertViewHas('recipes', fn ($recipes) => $recipes->perPage() === 20 && $recipes->total() === 25)
-        ->assertSee('Filas por página');
+        ->assertSee('Filas por página')
+        ->assertSee('new window.URL(', false);
 });
 
 test('per_page elige la cantidad de filas', function () {
