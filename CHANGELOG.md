@@ -307,6 +307,8 @@ Rama `v0.14.1-larastan`, sobre v0.14.0. Análisis estático con Larastan; sin ca
 - Genéricos en las 163 relaciones de los modelos (`@return BelongsTo<X, $this>`), `@property-read` de los atributos
   agregados por `withCount()`/`selectRaw()`, y tipos de colecciones y retornos corregidos en servicios y controladores.
 - `?->` redundante a la izquierda de `??` reemplazado por `->` (mismo comportamiento).
+- **Directriz** en `CLAUDE.md` y `AGENTS.md`: correr `composer analyse` antes de dar un cambio PHP por terminado, sin
+  agregar entradas nuevas al baseline.
 - **Tests**: la suite completa corre de una vez. `FixedCostReportController` ya no llama `set_time_limit` en consola
   (cortaba la corrida a los 60 s), 19 helpers compartidos pasaron a `tests/Pest.php`, y un test con fecha fija
   (`2026-09-21`) pasó a fecha relativa.
