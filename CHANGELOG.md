@@ -295,6 +295,22 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.14.1] — 2026-10-06
+
+Rama `v0.14.1-larastan`, sobre v0.14.0. Análisis estático con Larastan; sin cambios funcionales.
+
+### Técnico
+
+- **Larastan v3** (nivel 5, `composer analyse`) con `phpstan-baseline.neon`: de 496 errores iniciales quedan 9
+  registrados (comparaciones defensivas y tipos de fecha de `FixedCostHistory`, entre otros).
+- `parseModelCastsMethod: true`: Larastan lee el `casts()` de los modelos (enums y fechas).
+- Genéricos en las 163 relaciones de los modelos (`@return BelongsTo<X, $this>`), `@property-read` de los atributos
+  agregados por `withCount()`/`selectRaw()`, y tipos de colecciones y retornos corregidos en servicios y controladores.
+- `?->` redundante a la izquierda de `??` reemplazado por `->` (mismo comportamiento).
+- **Tests**: la suite completa corre de una vez. `FixedCostReportController` ya no llama `set_time_limit` en consola
+  (cortaba la corrida a los 60 s), 19 helpers compartidos pasaron a `tests/Pest.php`, y un test con fecha fija
+  (`2026-09-21`) pasó a fecha relativa.
+
 ## [0.14.0] — 2026-10-03
 
 Rama `v0.14.0-ArticulosConCantidadDeReceta`, sobre v0.13.4. Artículos de venta que toman una cantidad de una receta
