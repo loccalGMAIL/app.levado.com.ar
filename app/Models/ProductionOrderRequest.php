@@ -55,27 +55,43 @@ class ProductionOrderRequest extends Model
         return $this->number !== null ? "Pedido #{$this->number}" : "Pedido {$this->position}";
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<ProductionOrder, $this>
+     */
     public function productionOrder(): BelongsTo
     {
         return $this->belongsTo(ProductionOrder::class);
     }
 
-    /** El molde recurrente que generó esta instancia, si nació de uno. */
+    /**
+     * El molde recurrente que generó esta instancia, si nació de uno.
+     *
+     * @return BelongsTo<RecurringProductionRequest, $this>
+     */
     public function recurringProductionRequest(): BelongsTo
     {
         return $this->belongsTo(RecurringProductionRequest::class);
     }
 
+    /**
+     * @return MorphTo<Model, $this>
+     */
     public function destination(): MorphTo
     {
         return $this->morphTo();
     }
 
+    /**
+     * @return HasMany<ProductionOrderLine, $this>
+     */
     public function lines(): HasMany
     {
         return $this->hasMany(ProductionOrderLine::class);

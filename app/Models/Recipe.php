@@ -47,42 +47,67 @@ class Recipe extends Model
         $query->where('active', true);
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return HasMany<RecipeIngredientLine, $this>
+     */
     public function ingredientLines(): HasMany
     {
         return $this->hasMany(RecipeIngredientLine::class);
     }
 
+    /**
+     * @return HasMany<RecipePackagingLine, $this>
+     */
     public function packagingLines(): HasMany
     {
         return $this->hasMany(RecipePackagingLine::class);
     }
 
+    /**
+     * @return HasMany<RecipeLaborLine, $this>
+     */
     public function laborLines(): HasMany
     {
         return $this->hasMany(RecipeLaborLine::class);
     }
 
+    /**
+     * @return HasMany<RecipeSubrecipeLine, $this>
+     */
     public function subrecipeLines(): HasMany
     {
         return $this->hasMany(RecipeSubrecipeLine::class);
     }
 
+    /**
+     * @return HasMany<RecipeSubrecipeLine, $this>
+     */
     public function parentSubrecipeLines(): HasMany
     {
         return $this->hasMany(RecipeSubrecipeLine::class, 'child_recipe_id');
     }
 
+    /**
+     * @return HasMany<RecipePrice, $this>
+     */
     public function prices(): HasMany
     {
         return $this->hasMany(RecipePrice::class);
     }
 
-    /** El artículo base que produce esta receta (el precio de venta vive ahí); excluye las presentaciones. */
+    /**
+     * El artículo base que produce esta receta (el precio de venta vive ahí); excluye las presentaciones.
+     *
+     * @return HasOne<Product, $this>
+     */
     public function manufacturedProduct(): HasOne
     {
         return $this->hasOne(Product::class)
@@ -90,12 +115,19 @@ class Recipe extends Model
             ->whereNull('recipe_quantity');
     }
 
-    /** Todos los artículos elaborados de la receta: el base y sus presentaciones (packs). */
+    /**
+     * Todos los artículos elaborados de la receta: el base y sus presentaciones (packs).
+     *
+     * @return HasMany<Product, $this>
+     */
     public function manufacturedProducts(): HasMany
     {
         return $this->hasMany(Product::class)->where('type', ProductType::Manufactured->value);
     }
 
+    /**
+     * @return HasMany<RecipePriceLog, $this>
+     */
     public function priceLogs(): HasMany
     {
         return $this->hasMany(RecipePriceLog::class);

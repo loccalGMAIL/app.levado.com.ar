@@ -66,32 +66,51 @@ class Production extends Model
         return $this->status === ProductionStatus::Cancelled;
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Location, $this>
+     */
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
     }
 
+    /**
+     * @return BelongsTo<Product, $this>
+     */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /**
+     * @return BelongsTo<Recipe, $this>
+     */
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
     }
 
-    /** Null si nació de la pantalla "producir ahora" (ad-hoc, sin orden). */
+    /**
+     * Null si nació de la pantalla "producir ahora" (ad-hoc, sin orden).
+     *
+     * @return BelongsTo<ProductionOrder, $this>
+     */
     public function productionOrder(): BelongsTo
     {
         return $this->belongsTo(ProductionOrder::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -100,6 +119,8 @@ class Production extends Model
     /**
      * Movimientos de stock generados por esta producción (consumos de insumos +
      * entrada del elaborado), atados por la referencia genérica del ledger.
+     *
+     * @return HasMany<StockMovement, $this>
      */
     public function movements(): HasMany
     {

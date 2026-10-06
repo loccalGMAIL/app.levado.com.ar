@@ -20,11 +20,17 @@ class RecipeLaborLine extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Recipe, $this>
+     */
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
     }
 
+    /**
+     * @return BelongsTo<LaborType, $this>
+     */
     public function laborType(): BelongsTo
     {
         return $this->belongsTo(LaborType::class);

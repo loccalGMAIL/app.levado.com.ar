@@ -47,11 +47,17 @@ class PurchaseLine extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Purchase, $this>
+     */
     public function purchase(): BelongsTo
     {
         return $this->belongsTo(Purchase::class);
     }
 
+    /**
+     * @return MorphTo<Model, $this>
+     */
     public function purchaseable(): MorphTo
     {
         return $this->morphTo();

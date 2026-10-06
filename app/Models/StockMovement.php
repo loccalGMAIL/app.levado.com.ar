@@ -53,36 +53,57 @@ class StockMovement extends Model
         });
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Location, $this>
+     */
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
     }
 
+    /**
+     * @return BelongsTo<Ingredient, $this>
+     */
     public function ingredient(): BelongsTo
     {
         return $this->belongsTo(Ingredient::class, 'stockable_id');
     }
 
+    /**
+     * @return BelongsTo<Packaging, $this>
+     */
     public function packaging(): BelongsTo
     {
         return $this->belongsTo(Packaging::class, 'stockable_id');
     }
 
+    /**
+     * @return BelongsTo<Product, $this>
+     */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'stockable_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<self, $this>
+     */
     public function reverses(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reverses_movement_id');
@@ -102,6 +123,8 @@ class StockMovement extends Model
      * Renglón de compra que originó el movimiento. Sólo tiene valor cuando
      * reference_type es 'purchase_line' (hoy el único tipo de referencia);
      * queda null si el renglón o su factura se borraron.
+     *
+     * @return BelongsTo<PurchaseLine, $this>
      */
     public function purchaseLine(): BelongsTo
     {
@@ -111,6 +134,8 @@ class StockMovement extends Model
     /**
      * Renglón de nota de crédito que originó una salida de devolución.
      * Sólo tiene valor cuando reference_type es 'credit_note_line'.
+     *
+     * @return BelongsTo<CreditNoteLine, $this>
      */
     public function creditNoteLine(): BelongsTo
     {

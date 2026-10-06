@@ -73,27 +73,43 @@ class RecurringProductionRequest extends Model
         return $this->ends_on === null || $date->lte($this->ends_on);
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return MorphTo<Model, $this>
+     */
     public function destination(): MorphTo
     {
         return $this->morphTo();
     }
 
+    /**
+     * @return HasMany<RecurringProductionRequestLine, $this>
+     */
     public function lines(): HasMany
     {
         return $this->hasMany(RecurringProductionRequestLine::class);
     }
 
-    /** Las instancias reales que este recurrente ya generó. */
+    /**
+     * Las instancias reales que este recurrente ya generó.
+     *
+     * @return HasMany<ProductionOrderRequest, $this>
+     */
     public function instances(): HasMany
     {
         return $this->hasMany(ProductionOrderRequest::class);

@@ -23,6 +23,9 @@ class PackagingPriceLog extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Packaging, $this>
+     */
     public function packaging(): BelongsTo
     {
         return $this->belongsTo(Packaging::class);

@@ -33,11 +33,17 @@ class ProductionOrderLine extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<ProductionOrderRequest, $this>
+     */
     public function request(): BelongsTo
     {
         return $this->belongsTo(ProductionOrderRequest::class, 'production_order_request_id');
     }
 
+    /**
+     * @return BelongsTo<Product, $this>
+     */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

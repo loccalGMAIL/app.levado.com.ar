@@ -23,6 +23,9 @@ class IngredientPriceLog extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Ingredient, $this>
+     */
     public function ingredient(): BelongsTo
     {
         return $this->belongsTo(Ingredient::class);

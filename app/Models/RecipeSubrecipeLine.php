@@ -25,11 +25,17 @@ class RecipeSubrecipeLine extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Recipe, $this>
+     */
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
     }
 
+    /**
+     * @return BelongsTo<Recipe, $this>
+     */
     public function childRecipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class, 'child_recipe_id');

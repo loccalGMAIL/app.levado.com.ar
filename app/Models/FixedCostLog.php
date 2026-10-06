@@ -31,6 +31,9 @@ class FixedCostLog extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<FixedCost, $this>
+     */
     public function fixedCost(): BelongsTo
     {
         return $this->belongsTo(FixedCost::class);
