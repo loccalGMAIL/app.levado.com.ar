@@ -1,0 +1,49 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Parameter \#2 \$rows of function Laravel\\Prompts\\table expects array\<int, array\<int, string\>\>\|Illuminate\\Support\\Collection\<int, array\<int, string\>\>\|null, array\<int, array\{Negocio\: string, Receta\: string, Rinde\: non\-falsy\-string, ''Costo/u''\: non\-falsy\-string\}\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Console/Commands/CreateProductsFromRecipes.php
+
+		-
+			message: '#^Parameter \#1 \$user of class Illuminate\\Auth\\Events\\Verified constructor expects Illuminate\\Contracts\\Auth\\MustVerifyEmail, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/VerifyEmailController.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between Carbon\\Carbon and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Models/Invitation.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Models/ProductPrice.php
+
+		-
+			message: '#^Parameter \#1 \$points of method App\\Services\\FixedCostHistory\:\:withChangePct\(\) expects Illuminate\\Support\\Collection\<int, array\{period\: Illuminate\\Support\\Carbon, amount\: float\}\>, Illuminate\\Support\\Collection\<int, array\{period\: Carbon\\Carbon, amount\: float\}\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/FixedCostHistory.php
+
+		-
+			message: '#^Method App\\Services\\ProductionOrderSheets\:\:groupRequests\(\) should return Illuminate\\Support\\Collection\<int, array\{key\: string, kind\: string, title\: string, subtitle\: string\|null, requests\: list\<array\<string, mixed\>\>, totals\: list\<array\<string, mixed\>\>\}\> but returns Illuminate\\Support\\Collection\<int, array\{key\: string, kind\: string, title\: string, subtitle\: string\|null, requests\: array\<int, array\<string, mixed\>\>, totals\: list\<array\{product\: string, quantity\: float, unit\: string\}\>\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Parameter \#1 \$relations of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\ProductionOrderRequest\>\:\:with\(\) expects array\<array\|\(Closure\(Illuminate\\Database\\Eloquent\\Relations\\Relation\<\*, \*, \*\>\)\: mixed\)\|string\>\|string, array\{0\: ''lines\.product'', destination\: Closure\(Illuminate\\Database\\Eloquent\\Relations\\MorphTo\)\: Illuminate\\Database\\Eloquent\\Relations\\MorphTo\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionOrderSheets.php
+
+		-
+			message: '#^Parameter \#1 \.\.\.\$values of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Ingredient\|App\\Models\\Packaging\|float\|string\>\>\:\:push\(\) expects array\{sort\: string, item\: App\\Models\\Ingredient\|App\\Models\\Packaging, quantity\: float, unit_cost\: float\}, array\{sort\: string, item\: App\\Models\\Product, quantity\: float, unit_cost\: float\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ProductionService.php

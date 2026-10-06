@@ -43,12 +43,19 @@ class Customer extends Model
         $query->where('active', true);
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
-    /** Repartidor a cargo de este cliente, si tiene uno asignado. */
+    /**
+     * Repartidor a cargo de este cliente, si tiene uno asignado.
+     *
+     * @return BelongsTo<DeliveryPerson, $this>
+     */
     public function deliveryPerson(): BelongsTo
     {
         return $this->belongsTo(DeliveryPerson::class);

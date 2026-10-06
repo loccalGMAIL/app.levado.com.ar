@@ -190,7 +190,7 @@ class StockController extends Controller
             ]);
         }
 
-        $quantity = (float) ($this->stock->levelFor($item, $location)?->quantity ?? 0);
+        $quantity = (float) ($this->stock->levelFor($item, $location)->quantity ?? 0);
 
         return response()->json([
             'quantity' => $quantity,

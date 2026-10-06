@@ -71,7 +71,7 @@ class CreateProductsFromRecipes extends Command
         }
 
         $rows = $recipes->map(fn (Recipe $recipe) => [
-            'Negocio' => $recipe->tenant?->name ?? $recipe->tenant_id,
+            'Negocio' => (string) ($recipe->tenant->name ?? $recipe->tenant_id),
             'Receta' => $recipe->name,
             'Rinde' => $this->trimNumber((float) $recipe->yield_quantity).' '.$recipe->yield_unit->short(),
             'Costo/u' => $recipe->unit_cost !== null ? '$ '.number_format((float) $recipe->unit_cost, 2) : '—',

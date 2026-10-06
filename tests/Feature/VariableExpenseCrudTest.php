@@ -4,29 +4,7 @@ use App\Enums\TenantUserRole;
 use App\Models\FixedCostLog;
 use App\Models\Supplier;
 use App\Models\Tenant;
-use App\Models\TenantUser;
-use App\Models\User;
 use App\Models\VariableExpense;
-
-function userForVariableExpense(TenantUserRole $role): array
-{
-    $tenant = Tenant::factory()->create();
-    $user = User::factory()->create();
-    TenantUser::create([
-        'tenant_id' => $tenant->id,
-        'user_id' => $user->id,
-        'role' => $role->value,
-        'active' => true,
-    ]);
-    $category = $tenant->variableExpenseCategories()->create(['name' => 'General']);
-
-    return [$user, $tenant, $category];
-}
-
-function ownerForVariableExpense(): array
-{
-    return userForVariableExpense(TenantUserRole::Owner);
-}
 
 // --- CRUD ---
 

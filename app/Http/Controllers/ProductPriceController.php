@@ -36,9 +36,9 @@ class ProductPriceController extends Controller
         $policy = PricingPolicy::tryFrom($validated['policy_type'] ?? '') ?? PricingPolicy::Manual;
 
         if ($policy === PricingPolicy::Manual) {
-            $this->writer->set($product, $priceList, isset($validated['price']) && $validated['price'] !== null ? (float) $validated['price'] : null);
+            $this->writer->set($product, $priceList, isset($validated['price']) ? (float) $validated['price'] : null);
         } else {
-            abort_if(! isset($validated['policy_value']) || $validated['policy_value'] === null, 422, 'Indicá el porcentaje de la política.');
+            abort_if(! isset($validated['policy_value']), 422, 'Indicá el porcentaje de la política.');
             $this->writer->setPolicy($product, $priceList, $policy, (float) $validated['policy_value']);
         }
 
@@ -61,7 +61,7 @@ class ProductPriceController extends Controller
         return response()->json([
             'selling_price' => $sellingPrice,
             'selling_price_formatted' => $sellingPrice !== null ? number_format($sellingPrice, 2, ',', '.') : null,
-            'policy_type' => $saved?->policy_type?->value ?? PricingPolicy::Manual->value,
+            'policy_type' => $saved?->policy_type->value ?? PricingPolicy::Manual->value,
             'policy_value' => $saved && $saved->policy_value !== null ? (float) $saved->policy_value : null,
             'margin' => $margin,
             'margin_formatted' => $margin !== null ? number_format($margin, 2, ',', '.') : null,

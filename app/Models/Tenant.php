@@ -9,6 +9,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Atributos agregados por withCount()/withExists() en las queries que los usan.
+ *
+ * @property-read int|null $total_users
+ * @property-read int|null $active_users
+ * @property-read int|null $pending_invitations
+ * @property-read bool|null $fixed_costs_exists
+ * @property-read bool|null $labor_types_exists
+ * @property-read bool|null $ingredients_exists
+ */
 class Tenant extends Model
 {
     use HasFactory;
@@ -42,26 +52,41 @@ class Tenant extends Model
         $query->where('active', true);
     }
 
+    /**
+     * @return HasMany<Location, $this>
+     */
     public function locations(): HasMany
     {
         return $this->hasMany(Location::class);
     }
 
+    /**
+     * @return HasMany<DeliveryPerson, $this>
+     */
     public function deliveryPeople(): HasMany
     {
         return $this->hasMany(DeliveryPerson::class);
     }
 
+    /**
+     * @return HasMany<Customer, $this>
+     */
     public function customers(): HasMany
     {
         return $this->hasMany(Customer::class);
     }
 
+    /**
+     * @return HasMany<ProductionOrder, $this>
+     */
     public function productionOrders(): HasMany
     {
         return $this->hasMany(ProductionOrder::class);
     }
 
+    /**
+     * @return HasMany<RecurringProductionRequest, $this>
+     */
     public function recurringProductionRequests(): HasMany
     {
         return $this->hasMany(RecurringProductionRequest::class);
@@ -81,66 +106,105 @@ class Tenant extends Model
             ?? $this->locations()->create(['name' => 'Casa Central', 'is_default' => true, 'active' => true]);
     }
 
+    /**
+     * @return HasMany<Ingredient, $this>
+     */
     public function ingredients(): HasMany
     {
         return $this->hasMany(Ingredient::class);
     }
 
+    /**
+     * @return HasMany<Supplier, $this>
+     */
     public function suppliers(): HasMany
     {
         return $this->hasMany(Supplier::class);
     }
 
+    /**
+     * @return HasMany<Packaging, $this>
+     */
     public function packagings(): HasMany
     {
         return $this->hasMany(Packaging::class);
     }
 
+    /**
+     * @return HasMany<FixedCost, $this>
+     */
     public function fixedCosts(): HasMany
     {
         return $this->hasMany(FixedCost::class);
     }
 
+    /**
+     * @return HasMany<FixedCostCategory, $this>
+     */
     public function fixedCostCategories(): HasMany
     {
         return $this->hasMany(FixedCostCategory::class);
     }
 
+    /**
+     * @return HasMany<VariableExpense, $this>
+     */
     public function variableExpenses(): HasMany
     {
         return $this->hasMany(VariableExpense::class);
     }
 
+    /**
+     * @return HasMany<VariableExpenseCategory, $this>
+     */
     public function variableExpenseCategories(): HasMany
     {
         return $this->hasMany(VariableExpenseCategory::class);
     }
 
+    /**
+     * @return HasMany<LaborType, $this>
+     */
     public function laborTypes(): HasMany
     {
         return $this->hasMany(LaborType::class);
     }
 
+    /**
+     * @return HasMany<Recipe, $this>
+     */
     public function recipes(): HasMany
     {
         return $this->hasMany(Recipe::class);
     }
 
+    /**
+     * @return HasMany<Product, $this>
+     */
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
     }
 
+    /**
+     * @return HasMany<ProductCategory, $this>
+     */
     public function productCategories(): HasMany
     {
         return $this->hasMany(ProductCategory::class);
     }
 
+    /**
+     * @return HasMany<Production, $this>
+     */
     public function productions(): HasMany
     {
         return $this->hasMany(Production::class);
     }
 
+    /**
+     * @return HasMany<PriceList, $this>
+     */
     public function priceLists(): HasMany
     {
         return $this->hasMany(PriceList::class);
@@ -154,31 +218,49 @@ class Tenant extends Model
         );
     }
 
+    /**
+     * @return HasMany<TenantSetting, $this>
+     */
     public function settings(): HasMany
     {
         return $this->hasMany(TenantSetting::class);
     }
 
+    /**
+     * @return HasMany<TenantUser, $this>
+     */
     public function tenantUsers(): HasMany
     {
         return $this->hasMany(TenantUser::class);
     }
 
+    /**
+     * @return HasMany<Invitation, $this>
+     */
     public function invitations(): HasMany
     {
         return $this->hasMany(Invitation::class);
     }
 
+    /**
+     * @return HasMany<Purchase, $this>
+     */
     public function purchases(): HasMany
     {
         return $this->hasMany(Purchase::class);
     }
 
+    /**
+     * @return HasMany<CreditNote, $this>
+     */
     public function creditNotes(): HasMany
     {
         return $this->hasMany(CreditNote::class);
     }
 
+    /**
+     * @return BelongsToMany<User, $this>
+     */
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'tenant_users')

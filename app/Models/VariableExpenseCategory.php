@@ -16,11 +16,17 @@ class VariableExpenseCategory extends Model
 
     protected $fillable = ['tenant_id', 'name'];
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return HasMany<VariableExpense, $this>
+     */
     public function variableExpenses(): HasMany
     {
         return $this->hasMany(VariableExpense::class);

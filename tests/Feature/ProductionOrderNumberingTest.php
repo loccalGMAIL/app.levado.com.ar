@@ -10,11 +10,6 @@ use Illuminate\Support\Facades\DB;
 // orderWithLine() son globales (ProductionOrderTest); productionSetup() y
 // seedStock() son globales (ProductionControllerTest/ProductionTest).
 
-function ordersService(): ProductionOrderService
-{
-    return app(ProductionOrderService::class);
-}
-
 test('la primera orden de un negocio es la número 1', function () {
     [, $tenant] = stockTenantUser();
 

@@ -37,11 +37,17 @@ class PriceList extends Model
         $query->where('active', true);
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return HasMany<RecipePrice, $this>
+     */
     public function prices(): HasMany
     {
         return $this->hasMany(RecipePrice::class);

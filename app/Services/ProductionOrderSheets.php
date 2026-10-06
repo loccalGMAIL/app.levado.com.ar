@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Location;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -80,7 +81,7 @@ class ProductionOrderSheets
         $order->loadMissing(['location', 'tenant']);
 
         $requests = $order->productionOrderRequests()
-            ->with(['lines.product', 'destination' => fn ($morphTo) => $morphTo->morphWith([
+            ->with(['lines.product', 'destination' => fn (MorphTo $morphTo) => $morphTo->morphWith([
                 Customer::class => ['deliveryPerson'],
             ])])
             ->orderBy('position')
@@ -101,9 +102,11 @@ class ProductionOrderSheets
      */
     private function groupRequests(Collection $requests, Location $orderLocation): Collection
     {
+        /** @var Collection<string, array{key: string, kind: string, title: string, subtitle: ?string, requests: Collection<int, array<string, mixed>>}> $buckets */
         $buckets = collect();
 
         foreach ($requests as $request) {
+            /** @var Customer|Location|null $destination */
             $destination = $request->destination;
 
             // Grupo de sucursal: sin subtítulo de dirección -queda en la línea
@@ -148,7 +151,7 @@ class ProductionOrderSheets
 
         return [
             'number' => $request->numberLabel(),
-            'destination' => $destination?->name ?? '—',
+            'destination' => $destination->name ?? '—',
             'address' => $destination?->address,
             'city' => $destination?->city,
             'notes' => $pickupAtLocation
@@ -156,7 +159,7 @@ class ProductionOrderSheets
                 : $request->notes,
             'lines' => $request->lines
                 ->map(fn ($line) => [
-                    'product' => $line->product?->name ?? '—',
+                    'product' => $line->product->name ?? '—',
                     'quantity' => (float) $line->quantity,
                     'unit' => $line->unit->short(),
                 ])

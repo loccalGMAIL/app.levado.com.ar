@@ -282,7 +282,7 @@ class ProductionOrderService
                 'unit' => $line->unit->short(),
                 'quantity' => (float) $line->quantity,
             ])->all(),
-            'skipped' => $skipped->map(fn (ProductionOrderLine $line) => $line->product?->name ?? '—')->values()->all(),
+            'skipped' => $skipped->map(fn (ProductionOrderLine $line) => $line->product->name ?? '—')->values()->all(),
         ];
     }
 
@@ -459,10 +459,17 @@ class ProductionOrderService
             ->get();
 
         return $lines->groupBy('product_id')
-            ->map(fn (Collection $group) => [
-                'product' => $group->first()->product,
-                'quantity' => (float) $group->sum('quantity'),
-            ])
+            ->map(function (Collection $group) {
+                /** @var ProductionOrderLine $line */
+                $line = $group->first();
+                /** @var Product $product */
+                $product = $line->product;
+
+                return [
+                    'product' => $product,
+                    'quantity' => (float) $group->sum('quantity'),
+                ];
+            })
             ->values();
     }
 

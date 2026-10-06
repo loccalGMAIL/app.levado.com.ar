@@ -39,11 +39,17 @@ class CreditNoteLine extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<CreditNote, $this>
+     */
     public function creditNote(): BelongsTo
     {
         return $this->belongsTo(CreditNote::class);
     }
 
+    /**
+     * @return BelongsTo<PurchaseLine, $this>
+     */
     public function purchaseLine(): BelongsTo
     {
         return $this->belongsTo(PurchaseLine::class);

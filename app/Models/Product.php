@@ -68,6 +68,8 @@ class Product extends Model
      * sirve para EXCLUIR un área que se costea pero no se fabrica desde acá
      * (ej. cafetería). Único filtro compartido por la orden instantánea y
      * las órdenes de producción — no repetir la cadena en dos lugares.
+     *
+     * @param  Builder<Product>  $query
      */
     public function scopeProducible(Builder $query): void
     {
@@ -146,8 +148,8 @@ class Product extends Model
             return $direct;
         }
 
-        $yield = (float) ($this->recipe?->yield_quantity ?? 0);
-        $laborHours = (float) ($this->recipe?->labor_hours ?? 0);
+        $yield = (float) ($this->recipe->yield_quantity ?? 0);
+        $laborHours = (float) ($this->recipe->labor_hours ?? 0);
         $overheadPerUnit = $yield > 0 ? $laborHours * $overheadPerHour / $yield : 0.0;
 
         return $direct + $overheadPerUnit * $this->recipeUnitsPerItem();
@@ -161,27 +163,43 @@ class Product extends Model
         return $price !== null ? (float) $price : null;
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Recipe, $this>
+     */
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
     }
 
+    /**
+     * @return BelongsTo<ProductCategory, $this>
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(ProductCategory::class, 'product_category_id');
     }
 
+    /**
+     * @return HasMany<ProductPrice, $this>
+     */
     public function prices(): HasMany
     {
         return $this->hasMany(ProductPrice::class);
     }
 
-    /** Historial del precio de VENTA. Ojo: costLogs() es el del costo. */
+    /**
+     * Historial del precio de VENTA. Ojo: costLogs() es el del costo.
+     *
+     * @return HasMany<ProductPriceLog, $this>
+     */
     public function priceLogs(): HasMany
     {
         return $this->hasMany(ProductPriceLog::class);
@@ -191,6 +209,8 @@ class Product extends Model
      * Historial del COSTO de compra (sólo reventa). El elaborado no registra
      * logs acá — su costo vigente vive en la receta; su historial de
      * fabricaciones es productions(), no esto.
+     *
+     * @return HasMany<ProductCostLog, $this>
      */
     public function costLogs(): HasMany
     {
@@ -202,6 +222,8 @@ class Product extends Model
      * procedencia sin N+1. Sólo tiene sentido para reventa: en un elaborado
      * el costo vigente no sale de acá (sale de la receta), así que esto no
      * sirve para inferir procedencia de un elaborado.
+     *
+     * @return HasOne<ProductCostLog, $this>
      */
     public function latestCostLog(): HasOne
     {
@@ -213,17 +235,25 @@ class Product extends Model
      * de "cuánto costó cada vez que se produjo" — no confundir con costLogs():
      * el costo VIGENTE de un elaborado sigue saliendo de la receta (currentCost()),
      * esto solo lista lo que pasó en cada evento de producción.
+     *
+     * @return HasMany<Production, $this>
      */
     public function productions(): HasMany
     {
         return $this->hasMany(Production::class);
     }
 
+    /**
+     * @return HasMany<StockLevel, $this>
+     */
     public function stockLevels(): HasMany
     {
         return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', CatalogItemType::Product->value);
     }
 
+    /**
+     * @return HasMany<StockMovement, $this>
+     */
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', CatalogItemType::Product->value);

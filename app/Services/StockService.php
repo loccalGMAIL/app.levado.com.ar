@@ -66,7 +66,7 @@ class StockService
                 'unit_cost' => $unitCost,
                 'reason' => $reason,
                 'reference_type' => $this->referenceTypeFor($reference) ?? $referenceType,
-                'reference_id' => $reference?->id ?? $referenceId,
+                'reference_id' => $reference->id ?? $referenceId,
                 'reverses_movement_id' => $reverses?->id,
                 'user_id' => $user?->id,
             ]);
@@ -109,7 +109,7 @@ class StockService
      */
     public function applyCount(Ingredient|Packaging|Product $item, Location $location, float $countedQuantity, User $user): ?StockMovement
     {
-        $current = (float) ($this->levelFor($item, $location)?->quantity ?? 0);
+        $current = (float) ($this->levelFor($item, $location)->quantity ?? 0);
         $delta = $countedQuantity - $current;
 
         if (abs($delta) < self::QUANTITY_TOLERANCE) {

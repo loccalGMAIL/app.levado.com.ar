@@ -29,8 +29,10 @@ class FixedCostReportController extends Controller
         // límite global -sólo el de esta request, que ya viene acotada por
         // los topes de FixedCostReportRequest/FixedCostReport (months ≤ 24,
         // details ≤ 50 gastos)-.
-        ini_set('memory_limit', '256M');
-        set_time_limit(60);
+        if (! app()->runningInConsole()) {
+            ini_set('memory_limit', '256M');
+            set_time_limit(60);
+        }
 
         return Pdf::loadView('fixed-costs.report.pdf', compact('report'))
             ->setPaper('a4')

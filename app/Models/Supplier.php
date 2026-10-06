@@ -36,11 +36,17 @@ class Supplier extends Model
         $query->where('active', true);
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return HasMany<Ingredient, $this>
+     */
     public function ingredients(): HasMany
     {
         return $this->hasMany(Ingredient::class);

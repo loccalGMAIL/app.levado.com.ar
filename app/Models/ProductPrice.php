@@ -7,6 +7,11 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Columna del join con products en RecipeController.
+ *
+ * @property-read int|null $recipe_id
+ */
 class ProductPrice extends Model
 {
     use BelongsToTenant;
@@ -29,16 +34,25 @@ class ProductPrice extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Product, $this>
+     */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /**
+     * @return BelongsTo<PriceList, $this>
+     */
     public function priceList(): BelongsTo
     {
         return $this->belongsTo(PriceList::class);

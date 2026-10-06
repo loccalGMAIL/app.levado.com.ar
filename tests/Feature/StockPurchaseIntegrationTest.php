@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\StockMovementType;
-use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
@@ -9,48 +8,7 @@ use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\StockMovement;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantUser;
-use App\Models\User;
-use App\Services\PurchaseLineRecorder;
 use App\Services\StockService;
-
-function stockPurchaseOwner(): array
-{
-    $tenant = Tenant::factory()->create();
-    $user = User::factory()->create();
-    TenantUser::create([
-        'tenant_id' => $tenant->id,
-        'user_id' => $user->id,
-        'role' => TenantUserRole::Owner->value,
-        'active' => true,
-    ]);
-
-    return [$user, $tenant];
-}
-
-function stockPurchaseFor(Tenant $tenant): Purchase
-{
-    $supplier = Supplier::factory()->for($tenant)->create();
-
-    return $tenant->purchases()->create(['supplier_id' => $supplier->id, 'invoice_date' => '2026-07-07']);
-}
-
-function stockLineFor(Purchase $purchase, array $overrides = []): PurchaseLine
-{
-    return $purchase->lines()->create(array_merge([
-        'raw_name' => 'HARINA 000',
-        'quantity_purchased' => 2,
-        'purchase_unit' => 'kg',
-        'unit_price' => 1000,
-        'subtotal' => 2000,
-    ], $overrides));
-}
-
-function lineRecorder(): PurchaseLineRecorder
-{
-    return app(PurchaseLineRecorder::class);
-}
 
 // --- Entrada por compra (conversión de unidades) ---
 

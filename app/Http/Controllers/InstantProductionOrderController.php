@@ -92,10 +92,15 @@ class InstantProductionOrderController extends Controller
 
         return collect($items)
             ->groupBy('product_id')
-            ->map(fn (Collection $group, string $productId) => [
-                'product' => $products[(int) $productId],
-                'quantity' => (float) $group->sum('quantity'),
-            ])
+            ->map(function (Collection $group, string $productId) use ($products) {
+                /** @var Product $product */
+                $product = $products[(int) $productId];
+
+                return [
+                    'product' => $product,
+                    'quantity' => (float) $group->sum('quantity'),
+                ];
+            })
             ->values();
     }
 }

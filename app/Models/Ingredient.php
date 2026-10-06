@@ -52,31 +52,49 @@ class Ingredient extends Model
         $query->whereNull('converted_to_product_id');
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * @return HasMany<IngredientPriceLog, $this>
+     */
     public function priceLogs(): HasMany
     {
         return $this->hasMany(IngredientPriceLog::class);
     }
 
+    /**
+     * @return HasMany<StockLevel, $this>
+     */
     public function stockLevels(): HasMany
     {
         return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', CatalogItemType::Ingredient->value);
     }
 
+    /**
+     * @return HasMany<StockMovement, $this>
+     */
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', CatalogItemType::Ingredient->value);
     }
 
+    /**
+     * @return BelongsTo<Product, $this>
+     */
     public function convertedToProduct(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'converted_to_product_id');

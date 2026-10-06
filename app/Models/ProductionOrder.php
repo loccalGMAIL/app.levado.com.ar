@@ -97,16 +97,25 @@ class ProductionOrder extends Model
         return $this->number !== null ? "Orden #{$this->number}" : ($this->name ?? 'Plantilla sin nombre');
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Location, $this>
+     */
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -117,13 +126,19 @@ class ProductionOrder extends Model
      * binding de la ruta anidada production-orders/{productionOrder}/requests/
      * {productionOrderRequest} busca esta relación por convención (plural del
      * parámetro de ruta) — ver RecipeLineController para el mismo patrón.
+     *
+     * @return HasMany<ProductionOrderRequest, $this>
      */
     public function productionOrderRequests(): HasMany
     {
         return $this->hasMany(ProductionOrderRequest::class);
     }
 
-    /** Las Production que nació producir esta orden (una por artículo agregado). */
+    /**
+     * Las Production que nació producir esta orden (una por artículo agregado).
+     *
+     * @return HasMany<Production, $this>
+     */
     public function productions(): HasMany
     {
         return $this->hasMany(Production::class);

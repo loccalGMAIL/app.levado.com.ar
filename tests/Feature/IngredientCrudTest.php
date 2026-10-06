@@ -5,22 +5,6 @@ use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Supplier;
 use App\Models\Tenant;
-use App\Models\TenantUser;
-use App\Models\User;
-
-function tenantUserAs(TenantUserRole $role): array
-{
-    $tenant = Tenant::factory()->create();
-    $user = User::factory()->create();
-    TenantUser::create([
-        'tenant_id' => $tenant->id,
-        'user_id' => $user->id,
-        'role' => $role->value,
-        'active' => true,
-    ]);
-
-    return [$user, $tenant];
-}
 
 // --- Listado ---
 

@@ -80,7 +80,7 @@ class ProductionService
     {
         $lines = $items->map(function (array $entry) use ($location) {
             $item = $entry['item'];
-            $available = (float) ($this->stock->levelFor($item, $location)?->quantity ?? 0);
+            $available = (float) ($this->stock->levelFor($item, $location)->quantity ?? 0);
             $unitCost = (float) $item->cost_per_unit;
 
             return [

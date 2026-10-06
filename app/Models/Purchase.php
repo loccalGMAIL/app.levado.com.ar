@@ -9,6 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Atributo agregado por un join en NotificationService.
+ *
+ * @property-read int|string|null $pending_lines_count
+ */
 class Purchase extends Model
 {
     use BelongsToTenant;
@@ -38,21 +43,33 @@ class Purchase extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * @return HasMany<PurchaseLine, $this>
+     */
     public function lines(): HasMany
     {
         return $this->hasMany(PurchaseLine::class);
     }
 
+    /**
+     * @return HasMany<CreditNote, $this>
+     */
     public function creditNotes(): HasMany
     {
         return $this->hasMany(CreditNote::class);

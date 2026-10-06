@@ -10,6 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/**
+ * Totales agregados por selectRaw() en PurchaseController.
+ *
+ * @property-read float|string|null $total_subtotal
+ * @property-read float|string|null $total_iva
+ * @property-read float|string|null $total_percepcion
+ */
 class PurchaseLine extends Model
 {
     /** @use HasFactory<PurchaseLineFactory> */
@@ -47,11 +54,17 @@ class PurchaseLine extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Purchase, $this>
+     */
     public function purchase(): BelongsTo
     {
         return $this->belongsTo(Purchase::class);
     }
 
+    /**
+     * @return MorphTo<Model, $this>
+     */
     public function purchaseable(): MorphTo
     {
         return $this->morphTo();

@@ -42,26 +42,41 @@ class Packaging extends Model
         $query->where('active', true);
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * @return HasMany<PackagingPriceLog, $this>
+     */
     public function priceLogs(): HasMany
     {
         return $this->hasMany(PackagingPriceLog::class);
     }
 
+    /**
+     * @return HasMany<StockLevel, $this>
+     */
     public function stockLevels(): HasMany
     {
         return $this->hasMany(StockLevel::class, 'stockable_id')->where('stockable_type', CatalogItemType::Packaging->value);
     }
 
+    /**
+     * @return HasMany<StockMovement, $this>
+     */
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class, 'stockable_id')->where('stockable_type', CatalogItemType::Packaging->value);

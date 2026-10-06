@@ -22,6 +22,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * "se generó y lo borraron" — con DELETE físico no podría, y regeneraría lo
  * que alguien borró a mano en la próxima corrida.
  */
+/**
+ * Alias de select() en RecurringProductionRequestMaterializer.
+ *
+ * @property-read string|null $date
+ * @property-read int|null $rid
+ */
 class ProductionOrderRequest extends Model
 {
     /** @use HasFactory<ProductionOrderRequestFactory> */
@@ -55,27 +61,43 @@ class ProductionOrderRequest extends Model
         return $this->number !== null ? "Pedido #{$this->number}" : "Pedido {$this->position}";
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<ProductionOrder, $this>
+     */
     public function productionOrder(): BelongsTo
     {
         return $this->belongsTo(ProductionOrder::class);
     }
 
-    /** El molde recurrente que generó esta instancia, si nació de uno. */
+    /**
+     * El molde recurrente que generó esta instancia, si nació de uno.
+     *
+     * @return BelongsTo<RecurringProductionRequest, $this>
+     */
     public function recurringProductionRequest(): BelongsTo
     {
         return $this->belongsTo(RecurringProductionRequest::class);
     }
 
+    /**
+     * @return MorphTo<Model, $this>
+     */
     public function destination(): MorphTo
     {
         return $this->morphTo();
     }
 
+    /**
+     * @return HasMany<ProductionOrderLine, $this>
+     */
     public function lines(): HasMany
     {
         return $this->hasMany(ProductionOrderLine::class);

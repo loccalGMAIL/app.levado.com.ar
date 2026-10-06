@@ -19,3 +19,5 @@
 - [Perfil del usuario](user-profile.md) — Fundador/dev de Levado, contexto del negocio, idioma, preferencias
 - [Feedback general](feedback-general.md) — Boost ≠ auth, no i18n, no comentarios innecesarios
 - [CRUD con modales](feedback-crud-modals.md) — Create/edit siempre en modales; estructura modals/, patrón Alpine/Blade, rutas mínimas
+- [Siempre rama nueva](feedback-ramas.md) — Todo cambio va en una rama nueva, nunca sobre master
+- [Larastan](project-larastan.md) — Larastan nivel 5, baseline de 9 errores, `composer analyse`, helpers de tests en Pest.php (v0.14.1)

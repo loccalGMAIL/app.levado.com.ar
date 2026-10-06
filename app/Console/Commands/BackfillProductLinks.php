@@ -115,8 +115,8 @@ class BackfillProductLinks extends Command
         table(
             headers: ['Tenant', 'Proveedor', 'Texto de la factura', 'Ítem'],
             rows: $new->take(20)->map(fn (array $row) => [
-                $row['tenant_id'],
-                $row['supplier_id'],
+                (string) $row['tenant_id'],
+                (string) $row['supplier_id'],
                 Str::limit($row['raw_name_sample'], 45),
                 "{$row['purchaseable_type']}:{$row['purchaseable_id']}",
             ])->values()->all(),

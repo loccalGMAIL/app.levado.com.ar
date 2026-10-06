@@ -45,7 +45,7 @@ class FixedCostReport
         $to = $options['to'];
         $fromMonth = $from->copy()->startOfMonth();
         $toMonth = $to->copy()->startOfMonth();
-        $months = $fromMonth->diffInMonths($toMonth) + 1;
+        $months = (int) $fromMonth->diffInMonths($toMonth) + 1;
         $sections = $options['sections'];
 
         $current = $this->buildCurrent($tenant, $toMonth, $options['search'], $options['status'], $options['category']);
@@ -143,7 +143,7 @@ class FixedCostReport
      */
     private function buildMonthly(Tenant $tenant, Carbon $fromMonth, Carbon $toMonth): array
     {
-        $months = $fromMonth->diffInMonths($toMonth) + 1;
+        $months = (int) $fromMonth->diffInMonths($toMonth) + 1;
         $previousTotal = null;
 
         $rows = collect(range(0, $months - 1))

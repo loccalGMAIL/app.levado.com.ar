@@ -3,46 +3,15 @@
 use App\Enums\ProductionOrderStatus;
 use App\Enums\Unit;
 use App\Models\Ingredient;
-use App\Models\Location;
-use App\Models\Product;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderLine;
 use App\Models\ProductionOrderRequest;
 use App\Models\Recipe;
-use App\Services\ProductionOrderService;
 use App\Services\StockService;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 // stockTenantUser()/seedStock() (StockServiceTest) y manufacturedProduct() (ProductionTest)
 // son helpers globales reusados acá.
-
-function productionOrderService(): ProductionOrderService
-{
-    return app(ProductionOrderService::class);
-}
-
-/** Orden con un pedido y una línea artículo+cantidad, lista para producir. */
-function orderWithLine(Product $product, float $quantity, $tenant, ?Location $destination = null): ProductionOrder
-{
-    $order = ProductionOrder::factory()->for($tenant)->confirmed()->create([
-        'location_id' => $tenant->defaultLocation()->id,
-    ]);
-
-    $request = ProductionOrderRequest::factory()->for($tenant)->create([
-        'production_order_id' => $order->id,
-        'destination_type' => 'location',
-        'destination_id' => ($destination ?? Location::factory()->for($tenant)->create())->id,
-    ]);
-
-    ProductionOrderLine::factory()->create([
-        'production_order_request_id' => $request->id,
-        'product_id' => $product->id,
-        'quantity' => $quantity,
-        'unit' => $product->unit->value,
-    ]);
-
-    return $order->fresh();
-}
 
 test('aggregate suma la cantidad de un mismo artículo pedido por dos destinos', function () {
     [$user, $tenant] = stockTenantUser();

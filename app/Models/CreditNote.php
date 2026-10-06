@@ -32,21 +32,33 @@ class CreditNote extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * @return BelongsTo<Purchase, $this>
+     */
     public function purchase(): BelongsTo
     {
         return $this->belongsTo(Purchase::class);
     }
 
+    /**
+     * @return HasMany<CreditNoteLine, $this>
+     */
     public function lines(): HasMany
     {
         return $this->hasMany(CreditNoteLine::class);

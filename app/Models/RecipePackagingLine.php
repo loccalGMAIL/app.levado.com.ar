@@ -20,11 +20,17 @@ class RecipePackagingLine extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Recipe, $this>
+     */
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
     }
 
+    /**
+     * @return BelongsTo<Packaging, $this>
+     */
     public function packaging(): BelongsTo
     {
         return $this->belongsTo(Packaging::class);

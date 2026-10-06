@@ -34,16 +34,25 @@ class VariableExpense extends Model
             ->when($to, fn ($q, $date) => $q->where('expense_date', '<=', $date));
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<VariableExpenseCategory, $this>
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(VariableExpenseCategory::class, 'variable_expense_category_id');
     }
 
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);

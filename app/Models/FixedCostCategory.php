@@ -16,11 +16,17 @@ class FixedCostCategory extends Model
 
     protected $fillable = ['tenant_id', 'name'];
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return HasMany<FixedCost, $this>
+     */
     public function fixedCosts(): HasMany
     {
         return $this->hasMany(FixedCost::class);

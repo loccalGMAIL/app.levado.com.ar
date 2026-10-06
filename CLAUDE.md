@@ -1,6 +1,10 @@
 ## Memory System
 Write all project memories to `.claude/memory/` (inside the project root) instead of the global `~/.claude/projects/` path. This keeps memories version-controlled and portable across devices and apps. Always update `MEMORY.md` index when adding or modifying memory files.
 
+## Análisis estático (Larastan)
+- Si modificaste archivos PHP, corré `composer analyse` antes de dar el cambio por terminado. Tiene que pasar sin errores nuevos.
+- No agregues entradas a `phpstan-baseline.neon`: arreglá el código. Regenerar el baseline solo se justifica si el error se documenta (por qué queda y por qué no se puede arreglar sin cambiar comportamiento).
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
@@ -15,6 +19,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - php - 8.3
 - laravel/framework (LARAVEL) - v13
 - laravel/prompts (PROMPTS) - v0
+- larastan/larastan (LARASTAN) - v3
 - laravel/boost (BOOST) - v2
 - laravel/breeze (BREEZE) - v2
 - laravel/mcp (MCP) - v0

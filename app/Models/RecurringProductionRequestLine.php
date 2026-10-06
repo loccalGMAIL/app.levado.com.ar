@@ -34,11 +34,17 @@ class RecurringProductionRequestLine extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<RecurringProductionRequest, $this>
+     */
     public function recurringProductionRequest(): BelongsTo
     {
         return $this->belongsTo(RecurringProductionRequest::class);
     }
 
+    /**
+     * @return BelongsTo<Product, $this>
+     */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

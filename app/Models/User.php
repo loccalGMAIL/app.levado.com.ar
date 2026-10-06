@@ -30,6 +30,9 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * @return HasMany<TenantUser, $this>
+     */
     public function tenantUsers(): HasMany
     {
         return $this->hasMany(TenantUser::class);

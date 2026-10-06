@@ -31,16 +31,25 @@ class FixedCost extends Model
         $query->where('active', true);
     }
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<FixedCostCategory, $this>
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(FixedCostCategory::class, 'fixed_cost_category_id');
     }
 
+    /**
+     * @return HasMany<FixedCostLog, $this>
+     */
     public function logs(): HasMany
     {
         return $this->hasMany(FixedCostLog::class);

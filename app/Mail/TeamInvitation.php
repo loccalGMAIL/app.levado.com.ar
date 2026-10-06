@@ -33,7 +33,7 @@ class TeamInvitation extends Mailable
     public function envelope(): Envelope
     {
         $tpl = $this->template();
-        $subject = $tpl?->subject ?? "Invitación a {$this->invitation->tenant->name} en Levado";
+        $subject = $tpl->subject ?? "Invitación a {$this->invitation->tenant->name} en Levado";
 
         return new Envelope(subject: $subject);
     }
@@ -51,7 +51,7 @@ class TeamInvitation extends Mailable
                 'expiresAt' => $this->invitation->expires_at->format('d/m/Y H:i'),
                 'customMessage' => $this->invitation->tenant->getSetting('invitation_message'),
                 'introText' => $tpl?->intro_text,
-                'footerNote' => $tpl?->footer_note ?? 'Que tu panadería siga creciendo.',
+                'footerNote' => $tpl->footer_note ?? 'Que tu panadería siga creciendo.',
             ],
         );
     }

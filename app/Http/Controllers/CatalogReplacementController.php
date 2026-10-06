@@ -45,7 +45,7 @@ class CatalogReplacementController extends Controller
                 $this->findPackaging($tenant, (int) $data['from_id']),
                 $this->findPackaging($tenant, (int) $data['to_id']),
             ),
-            'recipe' => $this->replacer->previewSubrecipe(
+            default => $this->replacer->previewSubrecipe(
                 $this->findRecipe($tenant, (int) $data['from_id']),
                 $this->findRecipe($tenant, (int) $data['to_id']),
             ),
