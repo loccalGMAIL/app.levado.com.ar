@@ -20,4 +20,5 @@
 - [Feedback general](feedback-general.md) — Boost ≠ auth, no i18n, no comentarios innecesarios
 - [CRUD con modales](feedback-crud-modals.md) — Create/edit siempre en modales; estructura modals/, patrón Alpine/Blade, rutas mínimas
 - [Siempre rama nueva](feedback-ramas.md) — Todo cambio va en una rama nueva, nunca sobre master
+- [Accesos rápidos mobile](feature-accesos-rapidos-mobile.md) — Bottom nav con 3 slots editables por tenant: enum `MobileShortcut`, setting `mobile_nav.shortcuts`, view composer, pantalla en Administración (v0.16.0)
 - [Larastan](project-larastan.md) — Larastan nivel 5, baseline de 9 errores, `composer analyse`, helpers de tests en Pest.php (v0.14.1)

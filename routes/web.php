@@ -22,6 +22,7 @@ use App\Http\Controllers\InstantProductionOrderController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LaborTypeController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\MobileShortcutSettingsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\PackagingCostController;
@@ -326,6 +327,9 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner'])->gro
 
     Route::get('/alerts', [AlertSettingsController::class, 'edit'])->name('alerts.edit');
     Route::patch('/alerts', [AlertSettingsController::class, 'update'])->name('alerts.update');
+
+    Route::get('/mobile-shortcuts', [MobileShortcutSettingsController::class, 'edit'])->name('mobile-shortcuts.edit');
+    Route::patch('/mobile-shortcuts', [MobileShortcutSettingsController::class, 'update'])->name('mobile-shortcuts.update');
 
     Route::get('locations', [LocationController::class, 'index'])->name('locations.index');
     Route::post('locations', [LocationController::class, 'store'])->name('locations.store');

@@ -122,7 +122,7 @@
 
         {{-- Administración --}}
         @canany(['edit-settings', 'manage-team'])
-        <x-sidebar-group title="Administración" slug="administracion" :active="request()->routeIs('business.*', 'team.*', 'locations.*', 'alerts.*', 'price-lists.*')">
+        <x-sidebar-group title="Administración" slug="administracion" :active="request()->routeIs('business.*', 'team.*', 'locations.*', 'alerts.*', 'price-lists.*', 'mobile-shortcuts.*')">
             @can('edit-settings')
                 @include('components.sidebar-item', [
                     'href'   => route('business.edit'),
@@ -139,6 +139,15 @@
                     'label'  => 'Alertas',
                     'active' => request()->routeIs('alerts.*'),
                     'icon'   => '<path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />',
+                ])
+            @endcan
+
+            @can('edit-settings')
+                @include('components.sidebar-item', [
+                    'href'   => route('mobile-shortcuts.edit'),
+                    'label'  => 'Accesos rápidos',
+                    'active' => request()->routeIs('mobile-shortcuts.*'),
+                    'icon'   => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />',
                 ])
             @endcan
 
