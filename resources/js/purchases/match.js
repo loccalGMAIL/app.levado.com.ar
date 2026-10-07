@@ -24,8 +24,15 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         unitCost: unitPrice,
         needsPkgQty: false,
         incompatiblePkg: false,
+        // Reventa en `u` comprada en `u`: no hay conversión, pero el renglón puede
+        // ser un pack ("Pack 6 Coca-Cola") y el usuario indica cuántas u trae.
+        packDivisible: false,
         subdivisions: null,
         subdivisionLabel: null,
+
+        get showPkgQty() {
+            return this.needsPkgQty || this.packDivisible;
+        },
 
         // Centinela del select: el renglón no es un insumo del catálogo.
         get isExcluded() {
@@ -48,6 +55,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         recalc() {
             this.needsPkgQty = false;
             this.incompatiblePkg = false;
+            this.packDivisible = false;
             this.pkgQtyFromMemory = false;
             this.catalogUnit = '';
 
@@ -90,6 +98,22 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
                 const subdivisionFactor = (this.subdivisions && this.purchaseUnit === 'u' && item.unit === 'u')
                     ? this.subdivisions : 1;
                 this.unitCost = Math.round((this.unitPrice / directFactor / subdivisionFactor) * 10000) / 10000;
+
+                if (this.selected.startsWith('product:') && this.purchaseUnit === 'u' && item.unit === 'u') {
+                    this.packDivisible = true;
+
+                    const memoryHit = this.remembered?.selection === this.selected
+                        ? this.remembered.pkgQty
+                        : null;
+                    if (memoryHit > 0) {
+                        this.pkgQty = memoryHit;
+                        this.pkgQtyFromMemory = true;
+                    }
+
+                    this.unitCost = this.pkgQty > 0
+                        ? Math.round((this.unitPrice / this.pkgQty) * 10000) / 10000
+                        : this.unitPrice;
+                }
             } else {
                 this.needsPkgQty = true;
 

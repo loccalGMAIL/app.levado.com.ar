@@ -4,7 +4,9 @@ use App\Enums\StockMovementType;
 use App\Models\Packaging;
 use App\Models\Product;
 use App\Models\Recipe;
+use App\Models\SupplierProductLink;
 use App\Models\Tenant;
+use App\Services\ProductLinkMemory;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 // stockPurchaseOwner(), stockPurchaseFor(), stockLineFor() y lineRecorder() son
@@ -73,6 +75,121 @@ test('applyWithCost sobre un producto usa el costo explícito y deriva el stock'
 
     expect((float) $product->refresh()->cost_per_unit)->toBe(50.0)
         ->and((float) $product->stockLevels()->first()->quantity)->toBe(6.0);
+});
+
+// --- Pack de reventa (divisor por renglón) ---
+
+test('matchear un pack x6 de reventa por el controller divide el costo, suma 6 u y recuerda el divisor', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'u', 'cost_per_unit' => 0]);
+    $purchase = stockPurchaseFor($tenant);
+    $line = stockLineFor($purchase, [
+        'raw_name' => 'Pack 6 Coca-Cola Zero',
+        'purchase_unit' => 'u',
+        'quantity_purchased' => 1,
+        'unit_price' => 6000,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('purchases.lines.match', [$purchase, $line]), [
+            'match' => "product:{$product->id}",
+            'unit_cost' => '1000.0000',
+            'pkg_qty' => 6,
+        ])
+        ->assertRedirect();
+
+    expect((float) $product->refresh()->cost_per_unit)->toBe(1000.0)
+        ->and((float) $product->stockLevels()->first()->quantity)->toBe(6.0)
+        ->and((float) SupplierProductLink::query()->value('pkg_qty'))->toBe(6.0);
+});
+
+test('apply() sobre reventa usa el divisor recordado del proveedor para el mismo artículo', function () {
+    [, $tenant] = stockPurchaseOwner();
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'u', 'cost_per_unit' => 0]);
+    $purchase = stockPurchaseFor($tenant);
+    $first = stockLineFor($purchase, [
+        'raw_name' => 'Pack 6 Coca-Cola Zero',
+        'purchaseable_type' => 'product',
+        'purchaseable_id' => $product->id,
+        'purchase_unit' => 'u',
+        'quantity_purchased' => 1,
+        'unit_price' => 6000,
+    ]);
+    app(ProductLinkMemory::class)->remember($first, 6.0);
+
+    $next = stockLineFor($tenant->purchases()->create(['supplier_id' => $purchase->supplier_id, 'invoice_date' => '2026-07-08']), [
+        'raw_name' => 'Pack 6 Coca-Cola Zero',
+        'purchaseable_type' => 'product',
+        'purchaseable_id' => $product->id,
+        'purchase_unit' => 'u',
+        'quantity_purchased' => 2,
+        'unit_price' => 6000,
+    ]);
+
+    lineRecorder()->apply($next);
+
+    expect((float) $product->refresh()->cost_per_unit)->toBe(1000.0)
+        ->and((float) $product->stockLevels()->first()->quantity)->toBe(12.0);
+});
+
+test('el divisor recordado de otro artículo se ignora', function () {
+    [, $tenant] = stockPurchaseOwner();
+    $other = Product::factory()->for($tenant)->resale()->create(['unit' => 'u']);
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'u', 'cost_per_unit' => 0]);
+    $purchase = stockPurchaseFor($tenant);
+    $first = stockLineFor($purchase, [
+        'raw_name' => 'Pack 6 Coca-Cola Zero',
+        'purchaseable_type' => 'product',
+        'purchaseable_id' => $other->id,
+        'purchase_unit' => 'u',
+    ]);
+    app(ProductLinkMemory::class)->remember($first, 6.0);
+
+    $next = stockLineFor($tenant->purchases()->create(['supplier_id' => $purchase->supplier_id, 'invoice_date' => '2026-07-08']), [
+        'raw_name' => 'Pack 6 Coca-Cola Zero',
+        'purchaseable_type' => 'product',
+        'purchaseable_id' => $product->id,
+        'purchase_unit' => 'u',
+        'quantity_purchased' => 1,
+        'unit_price' => 6000,
+    ]);
+
+    lineRecorder()->apply($next);
+
+    expect((float) $product->refresh()->cost_per_unit)->toBe(6000.0)
+        ->and((float) $product->stockLevels()->first()->quantity)->toBe(1.0);
+});
+
+test('un pack x6 bonificado entra al stock como 6 u sin tocar el costo', function () {
+    [, $tenant] = stockPurchaseOwner();
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'u', 'cost_per_unit' => 800]);
+    $line = stockLineFor(stockPurchaseFor($tenant), [
+        'purchaseable_type' => 'product',
+        'purchaseable_id' => $product->id,
+        'purchase_unit' => 'u',
+        'quantity_purchased' => 1,
+        'unit_price' => 0,
+        'is_bonus' => true,
+    ]);
+
+    lineRecorder()->apply($line, pkgQtyOverride: 6.0);
+
+    expect((float) $product->refresh()->cost_per_unit)->toBe(800.0)
+        ->and((float) $product->stockLevels()->first()->quantity)->toBe(6.0);
+});
+
+test('mandar pkg_qty=1 pisa un divisor recordado', function () {
+    [$user, $tenant] = stockPurchaseOwner();
+    $product = Product::factory()->for($tenant)->resale()->create(['unit' => 'u', 'cost_per_unit' => 0]);
+    $purchase = stockPurchaseFor($tenant);
+    $line = stockLineFor($purchase, ['raw_name' => 'Coca-Cola Zero', 'purchase_unit' => 'u', 'quantity_purchased' => 1, 'unit_price' => 1000]);
+
+    $this->actingAs($user)
+        ->post(route('purchases.lines.match', [$purchase, $line]), ['match' => "product:{$product->id}", 'unit_cost' => '166.6667', 'pkg_qty' => 6]);
+    $this->actingAs($user)
+        ->post(route('purchases.lines.match', [$purchase, $line]), ['match' => "product:{$product->id}", 'unit_cost' => '1000.0000', 'pkg_qty' => 1]);
+
+    expect((float) SupplierProductLink::query()->value('pkg_qty'))->toBe(1.0);
 });
 
 // --- Guards ---

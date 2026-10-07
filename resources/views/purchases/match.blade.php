@@ -111,7 +111,7 @@
                                         default      => null,
                                     };
                                     $matchedName = $matchedItem?->name;
-                                    // La reventa no se subdivide: se compra y se vende en la misma unidad.
+                                    // La reventa no tiene subdivisiones fijas: si viene en pack, el divisor es del renglón.
                                     $matchedSubdivisions = $line->isProduct() ? null : $matchedItem?->subdivisions;
                                 @endphp
 
@@ -206,7 +206,7 @@
                                                 <input type="hidden" name="match" x-bind:value="selected">
                                                 <input type="hidden" name="unit_cost" x-bind:value="unitCost > 0 ? unitCost.toFixed(4) : ''">
                                                 {{-- Se recuerda para las próximas facturas de este proveedor. --}}
-                                                <input type="hidden" name="pkg_qty" x-bind:value="needsPkgQty && pkgQty > 0 ? pkgQty : ''">
+                                                <input type="hidden" name="pkg_qty" x-bind:value="showPkgQty && pkgQty > 0 ? pkgQty : ''">
                                                 {{-- Hidden y no un checkbox con name: el bloque de cálculo se oculta con
                                                      x-show pero sigue en el DOM, y un tilde escondido no debe viajar. --}}
                                                 <input type="hidden" name="is_bonus" x-bind:value="(isBonus && !isExcluded) ? 1 : 0">
@@ -272,8 +272,8 @@
                                                     <div x-show="catalogUnit && !incompatiblePkg" x-cloak
                                                         class="flex items-center gap-2 flex-wrap">
 
-                                                        {{-- Divisor (solo cuando unidades incompatibles: u → kg/gr/etc) --}}
-                                                        <template x-if="needsPkgQty">
+                                                        {{-- Divisor: unidades incompatibles (u → kg/gr/etc) o pack de reventa (u → u) --}}
+                                                        <template x-if="showPkgQty">
                                                             <div class="flex items-center gap-1 text-xs text-masa-madre">
                                                                 <span>÷</span>
                                                                 <input type="number"
@@ -285,7 +285,7 @@
                                                                         'border-amber-300 bg-amber-50': pkgQtyFromDesc,
                                                                         'border-green-300 bg-green-50': pkgQtyFromMemory,
                                                                     }">
-                                                                <span x-text="catalogUnit + '/u'"></span>
+                                                                <span x-text="packDivisible ? 'u/pack' : catalogUnit + '/u'"></span>
                                                                 <span x-show="pkgQtyFromDesc" x-cloak
                                                                     class="text-amber-600"
                                                                     title="Cantidad detectada automáticamente en la descripción del producto">
