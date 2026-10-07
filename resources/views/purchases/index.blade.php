@@ -106,7 +106,7 @@
                     @foreach($purchases as $purchase)
                         @php
                             $cardTotal = $includeIva
-                                ? ($purchase->invoice_total ?? $purchase->net_total ?? 0)
+                                ? ($purchase->gross_total ?? 0)
                                 : ($purchase->net_total ?? 0);
                             $cardAllResolved = $purchase->lines_count > 0 && $purchase->resolved_count >= $purchase->lines_count;
                         @endphp
@@ -201,7 +201,7 @@
                                     </td>
                                     @php
                                         $rowTotal = $includeIva
-                                            ? ($purchase->invoice_total ?? $purchase->net_total ?? 0)
+                                            ? ($purchase->gross_total ?? 0)
                                             : ($purchase->net_total ?? 0);
                                     @endphp
                                     <td class="px-4 py-3 text-right font-mono text-corteza">

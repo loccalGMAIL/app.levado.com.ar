@@ -13,6 +13,7 @@ use App\Models\Ingredient;
 use App\Models\Packaging;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
+use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceImagePreparer;
@@ -65,6 +66,10 @@ class PurchaseController extends Controller
                 fn ($q2) => $q2->whereNotNull('cost_applied_at')->orWhereNotNull('excluded_at')
             )])
             ->withSum('lines as net_total', 'subtotal')
+            // Total con IVA y percepción calculado desde los renglones (misma fórmula que
+            // updateLinePrice): se actualiza solo al editar renglones, a diferencia de
+            // invoice_total, que es lo que leyó la IA y puede venir mal.
+            ->withSum('lines as gross_total', DB::raw('subtotal * (1 + iva_rate + coalesce(percepcion_rate, 0) / 100)'))
             ->when(request('search'), function ($q, $s) {
                 $q->where(function ($q2) use ($s) {
                     $q2->where('invoice_number', 'like', "%{$s}%")
@@ -75,21 +80,24 @@ class PurchaseController extends Controller
             ->when(request('from'), fn ($q, $date) => $q->where('invoice_date', '>=', $date))
             ->when(request('to'), fn ($q, $date) => $q->where('invoice_date', '<=', $date));
 
+        $includeIva = filter_var($tenant->getSetting('purchase_price_includes_iva', '1'), FILTER_VALIDATE_BOOLEAN);
+
+        // Se ordena por subquery y no por join + select('purchases.*'): ese select
+        // pisaría los agregados (lines_count, net_total, gross_total) de arriba.
         match ($sortCol) {
             'invoice_number' => $query->orderBy('invoice_number', $sortDir)->orderByDesc('purchases.id'),
-            'supplier' => $query->join('suppliers', 'suppliers.id', '=', 'purchases.supplier_id')
-                ->select('purchases.*')
-                ->orderBy('suppliers.name', $sortDir)
-                ->orderByDesc('purchases.id'),
+            'supplier' => $query->orderBy(
+                Supplier::query()->select('name')->whereColumn('suppliers.id', 'purchases.supplier_id'),
+                $sortDir,
+            )->orderByDesc('purchases.id'),
             'items' => $query->orderBy('lines_count', $sortDir)->orderByDesc('id'),
-            'total' => $query->orderBy('invoice_total', $sortDir)->orderByDesc('id'),
+            'total' => $query->orderBy($includeIva ? 'gross_total' : 'net_total', $sortDir)->orderByDesc('id'),
             default => $query->orderBy('invoice_date', $sortDir)->orderByDesc('id'),
         };
 
         $purchases = $query->paginate($this->perPage())->withQueryString();
 
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
-        $includeIva = filter_var($tenant->getSetting('purchase_price_includes_iva', '1'), FILTER_VALIDATE_BOOLEAN);
 
         return view('purchases.index', compact('purchases', 'suppliers', 'includeIva'));
     }
