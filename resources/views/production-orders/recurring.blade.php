@@ -13,25 +13,22 @@
          referencia. --}}
     <div class="py-8 px-6 lg:px-8" x-data="{ editing: null, products: @js($products) }">
         <div class="space-y-6">
-            <div class="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Órdenes de producción</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">
-                        Se generan solos, hasta 7 días adelante, cada vez que alguien entra a Órdenes.
-                        @if($tenant->recurring_materialized_at)
-                            Última generación: {{ $tenant->recurring_materialized_at->format('d/m/Y H:i') }}.
-                        @endif
-                    </p>
-                </div>
+            <x-list-header title="Órdenes de producción">
+                <x-slot:description>
+                    Se generan solos, hasta 7 días adelante, cada vez que alguien entra a Órdenes.
+                    @if($tenant->recurring_materialized_at)
+                        Última generación: {{ $tenant->recurring_materialized_at->format('d/m/Y H:i') }}.
+                    @endif
+                </x-slot:description>
                 @can('manage-costs')
-                    <form method="POST" action="{{ route('production-requests.recurring.generate') }}">
+                    <form method="POST" action="{{ route('production-requests.recurring.generate') }}" class="[&>button]:w-full">
                         @csrf
                         <button type="submit" class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
                             Generar ahora
                         </button>
                     </form>
                 @endcan
-            </div>
+            </x-list-header>
 
             @include('production-orders.tabs')
 

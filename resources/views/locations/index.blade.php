@@ -25,17 +25,13 @@
 
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Sucursales</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Lugares físicos donde opera el negocio.</p>
-                </div>
+            <x-list-header title="Sucursales" subtitle="Lugares físicos donde opera el negocio.">
                 <button type="button"
                     @click="$dispatch('open-modal', 'location-create')"
                     class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     + Nueva sucursal
                 </button>
-            </div>
+            </x-list-header>
 
             @if($locations->isEmpty())
                 <x-empty-state>Todavía no hay sucursales. Creá la primera.</x-empty-state>

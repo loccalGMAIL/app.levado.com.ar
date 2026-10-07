@@ -326,19 +326,62 @@ test('the purchases index shows the total according to the IVA setting', functio
     $purchase = $tenant->purchases()->create([
         'supplier_id' => $supplier->id,
         'invoice_date' => '2026-05-14',
-        'invoice_total' => 12100,
+        // Mal leído por la IA: el listado debe ignorarlo y sumar los renglones.
+        'invoice_total' => 99999,
     ]);
     $purchase->lines()->create([
-        'raw_name' => 'X', 'quantity_purchased' => 10, 'purchase_unit' => 'u', 'unit_price' => 1000, 'subtotal' => 10000,
+        'raw_name' => 'X', 'quantity_purchased' => 10, 'purchase_unit' => 'u', 'unit_price' => 1000,
+        'subtotal' => 10000, 'iva_rate' => 0.21,
     ]);
 
     $tenant->setSetting('purchase_price_includes_iva', '1');
     $this->actingAs($user)->get(route('purchases.index'))
-        ->assertOk()->assertSee('12.100,00')->assertSee('(c/IVA)');
+        ->assertOk()->assertSee('12.100,00')->assertDontSee('99.999,00')->assertSee('(c/IVA)');
 
     $tenant->setSetting('purchase_price_includes_iva', '0');
     $this->actingAs($user)->get(route('purchases.index'))
         ->assertOk()->assertSee('10.000,00')->assertSee('(s/IVA)');
+});
+
+test('the purchases index total follows line edits and sorts by supplier keeping totals', function () {
+    [$user, $tenant] = ownerForScan();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-05-14',
+        'invoice_total' => 99999,
+    ]);
+    $line = $purchase->lines()->create([
+        'raw_name' => 'X', 'quantity_purchased' => 10, 'purchase_unit' => 'u', 'unit_price' => 1000,
+        'subtotal' => 10000, 'iva_rate' => 0.21,
+    ]);
+
+    $this->actingAs($user)->patchJson(route('purchases.lines.price.update', [$purchase, $line]), ['unit_price' => 2000])
+        ->assertOk();
+
+    $this->actingAs($user)->get(route('purchases.index', ['sort' => 'supplier']))
+        ->assertOk()->assertSee('24.200,00')->assertDontSee('99.999,00');
+});
+
+test('the purchase detail warns when the scanned total differs from the lines', function () {
+    [$user, $tenant] = ownerForScan();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create([
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-05-14',
+        'invoice_total' => 99999,
+    ]);
+    $purchase->lines()->create([
+        'raw_name' => 'X', 'quantity_purchased' => 10, 'purchase_unit' => 'u', 'unit_price' => 1000,
+        'subtotal' => 10000, 'iva_rate' => 0.21,
+    ]);
+
+    $this->actingAs($user)->get(route('purchases.show', $purchase))
+        ->assertOk()->assertSee('La factura escaneada indicaba');
+
+    $purchase->update(['invoice_total' => 12100]);
+    $this->actingAs($user)->get(route('purchases.show', $purchase))
+        ->assertOk()->assertDontSee('La factura escaneada indicaba');
 });
 
 test('the invoice image is served through the app', function () {

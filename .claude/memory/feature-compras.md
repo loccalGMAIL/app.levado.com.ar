@@ -15,7 +15,7 @@ Rama: `feature/compras` — versión 0.7.1
 ### `purchases`
 `id, tenant_id, supplier_id, invoice_number, invoice_date, invoice_total (decimal 14,2 nullable), notes, invoice_image_path, timestamps`
 
-- `invoice_total`: total con IVA tal como figura en la factura (capturado por la IA)
+- `invoice_total`: total con IVA que leyó la IA. Es solo referencia: el total mostrado sale de los renglones (`gross_total` en el index) y el detalle avisa si difiere en más de $1.
 - La imagen se guarda en disco `public` bajo `purchases/{tenant_id}/`
 
 ### `purchase_lines`
@@ -90,7 +90,7 @@ Rama: `feature/compras` — versión 0.7.1
 
 ### `purchases/index.blade.php`
 - Tabla con filtros (proveedor, fecha desde/hasta), paginación 20
-- Columna Total: si `purchase_price_includes_iva` → muestra `invoice_total`; si no → suma neta de subtotales
+- Columna Total: si `purchase_price_includes_iva` → muestra el total con IVA/percepción sumado desde los renglones (`gross_total`, no `invoice_total`); si no → suma neta de subtotales
 - Acciones: ojo (ver detalle), papelera (eliminar con confirm). Eliminar hace cascade en líneas + borra imagen del storage.
 
 ### `purchases/show.blade.php`

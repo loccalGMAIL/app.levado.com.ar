@@ -38,11 +38,7 @@
 
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Envases</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Cajas, bolsas y materiales de presentación con su costo por unidad.</p>
-                </div>
+            <x-list-header title="Envases" subtitle="Cajas, bolsas y materiales de presentación con su costo por unidad.">
                 @can('manage-costs')
                     <button type="button"
                         @click="$dispatch('open-modal', 'packaging-create')"
@@ -50,7 +46,7 @@
                         + Nuevo envase
                     </button>
                 @endcan
-            </div>
+            </x-list-header>
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <input type="hidden" name="sort" value="{{ request('sort') }}">

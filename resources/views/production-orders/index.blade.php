@@ -37,26 +37,20 @@
     <div class="py-8 px-6 lg:px-8" x-data="{ mobileExpanded: false, products: @js($products) }">
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Órdenes de producción</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Cargá los pedidos y la orden del día se va armando sola.</p>
-                </div>
+            <x-list-header title="Órdenes de producción" subtitle="Cargá los pedidos y la orden del día se va armando sola.">
                 @can('manage-costs')
-                    <div class="flex items-center gap-2 shrink-0">
-                        <button type="button"
-                            @click="$dispatch('open-modal', 'production-request-create')"
-                            class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
-                            + Nuevo pedido
-                        </button>
-                        <button type="button"
-                            @click="$dispatch('open-modal', 'production-instant-create')"
-                            class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
-                            ⚡ Orden instantánea
-                        </button>
-                    </div>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'production-request-create')"
+                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        + Nuevo pedido
+                    </button>
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'production-instant-create')"
+                        class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                        ⚡ Orden instantánea
+                    </button>
                 @endcan
-            </div>
+            </x-list-header>
 
             @include('production-orders.tabs')
 

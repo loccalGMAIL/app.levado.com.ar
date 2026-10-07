@@ -16,11 +16,7 @@
     }">
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Recetas</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Cada receta calcula el costo de producción a partir de ingredientes, envases y mano de obra.</p>
-                </div>
+            <x-list-header title="Recetas" subtitle="Cada receta calcula el costo de producción a partir de ingredientes, envases y mano de obra.">
                 @can('manage-costs')
                     <button type="button" id="btn-nueva-receta"
                         @click="$dispatch('open-modal', 'recipe-create')"
@@ -28,7 +24,7 @@
                         + Nueva receta
                     </button>
                 @endcan
-            </div>
+            </x-list-header>
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <input type="hidden" name="sort" value="{{ request('sort') }}">

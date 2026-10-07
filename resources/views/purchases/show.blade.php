@@ -125,13 +125,20 @@
                                 ${{ number_format($purchase->totalAmount(), 2, ',', '.') }}
                             </p>
                         </div>
-                        @if($purchase->invoice_total && $totalIva > 0)
+                        @if($totalIva > 0)
                             <div>
                                 <p class="text-xs text-masa-madre">Total factura (con IVA)</p>
-                                <p class="text-sm font-mono text-corteza [overflow-wrap:anywhere]">
-                                    ${{ number_format($purchase->invoice_total, 2, ',', '.') }}
+                                <p class="text-sm font-mono text-corteza [overflow-wrap:anywhere]"
+                                    x-text="'$ ' + fmt(tfootGrandTotal)">
+                                    ${{ number_format($grandTotal, 2, ',', '.') }}
                                 </p>
                             </div>
+                        @endif
+                        @if($purchase->invoice_total !== null && abs((float) $purchase->invoice_total - $grandTotal) > 1)
+                            <p class="text-xs text-amber-700 max-w-xs sm:ml-auto">
+                                La factura escaneada indicaba ${{ number_format($purchase->invoice_total, 2, ',', '.') }}.
+                                Revisá si falta o sobra algún renglón.
+                            </p>
                         @endif
                     </div>
                 </div>

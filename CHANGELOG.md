@@ -295,6 +295,36 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.15.0] — 2026-10-07
+
+Rama `v0.15.0-encabezados-total-compras`, sobre v0.14.2. El total de las compras sale de los renglones y los encabezados de los listados se adaptan a mobile.
+
+### Cambiado
+
+- **Total de la compra calculado desde los renglones**: el listado de Compras mostraba `invoice_total` (el monto que
+  leyó la IA), que no cambiaba al editar renglones y a veces venía mal. Ahora el total con IVA y percepción se suma
+  desde los renglones y se actualiza solo al editar, agregar o borrar uno. El orden por total usa ese mismo número.
+- **Detalle de la compra**: "Total factura (con IVA)" sale de los renglones. Si el total que leyó la IA difiere en
+  más de $1, aparece un aviso para revisar si falta o sobra algún renglón. `invoice_total` queda como dato de referencia.
+- **Encabezados de listados en mobile**: la descripción ocupa todo el ancho y los botones bajan en una fila de celdas
+  de igual ancho (antes quedaban amontonados al costado). Desde `sm` no cambia: descripción a la izquierda, botones
+  a la derecha. Aplica a Compras, Gastos (fijos, historial y variables), Proveedores, Recetas, Envases, Artículos,
+  Matriz de artículos, Listas de precios, Sucursales, Repartidores, Clientes, Órdenes de producción (y recurrentes) y Stock.
+
+### Técnico
+
+- `x-list-header` centraliza el encabezado (título, descripción y acciones) y acepta un slot `description` para
+  descripciones con markup. No renderiza el contenedor de acciones si el slot queda vacío (p. ej. `@can` sin permiso).
+  Los botones se pasan como hijos directos del slot; un `<form>` usa `[&>button]:w-full`.
+- `PurchaseController::index()`: agregado `gross_total` (`withSum` sobre `subtotal * (1 + iva_rate + percepcion/100)`).
+  El orden por proveedor pasó de join + `select('purchases.*')` a subquery, porque ese `select` pisaba los agregados.
+- **Tests nuevos**: `ListHeaderComponentTest` (4) y 2 en `PurchaseScanTest`; se ajustó el del total según la
+  configuración de IVA.
+
+### Al deployar
+
+- `npm run build`. Sin migraciones.
+
 ## [0.14.2] — 2026-10-07
 
 Rama `v0.14.2-reventa-divisor-pack`, sobre v0.14.1. Compras de artículos de reventa que vienen en pack.

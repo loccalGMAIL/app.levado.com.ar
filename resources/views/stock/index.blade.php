@@ -50,12 +50,7 @@
 
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Stock</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Stock de insumos, descartables y productos en {{ $location->name }}.</p>
-                </div>
-            </div>
+            <x-list-header title="Stock" :subtitle="'Stock de insumos, descartables y productos en '.$location->name.'.'" />
 
             {{-- Tabs insumos / descartables --}}
             <div class="flex gap-1 border-b border-miga">
