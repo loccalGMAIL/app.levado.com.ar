@@ -297,7 +297,7 @@ corto dentro del nuevo modelo de Órdenes.
 
 ## [0.15.0] — 2026-10-07
 
-Rama `fix-total-compras-desde-renglones`, sobre v0.14.2. El total de las compras sale de los renglones y los encabezados de los listados se adaptan a mobile.
+Rama `v0.15.0-encabezados-total-compras`, sobre v0.14.2. El total de las compras sale de los renglones y los encabezados de los listados se adaptan a mobile.
 
 ### Cambiado
 
