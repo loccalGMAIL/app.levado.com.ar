@@ -101,6 +101,9 @@ class PurchaseLineRecorder
      * el lote, en vez de una vez por línea. El ítem tocado se devuelve para
      * que el llamador pueda acumularlo.
      *
+     * Un producto de reventa comprado en `u` con catálogo en `u` también admite
+     * divisor (pack x6): override o recordado, nunca adivinado de la descripción.
+     *
      * $pkgQtyOverride fuerza el divisor de unidades incompatibles en vez de
      * recordarlo o adivinarlo de la descripción. Es lo que hace viable el
      * renglón bonificado: como su precio es $0, el divisor no puede derivarse
@@ -174,6 +177,15 @@ class PurchaseLineRecorder
                 abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del producto.');
                 $costPerUnit = (float) $line->unit_price / $pkgQty;
                 $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
+            } elseif ($purchaseUnit === Unit::Unidad && $item->unit === Unit::Unidad) {
+                // Pack de N unidades: la reventa no tiene subdivisiones fijas, el
+                // divisor es del renglón (o el recordado del proveedor). Sin divisor,
+                // 1 u comprada = 1 u de stock, como siempre.
+                $pkgQty = $pkgQtyOverride ?? $this->rememberedPkgQty($line);
+                if ($pkgQty !== null && $pkgQty > 0) {
+                    $costPerUnit = (float) $line->unit_price / $pkgQty;
+                    $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
+                }
             }
 
             // Igual que en la rama de ingrediente: un producto de reventa bonificado
