@@ -26,35 +26,29 @@
 
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Gastos</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Costos operativos mensuales del negocio: alquiler, servicios, personal y otros.</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <a href="{{ route('fixed-costs.history') }}"
-                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
-                        Historial
-                    </a>
+            <x-list-header title="Gastos" subtitle="Costos operativos mensuales del negocio: alquiler, servicios, personal y otros.">
+                <a href="{{ route('fixed-costs.history') }}"
+                    class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                    Historial
+                </a>
+                <button type="button"
+                    @click="$dispatch('open-modal', 'fixed-cost-report')"
+                    class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                    Imprimir
+                </button>
+                @can('manage-costs')
                     <button type="button"
-                        @click="$dispatch('open-modal', 'fixed-cost-report')"
+                        @click="$dispatch('open-modal', 'fixed-cost-categories')"
                         class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
-                        Imprimir
+                        Categorías
                     </button>
-                    @can('manage-costs')
-                        <button type="button"
-                            @click="$dispatch('open-modal', 'fixed-cost-categories')"
-                            class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
-                            Categorías
-                        </button>
-                        <button type="button" id="btn-nuevo-gasto"
-                            @click="$dispatch('open-modal', 'fixed-cost-create')"
-                            class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
-                            + Nuevo gasto
-                        </button>
-                    @endcan
-                </div>
-            </div>
+                    <button type="button" id="btn-nuevo-gasto"
+                        @click="$dispatch('open-modal', 'fixed-cost-create')"
+                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        + Nuevo gasto
+                    </button>
+                @endcan
+            </x-list-header>
 
             <x-expense-tabs />
 

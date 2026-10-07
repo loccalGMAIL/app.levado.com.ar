@@ -81,26 +81,20 @@
 
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Artículos</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Productos que vendés: elaborados (desde una receta) y de reventa.</p>
-                </div>
-                <div class="flex items-center gap-3 shrink-0">
-                    @can('manage-costs')
-                        <button type="button"
-                            @click="$dispatch('open-modal', 'product-categories')"
-                            class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
-                            Categorías
-                        </button>
-                        <button type="button" id="btn-nuevo-producto"
-                            @click="$dispatch('open-modal', 'product-create')"
-                            class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
-                            + Nuevo artículo
-                        </button>
-                    @endcan
-                </div>
-            </div>
+            <x-list-header title="Artículos" subtitle="Productos que vendés: elaborados (desde una receta) y de reventa.">
+                @can('manage-costs')
+                    <button type="button"
+                        @click="$dispatch('open-modal', 'product-categories')"
+                        class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                        Categorías
+                    </button>
+                    <button type="button" id="btn-nuevo-producto"
+                        @click="$dispatch('open-modal', 'product-create')"
+                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        + Nuevo artículo
+                    </button>
+                @endcan
+            </x-list-header>
 
             @include('products.tabs')
 

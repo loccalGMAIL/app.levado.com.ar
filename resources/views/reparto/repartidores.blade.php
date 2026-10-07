@@ -24,17 +24,13 @@
 
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Repartidores</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Quiénes reparten los pedidos de producción.</p>
-                </div>
+            <x-list-header title="Repartidores" subtitle="Quiénes reparten los pedidos de producción.">
                 <button type="button"
                     @click="$dispatch('open-modal', 'delivery-person-create')"
                     class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     + Nuevo repartidor
                 </button>
-            </div>
+            </x-list-header>
 
             @include('reparto.tabs')
 

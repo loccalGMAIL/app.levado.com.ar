@@ -35,16 +35,13 @@
 
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Clientes</h2>
-                </div>
+            <x-list-header title="Clientes">
                 <button type="button"
                     @click="$dispatch('open-modal', 'customer-create')"
                     class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                     + Nuevo cliente
                 </button>
-            </div>
+            </x-list-header>
 
             @include('reparto.tabs')
 

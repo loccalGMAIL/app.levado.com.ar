@@ -10,22 +10,16 @@
     <div class="py-8 px-6 lg:px-8">
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Historial de gastos fijos</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Monto de cada gasto fijo mes a mes.</p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button type="button" x-data
-                        @click="$dispatch('open-modal', 'fixed-cost-report')"
-                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
-                        Imprimir
-                    </button>
-                    <a href="{{ route('fixed-costs.index') }}" class="text-sm text-masa-madre hover:text-corteza hover:underline">
-                        ← Volver a Gastos fijos
-                    </a>
-                </div>
-            </div>
+            <x-list-header title="Historial de gastos fijos" subtitle="Monto de cada gasto fijo mes a mes.">
+                <button type="button" x-data
+                    @click="$dispatch('open-modal', 'fixed-cost-report')"
+                    class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                    Imprimir
+                </button>
+                <a href="{{ route('fixed-costs.index') }}" class="px-4 py-2 border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                    ← Volver a Gastos fijos
+                </a>
+            </x-list-header>
 
             <div class="flex items-center justify-center gap-3">
                 <a href="{{ route('fixed-costs.history', ['period' => $prevPeriod]) }}"

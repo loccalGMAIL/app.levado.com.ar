@@ -4,24 +4,20 @@
     <div class="py-8 px-6 lg:px-8">
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Artículos</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Todos los precios de tus artículos, lista por lista. Hacé clic en una celda para editar.</p>
-                </div>
+            <x-list-header title="Artículos" subtitle="Todos los precios de tus artículos, lista por lista. Hacé clic en una celda para editar.">
                 @can('manage-costs')
-                    <div class="flex items-center gap-3 shrink-0">
-                        <form method="POST" action="{{ route('price-lists.apply-all-suggestions') }}"
-                            onsubmit="return confirm('¿Aplicar todas las sugerencias pendientes? Solo se completarán las celdas vacías.')">
-                            @csrf
-                            <button type="submit"
-                                class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
-                                Aplicar sugerencias
-                            </button>
-                        </form>
-                    </div>
+                    {{-- El form es la celda de la grilla: el botón se estira para ocupar todo su ancho. --}}
+                    <form method="POST" action="{{ route('price-lists.apply-all-suggestions') }}"
+                        class="[&>button]:w-full"
+                        onsubmit="return confirm('¿Aplicar todas las sugerencias pendientes? Solo se completarán las celdas vacías.')">
+                        @csrf
+                        <button type="submit"
+                            class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                            Aplicar sugerencias
+                        </button>
+                    </form>
                 @endcan
-            </div>
+            </x-list-header>
 
             @include('products.tabs')
 

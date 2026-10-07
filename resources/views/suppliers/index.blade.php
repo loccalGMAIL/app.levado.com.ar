@@ -25,11 +25,7 @@
 
         <div class="space-y-6">
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-corteza">Proveedores</h2>
-                    <p class="text-sm text-masa-madre mt-0.5">Empresas y personas de quienes comprás insumos.</p>
-                </div>
+            <x-list-header title="Proveedores" subtitle="Empresas y personas de quienes comprás insumos.">
                 @can('manage-costs')
                     <button type="button" id="btn-nuevo-proveedor"
                         @click="$dispatch('open-modal', 'supplier-create')"
@@ -37,7 +33,7 @@
                         + Nuevo proveedor
                     </button>
                 @endcan
-            </div>
+            </x-list-header>
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <div class="flex-1 min-w-48">
