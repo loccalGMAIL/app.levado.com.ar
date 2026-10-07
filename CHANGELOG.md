@@ -295,6 +295,33 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.14.2] — 2026-10-07
+
+Rama `v0.14.2-reventa-divisor-pack`, sobre v0.14.1. Compras de artículos de reventa que vienen en pack.
+
+### Agregado
+
+- **Divisor de unidades por pack en la asociación de compras**: al vincular un renglón en `u` a un artículo de reventa
+  en `u` aparece `÷ [N] u/pack`. "Pack 6 Coca-Cola Zero" a $6000 con divisor 6 queda en $1000 por unidad y suma
+  6 u al stock (antes: 1 u a $6000).
+- El divisor se **recuerda por proveedor y texto del renglón** (`supplier_product_links.pkg_qty`): la próxima
+  factura llega precargado, y "Aplicar N sugerencias" lo usa. Sólo vale para el mismo artículo con el que se
+  guardó, y cargar 1 lo pisa, así que el mismo artículo puede comprarse suelto o en pack.
+- Un pack **sin cargo** entra al stock como N u sin tocar el costo.
+
+### Técnico
+
+- `PurchaseLineRecorder::apply()`: la rama de reventa u→u toma `pkgQtyOverride` o el divisor recordado. No se
+  adivina de la descripción: `parseDescPkgQty` sólo entiende masa y volumen, y un divisor mal adivinado cambiaría
+  el costo sin avisar.
+- `match.js`: `packDivisible` / `showPkgQty`. Sin cambios de base de datos ni de `products` (la reventa sigue sin
+  subdivisiones fijas).
+- **5 tests nuevos** en `ProductPurchaseTest`.
+
+### Al deployar
+
+- `npm run build`. Sin migraciones.
+
 ## [0.14.1] — 2026-10-06
 
 Rama `v0.14.1-larastan`, sobre v0.14.0. Análisis estático con Larastan; sin cambios funcionales.
