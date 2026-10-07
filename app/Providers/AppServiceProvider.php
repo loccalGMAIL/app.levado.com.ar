@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\CatalogItemType;
 use App\Enums\DeliveryDestinationType;
+use App\Enums\MobileShortcut;
 use App\Enums\TenantUserRole;
 use App\Models\Tenant;
 use App\Models\User;
@@ -76,6 +77,31 @@ class AppServiceProvider extends ServiceProvider
             } catch (\Throwable) {
                 $view->with('onboardingStep', null);
             }
+        });
+
+        View::composer('components.mobile-bottom-nav', function ($view) {
+            try {
+                $configured = app(Tenant::class)->mobileShortcuts();
+            } catch (\Throwable) {
+                $configured = MobileShortcut::defaults();
+            }
+
+            $visible = fn (MobileShortcut $s): bool => $s->ability() === null || Gate::allows($s->ability());
+
+            $barShortcuts = array_values(array_filter($configured, $visible));
+
+            $drawerGroups = collect(MobileShortcut::cases())
+                ->reject(fn (MobileShortcut $s) => in_array($s, $configured, true))
+                ->filter($visible)
+                ->groupBy(fn (MobileShortcut $s) => $s->group());
+
+            $moreActivePatterns = collect(MobileShortcut::cases())
+                ->reject(fn (MobileShortcut $s) => in_array($s, $barShortcuts, true))
+                ->flatMap(fn (MobileShortcut $s) => $s->activePatterns())
+                ->merge(['price-lists.*', 'business.*', 'alerts.*', 'mobile-shortcuts.*', 'team.*', 'locations.*', 'profile.*', 'admin.*'])
+                ->all();
+
+            $view->with(compact('barShortcuts', 'drawerGroups', 'moreActivePatterns'));
         });
 
         Gate::before(function (User $user) {

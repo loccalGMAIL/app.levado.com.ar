@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CondicionIva;
+use App\Enums\MobileShortcut;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -316,5 +317,28 @@ class Tenant extends Model
         );
 
         $this->cachedSettings = null;
+    }
+
+    /**
+     * Accesos de la barra inferior mobile, en orden. Si el setting falta, está
+     * corrupto o no tiene exactamente MobileShortcut::SLOTS accesos válidos y
+     * distintos, vuelve a los defaults.
+     *
+     * @return array<int, MobileShortcut>
+     */
+    public function mobileShortcuts(): array
+    {
+        $raw = (string) $this->getSetting('mobile_nav.shortcuts', '');
+
+        $shortcuts = [];
+        foreach (explode(',', $raw) as $value) {
+            $shortcut = MobileShortcut::tryFrom(trim($value));
+            if ($shortcut === null || in_array($shortcut, $shortcuts, true)) {
+                return MobileShortcut::defaults();
+            }
+            $shortcuts[] = $shortcut;
+        }
+
+        return count($shortcuts) === MobileShortcut::SLOTS ? $shortcuts : MobileShortcut::defaults();
     }
 }

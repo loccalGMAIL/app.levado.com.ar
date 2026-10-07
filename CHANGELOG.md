@@ -295,6 +295,33 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.16.0] — 2026-10-07
+
+Rama `v0.16.0-accesos-rapidos-mobile`, sobre v0.15.0. Cada negocio elige qué secciones van en la barra inferior del celular.
+
+### Agregado
+
+- **Accesos rápidos editables**: la barra inferior mobile es ahora Inicio + 3 accesos configurables + Más. El owner los
+  elige en Administración → **Accesos rápidos** (3 selects agrupados por Producción, Existencias y Costos) y vale para
+  todo el equipo del negocio. Inicio y Más quedan fijos.
+- Lo que sale de la barra pasa al drawer **Más**, así que ninguna sección queda inaccesible.
+- Sin configuración (o con una configuración inválida) la barra sigue siendo Recetas, Ingredientes y Compras.
+- Un acceso que el rol no puede ver (p. ej. Reparto para un viewer) se omite de la barra en vez de dejar un hueco.
+
+### Técnico
+
+- Enum `MobileShortcut` (11 destinos): label, ruta, patrones de `routeIs`, grupo del drawer, ícono y `ability()`.
+  Sumar un destino nuevo = un caso nuevo, sin tocar el Blade.
+- Persistencia en `tenant_settings` (`mobile_nav.shortcuts`, CSV) sin migración; `Tenant::mobileShortcuts()` valida y cae a
+  los defaults. View composer de `components.mobile-bottom-nav` entrega barra, grupos del drawer y patrones activos de Más.
+- `MobileShortcutSettingsController` + `UpdateMobileShortcutsRequest` (3 accesos, distintos, del enum). Rutas
+  `mobile-shortcuts.edit/update` bajo `role:super_admin,owner`.
+- **Tests nuevos**: `MobileShortcutsTest` (15): permisos, validación, defaults, setting corrupto, rol sin acceso y aislamiento por tenant.
+
+### Al deployar
+
+- Sin migraciones. `npm run build`.
+
 ## [0.15.0] — 2026-10-07
 
 Rama `v0.15.0-encabezados-total-compras`, sobre v0.14.2. El total de las compras sale de los renglones y los encabezados de los listados se adaptan a mobile.

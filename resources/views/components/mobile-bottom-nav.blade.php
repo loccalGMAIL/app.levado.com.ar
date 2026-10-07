@@ -30,91 +30,22 @@
             <div class="w-10 h-1 bg-miga rounded-full"></div>
         </div>
 
-        <div class="px-4 py-3">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Producción</p>
+        @foreach($drawerGroups as $groupTitle => $items)
+        <div class="px-4 {{ $loop->first ? 'py-3' : 'pb-3' }}">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">{{ $groupTitle }}</p>
 
-            <a href="{{ route('production-orders.index') }}" @click="open = false"
+            @foreach($items as $item)
+            <a href="{{ route($item->routeName()) }}" @click="open = false"
                 class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('production-orders.*', 'production.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                    {{ request()->routeIs(...$item->activePatterns()) ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
                 <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                    {!! $item->iconPath() !!}
                 </svg>
-                Órdenes de producción
+                {{ $item->label() }}
             </a>
-
-            @can('manage-costs')
-            <a href="{{ route('reparto.clientes.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('reparto.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-                </svg>
-                Reparto
-            </a>
-            @endcan
+            @endforeach
         </div>
-
-        <div class="px-4 pb-3">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Existencias</p>
-
-            <a href="{{ route('products.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('products.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-                Artículos
-            </a>
-
-            <a href="{{ route('suppliers.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('suppliers.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 18H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v3M8 10h8M8 14h4m4 4v-4m0 4h-4m4 0l-3-3" />
-                </svg>
-                Proveedores
-            </a>
-
-            <a href="{{ route('stock.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('stock.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                </svg>
-                Stock
-            </a>
-        </div>
-
-        <div class="px-4 pb-3">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-corteza/40 mb-2 px-1">Costos</p>
-
-            <a href="{{ route('packaging.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('packaging.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4M12 3v18" />
-                </svg>
-                Descartables
-            </a>
-
-            <a href="{{ route('labor-types.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('labor-types.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Mano de Obra
-            </a>
-
-            <a href="{{ route('fixed-costs.index') }}" @click="open = false"
-                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    {{ request()->routeIs('fixed-costs.*', 'variable-expenses.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
-                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                Gastos
-            </a>
-        </div>
+        @endforeach
 
         @canany(['edit-settings', 'manage-team'])
         <div class="px-4 pb-3">
@@ -139,6 +70,17 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
                 Alertas
+            </a>
+            @endcan
+
+            @can('edit-settings')
+            <a href="{{ route('mobile-shortcuts.edit') }}" @click="open = false"
+                class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
+                    {{ request()->routeIs('mobile-shortcuts.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
+                <svg class="w-5 h-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                Accesos rápidos
             </a>
             @endcan
 
@@ -230,40 +172,22 @@
             <span class="text-[10px] font-semibold leading-none">Inicio</span>
         </a>
 
-        {{-- Recetas --}}
-        <a href="{{ route('recipes.index') }}"
+        {{-- Accesos rápidos configurables por tenant --}}
+        @foreach($barShortcuts as $shortcut)
+        <a href="{{ route($shortcut->routeName()) }}"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs('recipes.*') ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs(...$shortcut->activePatterns()) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                {!! $shortcut->iconPath() !!}
             </svg>
-            <span class="text-[10px] font-semibold leading-none">Recetas</span>
+            <span class="text-[10px] font-semibold leading-none">{{ $shortcut->shortLabel() }}</span>
         </a>
-
-        {{-- Ingredientes --}}
-        <a href="{{ route('ingredients.index') }}"
-            class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs('ingredients.*') ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <span class="text-[10px] font-semibold leading-none">Ingredientes</span>
-        </a>
-
-        {{-- Compras --}}
-        <a href="{{ route('purchases.index') }}"
-            class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs('purchases.*', 'credit-notes.*') ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span class="text-[10px] font-semibold leading-none">Compras</span>
-        </a>
+        @endforeach
 
         {{-- Más --}}
         <button @click="open = !open"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs(['production.*', 'reparto.*', 'products.*', 'price-lists.*', 'fixed-costs.*', 'variable-expenses.*', 'packaging.*', 'labor-types.*', 'suppliers.*', 'stock.*', 'business.*', 'team.*', 'locations.*', 'profile.*', 'admin.*']) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs($moreActivePatterns) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
