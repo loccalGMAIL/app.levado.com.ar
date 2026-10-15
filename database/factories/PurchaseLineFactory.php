@@ -32,7 +32,6 @@ class PurchaseLineFactory extends Factory
             'purchase_unit' => 'u',
             'unit_price' => $unitPrice,
             'iva_rate' => 0.21,
-            'percepcion_rate' => null,
             'subtotal' => round($quantity * $unitPrice, 2),
             'is_bonus' => false,
             'cost_applied_at' => null,

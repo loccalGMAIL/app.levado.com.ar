@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  *
  * @property-read float|string|null $total_subtotal
  * @property-read float|string|null $total_iva
- * @property-read float|string|null $total_percepcion
  */
 class PurchaseLine extends Model
 {
@@ -31,7 +30,6 @@ class PurchaseLine extends Model
         'purchase_unit',
         'unit_price',
         'iva_rate',
-        'percepcion_rate',
         'subtotal',
         'is_bonus',
         'cost_applied_at',
@@ -45,7 +43,6 @@ class PurchaseLine extends Model
             'quantity_purchased' => 'decimal:4',
             'unit_price' => 'decimal:4',
             'iva_rate' => 'decimal:4',
-            'percepcion_rate' => 'decimal:2',
             'subtotal' => 'decimal:4',
             'is_bonus' => 'boolean',
             'purchase_unit' => Unit::class,

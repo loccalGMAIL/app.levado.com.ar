@@ -4,8 +4,6 @@
               supplierId: '{{ old('supplier_id', $purchase->supplier_id) }}',
               invoiceNumber: '{{ old('invoice_number', $purchase->invoice_number) }}',
               ivaRate: '{{ old('default_iva_rate', $purchase->default_iva_rate !== null ? (string) $purchase->default_iva_rate : '0.21') }}',
-              hasPercepcion: {{ (old('default_percepcion_rate', $purchase->default_percepcion_rate) !== null && old('default_percepcion_rate', $purchase->default_percepcion_rate) !== '') ? 'true' : 'false' }},
-              percepcionRate: '{{ old('default_percepcion_rate', $purchase->default_percepcion_rate ?? '') }}',
               duplicateWarning: null,
               _dupTimer: null,
               checkDuplicate() {
@@ -198,24 +196,6 @@
                         class="text-corteza focus:ring-horno border-gray-300">
                     21%
                 </label>
-            </div>
-
-            <div x-show="ivaRate !== '0'" x-cloak class="flex items-center gap-3 pt-1">
-                <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" x-model="hasPercepcion"
-                        @change="if (!hasPercepcion) percepcionRate = ''"
-                        class="rounded text-corteza focus:ring-horno border-gray-300">
-                    Percepción
-                </label>
-                <div x-show="hasPercepcion" x-cloak class="flex items-center gap-1.5">
-                    <input type="number" name="default_percepcion_rate"
-                        step="0.01" min="0" max="100"
-                        x-model="percepcionRate"
-                        :disabled="!hasPercepcion"
-                        placeholder="0"
-                        class="border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm w-24 text-right">
-                    <span class="text-sm text-masa-madre">%</span>
-                </div>
             </div>
         </div>
 

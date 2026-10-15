@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\CatalogItemType;
+use App\Enums\Jurisdiction;
+use App\Enums\PerceptionType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\Packaging;
@@ -29,7 +31,8 @@ class InvoiceExtractor
      * @param  Collection<int, Product>  $products  Sólo reventa; vacía si el negocio no tiene.
      * @return array{
      *     header: array{supplier_name: ?string, cuit: ?string, invoice_number: ?string, invoice_date: ?string, total: ?float},
-     *     lines: array<int, array{raw_name: ?string, quantity: ?float, unit: ?string, unit_price: ?float, matched_type: ?string, matched_id: ?int}>
+     *     lines: array<int, array{raw_name: ?string, quantity: ?float, unit: ?string, unit_price: ?float, matched_type: ?string, matched_id: ?int}>,
+     *     perceptions: array<int, array{type: string, jurisdiction: ?string, description: string, base: ?float, rate: ?float, amount: ?float}>
      * }
      */
     public function extract(string $base64, string $mimeType, Collection $ingredients, Collection $packagings, Collection $products): array
@@ -98,6 +101,8 @@ class InvoiceExtractor
             ->implode("\n");
 
         $units = collect(Unit::cases())->map(fn (Unit $u) => $u->value)->implode(', ');
+        $perceptionTypes = collect(PerceptionType::cases())->map(fn (PerceptionType $t) => '"'.$t->value.'"')->implode(' | ');
+        $jurisdictions = collect(Jurisdiction::cases())->map(fn (Jurisdiction $j) => '"'.$j->value.'"')->implode(', ');
 
         // El catálogo de reventa y su tipo en el esquema sólo se emiten si el
         // negocio tiene artículos de reventa: si no los tiene, el modelo ni
@@ -162,6 +167,17 @@ class InvoiceExtractor
             total: el TOTAL final de la factura, tal como figura. Copiá todos sus dígitos: un cero de menos
             convierte 38.000 en 3.800. Control: el total tiene que ser coherente con la suma de los renglones.
 
+            perceptions: las percepciones e impuestos que se SUMAN al total y no son IVA de los renglones
+            (suelen estar al pie, junto a los totales: "Perc. IIBB", "Percepción IVA", "Perc. Ganancias",
+            "Impuestos internos"). Una entrada por cada una; lista vacía si no hay ninguna.
+            - type: {$perceptionTypes}.
+            - jurisdiction: sólo para "iibb", la provincia que figura. Valores: {$jurisdictions}. null si no figura o no es IIBB.
+            - description: el texto tal como figura (ej. "Perc. IIBB Bs.As.").
+            - base: la base imponible si está impresa, sino null.
+            - rate: la alícuota en porcentaje si está impresa (3 para "3%"), sino null.
+            - amount: el IMPORTE impreso en pesos. Copialo, NO lo calcules.
+            El IVA discriminado (21%, 10,5%) NO es una percepción: no lo incluyas acá.
+
             Ejemplos de transcripción fiel (sin cálculos):
             - "HARINA 3/0 X 25 Kg" · Cantidad 200 · Unitario 13.891,40
               → {"raw_name":"HARINA 3/0 X 25 Kg","quantity":200,"unit":"u","unit_price":13891.40,...}
@@ -175,6 +191,9 @@ class InvoiceExtractor
               "invoice_number": string|null,
               "invoice_date": "YYYY-MM-DD"|null,
               "total": number|null,
+              "perceptions": [
+                { "type": string, "jurisdiction": string|null, "description": string, "base": number|null, "rate": number|null, "amount": number|null }
+              ],
               "lines": [
                 {
                   "raw_name": string,
@@ -264,7 +283,43 @@ class InvoiceExtractor
                 'total' => $this->toFloat($data['total'] ?? null),
             ],
             'lines' => $lines,
+            'perceptions' => $this->normalizePerceptions($data['perceptions'] ?? []),
         ];
+    }
+
+    /**
+     * Fail-closed: un tipo desconocido cae en «otro» y una provincia desconocida (o
+     * sobre un tipo que no es IIBB) se descarta. El importe se conserva tal como
+     * figura: es lo impreso, no un cálculo.
+     *
+     * @return array<int, array{type: string, jurisdiction: ?string, description: string, base: ?float, rate: ?float, amount: ?float}>
+     */
+    private function normalizePerceptions(mixed $raw): array
+    {
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        return collect($raw)
+            ->filter(fn ($row) => is_array($row))
+            ->map(function (array $row) {
+                $type = PerceptionType::tryFrom((string) ($row['type'] ?? '')) ?? PerceptionType::Otro;
+                $jurisdiction = $type->requiresJurisdiction()
+                    ? Jurisdiction::tryFrom((string) ($row['jurisdiction'] ?? ''))?->value
+                    : null;
+
+                return [
+                    'type' => $type->value,
+                    'jurisdiction' => $jurisdiction,
+                    'description' => filled($row['description'] ?? null) ? (string) $row['description'] : $type->label(),
+                    'base' => $this->toFloat($row['base'] ?? null),
+                    'rate' => $this->toFloat($row['rate'] ?? null),
+                    'amount' => $this->toFloat($row['amount'] ?? null),
+                ];
+            })
+            ->filter(fn (array $row) => $row['amount'] !== null || $row['rate'] !== null)
+            ->values()
+            ->all();
     }
 
     private function normalizeUnit(mixed $value): ?string

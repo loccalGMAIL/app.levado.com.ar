@@ -28,7 +28,6 @@ class Purchase extends Model
         'invoice_date',
         'invoice_total',
         'default_iva_rate',
-        'default_percepcion_rate',
         'notes',
         'invoice_image_path',
     ];
@@ -39,7 +38,6 @@ class Purchase extends Model
             'invoice_date' => 'date',
             'invoice_total' => 'decimal:2',
             'default_iva_rate' => 'decimal:4',
-            'default_percepcion_rate' => 'decimal:2',
         ];
     }
 
@@ -73,6 +71,34 @@ class Purchase extends Model
     public function creditNotes(): HasMany
     {
         return $this->hasMany(CreditNote::class);
+    }
+
+    /**
+     * @return HasMany<PurchasePerception, $this>
+     */
+    public function perceptions(): HasMany
+    {
+        return $this->hasMany(PurchasePerception::class);
+    }
+
+    /**
+     * Base automática de las percepciones: el neto de los renglones gravados con
+     * IVA. Una compra sin ningún renglón gravado (sin factura, exenta) cae al neto total.
+     */
+    public function taxedNet(): float
+    {
+        $lines = $this->relationLoaded('lines') ? $this->lines : $this->lines()->get(['subtotal', 'iva_rate']);
+
+        $taxed = $lines->filter(fn ($l) => (float) $l->iva_rate > 0)->sum(fn ($l) => (float) $l->subtotal);
+
+        return (float) ($taxed > 0 ? $taxed : $lines->sum(fn ($l) => (float) $l->subtotal));
+    }
+
+    public function perceptionsTotal(): float
+    {
+        return (float) ($this->relationLoaded('perceptions')
+            ? $this->perceptions->sum('amount')
+            : $this->perceptions()->sum('amount'));
     }
 
     public function totalAmount(): float

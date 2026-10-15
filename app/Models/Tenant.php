@@ -252,6 +252,14 @@ class Tenant extends Model
     }
 
     /**
+     * @return HasMany<PerceptionConcept, $this>
+     */
+    public function perceptionConcepts(): HasMany
+    {
+        return $this->hasMany(PerceptionConcept::class);
+    }
+
+    /**
      * @return HasMany<CreditNote, $this>
      */
     public function creditNotes(): HasMany

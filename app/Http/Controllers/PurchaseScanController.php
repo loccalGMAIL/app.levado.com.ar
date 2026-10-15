@@ -6,6 +6,7 @@ use App\Enums\CatalogItemType;
 use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Http\Requests\StoreScannedPurchaseRequest;
+use App\Models\PerceptionConcept;
 use App\Models\Purchase;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
@@ -13,9 +14,11 @@ use App\Services\InvoiceExtractor;
 use App\Services\InvoiceImagePreparer;
 use App\Services\ProductLinkMemory;
 use App\Services\PurchaseLineRecorder;
+use App\Services\PurchasePerceptionSync;
 use App\Services\SupplierMatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -32,6 +35,7 @@ class PurchaseScanController extends Controller
         private readonly PurchaseLineRecorder $lineRecorder,
         private readonly SupplierMatcher $supplierMatcher,
         private readonly ProductLinkMemory $linkMemory,
+        private readonly PurchasePerceptionSync $perceptionSync,
     ) {}
 
     public function create(): View
@@ -108,6 +112,9 @@ class PurchaseScanController extends Controller
         // proveedor definitivo que elija el usuario.
         $draft['lines'] = $this->applyMemory($draft['lines'], $tenant, $matchedSupplierId);
 
+        $perceptionConcepts = $tenant->perceptionConcepts()->active()->orderBy('name')->get();
+        $draft['perceptions'] = $this->matchPerceptionConcepts($draft['perceptions'], $perceptionConcepts);
+
         $possibleDuplicate = null;
         if (filled($invoiceNumber) && $matchedSupplierId !== null) {
             $possibleDuplicate = Purchase::where('tenant_id', $tenant->id)
@@ -122,6 +129,7 @@ class PurchaseScanController extends Controller
             'matchedSupplierId' => $matchedSupplierId,
             'suppliers' => $suppliers,
             'units' => Unit::cases(),
+            'perceptionConcepts' => $perceptionConcepts,
             'possibleDuplicate' => $possibleDuplicate,
             // For the "se sugerirá: X" hint per line. Incluye los ítems dados de
             // baja: la memoria sí puede devolver uno (misma regla del proveedor
@@ -130,6 +138,34 @@ class PurchaseScanController extends Controller
             'packagingNames' => $tenant->packagings()->pluck('name', 'id'),
             'productNames' => $tenant->products()->where('type', ProductType::Resale->value)->pluck('name', 'id'),
         ]);
+    }
+
+    /**
+     * Sugiere el concepto del catálogo para cada percepción leída: mismo tipo y
+     * misma provincia; si hay varios, el de alícuota por defecto más cercana.
+     * Sin coincidencia la fila queda libre (se carga con lo que figura impreso).
+     *
+     * @param  array<int, array<string, mixed>>  $perceptions
+     * @param  Collection<int, PerceptionConcept>  $concepts
+     * @return array<int, array<string, mixed>>
+     */
+    private function matchPerceptionConcepts(array $perceptions, Collection $concepts): array
+    {
+        return array_map(function (array $row) use ($concepts) {
+            $candidates = $concepts->filter(
+                fn (PerceptionConcept $c) => $c->type->value === $row['type']
+                    && $c->jurisdiction?->value === ($row['jurisdiction'] ?? null)
+            );
+
+            $rate = $row['rate'] ?? null;
+            $best = $rate === null
+                ? $candidates->first()
+                : $candidates->sortBy(fn (PerceptionConcept $c) => abs((float) ($c->default_rate ?? 0) - $rate))->first();
+
+            $row['perception_concept_id'] = $best?->id;
+
+            return $row;
+        }, $perceptions);
     }
 
     public function store(StoreScannedPurchaseRequest $request): RedirectResponse
@@ -175,7 +211,6 @@ class PurchaseScanController extends Controller
                 'notes' => $data['notes'] ?? null,
                 'invoice_image_path' => $imagePath,
                 'default_iva_rate' => $data['default_iva_rate'] ?? null,
-                'default_percepcion_rate' => $data['default_percepcion_rate'] ?? null,
             ]);
 
             foreach ($rows as $row) {
@@ -193,8 +228,18 @@ class PurchaseScanController extends Controller
                     'purchase_unit' => $row['purchase_unit'],
                     'unit_price' => $row['unit_price'],
                     'iva_rate' => $row['iva_rate'] ?? 0.21,
-                    'percepcion_rate' => $row['percepcion_rate'] ?? null,
                 ]);
+            }
+
+            // Después de los renglones: la base automática de una percepción es el
+            // neto gravado, que sólo existe una vez creados. Un importe leído de la
+            // factura queda manual (es lo impreso); sin importe se calcula.
+            foreach ($data['perceptions'] ?? [] as $perception) {
+                if (blank($perception['perception_concept_id'] ?? null) && blank($perception['description'] ?? null)) {
+                    continue;
+                }
+
+                $this->perceptionSync->store($purchase, $perception);
             }
 
             return $purchase;

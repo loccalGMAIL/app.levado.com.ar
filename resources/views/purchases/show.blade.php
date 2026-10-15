@@ -6,7 +6,30 @@
     @php
         $errorsInAddLine      = $errors->hasAny(['raw_name', 'quantity_purchased', 'purchase_unit', 'unit_price']) && old('_form') === 'add-line';
         $errorsInEditLine     = $errors->hasAny(['quantity_purchased', 'purchase_unit', 'unit_price']) && old('_form') === 'edit-line';
-        $errorsInEditPurchase = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'default_iva_rate', 'default_percepcion_rate', 'invoice']) && old('_form') === 'edit-purchase';
+        $errorsInEditPurchase = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'default_iva_rate', 'invoice']) && old('_form') === 'edit-purchase';
+
+        $errorsInPerception   = $errors->hasAny(['perception_concept_id', 'type', 'jurisdiction', 'description', 'base_amount', 'rate', 'amount']) && old('_form') === 'perception';
+
+        $conceptsById = $perceptionConcepts->mapWithKeys(fn ($c) => [$c->id => [
+            'name' => $c->name,
+            'type' => $c->type->value,
+            'jurisdiction' => $c->jurisdiction?->value ?? '',
+            'default_rate' => $c->default_rate !== null ? (float) $c->default_rate : '',
+        ]]);
+
+        $editingPerception = null;
+        if ($errorsInPerception) {
+            $editingPerception = [
+                'id'                    => old('perception_id') ?: null,
+                'perception_concept_id' => old('perception_concept_id', ''),
+                'type'                  => old('type', 'otro'),
+                'jurisdiction'          => old('jurisdiction', ''),
+                'description'           => old('description', ''),
+                'base_amount'           => old('base_amount', ''),
+                'rate'                  => old('rate', ''),
+                'amount'                => old('amount', ''),
+            ];
+        }
 
         $editingLine = null;
         if ($errorsInEditLine) {
@@ -17,7 +40,6 @@
                 'purchase_unit'      => old('purchase_unit'),
                 'unit_price'         => old('unit_price'),
                 'iva_rate'           => old('iva_rate'),
-                'percepcion_rate'    => old('percepcion_rate'),
             ];
         }
 
@@ -29,7 +51,7 @@
 
         $totalSubtotal   = $purchase->lines->sum(fn ($l) => (float) $l->subtotal);
         $totalIva        = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * (float) $l->iva_rate);
-        $totalPercepcion = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * ((float) ($l->percepcion_rate ?? 0) / 100));
+        $totalPercepcion = $purchase->perceptionsTotal();
         $grandTotal      = $totalSubtotal + $totalIva + $totalPercepcion;
     @endphp
 
@@ -40,11 +62,17 @@
                 this.editingLine = line;
                 $dispatch('open-modal', 'line-edit');
             },
+            editingPerception: {{ Js::from($editingPerception) }},
+            openPerception(perception) {
+                this.editingPerception = perception;
+                $dispatch('open-modal', 'perception-form');
+            },
             mobileExpanded: false,
             tfootSubtotal: {{ $totalSubtotal }},
             tfootIva: {{ $totalIva }},
             tfootPercepcion: {{ $totalPercepcion }},
             tfootGrandTotal: {{ $grandTotal }},
+            perceptionAmounts: {{ Js::from($purchase->perceptions->mapWithKeys(fn ($p) => [$p->id => (float) $p->amount])) }},
             fmt(n) { return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
         }"
         @line-price-saved.window="
@@ -52,6 +80,7 @@
             tfootIva        = $event.detail.total_iva;
             tfootPercepcion = $event.detail.total_percepcion;
             tfootGrandTotal = $event.detail.grand_total;
+            ($event.detail.perceptions || []).forEach(p => perceptionAmounts[p.id] = p.amount);
         ">
 
         {{-- Botón volver --}}
@@ -125,9 +154,9 @@
                                 ${{ number_format($purchase->totalAmount(), 2, ',', '.') }}
                             </p>
                         </div>
-                        @if($totalIva > 0)
+                        @if($totalIva > 0 || $totalPercepcion > 0)
                             <div>
-                                <p class="text-xs text-masa-madre">Total factura (con IVA)</p>
+                                <p class="text-xs text-masa-madre">Total factura{{ $totalIva > 0 ? ' (con IVA)' : '' }}</p>
                                 <p class="text-sm font-mono text-corteza [overflow-wrap:anywhere]"
                                     x-text="'$ ' + fmt(tfootGrandTotal)">
                                     ${{ number_format($grandTotal, 2, ',', '.') }}
@@ -198,7 +227,7 @@
                         @foreach($purchase->lines as $line)
                             @php
                                 $mSub   = (float) $line->subtotal;
-                                $mTotal = $mSub * (1 + (float) $line->iva_rate + ((float) ($line->percepcion_rate ?? 0) / 100));
+                                $mTotal = $mSub * (1 + (float) $line->iva_rate);
                             @endphp
                             <div class="px-4 py-3 space-y-1.5">
                                 <p class="font-medium text-corteza text-sm">{{ $line->raw_name ?? '—' }}</p>
@@ -256,7 +285,6 @@
                                                 'purchase_unit' => $line->purchase_unit->value,
                                                 'unit_price' => round((float) $line->unit_price, 2),
                                                 'iva_rate' => $line->iva_rate,
-                                                'percepcion_rate' => $line->percepcion_rate,
                                                 'is_bonus' => $line->isBonus(),
                                             ]) }})"
                                             class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-corteza border border-corteza/30 rounded-md hover:bg-miga transition-colors">
@@ -285,7 +313,7 @@
 
                         {{-- Total mobile --}}
                         <div class="px-4 py-3 bg-miga/30 flex items-center justify-between gap-4">
-                            <span class="text-xs font-semibold text-corteza">{{ $totalIva > 0 ? 'Total con IVA' : 'Total' }}</span>
+                            <span class="text-xs font-semibold text-corteza">{{ ($totalIva > 0 || $totalPercepcion > 0) ? 'Total factura' : 'Total' }}</span>
                             <span class="font-mono font-semibold text-corteza whitespace-nowrap"
                                   x-text="'$ ' + fmt(tfootGrandTotal)"></span>
                         </div>
@@ -332,7 +360,6 @@
                                     <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Precio unitario</th>
                                     <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Subtotal</th>
                                     <th class="px-4 py-3 font-medium text-right whitespace-nowrap">IVA $</th>
-                                    <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Percepción $</th>
                                     <th class="px-4 py-3 font-medium text-right whitespace-nowrap">Total</th>
                                     <th class="px-4 py-3 font-medium text-center">Costo</th>
                                     @can('manage-costs')
@@ -349,11 +376,9 @@
                                             price: {{ (float) $line->unit_price }},
                                             qty: {{ (float) $line->quantity_purchased }},
                                             ivaRate: {{ (float) $line->iva_rate }},
-                                            percepcionRate: {{ (float) ($line->percepcion_rate ?? 0) }},
                                             get subtotal() { return this.qty * this.price; },
                                             get ivaAmount() { return this.subtotal * this.ivaRate; },
-                                            get percepcionAmount() { return this.subtotal * (this.percepcionRate / 100); },
-                                            get lineTotal() { return this.subtotal + this.ivaAmount + this.percepcionAmount; },
+                                            get lineTotal() { return this.subtotal + this.ivaAmount; },
                                             fmt(n) { return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
                                             startEdit() {
                                                 this.isDirty = false;
@@ -427,10 +452,6 @@
                                             <span x-show="ivaAmount > 0" x-text="'$ ' + fmt(ivaAmount)"></span>
                                             <span x-show="ivaAmount <= 0">—</span>
                                         </td>
-                                        <td class="px-4 py-3 align-top text-right font-mono text-masa-madre whitespace-nowrap">
-                                            <span x-show="percepcionAmount > 0" x-text="'$ ' + fmt(percepcionAmount)"></span>
-                                            <span x-show="percepcionAmount <= 0">—</span>
-                                        </td>
                                         <td class="px-4 py-3 align-top text-right font-mono font-semibold text-corteza whitespace-nowrap"
                                             x-text="'$ ' + fmt(lineTotal)"></td>
                                         <td class="px-4 py-3 align-top text-center">
@@ -477,7 +498,6 @@
                                                             'purchase_unit' => $line->purchase_unit->value,
                                                             'unit_price' => round((float) $line->unit_price, 2),
                                                             'iva_rate' => $line->iva_rate,
-                                                            'percepcion_rate' => $line->percepcion_rate,
                                                 'is_bonus' => $line->isBonus(),
                                                         ]) }})"
                                                         class="p-1 text-masa-madre hover:text-corteza transition-colors"
@@ -514,18 +534,14 @@
                                         <span x-show="tfootIva > 0" x-text="'$ ' + fmt(tfootIva)"></span>
                                         <span x-show="tfootIva <= 0">—</span>
                                     </td>
-                                    <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs whitespace-nowrap">
-                                        <span x-show="tfootPercepcion > 0" x-text="'$ ' + fmt(tfootPercepcion)"></span>
-                                        <span x-show="tfootPercepcion <= 0">—</span>
-                                    </td>
                                     <td class="px-4 py-3 text-right font-mono font-semibold text-corteza text-xs whitespace-nowrap"
-                                        x-text="'$ ' + fmt(tfootGrandTotal)"></td>
+                                        x-text="'$ ' + fmt(tfootSubtotal + tfootIva)"></td>
                                     <td @can('manage-costs') colspan="2" @endcan class="px-4 py-3"></td>
                                 </tr>
                                 {{-- Informativo: el total de arriba NO lo descuenta, tiene que cerrar contra el papel. --}}
                                 @if($excludedLines->isNotEmpty())
                                     <tr>
-                                        <td colspan="6" class="px-4 py-2 text-xs text-masa-madre text-right">
+                                        <td colspan="5" class="px-4 py-2 text-xs text-masa-madre text-right">
                                             Sin insumo (no imputado al catálogo)
                                         </td>
                                         <td class="px-4 py-2 text-right font-mono text-masa-madre text-xs whitespace-nowrap">
@@ -540,6 +556,127 @@
                     <p class="mt-2 text-xs text-masa-madre">
                         Esta es la factura tal como se leyó. La asociación con insumos y la actualización de costos se hacen en un paso aparte.
                     </p>
+                @endif
+            </div>
+
+            {{-- Percepciones e impuestos: listado propio de la compra (no por renglón) --}}
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-corteza">Percepciones e impuestos</h3>
+                        <p class="text-xs text-masa-madre mt-0.5">IIBB, percepción de IVA y otros importes que suma el comprobante además del IVA de los renglones.</p>
+                    </div>
+                    @can('manage-costs')
+                        <button type="button"
+                            @click="openPerception(null)"
+                            class="px-3 py-1.5 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors shrink-0">
+                            + Agregar percepción
+                        </button>
+                    @endcan
+                </div>
+
+                @if($purchase->perceptions->isEmpty())
+                    <p class="text-sm text-masa-madre mt-4">Esta compra no tiene percepciones ni impuestos adicionales.</p>
+                @else
+                    <div class="mt-4 overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-miga text-masa-madre border-b border-miga">
+                                <tr>
+                                    <th class="px-4 py-2 font-medium">Concepto</th>
+                                    <th class="px-4 py-2 font-medium">Provincia</th>
+                                    <th class="px-4 py-2 font-medium text-right whitespace-nowrap">Base</th>
+                                    <th class="px-4 py-2 font-medium text-right whitespace-nowrap">Alícuota</th>
+                                    <th class="px-4 py-2 font-medium text-right whitespace-nowrap">Importe</th>
+                                    @can('manage-costs')
+                                        <th class="px-4 py-2"></th>
+                                    @endcan
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-miga">
+                                @foreach($purchase->perceptions as $perception)
+                                    <tr>
+                                        <td class="px-4 py-2.5 text-corteza">
+                                            {{ $perception->description }}
+                                            <span class="block text-[11px] text-masa-madre">{{ $perception->type->label() }}</span>
+                                        </td>
+                                        <td class="px-4 py-2.5 text-masa-madre">{{ $perception->jurisdiction?->label() ?? '—' }}</td>
+                                        <td class="px-4 py-2.5 text-right font-mono text-masa-madre whitespace-nowrap">
+                                            @if($perception->base_amount !== null)
+                                                $ {{ number_format((float) $perception->base_amount, 2, ',', '.') }}
+                                            @else
+                                                <span title="Neto gravado de la compra">auto</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-2.5 text-right font-mono text-masa-madre whitespace-nowrap">
+                                            {{ $perception->rate !== null ? rtrim(rtrim(number_format((float) $perception->rate, 4, ',', '.'), '0'), ',').'%' : '—' }}
+                                        </td>
+                                        <td class="px-4 py-2.5 text-right font-mono font-semibold text-corteza whitespace-nowrap">
+                                            <span x-text="'$ ' + fmt(perceptionAmounts[{{ $perception->id }}] ?? {{ (float) $perception->amount }})">
+                                                $ {{ number_format((float) $perception->amount, 2, ',', '.') }}
+                                            </span>
+                                            @if($perception->amount_is_manual)
+                                                <span class="block text-[11px] font-sans font-normal text-masa-madre">importe de la factura</span>
+                                            @endif
+                                        </td>
+                                        @can('manage-costs')
+                                            <td class="px-4 py-2.5">
+                                                <div class="flex items-center justify-end gap-3">
+                                                    <button type="button"
+                                                        @click="openPerception({{ Js::from([
+                                                            'id' => $perception->id,
+                                                            'perception_concept_id' => $perception->perception_concept_id,
+                                                            'type' => $perception->type->value,
+                                                            'jurisdiction' => $perception->jurisdiction?->value ?? '',
+                                                            'description' => $perception->description,
+                                                            'base_amount' => $perception->base_amount,
+                                                            'rate' => $perception->rate !== null ? (float) $perception->rate : '',
+                                                            'amount' => $perception->amount_is_manual ? (float) $perception->amount : '',
+                                                        ]) }})"
+                                                        class="p-1 text-masa-madre hover:text-corteza transition-colors" title="Editar">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.25 2.25 0 1 1 3.182 3.182L7.5 19.213l-4 1 1-4 12.362-12.726z" />
+                                                        </svg>
+                                                    </button>
+                                                    <form method="POST" action="{{ route('purchases.perceptions.destroy', [$purchase, $perception]) }}"
+                                                        onsubmit="return confirm('¿Eliminar esta percepción?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="p-1 text-red-400 hover:text-red-600 transition-colors" title="Eliminar">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        @endcan
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+
+                {{-- Resumen: neto + IVA + percepciones = total del comprobante --}}
+                @if($totalIva > 0 || $totalPercepcion > 0)
+                    <dl class="mt-4 pt-3 border-t border-miga space-y-1 text-sm max-w-xs ml-auto">
+                        <div class="flex justify-between gap-6">
+                            <dt class="text-masa-madre">Neto</dt>
+                            <dd class="font-mono text-masa-madre" x-text="'$ ' + fmt(tfootSubtotal)"></dd>
+                        </div>
+                        <div class="flex justify-between gap-6">
+                            <dt class="text-masa-madre">IVA</dt>
+                            <dd class="font-mono text-masa-madre" x-text="'$ ' + fmt(tfootIva)"></dd>
+                        </div>
+                        <div class="flex justify-between gap-6">
+                            <dt class="text-masa-madre">Percepciones</dt>
+                            <dd class="font-mono text-masa-madre" x-text="'$ ' + fmt(tfootPercepcion)"></dd>
+                        </div>
+                        <div class="flex justify-between gap-6 border-t border-miga pt-1">
+                            <dt class="font-medium text-corteza">Total factura</dt>
+                            <dd class="font-mono font-semibold text-corteza" x-text="'$ ' + fmt(tfootGrandTotal)"></dd>
+                        </div>
+                    </dl>
                 @endif
             </div>
 
@@ -608,6 +745,8 @@
             @include('purchases.modals.edit-line')
             @include('purchases.modals.edit-purchase')
             @include('purchases.modals.add-line')
+            @include('purchases.modals.perception')
+            @include('purchases.modals.perception-concepts')
             @include('credit-notes.modals.create')
         @endcan
 
