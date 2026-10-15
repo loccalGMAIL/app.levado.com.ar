@@ -295,6 +295,36 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.17.0] — 2026-10-15
+
+Rama `v0.17.0-percepciones-compra`, sobre v0.16.0. Las percepciones dejan de ser una alícuota por renglón y pasan a un listado propio de la compra.
+
+### Agregado
+
+- **Percepciones e impuestos como listado de la compra**: una factura puede traer varias (percepción de IVA, IIBB de una o más provincias, Ganancias, impuestos internos u otros). Se agregan, editan y quitan desde la tarjeta «Percepciones e impuestos» del detalle, con su base, alícuota e importe.
+- **Catálogo de conceptos por negocio** (botón «Percepciones» en Compras): tipo, provincia (obligatoria para IIBB) y alícuota habitual. Al usarlo en una compra se copian sus datos, así que cambiarlo o borrarlo no toca facturas viejas.
+- **Importe exacto de la factura**: si se escribe, se respeta tal cual y no se recalcula; si se deja vacío se calcula como base × alícuota (la base por defecto es el neto gravado) y se actualiza solo al editar renglones.
+- **El escaneo con IA lee las percepciones** de la factura y sugiere el concepto del catálogo por tipo y provincia. Se revisan en la pantalla de revisión antes de guardar.
+- El detalle muestra neto, IVA, percepciones y total de la factura.
+
+### Cambiado
+
+- El total de la lista de compras suma IVA y percepciones desde sus tablas, y sigue ordenable.
+- Se quitó la percepción de los modales de compra y de renglón, de la revisión del escaneo y de la columna «Percepción $» de la tabla de renglones. El IVA sigue por renglón.
+
+### Técnico
+
+- Tablas `perception_concepts` y `purchase_perceptions`; enums `PerceptionType` y `Jurisdiction`; servicio `PurchasePerceptionSync` (alta, edición y recálculo de las no manuales).
+- Se eliminan `purchase_lines.percepcion_rate` y `purchases.default_percepcion_rate`.
+- `InvoiceExtractor` normaliza las percepciones de forma estricta: tipo desconocido → «otro», provincia inválida o fuera de IIBB → vacía.
+- **Tests nuevos**: `PerceptionConceptTest` y `PurchasePerceptionTest` (21).
+
+### Al deployar
+
+- Corre migraciones. La que mueve los datos crea una percepción «otro / Percepción» por cada compra que tenía alícuota en sus renglones, con el importe congelado desde los renglones. `npm run build`.
+
+---
+
 ## [0.16.0] — 2026-10-07
 
 Rama `v0.16.0-accesos-rapidos-mobile`, sobre v0.15.0. Cada negocio elige qué secciones van en la barra inferior del celular.
