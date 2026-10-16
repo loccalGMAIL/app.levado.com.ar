@@ -109,6 +109,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('price-lists', [PriceListController::class, 'index'])->name('price-lists.index');
 
     Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
+    // Antes de recipes/{recipe} para que "semi-options" no se tome como binding.
+    Route::get('recipes/semi-options', [RecipeController::class, 'semiOptions'])
+        ->middleware('role:super_admin,owner,admin')
+        ->name('recipes.semi-options');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
     Route::get('recipes/{recipe}/print', [RecipePrintController::class, 'show'])->name('recipes.print');
     Route::get('recipes/{recipe}/print/pdf', [RecipePrintController::class, 'pdf'])
