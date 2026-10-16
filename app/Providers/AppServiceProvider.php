@@ -49,6 +49,12 @@ class AppServiceProvider extends ServiceProvider
             throw new LazyLoadingViolationException($model, $relation);
         });
 
+        // Sprite de íconos de los listados (<svg class="ico"><use href="{{ $iconSprite }}#i-…">).
+        // El ?v= es el mtime del archivo: cambia el sprite, cambia la URL y se
+        // invalida el caché del navegador.
+        $spritePath = public_path('icons/sprite.svg');
+        View::share('iconSprite', '/icons/sprite.svg?v='.(is_file($spritePath) ? filemtime($spritePath) : 1));
+
         View::composer('layouts.app', function ($view) {
             try {
                 $tenant = app(Tenant::class);

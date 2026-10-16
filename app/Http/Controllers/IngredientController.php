@@ -58,15 +58,10 @@ class IngredientController extends Controller
             ->get()
             ->keyBy('stockable_id');
 
-        // Lista completa (activos e inactivos) para el select del modal de
-        // reemplazo masivo: el sustituto puede ser cualquier ingrediente,
-        // no sólo los de la página actual.
-        $allIngredients = $tenant->ingredients()->notConverted()->orderBy('name')->get();
-
         // Para el select opcional de categoría en el modal "Convertir a producto".
         $productCategories = $tenant->productCategories()->orderBy('name')->get();
 
-        return view('ingredients.index', compact('ingredients', 'suppliers', 'stockLevels', 'allIngredients', 'productCategories'));
+        return view('ingredients.index', compact('ingredients', 'suppliers', 'stockLevels', 'productCategories'));
     }
 
     public function store(StoreIngredientRequest $request): RedirectResponse

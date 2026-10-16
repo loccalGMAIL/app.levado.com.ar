@@ -98,7 +98,7 @@
                                         <a href="{{ route('credit-notes.show', $note) }}"
                                             aria-label="Ver detalle" title="Ver detalle"
                                             class="dt-action">
-                                            <x-icon name="eye" />
+                                            <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-eye"></use></svg>
                                             <span class="dt-card-only">Ver detalle</span>
                                         </a>
                                         <form method="POST" action="{{ route('credit-notes.destroy', $note) }}"
@@ -108,7 +108,7 @@
                                             <button type="submit"
                                                 aria-label="Eliminar nota de crédito" title="Eliminar nota de crédito"
                                                 class="dt-action dt-action--danger">
-                                                <x-icon name="trash" />
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-trash"></use></svg>
                                                 <span class="dt-card-only">Eliminar</span>
                                             </button>
                                         </form>

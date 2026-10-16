@@ -53,10 +53,7 @@ class PackagingController extends Controller
             ->get()
             ->keyBy('stockable_id');
 
-        // Lista completa para el select del modal de reemplazo masivo.
-        $allPackagings = $tenant->packagings()->orderBy('name')->get();
-
-        return view('packaging.index', compact('packagings', 'suppliers', 'stockLevels', 'allPackagings'));
+        return view('packaging.index', compact('packagings', 'suppliers', 'stockLevels'));
     }
 
     public function store(StorePackagingRequest $request): RedirectResponse

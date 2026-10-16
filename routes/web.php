@@ -109,6 +109,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('price-lists', [PriceListController::class, 'index'])->name('price-lists.index');
 
     Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
+    // Antes de recipes/{recipe} para que "semi-options" no se tome como binding.
+    Route::get('recipes/semi-options', [RecipeController::class, 'semiOptions'])
+        ->middleware('role:super_admin,owner,admin')
+        ->name('recipes.semi-options');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
     Route::get('recipes/{recipe}/print', [RecipePrintController::class, 'show'])->name('recipes.print');
     Route::get('recipes/{recipe}/print/pdf', [RecipePrintController::class, 'pdf'])
@@ -166,6 +170,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 // Costos — escritura (owner y admin)
 Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
     Route::get('catalog/replacement-preview', [CatalogReplacementController::class, 'preview'])->name('catalog.replacement-preview');
+    Route::get('ingredients/replace-options', [CatalogReplacementController::class, 'ingredientOptions'])->name('ingredients.replace-options');
+    Route::get('packaging/replace-options', [CatalogReplacementController::class, 'packagingOptions'])->name('packaging.replace-options');
 
     Route::post('ingredients', [IngredientController::class, 'store'])->name('ingredients.store');
     Route::put('ingredients/{ingredient}', [IngredientController::class, 'update'])->name('ingredients.update');

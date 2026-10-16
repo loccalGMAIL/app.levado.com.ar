@@ -130,68 +130,39 @@
                             </x-data-table.cell>
 
                             <x-data-table.cell role="meta" align="right" label="Stock:" class="font-mono"
-                                x-data="{
-                                    editing: false,
-                                    saving: false,
-                                    isDirty: false,
-                                    qty: {{ $stockQty }},
-                                    qtyFormatted: '{{ number_format($stockQty, 2, ',', '.') }}',
-                                    startEdit() {
-                                        this.isDirty = false;
-                                        this.$refs.stockInput.value = parseFloat(this.qty).toFixed(2);
-                                        this.editing = true;
-                                        this.$nextTick(() => this.$refs.stockInput.select());
-                                    },
-                                    async saveStock() {
-                                        if (this.saving) return;
-                                        if (!this.isDirty) { this.editing = false; return; }
-                                        const raw = this.$refs.stockInput.value.trim();
-                                        if (raw === '') { this.editing = false; return; }
-                                        this.saving = true;
-                                        this.editing = false;
-                                        try {
-                                            const res = await fetch('{{ route('stock.level.update', ['ingredient', $ingredient->id]) }}', {
-                                                method: 'PATCH',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                                    'Accept': 'application/json',
-                                                },
-                                                body: JSON.stringify({ counted_quantity: raw })
-                                            });
-                                            const data = await res.json();
-                                            this.qty = data.quantity;
-                                            this.qtyFormatted = data.quantity_formatted;
-                                        } finally {
-                                            this.saving = false;
-                                        }
-                                    }
-                                }">
+                                x-data="inlineEdit({{ Js::from([
+                                    'url' => route('stock.level.update', ['ingredient', $ingredient->id]),
+                                    'field' => 'counted_quantity',
+                                    'valueKey' => 'quantity',
+                                    'formattedKey' => 'quantity_formatted',
+                                    'value' => $stockQty,
+                                    'formatted' => number_format($stockQty, 2, ',', '.'),
+                                ]) }})">
                                 <span class="inline-flex items-center gap-1.5">
                                     @can('manage-costs')
-                                        <span x-show="!editing && !saving"
+                                        <span x-show="!isEditing && !saving"
                                             @click="startEdit()"
                                             class="cursor-pointer hover:text-horno select-none"
-                                            :class="qty < 0 ? 'text-red-600' : 'text-corteza'"
-                                            x-text="qtyFormatted"></span>
+                                            :class="value < 0 ? 'text-red-600' : 'text-corteza'"
+                                            x-text="formatted"></span>
                                         <input
-                                            x-show="editing"
-                                            x-ref="stockInput"
+                                            x-show="isEditing"
+                                            x-ref="input"
                                             type="number" step="0.01" min="0"
                                             @input="isDirty = true"
-                                            @keydown.enter.prevent="saveStock()"
-                                            @keydown.escape="editing = false; isDirty = false"
-                                            @blur="saveStock()"
+                                            @keydown.enter.prevent="save()"
+                                            @keydown.escape="cancel()"
+                                            @blur="save()"
                                             class="w-24 text-right text-sm border-gray-300 rounded px-1 py-0.5 focus:border-horno focus:ring-horno font-mono">
                                         <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
                                     @else
-                                        <span :class="qty < 0 ? 'text-red-600' : 'text-corteza'" x-text="qtyFormatted"></span>
+                                        <span :class="value < 0 ? 'text-red-600' : 'text-corteza'" x-text="formatted"></span>
                                     @endcan
                                     <span class="text-masa-madre text-xs font-sans">{{ $stockUnit }}</span>
                                     <a href="{{ route('stock.show', ['ingredient', $ingredient->id]) }}"
                                         class="inline-flex items-center gap-1 text-masa-madre hover:text-corteza"
                                         title="Ver movimientos de stock">
-                                        <x-icon name="clock" class="w-3.5 h-3.5" />
+                                        <svg class="ico w-3.5 h-3.5" aria-hidden="true"><use href="{{ $iconSprite }}#i-clock"></use></svg>
                                         <span class="dt-card-only text-xs font-sans underline">historial</span>
                                     </a>
                                 </span>
@@ -199,24 +170,24 @@
 
                             @can('manage-costs')
                                 <x-data-table.cell role="actions">
-                                    <div class="dt-actions">
+                                    <div class="dt-actions dt-actions--grid">
                                         <button type="button" @click="openEdit({{ Js::from($editPayload) }})"
                                             aria-label="Editar ingrediente" title="Editar ingrediente"
                                             class="dt-action">
-                                            <x-icon name="pencil" />
+                                            <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-pencil"></use></svg>
                                             <span class="dt-card-only">Editar</span>
                                         </button>
                                         <button type="button" @click="openReplace({{ Js::from(['id' => $ingredient->id, 'name' => $ingredient->name]) }})"
                                             aria-label="Reemplazar en recetas" title="Reemplazar en recetas"
                                             class="dt-action">
-                                            <x-icon name="arrow-path" />
+                                            <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-arrow-path"></use></svg>
                                             <span class="dt-card-only">Reemplazar</span>
                                         </button>
                                         @if($ingredient->active)
                                             <button type="button" @click="openConvert({{ Js::from(['id' => $ingredient->id, 'name' => $ingredient->name, 'cost_per_unit' => round((float) $ingredient->cost_per_unit, 2), 'unit' => $ingredient->unit->short(), 'stock' => $stockQty]) }})"
                                                 aria-label="Convertir a producto de reventa" title="Convertir a producto de reventa"
                                                 class="dt-action">
-                                                <x-icon name="shopping-bag" />
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-shopping-bag"></use></svg>
                                                 <span class="dt-card-only">Convertir</span>
                                             </button>
                                         @endif
@@ -227,7 +198,7 @@
                                                 aria-label="{{ $ingredient->active ? 'Desactivar' : 'Activar' }}"
                                                 title="{{ $ingredient->active ? 'Desactivar' : 'Activar' }}"
                                                 class="dt-action {{ $ingredient->active ? 'dt-action--danger' : 'dt-action--success' }}">
-                                                <x-icon :name="$ingredient->active ? 'eye-off' : 'check'" />
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-{{ $ingredient->active ? 'eye-off' : 'check' }}"></use></svg>
                                                 <span class="dt-card-only">{{ $ingredient->active ? 'Desactivar' : 'Activar' }}</span>
                                             </button>
                                         </form>

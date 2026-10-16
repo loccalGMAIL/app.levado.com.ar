@@ -6,8 +6,7 @@
         $showUrl = fn ($purchase) => route('purchases.show', array_filter(['purchase' => $purchase->id, 'volver' => request()->getQueryString()]));
     @endphp
 
-    <div class="py-8 px-6 lg:px-8"
-        x-data="{ mobileExpanded: false }">
+    <div class="py-8 px-6 lg:px-8">
 
         <div class="space-y-6">
 
@@ -100,171 +99,91 @@
                     @endif
                 </div>
             @else
-                                <x-responsive-table>
-                    <x-slot:cards>
+                <x-data-table :paginator="$purchases" total-label="compra">
+                    <x-slot:head>
+                        <th class="px-4 py-3 font-medium">
+                            <a href="{{ $sortUrl('date') }}" class="hover:text-corteza">Fecha {{ $sortIcon('date') }}</a>
+                        </th>
+                        <th class="px-4 py-3 font-medium">
+                            <a href="{{ $sortUrl('invoice_number') }}" class="hover:text-corteza">N° Factura {{ $sortIcon('invoice_number') }}</a>
+                        </th>
+                        <th class="px-4 py-3 font-medium">
+                            <a href="{{ $sortUrl('supplier') }}" class="hover:text-corteza">Proveedor {{ $sortIcon('supplier') }}</a>
+                        </th>
+                        <th class="px-4 py-3 font-medium text-center">
+                            <a href="{{ $sortUrl('items') }}" class="hover:text-corteza">Ítems {{ $sortIcon('items') }}</a>
+                        </th>
+                        <th class="px-4 py-3 font-medium text-right">
+                            <a href="{{ $sortUrl('total') }}" class="hover:text-corteza">Total {{ $includeIva ? '(c/IVA)' : '(s/IVA)' }} {{ $sortIcon('total') }}</a>
+                        </th>
+                        <th class="px-4 py-3 font-medium"></th>
+                    </x-slot:head>
+
                     @foreach($purchases as $purchase)
                         @php
-                            $cardTotal = $includeIva
+                            $rowTotal = $includeIva
                                 ? ($purchase->lines_gross_total ?? 0) + ($purchase->perceptions_total ?? 0)
                                 : ($purchase->net_total ?? 0);
-                            $cardAllResolved = $purchase->lines_count > 0 && $purchase->resolved_count >= $purchase->lines_count;
+                            $allResolved = $purchase->lines_count > 0 && $purchase->resolved_count >= $purchase->lines_count;
                         @endphp
-                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <div class="font-medium text-corteza">{{ $purchase->supplier->name }}</div>
-                                    <div class="text-xs text-masa-madre mt-0.5 font-mono [overflow-wrap:anywhere]">
-                                        {{ $purchase->invoice_date->format('d/m/Y') }}
-                                        @if($purchase->invoice_number)
-                                            · #{{ $purchase->invoice_number }}
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="text-right shrink-0">
-                                    <div class="font-mono font-medium text-corteza [overflow-wrap:anywhere]">$ {{ number_format($cardTotal, 2, ',', '.') }}</div>
-                                    <div class="text-xs text-masa-madre mt-0.5">{{ $purchase->lines_count }} ítems</div>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
-                                <a href="{{ $showUrl($purchase) }}"
-                                    class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                    Ver detalle
-                                </a>
-                                @can('manage-costs')
-                                    @if($purchase->lines_count > 0)
-                                        <a href="{{ route('purchases.match', $purchase) }}"
-                                            class="flex-1 py-1.5 px-3 text-sm border rounded text-center transition-colors {{ $cardAllResolved ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-amber-300 text-amber-700 hover:bg-amber-50' }}">
-                                            {{ $cardAllResolved ? 'Vinculada' : 'Vincular' }}
-                                        </a>
-                                    @endif
-                                    <a href="{{ route('credit-notes.index', ['purchase_id' => $purchase->id]) }}"
-                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                        Nota de crédito
+                        <x-data-table.row>
+                            <x-data-table.cell role="subtitle" class="font-mono text-sm text-corteza">
+                                {{ $purchase->invoice_date->format('d/m/Y') }}
+                            </x-data-table.cell>
+                            <x-data-table.cell role="subtitle" class="text-masa-madre font-mono text-xs">
+                                @if($purchase->invoice_number)
+                                    <a href="{{ $showUrl($purchase) }}" class="hover:underline hover:text-corteza transition-colors">
+                                        <span class="dt-card-only">#</span>{{ $purchase->invoice_number }}
                                     </a>
-                                    <form method="POST" action="{{ route('purchases.destroy', $purchase) }}"
-                                        onsubmit="return confirm('¿Eliminar esta compra y todos sus renglones?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="py-1.5 px-3 text-sm border border-red-300 text-red-600 hover:bg-red-50 rounded transition-colors">
-                                            Eliminar
-                                        </button>
-                                    </form>
-                                @endcan
-                            </div>
-                        </div>
-                    @endforeach
-                    </x-slot:cards>
-
-                        <thead class="bg-miga text-masa-madre border-b border-miga">
-                            <tr>
-                                <th class="px-4 py-3 font-medium">
-                                    <a href="{{ $sortUrl('date') }}" class="hover:text-corteza">Fecha {{ $sortIcon('date') }}</a>
-                                </th>
-                                <th class="px-4 py-3 font-medium">
-                                    <a href="{{ $sortUrl('invoice_number') }}" class="hover:text-corteza">N° Factura {{ $sortIcon('invoice_number') }}</a>
-                                </th>
-                                <th class="px-4 py-3 font-medium">
-                                    <a href="{{ $sortUrl('supplier') }}" class="hover:text-corteza">Proveedor {{ $sortIcon('supplier') }}</a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-center">
-                                    <a href="{{ $sortUrl('items') }}" class="hover:text-corteza">Ítems {{ $sortIcon('items') }}</a>
-                                </th>
-                                <th class="px-4 py-3 font-medium text-right">
-                                    <a href="{{ $sortUrl('total') }}" class="hover:text-corteza">Total {{ $includeIva ? '(c/IVA)' : '(s/IVA)' }} {{ $sortIcon('total') }}</a>
-                                </th>
-                                <th class="px-4 py-3 font-medium"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-miga">
-                            @foreach($purchases as $purchase)
-                                <tr>
-                                    <td class="px-4 py-3 font-mono text-sm text-corteza">
-                                        {{ $purchase->invoice_date->format('d/m/Y') }}
-                                    </td>
-                                    <td class="px-4 py-3 text-masa-madre font-mono text-xs">
-                                        @if($purchase->invoice_number)
-                                            <a href="{{ $showUrl($purchase) }}"
-                                               class="hover:underline hover:text-corteza transition-colors">
-                                                {{ $purchase->invoice_number }}
+                                @endif
+                            </x-data-table.cell>
+                            <x-data-table.cell role="title">
+                                <span class="font-medium text-corteza">{{ $purchase->supplier->name }}</span>
+                            </x-data-table.cell>
+                            <x-data-table.cell role="meta" class="md:text-center text-masa-madre">
+                                {{ $purchase->lines_count }}<span class="dt-card-only"> ítems</span>
+                            </x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" class="font-mono text-corteza [overflow-wrap:anywhere]">
+                                ${{ number_format($rowTotal, 2, ',', '.') }}
+                            </x-data-table.cell>
+                            <x-data-table.cell role="actions">
+                                <div class="dt-actions dt-actions--grid">
+                                    <a href="{{ $showUrl($purchase) }}" title="Ver detalle" aria-label="Ver detalle"
+                                        class="dt-action">
+                                        <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-pencil"></use></svg>
+                                        <span class="dt-card-only">Ver detalle</span>
+                                    </a>
+                                    @can('manage-costs')
+                                        @if($purchase->lines_count > 0)
+                                            <a href="{{ route('purchases.match', $purchase) }}"
+                                                class="dt-action {{ $allResolved ? 'text-green-600 hover:text-green-700' : 'text-amber-600 hover:text-amber-700' }}"
+                                                aria-label="{{ $allResolved ? 'Vinculada' : 'Vincular' }}"
+                                                title="{{ $allResolved ? 'No queda ningún renglón por resolver' : ($purchase->lines_count - $purchase->resolved_count) . ' renglón(es) sin resolver' }}">
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-link"></use></svg>
+                                                <span class="dt-card-only">{{ $allResolved ? 'Vinculada' : 'Vincular' }}</span>
                                             </a>
-                                        @else
-                                            —
                                         @endif
-                                    </td>
-                                    <td class="px-4 py-3 font-medium text-corteza">
-                                        {{ $purchase->supplier->name }}
-                                    </td>
-                                    <td class="px-4 py-3 text-center text-masa-madre">
-                                        {{ $purchase->lines_count }}
-                                    </td>
-                                    @php
-                                        $rowTotal = $includeIva
-                                            ? ($purchase->lines_gross_total ?? 0) + ($purchase->perceptions_total ?? 0)
-                                            : ($purchase->net_total ?? 0);
-                                    @endphp
-                                    <td class="px-4 py-3 text-right font-mono text-corteza">
-                                        ${{ number_format($rowTotal, 2, ',', '.') }}
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex items-center justify-end gap-1">
-                                            <a href="{{ $showUrl($purchase) }}"
-                                                class="inline-flex p-1 text-masa-madre hover:text-corteza transition-colors"
-                                                title="Ver detalle">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                                </svg>
-                                            </a>
-                                            @can('manage-costs')
-                                                @if($purchase->lines_count > 0)
-                                                    @php
-                                                        $allResolved = $purchase->resolved_count >= $purchase->lines_count;
-                                                    @endphp
-                                                    <a href="{{ route('purchases.match', $purchase) }}"
-                                                        class="inline-flex p-1 transition-colors {{ $allResolved ? 'text-green-500 hover:text-green-700' : 'text-amber-500 hover:text-amber-700' }}"
-                                                        title="{{ $allResolved ? 'No queda ningún renglón por resolver' : ($purchase->lines_count - $purchase->resolved_count) . ' renglón(es) sin resolver' }}">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                                        </svg>
-                                                    </a>
-                                                @endif
-                                                <a href="{{ route('credit-notes.index', ['purchase_id' => $purchase->id]) }}"
-                                                    class="inline-flex p-1 text-masa-madre hover:text-corteza transition-colors"
-                                                    title="Nota de crédito">
-                                                    <x-icon name="receipt-refund" />
-                                                </a>
-                                                <form method="POST" action="{{ route('purchases.destroy', $purchase) }}"
-                                                    onsubmit="return confirm('¿Eliminar esta compra y todos sus renglones?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="inline-flex p-1 text-red-400 hover:text-red-600 transition-colors"
-                                                        title="Eliminar compra">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            @endcan
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-
-                    <x-slot:footer>
-                        @if($purchases->hasPages())
-                        <div class="px-4 py-3 border-t border-miga">
-                            {{ $purchases->links() }}
-                        </div>
-                    @endif
-                    </x-slot:footer>
-                </x-responsive-table>
-
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-masa-madre">{{ $purchases->total() }} compra(s) en total.</p>
-                    <x-per-page-select :paginator="$purchases" />
-                </div>
+                                        <a href="{{ route('credit-notes.index', ['purchase_id' => $purchase->id]) }}"
+                                            class="dt-action" title="Nota de crédito" aria-label="Nota de crédito">
+                                            <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-receipt-refund"></use></svg>
+                                            <span class="dt-card-only">Nota de crédito</span>
+                                        </a>
+                                        <form method="POST" action="{{ route('purchases.destroy', $purchase) }}"
+                                            onsubmit="return confirm('¿Eliminar esta compra y todos sus renglones?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="dt-action dt-action--danger"
+                                                title="Eliminar compra" aria-label="Eliminar compra">
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-trash"></use></svg>
+                                                <span class="dt-card-only">Eliminar</span>
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </div>
+                            </x-data-table.cell>
+                        </x-data-table.row>
+                    @endforeach
+                </x-data-table>
             @endif
 
         </div>

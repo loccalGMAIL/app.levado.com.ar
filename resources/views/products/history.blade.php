@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="title">Historial</x-slot>
 
-    <div class="py-8 px-6 lg:px-8" x-data="{ mobileExpanded: false }">
+    <div class="py-8 px-6 lg:px-8">
         <div class="space-y-6">
 
             <div>
@@ -57,89 +57,51 @@
                     @endif
                 </x-empty-state>
             @else
-                <x-responsive-table>
-                    <x-slot:cards>
+                <x-data-table :paginator="$productions" total-label="producción" total-suffix="(es)">
+                    <x-slot:head>
+                        <th class="px-4 py-3 font-medium">Fecha</th>
+                        <th class="px-4 py-3 font-medium">Artículo</th>
+                        <th class="px-4 py-3 font-medium text-right">Cantidad</th>
+                        <th class="px-4 py-3 font-medium text-right">Costo total</th>
+                        <th class="px-4 py-3 font-medium">Origen</th>
+                        <th class="px-4 py-3 font-medium">Estado</th>
+                        <th class="px-4 py-3"></th>
+                    </x-slot:head>
+
                     @foreach($productions as $production)
-                        <a href="{{ route('production.show', $production) }}"
-                            class="block bg-white border border-miga rounded-lg p-4 shadow-sm {{ $production->isCancelled() ? 'opacity-60' : '' }}">
-                            <div class="flex items-start justify-between">
-                                <div class="font-medium text-corteza">{{ $production->product?->name ?? '—' }}</div>
-                                <x-production-status-badge :status="$production->status" />
-                            </div>
-                            <div class="text-xs text-masa-madre mt-1">
-                                {{ $production->produced_at?->format('d/m/Y H:i') }}
+                        <x-data-table.row :dimmed="$production->isCancelled()">
+                            <x-data-table.cell role="subtitle" class="text-masa-madre whitespace-nowrap">{{ $production->produced_at?->format('d/m/Y H:i') }}</x-data-table.cell>
+                            <x-data-table.cell role="title">
+                                <a href="{{ route('production.show', $production) }}" class="hover:underline">
+                                    {{ $production->product?->name ?? '—' }}
+                                </a>
+                            </x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" class="text-corteza font-mono">
+                                {{ number_format($production->quantity, 2, ',', '.') }} {{ $production->unit->short() }}
+                            </x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" label="Costo:" class="text-corteza font-mono">
+                                <span class="dt-card-only">$ </span>{{ number_format($production->total_cost, 2, ',', '.') }}
+                            </x-data-table.cell>
+                            <x-data-table.cell role="subtitle">
                                 @if($production->productionOrder)
-                                    · {{ $production->productionOrder->numberLabel() }}
-                                @else
-                                    · Ad-hoc
-                                @endif
-                            </div>
-                            <div class="mt-2 flex items-center justify-between text-sm">
-                                <span class="text-corteza font-mono">{{ number_format($production->quantity, 2, ',', '.') }} {{ $production->unit->short() }}</span>
-                                <span class="text-masa-madre">Costo <span class="font-mono text-corteza">$ {{ number_format($production->total_cost, 2, ',', '.') }}</span></span>
-                            </div>
-                        </a>
-                    @endforeach
-                    </x-slot:cards>
-
-                    <thead class="bg-miga text-masa-madre border-b border-miga">
-                        <tr>
-                            <th class="px-4 py-3 font-medium">Fecha</th>
-                            <th class="px-4 py-3 font-medium">Artículo</th>
-                            <th class="px-4 py-3 font-medium text-right">Cantidad</th>
-                            <th class="px-4 py-3 font-medium text-right">Costo total</th>
-                            <th class="px-4 py-3 font-medium">Origen</th>
-                            <th class="px-4 py-3 font-medium">Estado</th>
-                            <th class="px-4 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-miga">
-                        @foreach($productions as $production)
-                            <tr class="{{ $production->isCancelled() ? 'opacity-60' : '' }}">
-                                <td class="px-4 py-3 text-masa-madre whitespace-nowrap">{{ $production->produced_at?->format('d/m/Y H:i') }}</td>
-                                <td class="px-4 py-3 font-medium text-corteza">
-                                    <a href="{{ route('production.show', $production) }}" class="hover:underline">
-                                        {{ $production->product?->name ?? '—' }}
+                                    <a href="{{ route('production-orders.show', $production->productionOrder) }}" class="text-horno hover:underline">
+                                        {{ $production->productionOrder->numberLabel() }}
                                     </a>
-                                </td>
-                                <td class="px-4 py-3 text-right text-corteza font-mono">
-                                    {{ number_format($production->quantity, 2, ',', '.') }} {{ $production->unit->short() }}
-                                </td>
-                                <td class="px-4 py-3 text-right text-corteza font-mono">
-                                    {{ number_format($production->total_cost, 2, ',', '.') }}
-                                </td>
-                                <td class="px-4 py-3">
-                                    @if($production->productionOrder)
-                                        <a href="{{ route('production-orders.show', $production->productionOrder) }}" class="text-horno hover:underline">
-                                            {{ $production->productionOrder->numberLabel() }}
-                                        </a>
-                                    @else
-                                        <span class="text-masa-madre">Ad-hoc</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">
-                                    <x-production-status-badge :status="$production->status" />
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <a href="{{ route('production.show', $production) }}" class="text-sm text-horno hover:underline">Ver</a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-
-                    <x-slot:footer>
-                        @if($productions->hasPages())
-                            <div class="px-4 py-3 border-t border-miga">
-                                {{ $productions->links() }}
-                            </div>
-                        @endif
-                    </x-slot:footer>
-                </x-responsive-table>
-
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-masa-madre">{{ $productions->total() }} producción(es) en total.</p>
-                    <x-per-page-select :paginator="$productions" />
-                </div>
+                                @else
+                                    <span class="text-masa-madre">Ad-hoc</span>
+                                @endif
+                            </x-data-table.cell>
+                            <x-data-table.cell role="badge">
+                                <x-production-status-badge :status="$production->status" />
+                            </x-data-table.cell>
+                            <x-data-table.cell role="actions">
+                                <div class="dt-actions">
+                                    <a href="{{ route('production.show', $production) }}" class="dt-action !text-horno">Ver</a>
+                                </div>
+                            </x-data-table.cell>
+                        </x-data-table.row>
+                    @endforeach
+                </x-data-table>
             @endif
 
         </div>

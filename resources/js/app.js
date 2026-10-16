@@ -7,6 +7,8 @@ window.Alpine = Alpine;
 window.TomSelect = TomSelect;
 
 import './pricing/price-cell';
+import './pricing/price-editor';
+import './inline-edit';
 import './production/consumption-preview';
 import './production/order-lines';
 
@@ -43,8 +45,47 @@ if ('serviceWorker' in navigator) {
 // posiciona con JS sobre las coordenadas del control) — sin esto, cualquier
 // ancestro con overflow-hidden (como el borde redondeado de la grilla de
 // artículos dentro de un modal) recorta el desplegable y lo deja invisible.
+//
+// Modo remoto (`data-remote="<url>"`): las opciones no vienen en el HTML sino de
+// un endpoint que devuelve [{ id, name, is_active, unit_short? }], filtrado
+// por `q` y, si el select tiene `data-exclude`, sin ese id. Se precarga al enfocar
+// y se vuelve a pedir al tipear (con throttle). Evita renderizar en cada carga del
+// índice un <select> con cientos de opciones que casi nunca se abre.
+function remoteSelectOptions(el) {
+    const renderOption = (data, escape) => {
+        const inactive = data.is_active === false ? ' (inactiva)' : '';
+        const unit = data.unit_short ? ` (${escape(data.unit_short)})` : '';
+
+        return `<div>${escape(data.name)}${inactive}${unit}</div>`;
+    };
+
+    return {
+        valueField: 'id',
+        labelField: 'name',
+        searchField: ['name'],
+        preload: 'focus',
+        loadThrottle: 300,
+        load(query, callback) {
+            const url = new URL(el.dataset.remote, window.location.origin);
+            url.searchParams.set('q', query);
+            if (el.dataset.exclude) {
+                url.searchParams.set('exclude', el.dataset.exclude);
+            }
+            fetch(url, { headers: { Accept: 'application/json' } })
+                .then((res) => (res.ok ? res.json() : []))
+                .then(callback)
+                .catch(() => callback());
+        },
+        render: { option: renderOption, item: renderOption },
+    };
+}
+
 document.querySelectorAll('[data-searchable]').forEach(function (el) {
-    const ts = new TomSelect(el, { maxOptions: null, dropdownParent: 'body' });
+    const ts = new TomSelect(el, {
+        maxOptions: null,
+        dropdownParent: 'body',
+        ...(el.dataset.remote ? remoteSelectOptions(el) : {}),
+    });
     el._ts = ts;
 });
 

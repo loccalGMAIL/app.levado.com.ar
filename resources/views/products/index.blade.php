@@ -39,7 +39,6 @@
 
     <div class="py-8 px-6 lg:px-8"
         x-data="{
-            mobileExpanded: false,
             // Asignación masiva de categoría: sólo en la tabla (no en las
             // cards) — clasificar 190+ artículos es tarea de escritorio.
             // x-model en checkbox de array guarda strings, por eso pageIds
@@ -173,226 +172,141 @@
                     @endif
                 </x-empty-state>
             @else
-                <x-responsive-table>
-                    <x-slot:cards>
+                <x-data-table :paginator="$products" total-label="artículo">
+                    <x-slot:head>
+                        @can('manage-costs')
+                            <th class="px-4 py-3 w-8">
+                                <input type="checkbox" :checked="allPageSelected" @change="togglePage($event.target.checked)"
+                                    aria-label="Seleccionar todos los de esta página"
+                                    class="rounded border-gray-300 text-horno focus:ring-horno">
+                            </th>
+                        @endcan
+                        <th class="px-4 py-3 font-medium">Código</th>
+                        <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
+                        <th class="px-4 py-3 font-medium">Tipo</th>
+                        <th class="px-4 py-3 font-medium">Categoría</th>
+                        <th class="px-4 py-3 font-medium">Unidad</th>
+                        <th class="px-4 py-3 font-medium text-right">Costo/u</th>
+                        <th class="px-4 py-3 font-medium text-right">Precio ({{ $priceList->name }})/u</th>
+                        <th class="px-4 py-3 font-medium text-right">Margen</th>
+                        @can('manage-costs')
+                            <th class="px-4 py-3"></th>
+                        @endcan
+                    </x-slot:head>
+
                     @foreach($products as $product)
                         @php
                             $cost = $product->fullCost($overheadPerHour);
                             $price = isset($priceMap[$product->id]) ? (float) $priceMap[$product->id] : null;
                             $marginPct = ($price !== null && $cost !== null && $price > 0) ? ($price - $cost) / $price * 100 : null;
                             $marginColor = $marginPct === null ? 'text-masa-madre' : ($marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500'));
+                            $initPriceFormatted = $price !== null ? number_format($price, 2, ',', '.') : '';
+                            $initMarginPctFormatted = $marginPct !== null ? number_format($marginPct, 1, ',', '.') : '';
+                            $policy = $policyMap[$product->id] ?? ['type' => 'manual', 'value' => null];
                         @endphp
-                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $product->active ? '' : 'opacity-50' }}">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <div class="font-medium text-corteza">{{ $product->name }}</div>
-                                    <div class="text-xs text-masa-madre mt-0.5">
-                                        <x-product-type-badge :type="$product->type" />
-                                        · {{ $product->unit->short() }}
-                                        @if($product->category)
-                                            · {{ $product->category->name }}
-                                        @endif
-                                        @if($product->isManufactured() && $product->recipe)
-                                            · {{ $product->isRecipePresentation() ? rtrim(rtrim(number_format((float) $product->recipe_quantity, 3, ",", "."), "0"), ",").' '.$product->recipe->yield_unit->short().' de ' : '' }}{{ $product->recipe->name }}
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
-                                <div>
-                                    <div class="text-masa-madre text-[11px]">Costo/u</div>
-                                    <div class="font-mono text-corteza">{{ $cost !== null ? '$ '.number_format($cost, 2, ',', '.') : '—' }}</div>
-                                </div>
-                                <div>
-                                    <div class="text-masa-madre text-[11px]">Precio</div>
-                                    <div class="font-mono text-corteza">{{ $price !== null ? '$ '.number_format($price, 2, ',', '.') : '—' }}</div>
-                                </div>
-                                <div>
-                                    <div class="text-masa-madre text-[11px]">Margen</div>
-                                    <div class="font-mono {{ $marginColor }}">{{ $marginPct !== null ? number_format($marginPct, 1, ',', '.').'%' : '—' }}</div>
-                                </div>
-                            </div>
-                            <div class="mt-1 text-[11px] text-masa-madre">Precios: {{ $priceList->name }}</div>
-                            @if($product->barcode)
-                                <div class="mt-1 text-xs text-masa-madre">{{ $product->barcode }}</div>
-                            @endif
+                        <x-data-table.row :dimmed="! $product->active"
+                            x-data="priceCell({{ Js::from([
+                                'url' => route('products.prices.update', [$product, $priceList]),
+                                'price' => $price,
+                                'priceFormatted' => $initPriceFormatted,
+                                'marginPct' => $marginPct,
+                                'marginPctFormatted' => $initMarginPctFormatted,
+                                'marginColor' => $marginColor,
+                                'policyType' => $policy['type'],
+                                'policyValue' => $policy['value'] !== null ? (float) $policy['value'] : null,
+                            ]) }})">
                             @can('manage-costs')
-                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
-                                    <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" />
-                                    <button type="button"
-                                        @click="openEdit({{ Js::from($editPayload($product)) }})"
-                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                        Editar
-                                    </button>
-                                    <form method="POST" action="{{ route('products.toggle-active', $product) }}" class="flex-1">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit"
-                                            class="w-full py-1.5 px-3 text-sm rounded transition-colors {{ $product->active ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-600 hover:bg-green-50' }}">
-                                            {{ $product->active ? 'Desactivar' : 'Activar' }}
-                                        </button>
-                                    </form>
-                                </div>
-                            @endcan
-                        </div>
-                    @endforeach
-                    </x-slot:cards>
-
-                    <thead class="bg-miga text-masa-madre border-b border-miga">
-                        <tr>
-                            @can('manage-costs')
-                                <th class="px-4 py-3 w-8">
-                                    <input type="checkbox" :checked="allPageSelected" @change="togglePage($event.target.checked)"
-                                        aria-label="Seleccionar todos los de esta página"
+                                {{-- La selección masiva es de escritorio: no entra en la card. --}}
+                                <x-data-table.cell role="meta" cards="hide">
+                                    <input type="checkbox" value="{{ $product->id }}" x-model="selectedIds"
+                                        aria-label="Seleccionar {{ $product->name }}"
                                         class="rounded border-gray-300 text-horno focus:ring-horno">
-                                </th>
+                                </x-data-table.cell>
                             @endcan
-                            <th class="px-4 py-3 font-medium">Código</th>
-                            <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
-                            <th class="px-4 py-3 font-medium">Tipo</th>
-                            <th class="px-4 py-3 font-medium">Categoría</th>
-                            <th class="px-4 py-3 font-medium">Unidad</th>
-                            <th class="px-4 py-3 font-medium text-right">Costo/u</th>
-                            <th class="px-4 py-3 font-medium text-right">Precio ({{ $priceList->name }})/u</th>
-                            <th class="px-4 py-3 font-medium text-right">Margen</th>
-                            @can('manage-costs')
-                                <th class="px-4 py-3"></th>
-                            @endcan
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-miga">
-                        @foreach($products as $product)
-                            @php
-                                $cost = $product->fullCost($overheadPerHour);
-                                $price = isset($priceMap[$product->id]) ? (float) $priceMap[$product->id] : null;
-                                $marginPct = ($price !== null && $cost !== null && $price > 0) ? ($price - $cost) / $price * 100 : null;
-                                $marginColor = $marginPct === null ? 'text-masa-madre' : ($marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500'));
-                                $initPriceFormatted = $price !== null ? number_format($price, 2, ',', '.') : '';
-                                $initMarginPctFormatted = $marginPct !== null ? number_format($marginPct, 1, ',', '.') : '';
-                                $policy = $policyMap[$product->id] ?? ['type' => 'manual', 'value' => null];
-                            @endphp
-                            <tr class="{{ $product->active ? '' : 'opacity-50' }}"
-                                x-data="priceCell({
-                                    url: @js(route('products.prices.update', [$product, $priceList])),
-                                    price: {{ $price ?? 'null' }},
-                                    priceFormatted: '{{ $initPriceFormatted }}',
-                                    marginPct: {{ $marginPct ?? 'null' }},
-                                    marginPctFormatted: '{{ $initMarginPctFormatted }}',
-                                    marginColor: '{{ $marginColor }}',
-                                    policyType: '{{ $policy['type'] }}',
-                                    policyValue: {{ $policy['value'] ?? 'null' }},
-                                })">
+                            <x-data-table.cell role="meta" class="text-masa-madre text-xs font-mono">
+                                {{ $product->barcode ?? $product->sku }}
+                            </x-data-table.cell>
+                            <x-data-table.cell role="title">
                                 @can('manage-costs')
-                                    <td class="px-4 py-3">
-                                        <input type="checkbox" value="{{ $product->id }}" x-model="selectedIds"
-                                            aria-label="Seleccionar {{ $product->name }}"
-                                            class="rounded border-gray-300 text-horno focus:ring-horno">
-                                    </td>
-                                @endcan
-                                <td class="px-4 py-3 text-masa-madre text-xs font-mono">
-                                    {{ $product->barcode ?? ($product->sku ?? '—') }}
-                                </td>
-                                <td class="px-4 py-3 font-medium text-corteza">
-                                    @can('manage-costs')
-                                        <button type="button"
-                                            @click="openEdit({{ Js::from($editPayload($product)) }})"
-                                            class="hover:underline text-left">
-                                            {{ $product->name }}
-                                        </button>
-                                    @else
+                                    <button type="button" @click="openEdit({{ Js::from($editPayload($product)) }})"
+                                        class="font-medium text-corteza hover:underline text-left">
                                         {{ $product->name }}
-                                    @endcan
-                                </td>
-                                <td class="px-4 py-3">
-                                    <x-product-type-badge :type="$product->type" />
-                                </td>
-                                <td class="px-4 py-3 text-masa-madre text-xs">
-                                    @if($product->category)
-                                        <span class="inline-flex items-center gap-1">
-                                            {{ $product->category->name }}
-                                            @unless($product->category->producible)
-                                                <span class="text-[10px] text-gray-400 whitespace-nowrap" title="Excluido de los selectores de Producción">no se produce</span>
-                                            @endunless
-                                        </span>
-                                    @else
-                                        —
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-masa-madre">
-                                    {{ $product->unit->short() }}
-                                </td>
-                                <td class="px-4 py-3 text-right text-corteza font-mono">
-                                    {{ $cost !== null ? number_format($cost, 2, ',', '.') : '—' }}
-                                </td>
-                                <td class="px-4 py-3 text-right text-corteza font-mono">
-                                    @can('manage-costs')
-                                        <div @click="startEdit($event)" class="cursor-pointer hover:text-horno select-none inline-flex flex-col items-end gap-0.5">
-                                            <span x-show="!saving">
-                                                <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
-                                                <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
-                                            </span>
-                                            <span x-show="saving" class="text-xs text-masa-madre">…</span>
-                                            <span x-show="hasPolicy" x-text="policyBadge"
-                                                class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
-                                        </div>
-                                        <x-price-cell-editor />
-                                    @else
-                                        {{ $price !== null ? '$ '.number_format($price, 2, ',', '.') : '—' }}
-                                    @endcan
-                                </td>
-                                <td class="px-4 py-3 text-right font-mono" :class="marginColor">
-                                    <span x-show="marginPct !== null" x-text="marginPctFormatted + '%'"></span>
-                                    <span x-show="marginPct === null" class="text-masa-madre">—</span>
-                                </td>
-                                @can('manage-costs')
-                                    <td class="px-4 py-3">
-                                        <div class="flex items-center justify-end gap-1">
-                                            <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" />
-                                            <button type="button"
-                                                @click="openEdit({{ Js::from($editPayload($product)) }})"
-                                                aria-label="Editar artículo" title="Editar artículo"
-                                                class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                                </svg>
-                                            </button>
-                                            <form method="POST" action="{{ route('products.toggle-active', $product) }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit"
-                                                    aria-label="{{ $product->active ? 'Desactivar' : 'Activar' }}" title="{{ $product->active ? 'Desactivar' : 'Activar' }}"
-                                                    class="p-1.5 rounded transition-colors {{ $product->active ? 'text-red-500 hover:text-red-700 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50' }}">
-                                                    @if($product->active)
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                                        </svg>
-                                                    @else
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                                        </svg>
-                                                    @endif
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
+                                    </button>
+                                @else
+                                    <span class="font-medium text-corteza">{{ $product->name }}</span>
                                 @endcan
-                            </tr>
-                        @endforeach
-                    </tbody>
-
-                    <x-slot:footer>
-                        @if($products->hasPages())
-                            <div class="px-4 py-3 border-t border-miga">
-                                {{ $products->links() }}
-                            </div>
-                        @endif
-                    </x-slot:footer>
-                </x-responsive-table>
-
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-masa-madre">{{ $products->total() }} artículo(s) en total.</p>
-                    <x-per-page-select :paginator="$products" />
-                </div>
+                                @if($product->isManufactured() && $product->recipe && ($product->isRecipePresentation() || $product->recipe->name !== $product->name))
+                                    <span class="dt-card-only text-xs text-masa-madre font-normal">
+                                        {{ $product->isRecipePresentation() ? rtrim(rtrim(number_format((float) $product->recipe_quantity, 3, ",", "."), "0"), ",").' '.$product->recipe->yield_unit->short().' de ' : '' }}{{ $product->recipe->name }}
+                                    </span>
+                                @endif
+                            </x-data-table.cell>
+                            <x-data-table.cell role="subtitle">
+                                <x-product-type-badge :type="$product->type" />
+                            </x-data-table.cell>
+                            <x-data-table.cell role="subtitle" class="text-masa-madre text-xs">
+                                @if($product->category)
+                                    <span class="inline-flex items-center gap-1">
+                                        {{ $product->category->name }}
+                                        @unless($product->category->producible)
+                                            <span class="text-[10px] text-gray-400 whitespace-nowrap" title="Excluido de los selectores de Producción">no se produce</span>
+                                        @endunless
+                                    </span>
+                                @endif
+                            </x-data-table.cell>
+                            <x-data-table.cell role="subtitle" class="text-masa-madre">{{ $product->unit->short() }}</x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" label="Costo/u:" class="text-corteza font-mono">
+                                {{ $cost !== null ? number_format($cost, 2, ',', '.') : '' }}
+                                @can('manage-costs')
+                                    <x-cost-source-badge :product="$product" :history-url="route('products.cost-history', $product)" class="inline-flex align-middle" />
+                                @endcan
+                            </x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" label="Precio ({{ $priceList->name }}):" class="text-corteza font-mono">
+                                @can('manage-costs')
+                                    <div @click="startEdit($event)"
+                                        class="cursor-pointer hover:text-horno select-none inline-flex items-center gap-1 md:flex-col md:items-end md:gap-0.5">
+                                        <span x-show="!saving">
+                                            <span x-show="price !== null" x-text="'$ ' + priceFormatted"></span>
+                                            <span x-show="price === null" class="text-xs text-masa-madre hover:text-corteza">Agregar →</span>
+                                        </span>
+                                        <span x-show="saving" class="text-xs text-masa-madre">…</span>
+                                        <span x-show="hasPolicy" x-text="policyBadge"
+                                            class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
+                                        <svg class="ico w-3 h-3 text-masa-madre md:hidden" x-show="!hasPolicy" aria-hidden="true"><use href="{{ $iconSprite }}#i-pencil"></use></svg>
+                                    </div>
+                                @else
+                                    {{ $price !== null ? '$ '.number_format($price, 2, ',', '.') : '' }}
+                                @endcan
+                            </x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" label="Margen:" class="font-mono" x-bind:class="marginColor">
+                                <span x-show="marginPct !== null" x-text="marginPctFormatted + '%'"></span>
+                                <span x-show="marginPct === null" class="text-masa-madre">—</span>
+                            </x-data-table.cell>
+                            @can('manage-costs')
+                                <x-data-table.cell role="actions">
+                                    <div class="dt-actions">
+                                        <button type="button" @click="openEdit({{ Js::from($editPayload($product)) }})"
+                                            aria-label="Editar artículo" title="Editar artículo"
+                                            class="dt-action">
+                                            <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-pencil"></use></svg>
+                                            <span class="dt-card-only">Editar</span>
+                                        </button>
+                                        <form method="POST" action="{{ route('products.toggle-active', $product) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit"
+                                                aria-label="{{ $product->active ? 'Desactivar' : 'Activar' }}" title="{{ $product->active ? 'Desactivar' : 'Activar' }}"
+                                                class="dt-action {{ $product->active ? 'dt-action--danger' : 'dt-action--success' }}">
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-{{ $product->active ? 'eye-off' : 'check' }}"></use></svg>
+                                                <span class="dt-card-only">{{ $product->active ? 'Desactivar' : 'Activar' }}</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </x-data-table.cell>
+                            @endcan
+                        </x-data-table.row>
+                    @endforeach
+                </x-data-table>
             @endif
 
         </div>

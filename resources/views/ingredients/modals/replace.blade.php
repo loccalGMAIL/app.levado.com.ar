@@ -28,7 +28,13 @@
             toId = '';
             preview = null;
             const ts = $refs.toSelect._ts;
-            if (ts) { ts.clear(true); }
+            if (ts) {
+                ts.clear(true);
+                ts.clearOptions();
+                // clearOptions no quita la marca de precargado: sin esto no vuelve a
+                // pedir las opciones al enfocar con el nuevo `exclude`.
+                ts.wrapper.classList.remove('preloaded');
+            }
         })">
         @csrf
 
@@ -41,15 +47,11 @@
             <x-input-label value="Reemplazar por" />
             <select x-ref="toSelect" name="to_id" required
                 data-searchable
+                data-remote="{{ route('ingredients.replace-options') }}"
+                :data-exclude="replacing?.id"
                 x-model="toId" @change="loadPreview()"
                 class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
                 <option value="">— Seleccioná el ingrediente sustituto —</option>
-                @foreach($allIngredients as $ing)
-                    <option value="{{ $ing->id }}">
-                        {{ $ing->name }}@if(! $ing->active) (inactivo)@endif
-                        ({{ $ing->unit->short() }})
-                    </option>
-                @endforeach
             </select>
             <p x-show="toId && replacing && Number(toId) === replacing.id" x-cloak class="mt-1 text-xs text-red-600">
                 Elegí un ingrediente distinto del que estás reemplazando.

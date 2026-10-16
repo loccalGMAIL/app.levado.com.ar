@@ -73,6 +73,10 @@
 
         <x-pwa-install-banner />
 
+        @can('manage-costs')
+            <x-price-cell-editor />
+        @endcan
+
         @stack('scripts')
 
     </body>

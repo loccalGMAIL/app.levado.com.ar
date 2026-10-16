@@ -4,6 +4,13 @@
     @php
         $errorsInCreate = $errors->hasAny(['name', 'fixed_cost_category_id', 'monthly_amount', 'period']) && old('_form') === 'create';
         $errorsInEdit   = $errors->hasAny(['name', 'fixed_cost_category_id', 'monthly_amount', 'period']) && old('_form') === 'edit';
+        $editPayload = fn ($fixedCost) => [
+            'id'                     => $fixedCost->id,
+            'name'                   => $fixedCost->name,
+            'fixed_cost_category_id' => $fixedCost->fixed_cost_category_id ?? '',
+            'monthly_amount'         => $fixedCost->monthly_amount,
+            'period'                 => now()->format('Y-m'),
+        ];
         $editingDefault = ['id' => null, 'name' => '', 'fixed_cost_category_id' => '', 'monthly_amount' => '', 'period' => now()->format('Y-m')];
         $editingOnError = $errorsInEdit ? [
             'id'                     => old('fixed_cost_id'),
@@ -16,7 +23,6 @@
 
     <div class="py-8 px-6 lg:px-8"
         x-data="{
-            mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
                 this.editing = record;
@@ -95,183 +101,81 @@
                     @endif
                 </x-empty-state>
             @else
-                                <x-responsive-table>
-                    <x-slot:cards>
+                <x-data-table :paginator="$fixedCosts" total-label="gasto">
+                    <x-slot:head>
+                        <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
+                        <th class="px-4 py-3 font-medium">Categoría</th>
+                        <x-sortable-th column="monthly_amount" :sort="$sort" :dir="$dir" align="right">Monto mensual</x-sortable-th>
+                        <th class="px-4 py-3 font-medium">Estado</th>
+                        @can('manage-costs')
+                            <th class="px-4 py-3"></th>
+                        @endcan
+                    </x-slot:head>
+
                     @foreach($fixedCosts as $fixedCost)
-                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $fixedCost->active ? '' : 'opacity-50' }}">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <div class="font-medium text-corteza">{{ $fixedCost->name }}</div>
-                                    @if($fixedCost->category)
-                                        <div class="text-xs text-masa-madre mt-0.5">{{ $fixedCost->category->name }}</div>
-                                    @endif
-                                    <div class="text-sm font-mono text-corteza mt-1 [overflow-wrap:anywhere] flex items-center gap-1.5">
-                                        $ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }} / mes
-                                        <a href="{{ route('fixed-costs.show-history', $fixedCost) }}"
-                                            class="text-masa-madre hover:text-corteza"
-                                            aria-label="Ver historial de montos" title="Ver historial de montos">
-                                            <x-icon name="clock" class="w-3.5 h-3.5" />
-                                        </a>
-                                    </div>
-                                </div>
-                                <x-status-badge :active="$fixedCost->active" />
-                            </div>
-                            @can('manage-costs')
-                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
-                                    <button type="button"
-                                        @click="openEdit({{ Js::from([
-                                            'id'                     => $fixedCost->id,
-                                            'name'                   => $fixedCost->name,
-                                            'fixed_cost_category_id' => $fixedCost->fixed_cost_category_id ?? '',
-                                            'monthly_amount'         => $fixedCost->monthly_amount,
-                                            'period'                 => now()->format('Y-m'),
-                                        ]) }})"
-                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                        Editar
-                                    </button>
-                                    <form method="POST" action="{{ route('fixed-costs.toggle-active', $fixedCost) }}" class="flex-1">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit"
-                                            class="w-full py-1.5 px-3 text-sm rounded transition-colors {{ $fixedCost->active ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-600 hover:bg-green-50' }}">
-                                            {{ $fixedCost->active ? 'Desactivar' : 'Activar' }}
-                                        </button>
-                                    </form>
-                                </div>
-                                <form method="POST" action="{{ route('fixed-costs.destroy', $fixedCost) }}" class="mt-2"
-                                    onsubmit="return confirm('¿Eliminar «{{ addslashes($fixedCost->name) }}»? Deja de contarse en los costos y no se va a listar más. Su historial se conserva.')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                        class="w-full py-1.5 px-3 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
-                                        Eliminar
-                                    </button>
-                                </form>
-                            @endcan
-                        </div>
-                    @endforeach
-                    <div class="bg-miga/50 rounded-lg px-4 py-3 text-right text-sm font-semibold text-corteza">
-                        Total mensual activo: <span class="font-mono ml-1">$ {{ number_format($totalActive, 2, ',', '.') }}</span>
-                    </div>
-                    </x-slot:cards>
-
-                        <thead class="bg-miga text-masa-madre border-b border-miga">
-                            <tr>
-                                <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
-                                <th class="px-4 py-3 font-medium">Categoría</th>
-                                <x-sortable-th column="monthly_amount" :sort="$sort" :dir="$dir" align="right">Monto mensual</x-sortable-th>
-                                <th class="px-4 py-3 font-medium">Estado</th>
+                        <x-data-table.row :dimmed="! $fixedCost->active">
+                            <x-data-table.cell role="title">
                                 @can('manage-costs')
-                                    <th class="px-4 py-3"></th>
+                                    <button type="button" @click="openEdit({{ Js::from($editPayload($fixedCost)) }})"
+                                        class="font-medium text-corteza hover:underline text-left">
+                                        {{ $fixedCost->name }}
+                                    </button>
+                                @else
+                                    <span class="font-medium text-corteza">{{ $fixedCost->name }}</span>
                                 @endcan
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-miga">
-                            @foreach($fixedCosts as $fixedCost)
-                                <tr class="{{ $fixedCost->active ? '' : 'opacity-50' }}">
-                                    <td class="px-4 py-3 font-medium text-corteza">
-                                        @can('manage-costs')
-                                            <button type="button"
-                                                @click="openEdit({{ Js::from([
-                                                    'id'                     => $fixedCost->id,
-                                                    'name'                   => $fixedCost->name,
-                                                    'fixed_cost_category_id' => $fixedCost->fixed_cost_category_id ?? '',
-                                                    'monthly_amount'         => $fixedCost->monthly_amount,
-                                                    'period'                 => now()->format('Y-m'),
-                                                ]) }})"
-                                                class="hover:underline text-left">
-                                                {{ $fixedCost->name }}
+                            </x-data-table.cell>
+                            <x-data-table.cell role="subtitle" class="text-masa-madre text-xs">{{ $fixedCost->category?->name }}</x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" class="text-corteza font-mono [overflow-wrap:anywhere]">
+                                $ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }}<span class="dt-card-only font-sans"> / mes</span>
+                                <a href="{{ route('fixed-costs.show-history', $fixedCost) }}"
+                                    class="ml-1.5 inline-flex items-center text-masa-madre hover:text-corteza align-middle"
+                                    aria-label="Ver historial de montos" title="Ver historial de montos">
+                                    <svg class="ico w-3.5 h-3.5" aria-hidden="true"><use href="{{ $iconSprite }}#i-clock"></use></svg>
+                                </a>
+                            </x-data-table.cell>
+                            <x-data-table.cell role="badge">
+                                <x-status-badge :active="$fixedCost->active" />
+                            </x-data-table.cell>
+                            @can('manage-costs')
+                                <x-data-table.cell role="actions">
+                                    <div class="dt-actions dt-actions--grid">
+                                        <button type="button" @click="openEdit({{ Js::from($editPayload($fixedCost)) }})"
+                                            aria-label="Editar gasto" title="Editar gasto"
+                                            class="dt-action">
+                                            <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-pencil"></use></svg>
+                                            <span class="dt-card-only">Editar</span>
+                                        </button>
+                                        <form method="POST" action="{{ route('fixed-costs.toggle-active', $fixedCost) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit"
+                                                aria-label="{{ $fixedCost->active ? 'Desactivar' : 'Activar' }}" title="{{ $fixedCost->active ? 'Desactivar' : 'Activar' }}"
+                                                class="dt-action {{ $fixedCost->active ? 'dt-action--danger' : 'dt-action--success' }}">
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-{{ $fixedCost->active ? 'eye-off' : 'eye' }}"></use></svg>
+                                                <span class="dt-card-only">{{ $fixedCost->active ? 'Desactivar' : 'Activar' }}</span>
                                             </button>
-                                        @else
-                                            {{ $fixedCost->name }}
-                                        @endcan
-                                    </td>
-                                    <td class="px-4 py-3 text-masa-madre text-xs">{{ $fixedCost->category?->name ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-right text-corteza font-mono">
-                                        $ {{ number_format($fixedCost->monthly_amount, 2, ',', '.') }}
-                                        <a href="{{ route('fixed-costs.show-history', $fixedCost) }}"
-                                            class="ml-2 inline-flex items-center text-masa-madre hover:text-corteza"
-                                            aria-label="Ver historial de montos" title="Ver historial de montos">
-                                            <x-icon name="clock" class="w-3.5 h-3.5" />
-                                        </a>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <x-status-badge :active="$fixedCost->active" />
-                                    </td>
-                                    @can('manage-costs')
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center justify-end gap-1">
-                                                <button type="button"
-                                                    @click="openEdit({{ Js::from([
-                                                        'id'                     => $fixedCost->id,
-                                                        'name'                   => $fixedCost->name,
-                                                        'fixed_cost_category_id' => $fixedCost->fixed_cost_category_id ?? '',
-                                                        'monthly_amount'         => $fixedCost->monthly_amount,
-                                                        'period'                 => now()->format('Y-m'),
-                                                    ]) }})"
-                                                    aria-label="Editar gasto" title="Editar gasto"
-                                                    class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                                    </svg>
-                                                </button>
-                                                <form method="POST" action="{{ route('fixed-costs.toggle-active', $fixedCost) }}">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <button type="submit"
-                                                        aria-label="{{ $fixedCost->active ? 'Desactivar' : 'Activar' }}" title="{{ $fixedCost->active ? 'Desactivar' : 'Activar' }}"
-                                                        class="p-1.5 rounded transition-colors {{ $fixedCost->active ? 'text-red-500 hover:text-red-700 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50' }}">
-                                                        @if($fixedCost->active)
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                                            </svg>
-                                                        @else
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                            </svg>
-                                                        @endif
-                                                    </button>
-                                                </form>
-                                                <form method="POST" action="{{ route('fixed-costs.destroy', $fixedCost) }}"
-                                                    onsubmit="return confirm('¿Eliminar «{{ addslashes($fixedCost->name) }}»? Deja de contarse en los costos y no se va a listar más. Su historial se conserva.')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        aria-label="Eliminar gasto" title="Eliminar gasto"
-                                                        class="p-1.5 rounded text-masa-madre hover:text-red-600 hover:bg-red-50 transition-colors">
-                                                        <x-icon name="trash" class="w-4 h-4" />
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    @endcan
-                                </tr>
-                            @endforeach
-                        </tbody>
-                        <tfoot class="border-t-2 border-miga bg-miga/50">
-                            <tr>
-                                <td colspan="{{ auth()->user()->can('manage-costs') ? 5 : 4 }}"
-                                    class="px-4 py-3 text-right text-sm font-semibold text-corteza">
-                                    Total mensual activo:
-                                    <span class="font-mono ml-2">$ {{ number_format($totalActive, 2, ',', '.') }}</span>
-                                </td>
-                            </tr>
-                        </tfoot>
+                                        </form>
+                                        <form method="POST" action="{{ route('fixed-costs.destroy', $fixedCost) }}"
+                                            onsubmit="return confirm('¿Eliminar «{{ addslashes($fixedCost->name) }}»? Deja de contarse en los costos y no se va a listar más. Su historial se conserva.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                aria-label="Eliminar gasto" title="Eliminar gasto"
+                                                class="dt-action hover:!text-red-600 hover:!bg-red-50">
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-trash"></use></svg>
+                                                <span class="dt-card-only">Eliminar</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </x-data-table.cell>
+                            @endcan
+                        </x-data-table.row>
+                    @endforeach
 
-                    <x-slot:footer>
-                        @if($fixedCosts->hasPages())
-                        <div class="px-4 py-3 border-t border-miga">
-                            {{ $fixedCosts->links() }}
-                        </div>
-                    @endif
-                    </x-slot:footer>
-                </x-responsive-table>
-
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-masa-madre">{{ $fixedCosts->total() }} gasto(s) en total.</p>
-                    <x-per-page-select :paginator="$fixedCosts" />
-                </div>
+                    <x-slot:summary>
+                        Total mensual activo: <span class="font-mono ml-2">$ {{ number_format($totalActive, 2, ',', '.') }}</span>
+                    </x-slot:summary>
+                </x-data-table>
             @endif
 
         </div>

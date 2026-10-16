@@ -159,7 +159,6 @@
                                                             class="block text-[11px] font-medium"
                                                             x-text="marginPct !== null ? marginPctFormatted + ' %' : ''"></span>
                                                     </div>
-                                                    <x-price-cell-editor />
                                                 </div>
                                             @else
                                                 @if($cellPrice !== null)

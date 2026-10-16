@@ -11,7 +11,9 @@ use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
 use App\Services\RecipeShowViewModel;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -51,11 +53,7 @@ class RecipeController extends Controller
 
         $recipes = $tenant->recipes()
             ->with('manufacturedProduct')
-            ->when(request('search'), function ($q, $search) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
-
-                return $q->where('name', 'like', "%{$escaped}%");
-            })
+            ->when(request('search'), fn ($q, $search) => $q->where('name', 'like', $this->containsPattern($search)))
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when($sort === 'selling_price', fn ($q) => $q->orderBy($priceSubquery, $dir))
@@ -74,11 +72,36 @@ class RecipeController extends Controller
         $prices = $priceRows->pluck('price', 'recipe_id');
         $policies = $priceRows->mapWithKeys(fn (ProductPrice $row) => [$row->recipe_id => $row->policyPayload()]);
 
-        // Lista completa de sub-recetas para el select del modal de reemplazo
-        // masivo: el sustituto tiene que ser un semielaborado, activo o no.
-        $semiElaborateRecipes = $tenant->recipes()->where('is_semi_elaborate', true)->orderBy('name')->get();
+        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices', 'policies'));
+    }
 
-        return view('recipes.index', compact('recipes', 'priceList', 'priceLists', 'prices', 'policies', 'semiElaborateRecipes'));
+    /**
+     * Opciones del select del modal «Reemplazar sub-receta»: se piden bajo demanda
+     * (TomSelect remoto) en vez de renderizar todas las sub-recetas en cada carga
+     * del índice. El sustituto tiene que ser un semielaborado, activo o no.
+     */
+    public function semiOptions(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'exclude' => ['nullable', 'integer'],
+        ]);
+
+        $options = app(Tenant::class)->recipes()
+            ->where('is_semi_elaborate', true)
+            ->when($data['q'] ?? null, fn ($q, $term) => $q->where('name', 'like', $this->containsPattern($term)))
+            ->when($data['exclude'] ?? null, fn ($q, $id) => $q->whereKeyNot($id))
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'name', 'active', 'yield_unit'])
+            ->map(fn (Recipe $recipe) => [
+                'id' => $recipe->id,
+                'name' => $recipe->name,
+                'is_active' => (bool) $recipe->active,
+                'unit_short' => $recipe->yield_unit->short(),
+            ]);
+
+        return response()->json($options);
     }
 
     public function show(Recipe $recipe): View

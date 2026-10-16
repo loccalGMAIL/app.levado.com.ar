@@ -34,7 +34,7 @@
     {{-- products viaja una sola vez acá (root x-data) y el modal "+ Nuevo
          pedido" lo lee por referencia, igual que hace show.blade.php con
          cada grilla de pedido — ver partials/lines-grid.blade.php. --}}
-    <div class="py-8 px-6 lg:px-8" x-data="{ mobileExpanded: false, products: @js($products) }">
+    <div class="py-8 px-6 lg:px-8" x-data="{ products: @js($products) }">
         <div class="space-y-6">
 
             <x-list-header title="Órdenes de producción" subtitle="Cargá los pedidos y la orden del día se va armando sola.">
@@ -86,117 +86,53 @@
             @if($orders->isEmpty())
                 <x-empty-state>Todavía no hay órdenes de producción. Cargá el primer pedido.</x-empty-state>
             @else
-                <x-responsive-table>
-                    <x-slot:cards>
+                <x-data-table :paginator="$orders" total-label="orden" total-suffix="(es)">
+                    <x-slot:head>
+                        <x-sortable-th column="number" :sort="$sort" :dir="$dir">Orden</x-sortable-th>
+                        <x-sortable-th column="scheduled_for" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
+                        <x-sortable-th column="type" :sort="$sort" :dir="$dir">Tipo</x-sortable-th>
+                        <x-sortable-th column="production_order_requests_count" :sort="$sort" :dir="$dir" align="right">Pedidos</x-sortable-th>
+                        <x-sortable-th column="status" :sort="$sort" :dir="$dir">Estado</x-sortable-th>
+                        <th class="px-4 py-3"></th>
+                    </x-slot:head>
+
                     @foreach($orders as $order)
-                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm {{ $order->isCancelled() ? 'opacity-60' : '' }}">
-                            <div class="flex items-start justify-between gap-2">
-                                <span class="font-medium text-corteza">
+                        <x-data-table.row :dimmed="$order->isCancelled()">
+                            <x-data-table.cell role="title">
+                                <a href="{{ route('production-orders.show', $order) }}" class="font-medium text-corteza hover:underline">
                                     {{ $orderNumber($order) }}
-                                    @if($order->recurring_requests_count > 0)
-                                        <span title="Tiene pedidos recurrentes">🔁</span>
-                                    @endif
-                                </span>
-                                <x-production-order-status-badge :status="$order->status" />
-                            </div>
-                            <div class="flex items-center gap-2 mt-1">
+                                </a>
+                                @if($order->recurring_requests_count > 0)
+                                    <span title="Tiene pedidos recurrentes">🔁</span>
+                                @endif
+                            </x-data-table.cell>
+                            <x-data-table.cell role="subtitle" class="text-masa-madre whitespace-nowrap">{{ $dateLabel($order) }}</x-data-table.cell>
+                            <x-data-table.cell role="subtitle">
                                 <x-production-order-type-badge :type="$order->type" />
-                            </div>
-                            <div class="text-xs text-masa-madre mt-2">
-                                {{ $dateLabel($order) }}
-                            </div>
-                            <div class="mt-1 text-sm text-corteza">
-                                {{ $order->production_order_requests_count }} pedido(s)
-                            </div>
-
-                            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
-                                <a href="{{ route('production-orders.show', $order) }}"
-                                    class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                    Ver
-                                </a>
-                                <a href="{{ route('production-orders.production-sheet', $order) }}" target="_blank"
-                                    class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                    Producción
-                                </a>
-                                <a href="{{ route('production-orders.delivery-sheet', $order) }}" target="_blank"
-                                    class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                    Reparto
-                                </a>
-                                @can('manage-costs')
-                                    @if($order->isDraft())
-                                        <form method="POST" action="{{ route('production-orders.transition', $order) }}" class="flex-1">
-                                            @csrf @method('PATCH')
-                                            <input type="hidden" name="status" value="confirmed">
-                                            <button type="submit"
-                                                class="w-full py-1.5 px-3 text-sm border border-corteza text-corteza hover:bg-miga rounded transition-colors">
-                                                Confirmar
-                                            </button>
-                                        </form>
-                                    @endif
-                                @endcan
-                            </div>
-                        </div>
+                            </x-data-table.cell>
+                            <x-data-table.cell role="meta" align="right" class="text-corteza font-mono">{{ $order->production_order_requests_count }}<span class="dt-card-only font-sans"> pedido(s)</span></x-data-table.cell>
+                            <x-data-table.cell role="badge">
+                                <x-production-order-status-badge :status="$order->status" />
+                            </x-data-table.cell>
+                            <x-data-table.cell role="actions">
+                                <div class="dt-actions dt-actions--grid">
+                                    <a href="{{ route('production-orders.show', $order) }}" class="dt-action !text-horno">Ver</a>
+                                    <a href="{{ route('production-orders.production-sheet', $order) }}" target="_blank" class="dt-action !text-horno">Producción</a>
+                                    <a href="{{ route('production-orders.delivery-sheet', $order) }}" target="_blank" class="dt-action !text-horno">Reparto</a>
+                                    @can('manage-costs')
+                                        @if($order->isDraft())
+                                            <form method="POST" action="{{ route('production-orders.transition', $order) }}">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="status" value="confirmed">
+                                                <button type="submit" class="dt-action !text-horno">Confirmar</button>
+                                            </form>
+                                        @endif
+                                    @endcan
+                                </div>
+                            </x-data-table.cell>
+                        </x-data-table.row>
                     @endforeach
-                    </x-slot:cards>
-
-                    <thead class="bg-miga text-masa-madre border-b border-miga">
-                        <tr>
-                            <x-sortable-th column="number" :sort="$sort" :dir="$dir">Orden</x-sortable-th>
-                            <x-sortable-th column="scheduled_for" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
-                            <x-sortable-th column="type" :sort="$sort" :dir="$dir">Tipo</x-sortable-th>
-                            <x-sortable-th column="production_order_requests_count" :sort="$sort" :dir="$dir" align="right">Pedidos</x-sortable-th>
-                            <x-sortable-th column="status" :sort="$sort" :dir="$dir">Estado</x-sortable-th>
-                            <th class="px-4 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-miga">
-                        @foreach($orders as $order)
-                            <tr class="{{ $order->isCancelled() ? 'opacity-60' : '' }}">
-                                <td class="px-4 py-3 font-medium text-corteza">
-                                    <a href="{{ route('production-orders.show', $order) }}" class="hover:underline">
-                                        {{ $orderNumber($order) }}
-                                    </a>
-                                    @if($order->recurring_requests_count > 0)
-                                        <span title="Tiene pedidos recurrentes">🔁</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-masa-madre whitespace-nowrap">{{ $dateLabel($order) }}</td>
-                                <td class="px-4 py-3">
-                                    <x-production-order-type-badge :type="$order->type" />
-                                </td>
-                                <td class="px-4 py-3 text-right text-corteza font-mono">{{ $order->production_order_requests_count }}</td>
-                                <td class="px-4 py-3">
-                                    <x-production-order-status-badge :status="$order->status" />
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <div class="flex items-center justify-end gap-3">
-                                        <a href="{{ route('production-orders.show', $order) }}" class="text-sm text-horno hover:underline">Ver</a>
-                                        <a href="{{ route('production-orders.production-sheet', $order) }}" target="_blank" class="text-sm text-horno hover:underline">Producción</a>
-                                        <a href="{{ route('production-orders.delivery-sheet', $order) }}" target="_blank" class="text-sm text-horno hover:underline">Reparto</a>
-                                        @can('manage-costs')
-                                            @if($order->isDraft())
-                                                <form method="POST" action="{{ route('production-orders.transition', $order) }}">
-                                                    @csrf @method('PATCH')
-                                                    <input type="hidden" name="status" value="confirmed">
-                                                    <button type="submit" class="text-sm text-horno hover:underline">Confirmar</button>
-                                                </form>
-                                            @endif
-                                        @endcan
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-
-                    <x-slot:footer>
-                        @if($orders->total() > 20)
-                        <div class="px-4 py-3 border-t border-miga flex items-center justify-between gap-3 flex-wrap">
-                            <div>{{ $orders->hasPages() ? $orders->links() : '' }}</div>
-                            <x-per-page-select :paginator="$orders" />
-                        </div>
-                        @endif
-                    </x-slot:footer>
-                </x-responsive-table>
+                </x-data-table>
             @endif
 
         </div>
