@@ -98,17 +98,10 @@ class RecipeController extends Controller
                 'id' => $recipe->id,
                 'name' => $recipe->name,
                 'is_active' => (bool) $recipe->active,
-                'yield_unit' => $recipe->yield_unit->value,
-                'yield_unit_short' => $recipe->yield_unit->short(),
+                'unit_short' => $recipe->yield_unit->short(),
             ]);
 
         return response()->json($options);
-    }
-
-    /** Patrón LIKE «contiene» con los comodines del término escapados. */
-    private function containsPattern(string $term): string
-    {
-        return '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term).'%';
     }
 
     public function show(Recipe $recipe): View

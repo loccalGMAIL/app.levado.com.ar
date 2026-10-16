@@ -60,8 +60,7 @@ test('incluye las inactivas marcadas como tales y la unidad de rendimiento', fun
         ->keyBy('name');
 
     expect($options['Masa vieja']['is_active'])->toBeFalse()
-        ->and($options['Masa vieja']['yield_unit'])->toBe(Unit::Kilogramo->value)
-        ->and($options['Masa vieja']['yield_unit_short'])->toBe(Unit::Kilogramo->short())
+        ->and($options['Masa vieja']['unit_short'])->toBe(Unit::Kilogramo->short())
         ->and($options['Masa nueva']['is_active'])->toBeTrue();
 });
 

@@ -46,14 +46,14 @@ if ('serviceWorker' in navigator) {
 // artículos dentro de un modal) recorta el desplegable y lo deja invisible.
 //
 // Modo remoto (`data-remote="<url>"`): las opciones no vienen en el HTML sino de
-// un endpoint que devuelve [{ id, name, is_active, yield_unit_short }], filtrado
+// un endpoint que devuelve [{ id, name, is_active, unit_short? }], filtrado
 // por `q` y, si el select tiene `data-exclude`, sin ese id. Se precarga al enfocar
 // y se vuelve a pedir al tipear (con throttle). Evita renderizar en cada carga del
 // índice un <select> con cientos de opciones que casi nunca se abre.
 function remoteSelectOptions(el) {
     const renderOption = (data, escape) => {
         const inactive = data.is_active === false ? ' (inactiva)' : '';
-        const unit = data.yield_unit_short ? ` (${escape(data.yield_unit_short)})` : '';
+        const unit = data.unit_short ? ` (${escape(data.unit_short)})` : '';
 
         return `<div>${escape(data.name)}${inactive}${unit}</div>`;
     };

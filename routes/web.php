@@ -170,6 +170,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 // Costos — escritura (owner y admin)
 Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
     Route::get('catalog/replacement-preview', [CatalogReplacementController::class, 'preview'])->name('catalog.replacement-preview');
+    Route::get('ingredients/replace-options', [CatalogReplacementController::class, 'ingredientOptions'])->name('ingredients.replace-options');
+    Route::get('packaging/replace-options', [CatalogReplacementController::class, 'packagingOptions'])->name('packaging.replace-options');
 
     Route::post('ingredients', [IngredientController::class, 'store'])->name('ingredients.store');
     Route::put('ingredients/{ingredient}', [IngredientController::class, 'update'])->name('ingredients.update');

@@ -117,6 +117,61 @@ class CatalogReplacementController extends Controller
         return back()->with('status', $this->summaryMessage($recipe->name, $to->name, $result));
     }
 
+    /**
+     * Opciones del select de «Reemplazar por» del modal de ingredientes, bajo
+     * demanda (TomSelect remoto). El sustituto puede estar inactivo.
+     */
+    public function ingredientOptions(Request $request): JsonResponse
+    {
+        $query = app(Tenant::class)->ingredients()->notConverted();
+
+        return $this->options($request, $query, fn (Ingredient $ingredient) => [
+            'id' => $ingredient->id,
+            'name' => $ingredient->name,
+            'is_active' => (bool) $ingredient->active,
+            'unit_short' => $ingredient->unit->short(),
+        ]);
+    }
+
+    /** Opciones del select de «Reemplazar por» del modal de descartables. */
+    public function packagingOptions(Request $request): JsonResponse
+    {
+        $query = app(Tenant::class)->packagings();
+
+        return $this->options($request, $query, fn (Packaging $packaging) => [
+            'id' => $packaging->id,
+            'name' => $packaging->name,
+            'is_active' => (bool) $packaging->active,
+        ]);
+    }
+
+    /**
+     * Filtra por `q`, excluye `exclude` (el ítem que se está reemplazando) y
+     * devuelve hasta 50 opciones ordenadas por nombre.
+     *
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  \Illuminate\Database\Eloquent\Relations\Relation<TModel, *, *>|\Illuminate\Database\Eloquent\Builder<TModel>  $query
+     * @param  \Closure(TModel): array<string, mixed>  $present
+     */
+    private function options(Request $request, $query, \Closure $present): JsonResponse
+    {
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'exclude' => ['nullable', 'integer'],
+        ]);
+
+        $options = $query
+            ->when($data['q'] ?? null, fn ($q, $term) => $q->where('name', 'like', $this->containsPattern($term)))
+            ->when($data['exclude'] ?? null, fn ($q, $id) => $q->whereKeyNot($id))
+            ->orderBy('name')
+            ->limit(50)
+            ->get()
+            ->map($present);
+
+        return response()->json($options);
+    }
+
     private function findIngredient(Tenant $tenant, int $id): Ingredient
     {
         return $tenant->ingredients()->findOrFail($id);
