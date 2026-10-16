@@ -48,22 +48,20 @@ Modales «Reemplazar» con el `<select>` completo precargado en cada carga del �
 |--------------------------------------|------------:|-----------:|-------------:|-----------:|
 | Nodos DOM (app, ya inicializado)     |       1.386 |       −42% |        8.417 |       −56% |
 | Nodos DOM (HTML crudo)               |       1.220 |       −27% |        8.347 |       −32% |
-| HTML crudo (bytes)                   |     389.738 |       −38% |    2.261.059 |       −50% |
-| Líneas de HTML                       |       3.345 |       −46% |       18.287 |       −59% |
+| HTML crudo (bytes)                   |     350.178 |       −44% |    1.890.497 |       −58% |
 | `<template x-teleport>` (popovers)   |           0 |        −30 |            0 |       −306 |
 | Queries                              |          11 |         −1 |           12 |         −1 |
-| Vistas Blade renderizadas            |         323 |       +82% |        2.676 |      +118% |
-| Tiempo de respuesta (Debugbar)       |      737 ms |         ≈ |       2,12 s |       +29% |
-| Memoria pico                         |       28 MB |         ≈ |        39 MB |       −11% |
+| Vistas Blade renderizadas            |         221 |       +25% |        1.661 |       +35% |
+| Tiempo de respuesta (Debugbar, mediana de 3) | 730 ms |      ≈ |  1,55–1,77 s |          ≈ |
 
 **Meta no alcanzada:** con 20 filas el DOM bajó 42%, no más de la mitad. Quedan ~600 nodos de estructura fija de la
 página (sidebar, barra inferior mobile, barra superior, modales de crear/reemplazar, TomSelect) que no dependen de las
 filas y están fuera de este alcance. El costo por fila pasó de ~94 a ~39 nodos: con 200 filas la baja es de 56%.
 
-**Costo del lado del servidor:** cada fila ahora son 6 componentes de celda/fila y 6 `<x-icon>`, por eso las vistas
-Blade se duplican. Con 20 filas el tiempo no cambia; con 200 sube ~29% (1,64 s → 2,12 s con Debugbar activo). Si
-`per_page=200` es un caso real, el siguiente paso es renderizar los íconos como `<svg><use>` plano (sin componente)
-en vez de `<x-icon sprite>`.
+**Costo del lado del servidor:** la primera versión usaba `<x-icon sprite>` (una vista Blade por ícono) y con 200 filas
+el render subía ~29% (1,64 s → 2,12 s). Pasar los íconos a `<svg class="ico"><use></svg>` plano lo devolvió al nivel
+de antes (1,55–1,77 s) y bajó las vistas de 2.676 a 1.661. Lo que queda de más son los componentes `x-data-table.row` y
+`.cell` (un componente por celda).
 
 **El sprite reduce bytes pero no nodos:** cada `<use>` es un nodo hijo del `<svg>` (+20 nodos con 20 filas). El
 beneficio es el HTML más chico y el path definido una sola vez en un archivo cacheable.

@@ -79,11 +79,18 @@ es silencioso**. El rol se declara en la celda: una palabra, en el lugar donde i
 
 ## Estado
 
-Migradas `ingredients/index`, `labor-types/index` y `recipes/index` (v0.17.1). **Pendientes** (siguen en
-`x-responsive-table`, que se mantiene funcionando): `packaging`, `variable-expenses`, `price-lists`,
-`purchases`, `fixed-costs`, `stock`, `products/index`, `products/history`, `production-orders/index`.
-Fuera del patrón y con el doble marcado escrito a mano: `team/index` (2 bloques), `recipes/show`
-(4 bloques) y `purchases/show` (1 bloque).
+Migrados (v0.17.1): `ingredients`, `labor-types`, `credit-notes`, `recipes`, `packaging`, `variable-expenses`,
+`price-lists`, `purchases`, `fixed-costs`, `stock`, `products/index`, `products/history` y
+`production-orders/index`. **`x-responsive-table` se eliminó.** Fuera del patrón y con el doble marcado
+escrito a mano: `team/index` (2 bloques), `recipes/show` (4 bloques) y `purchases/show` (1 bloque).
+
+API que se sumó al componente en v0.17.1: `:toggle="false"`, `total-suffix` («(es)»), `total-note`, slot
+`summary` (totales de gastos), `dash` en la celda (muestra «—» en la tabla aunque el rol no lo haga solo) y la
+clase `.dt-actions--grid` (acciones de a dos por renglón en la card, solo con texto).
+
+Trampas nuevas: **un atributo `:class` en un componente Blade se interpreta como PHP** (para Alpine usar
+`x-bind:class`); `@js(...)` no se procesa dentro de los atributos de un componente (usar `{{ Js::from(...) }}`);
+y `Js::from` escapa las barras de las URLs, así que un test que busca la URL en el HTML tiene que normalizarla.
 
 ## Lo que aprendimos en recetas (v0.17.1, medido con Debugbar y 373 recetas)
 
@@ -91,7 +98,12 @@ Fuera del patrón y con el doble marcado escrito a mano: `team/index` (2 bloques
 - **Costo de render:** cada fila = 1 `row` + N `cell` + un `<x-icon>` por ícono, todos componentes Blade. Con 20
   filas no se nota; con 200 las vistas Blade pasaron de 1.228 a 2.676 y la respuesta de 1,64 s a 2,12 s.
   Antes de migrar otra vista, pensar si `per_page=200` es un caso real.
-- **`x-icon sprite`** referencia `public/icons/sprite.svg` (`<use>`): menos bytes, pero **+1 nodo** por ícono.
+- **Íconos por fila:** `<svg class="ico"><use href="{{ $iconSprite }}#i-nombre"></use></svg>` plano (sprite en
+  `public/icons/sprite.svg`, `$iconSprite` compartida en AppServiceProvider). **No** usar `<x-icon>` por fila: una
+  vista Blade por ícono sumó ~29% de tiempo con 200 filas. El sprite ahorra bytes pero cuesta **+1 nodo** por ícono.
+  Hay que agregar el `<symbol>` al sprite antes de usar un ícono nuevo.
+- **Edición inline de número** (costo, stock): `Alpine.data('inlineEdit')` en `resources/js/inline-edit.js`; usa
+  `isEditing` (no `editing`) para no tapar el `editing` del modal de la página.
 - **Botones de acción en card:** con ícono + texto se parten («Copi ar»). En recetas la card lleva solo texto, de a
   dos por renglón: `max-md:[&_svg]:hidden max-md:[&>*]:!basis-[calc(50%-0.25rem)]` sobre `.dt-actions`.
 - **Editor de precio:** `priceCell` (x-data por celda) solo muestra y despacha `edit-price`; el popover es uno solo

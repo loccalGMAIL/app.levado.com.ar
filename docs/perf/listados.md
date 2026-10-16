@@ -32,13 +32,47 @@ Los «duplicados» que marca Debugbar por prefijo de SQL son queries distintas:
 Lo único que sobra son las listas completas de los modales «Reemplazar» (ingredientes, envases, recetas), que se quitan
 con los endpoints bajo demanda.
 
-## Cambios aplicados hasta ahora
+## Después (v0.17.1-listado-recetas-perf)
 
-- `/recipes`: ver [recipes-index.md](recipes-index.md).
-- `/ingredients` y `/packaging`: la lista completa del modal «Reemplazar» ya no se consulta ni se renderiza en cada
-  carga (`ingredients.replace-options`, `packaging.replace-options`, 50 como máximo, bajo demanda).
-- `/products` (artículos) y la matriz de precios: dejaron de renderizar un popover por celda (20 teleports → 0 en
-  `/products`); el editor es el único del layout.
+Mismas vistas y metodología, `?per_page=20`. Tiempo = mediana de 3 pedidos (Debugbar). Entre paréntesis, el cambio
+contra «Antes». Los nodos incluyen ~23 del editor de precio que ahora está en el layout de todas las páginas.
 
-El resto de las vistas (migración a `x-data-table` y sprite) queda pendiente de decidir: ver la nota sobre costo de
-render en [recipes-index.md](recipes-index.md).
+| Vista                | Nodos        | HTML (bytes)         | Queries | Vistas Blade | Respuesta  | Teleports |
+|----------------------|-------------:|---------------------:|--------:|-------------:|-----------:|----------:|
+| `/recipes`           | 1.220 (−27%) | 350.178 (−44%)       | 11 (−1) |   221 (+25%) |     730 ms |   0 (−30) |
+| `/products`          | 2.388 (−16%) | 644.448 (−18%)       | 17 (=)  |   363 (+80%) |     934 ms |   0 (−20) |
+| `/packaging`         | 1.542 (−19%) | 484.694 (−36%)       | 12 (−1) |   295 (+92%) |     831 ms |         0 |
+| `/ingredients`       | 1.529 (−14%) | 471.786 (−22%)       | 13 (−1) |   284 (−26%) |     769 ms |         0 |
+| `/variable-expenses` | 1.571 (−14%) | 460.727 (−12%)       | 13 (=)  |   260 (+98%) |     803 ms |         0 |
+| `/fixed-costs`       | 1.312 (−19%) | 370.861 (−23%)       | 11 (=)  |   222 (+23%) |     754 ms |         0 |
+| `/purchases`         | 1.317 (−11%) | 369.900 (−16%)       | 11 (=)  |   225 (+116%)|     790 ms |         0 |
+| `/stock`             |   783 (−28%) | 288.739 (−12%)       | 11 (=)  |   208 (+210%)|     674 ms |         0 |
+| `/price-lists`       |    493 (−5%) | 186.541 (−7%)        | 9 (=)   |    94 (+38%) |     570 ms |         0 |
+| `/labor-types`       |   514 (+5%)  | 191.326 (−2%)        | 8 (=)   |    108 (−12%)|     625 ms |         0 |
+| `/production-orders` |   965 (+2%)  | 240.586 (−2%)        | 10 (=)  |    65 (+2%)  |     687 ms |         0 |
+| `/products/history`  |   650 (+4%)  | 170.310 (+3%)        | 8 (=)   |    36 (+3%)  |     612 ms |         0 |
+
+- `production-orders` y `products/history` no tenían filas en esta base: el cambio ahí es solo estructura fija.
+- **El tiempo de respuesta no mejora:** con 20 filas queda igual en recetas y sube entre 4% y 18% en varias vistas
+  (envases 703 → 831 ms, gastos variables 725 → 803, compras 709 → 790), con ruido de medición de unos ±50 ms. La
+  cantidad de vistas Blade sube porque cada fila/celda de `x-data-table` es un componente. Con 200 filas en
+  recetas el tiempo quedó igual que antes (con `<x-icon>` por ícono llegó a subir 29%). Lo que mejora es el HTML
+  (bytes y nodos), no el tiempo de servidor.
+- Ingredientes y envases: el modal «Reemplazar» ya no consulta ni renderiza la lista completa (1 query menos).
+- Envases e ingredientes: la edición inline de costo/stock se define una vez (`inlineEdit`) en lugar de repetir ~30
+  líneas de JS por celda, que era buena parte de los bytes.
+
+## Cambios aplicados
+
+- Un solo editor de precio compartido (`priceEditor`, en el layout): recetas, artículos, matriz y dashboard.
+- `x-data-table` (una fila por registro, el CSS decide fila o card) en: recetas, artículos, envases, compras, stock,
+  listas de precios, gastos fijos, gastos variables, órdenes de producción e historial de producción
+  (ya estaban: ingredientes, mano de obra, notas de crédito). Se eliminó `x-responsive-table`.
+- Íconos de las acciones por fila desde `public/icons/sprite.svg` (`<svg class="ico"><use href="{{ $iconSprite }}#i-…">`).
+- Modales «Reemplazar» de recetas, ingredientes y envases: opciones bajo demanda.
+
+## Fuera de este alcance
+
+- `suppliers`, `locations`, `reparto/clientes`, `reparto/repartidores`, `admin/users` y `notifications`: no usan
+  `x-responsive-table` (son grillas de cards o listas propias) y no se tocaron.
+- La barra lateral y la barra inferior mobile siguen duplicando navegación (~190 nodos).
