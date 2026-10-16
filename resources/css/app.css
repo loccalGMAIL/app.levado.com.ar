@@ -237,12 +237,23 @@
             content: " ·";
         }
 
+        /* El label va siempre en la tipografía de texto, aunque la cifra de la
+           celda sea monoespaciada. */
         .data-table[data-view="cards"] td[data-label]::before {
             content: attr(data-label) " ";
+            font-family: theme('fontFamily.sans');
+            font-weight: 400;
         }
 
         .data-table[data-view="cards"] .dt-actions { gap: 0.5rem; }
         .data-table[data-view="cards"] .dt-actions > * { flex: 1 1 0; }
+
+        /* Muchas acciones (3 o más): en la card van de a dos por renglón, solo con
+           texto y sin partir las palabras. Con ícono + texto se rompían ("Copi ar"). */
+        .data-table[data-view="cards"] .dt-actions--grid { flex-wrap: wrap; }
+        .data-table[data-view="cards"] .dt-actions--grid > * { flex: 1 1 calc(50% - 0.25rem); }
+        .data-table[data-view="cards"] .dt-actions--grid .dt-action { white-space: nowrap; }
+        .data-table[data-view="cards"] .dt-actions--grid svg { display: none; }
 
         .data-table[data-view="cards"] .dt-action {
             width: 100%;

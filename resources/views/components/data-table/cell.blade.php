@@ -5,8 +5,10 @@
     role:   title | subtitle | figure | badge | meta | actions
     cards:  show (default) | hide  → columna que no entra en la card
     label:  prefijo que muestra la card ("Stock:"); la tabla ya tiene su <th>
+    dash:   muestra «—» en la tabla cuando la celda está vacía aunque su rol no
+            lo haga solo (badge, title, actions); la card sigue omitiéndola
 --}}
-@props(['role' => 'meta', 'align' => 'left', 'cards' => 'show', 'label' => null])
+@props(['role' => 'meta', 'align' => 'left', 'cards' => 'show', 'label' => null, 'dash' => false])
 
 @php
     // El slot ya viene renderizado. Se recorta para poder distinguir una celda
@@ -14,7 +16,7 @@
     // que el whitespace de Blade vuelve inservible.
     $content = trim($slot->toHtml());
     $isEmpty = $content === '';
-    $showsDash = $isEmpty && in_array($role, ['subtitle', 'figure', 'meta'], true);
+    $showsDash = $isEmpty && ($dash || in_array($role, ['subtitle', 'figure', 'meta'], true));
 @endphp
 
 <td {{ $attributes->class(['px-4 py-3', 'text-right' => $align === 'right']) }}

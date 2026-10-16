@@ -40,7 +40,6 @@
 
     <div class="py-8 px-6 lg:px-8"
         x-data="{
-            mobileExpanded: false,
             selected: {{ Js::from($selectedOnError) }},
             openAction(record, modal) {
                 this.selected = record;
@@ -94,131 +93,68 @@
                     @endif
                 </x-empty-state>
             @else
-                                <x-responsive-table>
-                    <x-slot:cards>
+                <x-data-table :paginator="$items" total-label="ítem" total-note="La valuación usa el último costo de cada ítem.">
+                    <x-slot:head>
+                        <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
+                        <x-sortable-th column="quantity" :sort="$sort" :dir="$dir" align="right">Stock actual</x-sortable-th>
+                        <x-sortable-th column="min_quantity" :sort="$sort" :dir="$dir" align="right">Mínimo</x-sortable-th>
+                        <th class="px-4 py-3 font-medium text-right">Valuación</th>
+                        <th class="px-4 py-3 font-medium">Alerta</th>
+                        @can('manage-costs')
+                            <th class="px-4 py-3"></th>
+                        @endcan
+                    </x-slot:head>
+
                     @foreach($items as $item)
                         @php
                             $level = $levels->get($item->id);
                             $qty = $level !== null ? (float) $level->quantity : 0.0;
                             $payload = $rowPayload($item, $level);
                         @endphp
-                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <a href="{{ route('stock.show', [$type, $item->id]) }}" class="font-medium text-corteza hover:underline">{{ $item->name }}</a>
-                                    <div class="text-xs text-masa-madre mt-0.5">
-                                        Mínimo: {{ $level?->min_quantity !== null ? number_format($level->min_quantity, 2, ',', '.').' '.$displayUnit($item) : '—' }}
-                                    </div>
+                        <x-data-table.row>
+                            <x-data-table.cell role="title">
+                                <a href="{{ route('stock.show', [$type, $item->id]) }}" class="font-medium text-corteza hover:underline">{{ $item->name }}</a>
+                            </x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" label="Stock:" class="font-mono {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }}">
+                                <div class="inline-flex items-center justify-end gap-1.5">
+                                    {{ number_format($qty, 2, ',', '.') }}
+                                    <span class="text-xs text-masa-madre font-normal">{{ $displayUnit($item) }}</span>
+                                    <a href="{{ route('stock.show', [$type, $item->id]) }}"
+                                        class="text-masa-madre hover:text-corteza" title="Ver movimientos de stock">
+                                        <svg class="ico w-3.5 h-3.5" aria-hidden="true"><use href="{{ $iconSprite }}#i-clock"></use></svg>
+                                    </a>
                                 </div>
+                            </x-data-table.cell>
+                            <x-data-table.cell role="meta" align="right" label="Mínimo:" class="font-mono text-masa-madre text-xs">
+                                @if($level?->min_quantity !== null)
+                                    {{ number_format($level->min_quantity, 2, ',', '.') }}<span class="dt-card-only"> {{ $displayUnit($item) }}</span>
+                                @endif
+                            </x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" label="Valuación:" class="font-mono text-corteza">
+                                $ {{ number_format($qty * $unitCost($item), 2, ',', '.') }}
+                            </x-data-table.cell>
+                            <x-data-table.cell role="badge" dash>
                                 @if($qty < 0)
                                     <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Negativo</span>
                                 @elseif($level !== null && $level->hasAlert())
                                     <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Bajo mínimo</span>
                                 @endif
-                            </div>
-                            <div class="mt-2 flex items-baseline justify-between gap-2">
-                                <span class="text-sm font-mono {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }} inline-flex items-center gap-1.5 min-w-0">
-                                    {{ number_format($qty, 2, ',', '.') }} <span class="text-xs text-masa-madre">{{ $displayUnit($item) }}</span>
-                                    <a href="{{ route('stock.show', [$type, $item->id]) }}"
-                                        class="text-masa-madre hover:text-corteza" title="Ver movimientos de stock">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </a>
-                                </span>
-                                <span class="text-xs text-masa-madre font-mono text-right [overflow-wrap:anywhere]">$ {{ number_format($qty * $unitCost($item), 2, ',', '.') }}</span>
-                            </div>
+                            </x-data-table.cell>
                             @can('manage-costs')
-                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga text-sm">
-                                    <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-adjust')"
-                                        class="flex-1 py-1.5 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Ajuste</button>
-                                    <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-count')"
-                                        class="flex-1 py-1.5 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Recuento</button>
-                                </div>
+                                <x-data-table.cell role="actions">
+                                    <div class="dt-actions dt-actions--grid">
+                                        <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-adjust')"
+                                            class="dt-action border border-gray-300 !text-corteza text-xs">Ajuste</button>
+                                        <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-count')"
+                                            class="dt-action border border-gray-300 !text-corteza text-xs">Recuento</button>
+                                        <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-min')"
+                                            class="dt-action border border-gray-300 !text-corteza text-xs">Mínimo</button>
+                                    </div>
+                                </x-data-table.cell>
                             @endcan
-                        </div>
+                        </x-data-table.row>
                     @endforeach
-                    </x-slot:cards>
-
-                        <thead class="bg-miga text-masa-madre border-b border-miga">
-                            <tr>
-                                <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
-                                <x-sortable-th column="quantity" :sort="$sort" :dir="$dir" align="right">Stock actual</x-sortable-th>
-                                <x-sortable-th column="min_quantity" :sort="$sort" :dir="$dir" align="right">Mínimo</x-sortable-th>
-                                <th class="px-4 py-3 font-medium text-right">Valuación</th>
-                                <th class="px-4 py-3 font-medium">Alerta</th>
-                                @can('manage-costs')
-                                    <th class="px-4 py-3"></th>
-                                @endcan
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-miga">
-                            @foreach($items as $item)
-                                @php
-                                    $level = $levels->get($item->id);
-                                    $qty = $level !== null ? (float) $level->quantity : 0.0;
-                                    $payload = $rowPayload($item, $level);
-                                @endphp
-                                <tr>
-                                    <td class="px-4 py-3 font-medium text-corteza">
-                                        <a href="{{ route('stock.show', [$type, $item->id]) }}" class="hover:underline">{{ $item->name }}</a>
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-mono {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }}">
-                                        <div class="inline-flex items-center justify-end gap-1.5">
-                                            {{ number_format($qty, 2, ',', '.') }}
-                                            <span class="text-xs text-masa-madre font-normal">{{ $displayUnit($item) }}</span>
-                                            <a href="{{ route('stock.show', [$type, $item->id]) }}"
-                                                class="text-masa-madre hover:text-corteza" title="Ver movimientos de stock">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                            </a>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-mono text-masa-madre text-xs">
-                                        {{ $level?->min_quantity !== null ? number_format($level->min_quantity, 2, ',', '.') : '—' }}
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-mono text-corteza">
-                                        $ {{ number_format($qty * $unitCost($item), 2, ',', '.') }}
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        @if($qty < 0)
-                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Negativo</span>
-                                        @elseif($level !== null && $level->hasAlert())
-                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Bajo mínimo</span>
-                                        @else
-                                            <span class="text-xs text-masa-madre">—</span>
-                                        @endif
-                                    </td>
-                                    @can('manage-costs')
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center justify-end gap-2 text-xs">
-                                                <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-adjust')"
-                                                    class="px-2 py-1 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Ajuste</button>
-                                                <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-count')"
-                                                    class="px-2 py-1 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Recuento</button>
-                                                <button type="button" @click="openAction({{ Js::from($payload) }}, 'stock-min')"
-                                                    class="px-2 py-1 border border-gray-300 rounded text-corteza hover:bg-miga transition-colors">Mínimo</button>
-                                            </div>
-                                        </td>
-                                    @endcan
-                                </tr>
-                            @endforeach
-                        </tbody>
-
-                    <x-slot:footer>
-                        @if($items->hasPages())
-                        <div class="px-4 py-3 border-t border-miga">
-                            {{ $items->links() }}
-                        </div>
-                    @endif
-                    </x-slot:footer>
-                </x-responsive-table>
-
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-masa-madre">{{ $items->total() }} ítem(s) en total. La valuación usa el último costo de cada ítem.</p>
-                    <x-per-page-select :paginator="$items" />
-                </div>
+                </x-data-table>
             @endif
 
         </div>

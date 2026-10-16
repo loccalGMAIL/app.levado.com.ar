@@ -138,9 +138,7 @@
                             </x-data-table.cell>
 
                             <x-data-table.cell role="actions">
-                                {{-- En la card los botones llevan solo texto y van de a dos por renglón
-                                     (una semi tiene 4; con ícono + texto se partían las palabras). --}}
-                                <div class="dt-actions max-md:flex-wrap max-md:[&_svg]:hidden max-md:[&>*]:!basis-[calc(50%-0.25rem)] max-md:[&_.dt-action]:whitespace-nowrap">
+                                <div class="dt-actions dt-actions--grid">
                                     <a href="{{ $showUrl($recipe) }}"
                                         aria-label="Ver detalle de receta" title="Ver detalle"
                                         class="dt-action">

@@ -24,7 +24,7 @@
     resuelve hacia arriba en la cadena de scopes, así que el x-data propio de este
     componente no los tapa.
 --}}
-@props(['paginator', 'totalLabel', 'toggle' => true])
+@props(['paginator', 'totalLabel', 'totalSuffix' => '(s)', 'totalNote' => null, 'toggle' => true])
 
 {{-- `toggle` = false: en mobile queda siempre la card, sin «Ver tabla completa». --}}
 <div class="data-table"
@@ -47,6 +47,14 @@
             <tbody>{{ $slot }}</tbody>
         </table>
 
+        {{-- Resumen opcional (ej. «Total del período»): pie de la tabla en desktop,
+             barra suelta debajo de las cards en mobile. --}}
+        @isset($summary)
+            <div class="px-4 py-3 border-t-2 border-miga bg-miga/50 text-right text-sm font-semibold text-corteza max-md:mt-3 max-md:rounded-lg max-md:border-t-0">
+                {{ $summary }}
+            </div>
+        @endisset
+
         @if($paginator->hasPages())
             <div class="px-4 py-3 border-t border-miga">
                 {{ $paginator->links() }}
@@ -62,7 +70,7 @@
     @endif
 
     <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
-        <p class="text-xs text-masa-madre">{{ $paginator->total() }} {{ $totalLabel }}(s) en total.</p>
+        <p class="text-xs text-masa-madre">{{ $paginator->total() }} {{ $totalLabel }}{{ $totalSuffix }} en total.{{ $totalNote ? ' '.$totalNote : '' }}</p>
         <x-per-page-select :paginator="$paginator" />
     </div>
 </div>

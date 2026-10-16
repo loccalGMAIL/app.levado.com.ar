@@ -5,6 +5,16 @@
         $expenseFields  = ['name', 'description', 'variable_expense_category_id', 'supplier_id', 'amount', 'expense_date', 'receipt'];
         $errorsInCreate = $errors->hasAny($expenseFields) && old('_form') === 've-create';
         $errorsInEdit   = $errors->hasAny($expenseFields) && old('_form') === 've-edit';
+        $editPayload = fn ($expense) => [
+            'id'                           => $expense->id,
+            'name'                         => $expense->name,
+            'description'                  => $expense->description,
+            'variable_expense_category_id' => $expense->variable_expense_category_id ?? '',
+            'supplier_id'                  => $expense->supplier_id ?? '',
+            'amount'                       => $expense->amount,
+            'expense_date'                 => $expense->expense_date->format('Y-m-d'),
+            'receipt_image_path'           => $expense->receipt_image_path,
+        ];
         $editingDefault = ['id' => null, 'name' => '', 'description' => '', 'variable_expense_category_id' => '', 'supplier_id' => '', 'amount' => '', 'expense_date' => date('Y-m-d'), 'receipt_image_path' => null];
         $editingOnError = $errorsInEdit ? [
             'id'                           => old('variable_expense_id'),
@@ -20,7 +30,6 @@
 
     <div class="py-8 px-6 lg:px-8"
         x-data="{
-            mobileExpanded: false,
             editing: {{ Js::from($editingOnError) }},
             openEdit(record) {
                 this.editing = record;
@@ -129,176 +138,76 @@
                     @endif
                 </x-empty-state>
             @else
-                                <x-responsive-table>
-                    <x-slot:cards>
+                <x-data-table :paginator="$variableExpenses" total-label="gasto">
+                    <x-slot:head>
+                        <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
+                        <th class="px-4 py-3 font-medium">Categoría</th>
+                        <th class="px-4 py-3 font-medium">Proveedor</th>
+                        <x-sortable-th column="expense_date" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
+                        <x-sortable-th column="amount" :sort="$sort" :dir="$dir" align="right">Monto</x-sortable-th>
+                        @can('manage-costs')
+                            <th class="px-4 py-3"></th>
+                        @endcan
+                    </x-slot:head>
+
                     @foreach($variableExpenses as $variableExpense)
-                        <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <div class="font-medium text-corteza flex items-center gap-1.5">
-                                        {{ $variableExpense->name }}
-                                        @if($variableExpense->receipt_image_path)
-                                            <x-receipt-link :href="route('variable-expenses.receipt', $variableExpense)" />
-                                        @endif
-                                    </div>
-                                    @if($variableExpense->description)
-                                        <div class="text-xs text-masa-madre mt-0.5" title="{{ $variableExpense->description }}">
-                                            {{ \Illuminate\Support\Str::limit($variableExpense->description, 70) }}
-                                        </div>
-                                    @endif
-                                    <div class="text-xs text-masa-madre mt-0.5">
-                                        {{ implode(' · ', array_filter([$variableExpense->category?->name, $variableExpense->supplier?->name])) ?: '—' }}
-                                    </div>
-                                    <div class="text-sm font-mono text-corteza mt-1 [overflow-wrap:anywhere]">$ {{ number_format($variableExpense->amount, 2, ',', '.') }}</div>
-                                </div>
-                                <div class="text-xs text-masa-madre shrink-0">{{ $variableExpense->expense_date->format('d/m/Y') }}</div>
-                            </div>
-                            @can('manage-costs')
-                                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-miga">
-                                    <button type="button"
-                                        @click="openEdit({{ Js::from([
-                                            'id'                           => $variableExpense->id,
-                                            'name'                         => $variableExpense->name,
-                                            'description'                  => $variableExpense->description,
-                                            'variable_expense_category_id' => $variableExpense->variable_expense_category_id ?? '',
-                                            'supplier_id'                  => $variableExpense->supplier_id ?? '',
-                                            'amount'                       => $variableExpense->amount,
-                                            'expense_date'                 => $variableExpense->expense_date->format('Y-m-d'),
-                                            'receipt_image_path'           => $variableExpense->receipt_image_path,
-                                        ]) }})"
-                                        class="flex-1 py-1.5 px-3 text-sm border border-gray-300 rounded text-corteza hover:bg-miga transition-colors text-center">
-                                        Editar
-                                    </button>
-                                    <form method="POST" action="{{ route('variable-expenses.destroy', $variableExpense) }}" class="flex-1">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            onclick="return confirm('¿Eliminar «{{ addslashes($variableExpense->name) }}»?')"
-                                            class="w-full py-1.5 px-3 text-sm rounded transition-colors border border-red-300 text-red-600 hover:bg-red-50">
-                                            Eliminar
-                                        </button>
-                                    </form>
-                                </div>
-                            @endcan
-                        </div>
-                    @endforeach
-                    <div class="bg-miga/50 rounded-lg px-4 py-3 text-right text-sm font-semibold text-corteza">
-                        Total del período: <span class="font-mono ml-1">$ {{ number_format($totalPeriod, 2, ',', '.') }}</span>
-                    </div>
-                    </x-slot:cards>
-
-                        <thead class="bg-miga text-masa-madre border-b border-miga">
-                            <tr>
-                                <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
-                                <th class="px-4 py-3 font-medium">Categoría</th>
-                                <th class="px-4 py-3 font-medium">Proveedor</th>
-                                <x-sortable-th column="expense_date" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
-                                <x-sortable-th column="amount" :sort="$sort" :dir="$dir" align="right">Monto</x-sortable-th>
-                                @can('manage-costs')
-                                    <th class="px-4 py-3"></th>
-                                @endcan
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-miga">
-                            @foreach($variableExpenses as $variableExpense)
-                                <tr>
-                                    <td class="px-4 py-3 font-medium text-corteza">
-                                        <div class="flex items-center gap-1.5">
-                                            @can('manage-costs')
-                                                <button type="button"
-                                                    @click="openEdit({{ Js::from([
-                                                        'id'                           => $variableExpense->id,
-                                                        'name'                         => $variableExpense->name,
-                                                        'description'                  => $variableExpense->description,
-                                                        'variable_expense_category_id' => $variableExpense->variable_expense_category_id ?? '',
-                                                        'supplier_id'                  => $variableExpense->supplier_id ?? '',
-                                                        'amount'                       => $variableExpense->amount,
-                                                        'expense_date'                 => $variableExpense->expense_date->format('Y-m-d'),
-                                                        'receipt_image_path'           => $variableExpense->receipt_image_path,
-                                                    ]) }})"
-                                                    class="hover:underline text-left">
-                                                    {{ $variableExpense->name }}
-                                                </button>
-                                            @else
-                                                {{ $variableExpense->name }}
-                                            @endcan
-                                            @if($variableExpense->receipt_image_path)
-                                                <x-receipt-link :href="route('variable-expenses.receipt', $variableExpense)" />
-                                            @endif
-                                        </div>
-                                        @if($variableExpense->description)
-                                            <div class="text-xs font-normal text-masa-madre mt-0.5" title="{{ $variableExpense->description }}">
-                                                {{ \Illuminate\Support\Str::limit($variableExpense->description, 60) }}
-                                            </div>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3 text-masa-madre text-xs">{{ $variableExpense->category?->name ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-masa-madre text-xs">{{ $variableExpense->supplier?->name ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-masa-madre">{{ $variableExpense->expense_date->format('d/m/Y') }}</td>
-                                    <td class="px-4 py-3 text-right text-corteza font-mono">
-                                        $ {{ number_format($variableExpense->amount, 2, ',', '.') }}
-                                    </td>
+                        <x-data-table.row>
+                            <x-data-table.cell role="title">
+                                <div class="flex items-center gap-1.5 font-medium text-corteza">
                                     @can('manage-costs')
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center justify-end gap-1">
-                                                <button type="button"
-                                                    @click="openEdit({{ Js::from([
-                                                        'id'                           => $variableExpense->id,
-                                                        'name'                         => $variableExpense->name,
-                                                        'description'                  => $variableExpense->description,
-                                                        'variable_expense_category_id' => $variableExpense->variable_expense_category_id ?? '',
-                                                        'supplier_id'                  => $variableExpense->supplier_id ?? '',
-                                                        'amount'                       => $variableExpense->amount,
-                                                        'expense_date'                 => $variableExpense->expense_date->format('Y-m-d'),
-                                                        'receipt_image_path'           => $variableExpense->receipt_image_path,
-                                                    ]) }})"
-                                                    aria-label="Editar gasto" title="Editar gasto"
-                                                    class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                                    </svg>
-                                                </button>
-                                                <form method="POST" action="{{ route('variable-expenses.destroy', $variableExpense) }}">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        onclick="return confirm('¿Eliminar «{{ addslashes($variableExpense->name) }}»?')"
-                                                        aria-label="Eliminar gasto" title="Eliminar gasto"
-                                                        class="p-1.5 rounded text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
+                                        <button type="button" @click="openEdit({{ Js::from($editPayload($variableExpense)) }})"
+                                            class="hover:underline text-left">
+                                            {{ $variableExpense->name }}
+                                        </button>
+                                    @else
+                                        {{ $variableExpense->name }}
                                     @endcan
-                                </tr>
-                            @endforeach
-                        </tbody>
-                        <tfoot class="border-t-2 border-miga bg-miga/50">
-                            <tr>
-                                <td colspan="{{ auth()->user()->can('manage-costs') ? 6 : 5 }}"
-                                    class="px-4 py-3 text-right text-sm font-semibold text-corteza">
-                                    Total del período:
-                                    <span class="font-mono ml-2">$ {{ number_format($totalPeriod, 2, ',', '.') }}</span>
-                                </td>
-                            </tr>
-                        </tfoot>
+                                    @if($variableExpense->receipt_image_path)
+                                        <x-receipt-link :href="route('variable-expenses.receipt', $variableExpense)" />
+                                    @endif
+                                </div>
+                                @if($variableExpense->description)
+                                    <div class="text-xs font-normal text-masa-madre mt-0.5" title="{{ $variableExpense->description }}">
+                                        {{ \Illuminate\Support\Str::limit($variableExpense->description, 60) }}
+                                    </div>
+                                @endif
+                            </x-data-table.cell>
+                            <x-data-table.cell role="subtitle" class="text-masa-madre text-xs">{{ $variableExpense->category?->name }}</x-data-table.cell>
+                            <x-data-table.cell role="subtitle" class="text-masa-madre text-xs">{{ $variableExpense->supplier?->name }}</x-data-table.cell>
+                            <x-data-table.cell role="badge" class="text-masa-madre max-md:text-xs">{{ $variableExpense->expense_date->format('d/m/Y') }}</x-data-table.cell>
+                            <x-data-table.cell role="figure" align="right" class="text-corteza font-mono [overflow-wrap:anywhere]">
+                                $ {{ number_format($variableExpense->amount, 2, ',', '.') }}
+                            </x-data-table.cell>
+                            @can('manage-costs')
+                                <x-data-table.cell role="actions">
+                                    <div class="dt-actions">
+                                        <button type="button" @click="openEdit({{ Js::from($editPayload($variableExpense)) }})"
+                                            aria-label="Editar gasto" title="Editar gasto"
+                                            class="dt-action">
+                                            <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-pencil"></use></svg>
+                                            <span class="dt-card-only">Editar</span>
+                                        </button>
+                                        <form method="POST" action="{{ route('variable-expenses.destroy', $variableExpense) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                onclick="return confirm('¿Eliminar «{{ addslashes($variableExpense->name) }}»?')"
+                                                aria-label="Eliminar gasto" title="Eliminar gasto"
+                                                class="dt-action dt-action--danger">
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-trash"></use></svg>
+                                                <span class="dt-card-only">Eliminar</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </x-data-table.cell>
+                            @endcan
+                        </x-data-table.row>
+                    @endforeach
 
-                    <x-slot:footer>
-                        @if($variableExpenses->hasPages())
-                        <div class="px-4 py-3 border-t border-miga">
-                            {{ $variableExpenses->links() }}
-                        </div>
-                    @endif
-                    </x-slot:footer>
-                </x-responsive-table>
-
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-masa-madre">{{ $variableExpenses->total() }} gasto(s) en total.</p>
-                    <x-per-page-select :paginator="$variableExpenses" />
-                </div>
+                    <x-slot:summary>
+                        Total del período: <span class="font-mono ml-2">$ {{ number_format($totalPeriod, 2, ',', '.') }}</span>
+                    </x-slot:summary>
+                </x-data-table>
             @endif
 
         </div>
