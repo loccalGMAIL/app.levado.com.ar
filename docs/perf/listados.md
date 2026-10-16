@@ -32,6 +32,13 @@ Los «duplicados» que marca Debugbar por prefijo de SQL son queries distintas:
 Lo único que sobra son las listas completas de los modales «Reemplazar» (ingredientes, envases, recetas), que se quitan
 con los endpoints bajo demanda.
 
-## Después
+## Cambios aplicados hasta ahora
 
-_Se completa al cerrar los commits._
+- `/recipes`: ver [recipes-index.md](recipes-index.md).
+- `/ingredients` y `/packaging`: la lista completa del modal «Reemplazar» ya no se consulta ni se renderiza en cada
+  carga (`ingredients.replace-options`, `packaging.replace-options`, 50 como máximo, bajo demanda).
+- `/products` (artículos) y la matriz de precios: dejaron de renderizar un popover por celda (20 teleports → 0 en
+  `/products`); el editor es el único del layout.
+
+El resto de las vistas (migración a `x-data-table` y sprite) queda pendiente de decidir: ver la nota sobre costo de
+render en [recipes-index.md](recipes-index.md).

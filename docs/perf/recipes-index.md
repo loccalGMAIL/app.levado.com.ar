@@ -42,6 +42,32 @@ Modales «Reemplazar» con el `<select>` completo precargado en cada carga del �
 - `resources/views/ingredients/modals/replace.blade.php` (lista completa de ingredientes en `IngredientController::index`).
 - `resources/views/packaging/modals/replace.blade.php` (lista completa de envases en `PackagingController::index`).
 
-## Después
+## Después (v0.17.1-listado-recetas-perf)
 
-_Se completa al cerrar los commits._
+| Métrica                              | per_page=20 | Δ vs antes | per_page=200 | Δ vs antes |
+|--------------------------------------|------------:|-----------:|-------------:|-----------:|
+| Nodos DOM (app, ya inicializado)     |       1.386 |       −42% |        8.417 |       −56% |
+| Nodos DOM (HTML crudo)               |       1.220 |       −27% |        8.347 |       −32% |
+| HTML crudo (bytes)                   |     389.738 |       −38% |    2.261.059 |       −50% |
+| Líneas de HTML                       |       3.345 |       −46% |       18.287 |       −59% |
+| `<template x-teleport>` (popovers)   |           0 |        −30 |            0 |       −306 |
+| Queries                              |          11 |         −1 |           12 |         −1 |
+| Vistas Blade renderizadas            |         323 |       +82% |        2.676 |      +118% |
+| Tiempo de respuesta (Debugbar)       |      737 ms |         ≈ |       2,12 s |       +29% |
+| Memoria pico                         |       28 MB |         ≈ |        39 MB |       −11% |
+
+**Meta no alcanzada:** con 20 filas el DOM bajó 42%, no más de la mitad. Quedan ~600 nodos de estructura fija de la
+página (sidebar, barra inferior mobile, barra superior, modales de crear/reemplazar, TomSelect) que no dependen de las
+filas y están fuera de este alcance. El costo por fila pasó de ~94 a ~39 nodos: con 200 filas la baja es de 56%.
+
+**Costo del lado del servidor:** cada fila ahora son 6 componentes de celda/fila y 6 `<x-icon>`, por eso las vistas
+Blade se duplican. Con 20 filas el tiempo no cambia; con 200 sube ~29% (1,64 s → 2,12 s con Debugbar activo). Si
+`per_page=200` es un caso real, el siguiente paso es renderizar los íconos como `<svg><use>` plano (sin componente)
+en vez de `<x-icon sprite>`.
+
+**El sprite reduce bytes pero no nodos:** cada `<use>` es un nodo hijo del `<svg>` (+20 nodos con 20 filas). El
+beneficio es el HTML más chico y el path definido una sola vez en un archivo cacheable.
+
+Lo que cambió: un solo editor de precio en el layout (−30/−306 popovers), una sola fila por receta (antes card + fila),
+íconos desde `public/icons/sprite.svg`, y las sub-recetas del modal «Reemplazar» se piden bajo demanda
+(`recipes.semi-options`, 50 como máximo) en vez de ir en cada carga.
