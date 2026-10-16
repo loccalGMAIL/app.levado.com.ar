@@ -24,17 +24,21 @@
     resuelve hacia arriba en la cadena de scopes, así que el x-data propio de este
     componente no los tapa.
 --}}
-@props(['paginator', 'totalLabel'])
+@props(['paginator', 'totalLabel', 'toggle' => true])
 
-<div class="data-table" x-data="{ mobileExpanded: false }" :data-view="mobileExpanded ? 'table' : 'cards'">
+{{-- `toggle` = false: en mobile queda siempre la card, sin «Ver tabla completa». --}}
+<div class="data-table"
+    @if($toggle) x-data="{ mobileExpanded: false }" :data-view="mobileExpanded ? 'table' : 'cards'" @else data-view="cards" @endif>
 
     <div class="data-table__surface bg-white rounded-lg shadow overflow-x-auto">
-        <div x-show="mobileExpanded" class="md:hidden px-4 py-2 border-b border-miga">
-            <button type="button" @click="mobileExpanded = false"
-                class="text-sm text-masa-madre hover:text-corteza">
-                ← Volver a cards
-            </button>
-        </div>
+        @if($toggle)
+            <div x-show="mobileExpanded" class="md:hidden px-4 py-2 border-b border-miga">
+                <button type="button" @click="mobileExpanded = false"
+                    class="text-sm text-masa-madre hover:text-corteza">
+                    ← Volver a cards
+                </button>
+            </div>
+        @endif
 
         <table class="w-full text-sm text-left">
             <thead class="bg-miga text-masa-madre border-b border-miga">
@@ -50,10 +54,12 @@
         @endif
     </div>
 
-    <button type="button" x-show="!mobileExpanded" @click="mobileExpanded = true"
-        class="md:hidden w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
-        Ver tabla completa ↓
-    </button>
+    @if($toggle)
+        <button type="button" x-show="!mobileExpanded" @click="mobileExpanded = true"
+            class="md:hidden w-full py-2 text-sm text-masa-madre hover:text-corteza text-center">
+            Ver tabla completa ↓
+        </button>
+    @endif
 
     <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
         <p class="text-xs text-masa-madre">{{ $paginator->total() }} {{ $totalLabel }}(s) en total.</p>

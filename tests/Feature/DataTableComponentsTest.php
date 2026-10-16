@@ -1,9 +1,12 @@
 <?php
 
+use App\Enums\ProductType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
 use App\Models\LaborType;
+use App\Models\Product;
+use App\Models\Recipe;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
@@ -123,4 +126,42 @@ test('la edición inline de stock vive en la fila y no se duplica', function () 
     // stock de sólo lectura; ahora hay un único editor por ingrediente.
     expect(substr_count($html, route('stock.level.update', ['ingredient', $ingredient->id])))->toBe(1)
         ->and($html)->toContain('data-label="Stock:"');
+});
+
+test('recetas: cada receta es una sola fila y no hay toggle de tabla completa', function () {
+    [$user, $tenant] = ownerForDataTable();
+    foreach (['Brownie', 'Alfajor'] as $name) {
+        $recipe = Recipe::factory()->for($tenant)->create(['name' => $name]);
+        Product::factory()->create([
+            'tenant_id' => $tenant->id,
+            'type' => ProductType::Manufactured->value,
+            'recipe_id' => $recipe->id,
+            'unit' => $recipe->yield_unit->value,
+        ]);
+    }
+
+    $html = $this->actingAs($user)
+        ->get(route('recipes.index'))
+        ->assertOk()
+        ->assertDontSee('Ver tabla completa')
+        ->assertDontSee('Volver a cards')
+        ->assertSee('id="btn-nueva-receta"', false)
+        ->getContent();
+
+    expect(substr_count($html, 'data-role="title"'))->toBe(2)
+        ->and(preg_match_all('/>\s*Brownie\s*</', $html))->toBe(1)
+        ->and(substr_count($html, 'x-data="priceCell('))->toBe(2)
+        ->and(substr_count($html, 'aria-label="Imprimir receta"'))->toBe(2)
+        ->and($html)->toContain('data-view="cards"')
+        ->and($html)->not->toContain('mobileExpanded');
+});
+
+test('el toggle de tabla completa es opcional y por defecto sigue activo', function () {
+    [$user, $tenant] = ownerForDataTable();
+    Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => Unit::Kilogramo->value]);
+
+    $this->actingAs($user)
+        ->get(route('ingredients.index'))
+        ->assertOk()
+        ->assertSee('Ver tabla completa');
 });
