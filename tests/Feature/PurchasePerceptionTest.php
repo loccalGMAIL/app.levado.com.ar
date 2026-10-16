@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PerceptionBase;
 use App\Models\Ingredient;
 use App\Models\PerceptionConcept;
 use App\Models\Purchase;
@@ -253,4 +254,135 @@ test('guardar el escaneo crea las percepciones: el importe leído queda manual y
         ->and($perceptions[0]->amount_is_manual)->toBeTrue()
         ->and((float) $perceptions[1]->amount)->toBe(20.0)
         ->and($perceptions[1]->amount_is_manual)->toBeFalse();
+});
+
+// --- Base de cálculo por concepto ---
+
+test('baseFor da neto gravado, neto total y total con IVA', function () {
+    [, , $purchase] = purchaseWithLines([
+        ['subtotal' => 1000, 'iva_rate' => 0.21],
+        ['subtotal' => 500, 'iva_rate' => 0],
+    ]);
+
+    expect($purchase->baseFor(PerceptionBase::NetTaxed))->toBe(1000.0)
+        ->and($purchase->baseFor(PerceptionBase::NetTotal))->toBe(1500.0)
+        ->and($purchase->baseFor(PerceptionBase::Gross))->toBe(1710.0);
+});
+
+test('un concepto sobre total con IVA calcula con esa base y la conserva al recalcular', function () {
+    [$user, $tenant, $purchase] = purchaseWithLines([['subtotal' => 1000, 'iva_rate' => 0.21]]);
+    $concept = PerceptionConcept::factory()->for($tenant)->create(['default_rate' => 3, 'base_type' => 'gross']);
+
+    $this->actingAs($user)->post(route('purchases.perceptions.store', $purchase), [
+        'perception_concept_id' => $concept->id,
+    ])->assertRedirect();
+
+    $perception = $purchase->perceptions()->firstOrFail();
+    expect($perception->base_type)->toBe(PerceptionBase::Gross)
+        ->and((float) $perception->amount)->toBe(36.3); // 1.210 × 3%
+
+    $this->actingAs($user)->post(route('purchases.lines.store', $purchase), [
+        'raw_name' => 'OTRO', 'quantity_purchased' => 1, 'purchase_unit' => 'u', 'unit_price' => 1000, 'iva_rate' => 0.21,
+    ]);
+
+    expect((float) $perception->fresh()->amount)->toBe(72.6); // 2.420 × 3%
+});
+
+test('sin concepto ni base elegida la base es el neto gravado', function () {
+    [$user, , $purchase] = purchaseWithLines([['subtotal' => 1000, 'iva_rate' => 0.21]]);
+
+    $this->actingAs($user)->post(route('purchases.perceptions.store', $purchase), ['description' => 'Perc.', 'rate' => 3]);
+
+    expect($purchase->perceptions()->firstOrFail()->base_type)->toBe(PerceptionBase::NetTaxed);
+});
+
+test('la base que elige el usuario en el formulario manda sobre la del concepto', function () {
+    [$user, $tenant, $purchase] = purchaseWithLines([['subtotal' => 1000, 'iva_rate' => 0.21]]);
+    $concept = PerceptionConcept::factory()->for($tenant)->create(['default_rate' => 3, 'base_type' => 'gross']);
+
+    $this->actingAs($user)->post(route('purchases.perceptions.store', $purchase), [
+        'perception_concept_id' => $concept->id, 'base_type' => 'net_total',
+    ]);
+
+    expect($purchase->perceptions()->firstOrFail()->base_type)->toBe(PerceptionBase::NetTotal)
+        ->and((float) $purchase->perceptions()->firstOrFail()->amount)->toBe(30.0);
+});
+
+test('una base escrita a mano gana sobre el tipo de base', function () {
+    [$user, , $purchase] = purchaseWithLines([['subtotal' => 1000, 'iva_rate' => 0.21]]);
+
+    $this->actingAs($user)->post(route('purchases.perceptions.store', $purchase), [
+        'description' => 'Perc.', 'rate' => 3, 'base_type' => 'gross', 'base_amount' => 200,
+    ]);
+
+    expect((float) $purchase->perceptions()->firstOrFail()->amount)->toBe(6.0);
+});
+
+test('cambiar la base del concepto no modifica las percepciones ya cargadas', function () {
+    [$user, $tenant, $purchase] = purchaseWithLines([['subtotal' => 1000, 'iva_rate' => 0.21]]);
+    $concept = PerceptionConcept::factory()->for($tenant)->create(['default_rate' => 3, 'base_type' => 'net_taxed']);
+    $this->actingAs($user)->post(route('purchases.perceptions.store', $purchase), ['perception_concept_id' => $concept->id]);
+
+    $this->actingAs($user)->put(route('perception-concepts.update', $concept), [
+        'type' => 'iva', 'name' => $concept->name, 'base_type' => 'gross',
+    ])->assertRedirect();
+
+    $perception = $purchase->perceptions()->firstOrFail();
+    expect($concept->fresh()->base_type)->toBe(PerceptionBase::Gross)
+        ->and($perception->base_type)->toBe(PerceptionBase::NetTaxed)
+        ->and((float) $perception->amount)->toBe(30.0);
+});
+
+test('una base inválida se rechaza', function () {
+    [$user, , $purchase] = purchaseWithLines();
+
+    $this->actingAs($user)->post(route('purchases.perceptions.store', $purchase), [
+        'description' => 'x', 'rate' => 1, 'base_type' => 'inventada',
+    ])->assertSessionHasErrors('base_type');
+    $this->actingAs($user)->post(route('perception-concepts.store'), [
+        'type' => 'iva', 'name' => 'x', 'base_type' => 'inventada',
+    ])->assertSessionHasErrors('base_type');
+});
+
+test('el escaneo propone la base del concepto y guardarlo la conserva', function () {
+    Storage::fake('local');
+    [$user, $tenant] = ownerForScan();
+    Ingredient::factory()->for($tenant)->create(['unit' => 'kg']);
+    PerceptionConcept::factory()->for($tenant)->create(['type' => 'iva', 'default_rate' => 3, 'base_type' => 'gross']);
+
+    config(['services.anthropic.key' => 'test-key']);
+    Http::fake(['api.anthropic.com/*' => Http::response(['content' => [['type' => 'text', 'text' => json_encode([
+        'supplier_name' => 'Molino', 'invoice_number' => '1', 'invoice_date' => '2026-05-14', 'total' => 1, 'lines' => [],
+        'perceptions' => [['type' => 'iva', 'description' => 'Perc. IVA', 'rate' => 3, 'amount' => 36.3]],
+    ])]]])]);
+
+    $draft = $this->actingAs($user)->post(route('purchases.scan'), [
+        'invoice' => UploadedFile::fake()->image('factura.jpg', 800, 600),
+    ])->assertOk()->viewData('draft');
+
+    expect($draft['perceptions'][0]['base_type'])->toBe('gross');
+
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $this->actingAs($user)->post(route('purchases.scan.store'), [
+        'supplier_id' => $supplier->id,
+        'invoice_date' => '2026-05-14',
+        'lines' => [['include' => '1', 'raw_name' => 'H', 'quantity_purchased' => '1', 'purchase_unit' => 'kg', 'unit_price' => '1000', 'iva_rate' => '0.21']],
+        'perceptions' => [['description' => 'Perc. IVA', 'rate' => '3', 'base_type' => 'gross', 'amount' => '']],
+    ])->assertRedirect();
+
+    $perception = $tenant->purchases()->firstOrFail()->perceptions()->firstOrFail();
+    expect($perception->base_type)->toBe(PerceptionBase::Gross)
+        ->and((float) $perception->amount)->toBe(36.3);
+});
+
+test('el modal de percepción ya no ofrece base imponible y el de concepto no lista el catálogo', function () {
+    [$user, $tenant, $purchase] = purchaseWithLines();
+    $concept = PerceptionConcept::factory()->for($tenant)->create(['name' => 'Perc. Existente']);
+
+    $html = $this->actingAs($user)->get(route('purchases.show', $purchase))->assertOk()->getContent();
+
+    expect($html)->not->toContain('name="base_amount"')
+        ->and($html)->not->toContain('perception-concepts/'.$concept->id)
+        ->and($html)->toContain('Nueva percepción')
+        ->and($html)->toContain('perceptionConceptForm');
 });

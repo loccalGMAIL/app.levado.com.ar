@@ -8,13 +8,14 @@
         $errorsInEditLine     = $errors->hasAny(['quantity_purchased', 'purchase_unit', 'unit_price']) && old('_form') === 'edit-line';
         $errorsInEditPurchase = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'default_iva_rate', 'invoice']) && old('_form') === 'edit-purchase';
 
-        $errorsInPerception   = $errors->hasAny(['perception_concept_id', 'type', 'jurisdiction', 'description', 'base_amount', 'rate', 'amount']) && old('_form') === 'perception';
+        $errorsInPerception   = $errors->hasAny(['perception_concept_id', 'type', 'jurisdiction', 'description', 'base_type', 'base_amount', 'rate', 'amount']) && old('_form') === 'perception';
 
         $conceptsById = $perceptionConcepts->mapWithKeys(fn ($c) => [$c->id => [
             'name' => $c->name,
             'type' => $c->type->value,
             'jurisdiction' => $c->jurisdiction?->value ?? '',
             'default_rate' => $c->default_rate !== null ? (float) $c->default_rate : '',
+            'base_type' => $c->base_type->value,
         ]]);
 
         $editingPerception = null;
@@ -25,6 +26,7 @@
                 'type'                  => old('type', 'otro'),
                 'jurisdiction'          => old('jurisdiction', ''),
                 'description'           => old('description', ''),
+                'base_type'             => old('base_type', 'net_taxed'),
                 'base_amount'           => old('base_amount', ''),
                 'rate'                  => old('rate', ''),
                 'amount'                => old('amount', ''),
@@ -148,18 +150,29 @@
                     {{-- En mobile los totales bajan a su propia fila con el ancho completo:
                          apilados a la derecha con `shrink-0` empujaban el monto fuera de la card. --}}
                     <div class="sm:text-right sm:shrink-0 space-y-2">
-                        <div>
-                            <p class="text-xs text-masa-madre">Total renglones{{ $totalIva > 0 ? ' (sin IVA)' : '' }}</p>
-                            <p class="text-lg sm:text-xl font-mono font-semibold text-corteza [overflow-wrap:anywhere]">
-                                ${{ number_format($purchase->totalAmount(), 2, ',', '.') }}
-                            </p>
-                        </div>
+                        {{-- Con IVA o percepciones el protagonista es el total del comprobante;
+                             el neto de los renglones pasa a ser el dato secundario. Sin ninguno de
+                             los dos, el total de renglones es el único importe y queda destacado. --}}
                         @if($totalIva > 0 || $totalPercepcion > 0)
                             <div>
                                 <p class="text-xs text-masa-madre">Total factura{{ $totalIva > 0 ? ' (con IVA)' : '' }}</p>
-                                <p class="text-sm font-mono text-corteza [overflow-wrap:anywhere]"
+                                <p class="text-lg sm:text-xl font-mono font-semibold text-corteza [overflow-wrap:anywhere]"
                                     x-text="'$ ' + fmt(tfootGrandTotal)">
                                     ${{ number_format($grandTotal, 2, ',', '.') }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-masa-madre">Total renglones{{ $totalIva > 0 ? ' (sin IVA)' : '' }}</p>
+                                <p class="text-sm font-mono text-corteza [overflow-wrap:anywhere]"
+                                    x-text="'$ ' + fmt(tfootSubtotal)">
+                                    ${{ number_format($purchase->totalAmount(), 2, ',', '.') }}
+                                </p>
+                            </div>
+                        @else
+                            <div>
+                                <p class="text-xs text-masa-madre">Total renglones</p>
+                                <p class="text-lg sm:text-xl font-mono font-semibold text-corteza [overflow-wrap:anywhere]">
+                                    ${{ number_format($purchase->totalAmount(), 2, ',', '.') }}
                                 </p>
                             </div>
                         @endif
@@ -564,7 +577,7 @@
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <h3 class="text-sm font-semibold text-corteza">Percepciones e impuestos</h3>
-                        <p class="text-xs text-masa-madre mt-0.5">IIBB, percepción de IVA y otros importes que suma el comprobante además del IVA de los renglones.</p>
+                        <!-- <p class="text-xs text-masa-madre mt-0.5">IIBB, percepción de IVA y otros importes que suma el comprobante además del IVA de los renglones.</p> -->
                     </div>
                     @can('manage-costs')
                         <button type="button"
@@ -583,7 +596,6 @@
                             <thead class="bg-miga text-masa-madre border-b border-miga">
                                 <tr>
                                     <th class="px-4 py-2 font-medium">Concepto</th>
-                                    <th class="px-4 py-2 font-medium">Provincia</th>
                                     <th class="px-4 py-2 font-medium text-right whitespace-nowrap">Base</th>
                                     <th class="px-4 py-2 font-medium text-right whitespace-nowrap">Alícuota</th>
                                     <th class="px-4 py-2 font-medium text-right whitespace-nowrap">Importe</th>
@@ -595,17 +607,10 @@
                             <tbody class="divide-y divide-miga">
                                 @foreach($purchase->perceptions as $perception)
                                     <tr>
-                                        <td class="px-4 py-2.5 text-corteza">
-                                            {{ $perception->description }}
-                                            <span class="block text-[11px] text-masa-madre">{{ $perception->type->label() }}</span>
-                                        </td>
-                                        <td class="px-4 py-2.5 text-masa-madre">{{ $perception->jurisdiction?->label() ?? '—' }}</td>
-                                        <td class="px-4 py-2.5 text-right font-mono text-masa-madre whitespace-nowrap">
-                                            @if($perception->base_amount !== null)
-                                                $ {{ number_format((float) $perception->base_amount, 2, ',', '.') }}
-                                            @else
-                                                <span title="Neto gravado de la compra">auto</span>
-                                            @endif
+                                        <td class="px-4 py-2.5 text-corteza">{{ $perception->description }}</td>
+                                        <td class="px-4 py-2.5 text-right font-mono text-masa-madre whitespace-nowrap"
+                                            title="Se calcula sobre: {{ $perception->base_type->label() }}">
+                                            $ {{ number_format($perception->base_amount !== null ? (float) $perception->base_amount : $purchase->baseFor($perception->base_type), 2, ',', '.') }}
                                         </td>
                                         <td class="px-4 py-2.5 text-right font-mono text-masa-madre whitespace-nowrap">
                                             {{ $perception->rate !== null ? rtrim(rtrim(number_format((float) $perception->rate, 4, ',', '.'), '0'), ',').'%' : '—' }}
@@ -628,6 +633,7 @@
                                                             'type' => $perception->type->value,
                                                             'jurisdiction' => $perception->jurisdiction?->value ?? '',
                                                             'description' => $perception->description,
+                                                            'base_type' => $perception->base_type->value,
                                                             'base_amount' => $perception->base_amount,
                                                             'rate' => $perception->rate !== null ? (float) $perception->rate : '',
                                                             'amount' => $perception->amount_is_manual ? (float) $perception->amount : '',
@@ -747,6 +753,7 @@
             @include('purchases.modals.add-line')
             @include('purchases.modals.perception')
             @include('purchases.modals.perception-concepts')
+            @include('purchases.modals.perception-concepts-manage')
             @include('credit-notes.modals.create')
         @endcan
 

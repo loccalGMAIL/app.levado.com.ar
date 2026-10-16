@@ -17,7 +17,8 @@ class PerceptionConceptController extends Controller
     public function store(StorePerceptionConceptRequest $request): RedirectResponse|JsonResponse
     {
         $tenant = app(Tenant::class);
-        $concept = $tenant->perceptionConcepts()->create($request->conceptData());
+        // refresh(): los defaults de la BD (base_type, is_active) no vuelven con el create().
+        $concept = $tenant->perceptionConcepts()->create($request->conceptData())->refresh();
 
         $this->recorder->record(
             actor: $request->user(),
@@ -29,7 +30,7 @@ class PerceptionConceptController extends Controller
         );
 
         if ($request->wantsJson()) {
-            return response()->json($this->toArray($concept), 201);
+            return response()->json($concept->toClientArray(), 201);
         }
 
         return back(fallback: route('purchases.index'))
@@ -37,7 +38,7 @@ class PerceptionConceptController extends Controller
             ->with('status', 'Concepto creado.');
     }
 
-    public function update(UpdatePerceptionConceptRequest $request, PerceptionConcept $perceptionConcept): RedirectResponse
+    public function update(UpdatePerceptionConceptRequest $request, PerceptionConcept $perceptionConcept): RedirectResponse|JsonResponse
     {
         $this->authorizeConcept($perceptionConcept);
 
@@ -52,6 +53,10 @@ class PerceptionConceptController extends Controller
             tenantId: $perceptionConcept->tenant_id,
         );
 
+        if ($request->wantsJson()) {
+            return response()->json($perceptionConcept->refresh()->toClientArray());
+        }
+
         return back(fallback: route('purchases.index'))
             ->with('reopen_perception_concepts', true)
             ->with('status', 'Concepto actualizado.');
@@ -61,7 +66,7 @@ class PerceptionConceptController extends Controller
      * Las percepciones ya cargadas conservan su snapshot: borrar el concepto sólo
      * las desvincula (nullOnDelete), no las modifica.
      */
-    public function destroy(PerceptionConcept $perceptionConcept): RedirectResponse
+    public function destroy(PerceptionConcept $perceptionConcept): RedirectResponse|JsonResponse
     {
         $this->authorizeConcept($perceptionConcept);
 
@@ -76,23 +81,13 @@ class PerceptionConceptController extends Controller
 
         $perceptionConcept->delete();
 
+        if (request()->wantsJson()) {
+            return response()->json(['id' => $perceptionConcept->id]);
+        }
+
         return back(fallback: route('purchases.index'))
             ->with('reopen_perception_concepts', true)
             ->with('status', 'Concepto eliminado.');
-    }
-
-    /**
-     * @return array{id: int, name: string, type: string, jurisdiction: ?string, default_rate: ?float}
-     */
-    private function toArray(PerceptionConcept $concept): array
-    {
-        return [
-            'id' => $concept->id,
-            'name' => $concept->name,
-            'type' => $concept->type->value,
-            'jurisdiction' => $concept->jurisdiction?->value,
-            'default_rate' => $concept->default_rate !== null ? (float) $concept->default_rate : null,
-        ];
     }
 
     private function authorizeConcept(PerceptionConcept $concept): void

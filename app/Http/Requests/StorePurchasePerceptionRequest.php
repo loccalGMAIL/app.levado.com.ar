@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\Jurisdiction;
+use App\Enums\PerceptionBase;
 use App\Enums\PerceptionType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,6 +26,7 @@ class StorePurchasePerceptionRequest extends FormRequest
             'type' => ['nullable', Rule::enum(PerceptionType::class)],
             'jurisdiction' => ['nullable', Rule::enum(Jurisdiction::class)],
             'description' => ['nullable', 'string', 'max:255'],
+            'base_type' => ['nullable', Rule::enum(PerceptionBase::class)],
             'base_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'amount' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],

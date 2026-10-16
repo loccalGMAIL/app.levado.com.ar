@@ -184,6 +184,7 @@
                         'type' => $p['type'],
                         'jurisdiction' => $p['jurisdiction'] ?? '',
                         'description' => $p['description'],
+                        'base_type' => $p['base_type'] ?? 'net_taxed',
                         'rate' => $p['rate'] ?? '',
                         'amount' => $p['amount'] ?? '',
                     ])->all());
@@ -192,13 +193,14 @@
                         'type' => $c->type->value,
                         'jurisdiction' => $c->jurisdiction?->value ?? '',
                         'default_rate' => $c->default_rate !== null ? (float) $c->default_rate : '',
+                        'base_type' => $c->base_type->value,
                     ]]);
                 @endphp
                 <div class="bg-white rounded-lg shadow p-5"
                     x-data="{
                         rows: @js($initialPerceptions),
                         concepts: @js($conceptsById),
-                        add() { this.rows.push({ perception_concept_id: '', type: 'otro', jurisdiction: '', description: '', rate: '', amount: '' }); },
+                        add() { this.rows.push({ perception_concept_id: '', type: 'otro', jurisdiction: '', description: '', base_type: 'net_taxed', rate: '', amount: '' }); },
                         remove(i) { this.rows.splice(i, 1); },
                         pick(row) {
                             const c = this.concepts[row.perception_concept_id];
@@ -206,6 +208,7 @@
                             row.description = c.name;
                             row.type = c.type;
                             row.jurisdiction = c.jurisdiction;
+                            row.base_type = c.base_type;
                             if (row.rate === '' || row.rate === null) { row.rate = c.default_rate; }
                         },
                     }">
@@ -224,6 +227,7 @@
                             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
                                 <input type="hidden" :name="`perceptions[${i}][type]`" :value="row.type">
                                 <input type="hidden" :name="`perceptions[${i}][jurisdiction]`" :value="row.jurisdiction">
+                                <input type="hidden" :name="`perceptions[${i}][base_type]`" :value="row.base_type">
 
                                 <div class="sm:col-span-4">
                                     <label class="text-xs text-masa-madre">Concepto</label>
@@ -260,7 +264,7 @@
                         </template>
                     </div>
                     <p class="mt-3 text-xs text-masa-madre">
-                        Si dejás el importe vacío se calcula como alícuota × neto gravado de los renglones. Si lo completás, se respeta tal cual figura en la factura.
+                        Si dejás el importe vacío se calcula como alícuota × la base del concepto (por defecto, el neto gravado). Si lo completás, se respeta tal cual figura en la factura.
                     </p>
                 </div>
 

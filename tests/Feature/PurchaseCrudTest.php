@@ -2,6 +2,7 @@
 
 use App\Enums\TenantUserRole;
 use App\Models\Ingredient;
+use App\Models\PurchaseLine;
 use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Models\TenantUser;
@@ -261,4 +262,48 @@ test('el match de una compra con ítem dado de baja ofrece su opción marcada', 
     expect($html)->toContain('Harina Baja')
         ->and($html)->toContain('(inactivo)')
         ->and($html)->toContain('value="ingredient:'.$ingredient->id.'"');
+});
+
+test('los modales de compra ponen el IVA bajo fecha y factura, y las notas al final en un acordeón', function () {
+    [$user, $tenant] = ownerForPurchaseCrud();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create(['supplier_id' => $supplier->id, 'invoice_date' => '2026-07-13']);
+
+    $editModal = str($this->actingAs($user)->get(route('purchases.show', $purchase))->assertOk()->getContent())
+        ->after('name="purchase-edit"')->before('name="invoice-image"')->toString();
+    $createModal = str($this->actingAs($user)->get(route('purchases.index'))->assertOk()->getContent())
+        ->after('Nueva compra')->toString();
+
+    foreach ([$editModal, $createModal] as $html) {
+        expect(strpos($html, 'N° de factura'))->toBeLessThan(strpos($html, 'IVA de la factura'))
+            ->and(strpos($html, 'IVA de la factura'))->toBeLessThan(strpos($html, 'Comprobante'))
+            ->and(strpos($html, 'Comprobante'))->toBeLessThan(strpos($html, 'notesOpen = !notesOpen'));
+    }
+});
+
+test('el modal de editar muestra la alícuota real de la factura y no roba el foco al abrir', function () {
+    [$user, $tenant] = ownerForPurchaseCrud();
+    $supplier = Supplier::factory()->for($tenant)->create();
+
+    $sinIva = $tenant->purchases()->create(['supplier_id' => $supplier->id, 'invoice_date' => '2026-07-13', 'default_iva_rate' => null]);
+    PurchaseLine::factory()->for($sinIva)->create(['iva_rate' => 0]);
+
+    $conIva = $tenant->purchases()->create(['supplier_id' => $supplier->id, 'invoice_date' => '2026-07-13', 'default_iva_rate' => 0.21]);
+    PurchaseLine::factory()->for($conIva)->create(['iva_rate' => 0.105]);
+
+    $vacia = $tenant->purchases()->create(['supplier_id' => $supplier->id, 'invoice_date' => '2026-07-13', 'default_iva_rate' => '0.0000']);
+
+    expect($sinIva->fresh()->ivaRateForForm())->toBe('0')
+        ->and($conIva->fresh()->ivaRateForForm())->toBe('0.105')
+        ->and($vacia->fresh()->ivaRateForForm())->toBe('0');
+
+    $html = $this->actingAs($user)->get(route('purchases.show', $sinIva))->assertOk()->getContent();
+    expect($html)->toContain("ivaRate: '0',");
+
+    // El foco inicial sólo lo piden los modales `focusable`: el de editar no, para que no
+    // se abra de entrada el desplegable del proveedor.
+    $editInit = substr($html, strpos($html, "== 'purchase-edit'") - 700, 700);
+    $addInit = substr($html, strpos($html, "== 'add-line'") - 700, 700);
+    expect($editInit)->not->toContain('firstNonButtonFocusable().focus()')
+        ->and($addInit)->toContain('firstNonButtonFocusable().focus()');
 });

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PerceptionBase;
 use App\Models\PerceptionConcept;
 use App\Models\Purchase;
 use App\Models\PurchasePerception;
@@ -37,7 +38,7 @@ class PurchasePerceptionSync
     }
 
     /**
-     * Recalcula las percepciones no manuales contra el neto gravado actual.
+     * Recalcula las percepciones no manuales contra la base actual de cada una.
      * Se llama cada vez que cambian los renglones de la compra.
      */
     public function refresh(Purchase $purchase): void
@@ -47,7 +48,7 @@ class PurchasePerceptionSync
             ->get()
             ->each(function (PurchasePerception $perception) use ($purchase) {
                 $perception->setRelation('purchase', $purchase);
-                $perception->update(['amount' => $this->computeAmount($purchase, $perception->base_amount, $perception->rate)]);
+                $perception->update(['amount' => $this->computeAmount($purchase, $perception->base_type, $perception->base_amount, $perception->rate)]);
             });
     }
 
@@ -63,6 +64,9 @@ class PurchasePerceptionSync
         $rate = $this->nullableNumber($data['rate'] ?? $concept?->default_rate);
         $typedAmount = $this->nullableNumber($data['amount'] ?? null);
 
+        // Lo que elige el usuario en el formulario manda; el concepto sólo propone el default.
+        $baseType = PerceptionBase::tryFrom((string) ($data['base_type'] ?? '')) ?? $concept->base_type ?? PerceptionBase::NetTaxed;
+
         $isManual = $typedAmount !== null;
 
         return [
@@ -70,20 +74,21 @@ class PurchasePerceptionSync
             'type' => $concept->type->value ?? $data['type'] ?? 'otro',
             'jurisdiction' => $concept !== null ? $concept->jurisdiction?->value : ($data['jurisdiction'] ?? null),
             'description' => $data['description'] ?? $concept->name ?? 'Percepción',
+            'base_type' => $baseType->value,
             'base_amount' => $base,
             'rate' => $rate,
-            'amount' => $isManual ? round($typedAmount, 2) : $this->computeAmount($purchase, $base, $rate),
+            'amount' => $isManual ? round($typedAmount, 2) : $this->computeAmount($purchase, $baseType, $base, $rate),
             'amount_is_manual' => $isManual,
         ];
     }
 
-    private function computeAmount(Purchase $purchase, float|string|null $base, float|string|null $rate): float
+    private function computeAmount(Purchase $purchase, PerceptionBase $baseType, float|string|null $base, float|string|null $rate): float
     {
         if ($rate === null || $rate === '') {
             return 0.0;
         }
 
-        $effectiveBase = $base !== null ? (float) $base : $purchase->taxedNet();
+        $effectiveBase = $base !== null ? (float) $base : $purchase->baseFor($baseType);
 
         return round($effectiveBase * (float) $rate / 100, 2);
     }

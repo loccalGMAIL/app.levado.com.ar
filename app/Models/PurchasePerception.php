@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Jurisdiction;
+use App\Enums\PerceptionBase;
 use App\Enums\PerceptionType;
 use Database\Factories\PurchasePerceptionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,6 +28,7 @@ class PurchasePerception extends Model
         'type',
         'jurisdiction',
         'description',
+        'base_type',
         'base_amount',
         'rate',
         'amount',
@@ -38,6 +40,7 @@ class PurchasePerception extends Model
         return [
             'type' => PerceptionType::class,
             'jurisdiction' => Jurisdiction::class,
+            'base_type' => PerceptionBase::class,
             'base_amount' => 'decimal:2',
             'rate' => 'decimal:4',
             'amount' => 'decimal:2',

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\CatalogItemType;
 use App\Enums\Jurisdiction;
+use App\Enums\PerceptionBase;
 use App\Enums\PerceptionType;
 use App\Enums\Unit;
 use App\Models\Tenant;
@@ -51,6 +52,7 @@ class StoreScannedPurchaseRequest extends FormRequest
             'perceptions.*.type' => ['nullable', Rule::enum(PerceptionType::class)],
             'perceptions.*.jurisdiction' => ['nullable', Rule::enum(Jurisdiction::class)],
             'perceptions.*.description' => ['nullable', 'string', 'max:255'],
+            'perceptions.*.base_type' => ['nullable', Rule::enum(PerceptionBase::class)],
             'perceptions.*.rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'perceptions.*.amount' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
         ];

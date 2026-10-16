@@ -1,9 +1,10 @@
-<x-crud-modal name="purchase-edit" title="Editar compra" :show="$errorsInEditPurchase">
+<x-crud-modal name="purchase-edit" title="Editar compra" :show="$errorsInEditPurchase" :focusable="false">
     <form method="POST" action="{{ route('purchases.update', $purchase) }}" enctype="multipart/form-data" class="space-y-4"
           x-data="{
               supplierId: '{{ old('supplier_id', $purchase->supplier_id) }}',
               invoiceNumber: '{{ old('invoice_number', $purchase->invoice_number) }}',
-              ivaRate: '{{ old('default_iva_rate', $purchase->default_iva_rate !== null ? (string) $purchase->default_iva_rate : '0.21') }}',
+              ivaRate: '{{ old('default_iva_rate', $purchase->ivaRateForForm()) }}',
+              notesOpen: {{ filled(old('notes', $purchase->notes)) || $errors->has('notes') ? 'true' : 'false' }},
               duplicateWarning: null,
               _dupTimer: null,
               checkDuplicate() {
@@ -134,13 +135,26 @@
             </div>
         </div>
 
-        <div>
-            <x-input-label for="edit_purchase_notes" value="Notas" />
-            <textarea id="edit_purchase_notes" name="notes"
-                rows="2"
-                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm"
-                placeholder="Opcional">{{ old('notes', $purchase->notes) }}</textarea>
-            <x-input-error :messages="$errors->get('notes')" class="mt-2" />
+        {{-- IVA --}}
+        <div class="bg-miga/50 rounded-md p-4 space-y-3">
+            <p class="text-xs font-semibold text-corteza">IVA de la factura</p>
+            <div class="flex flex-wrap gap-x-5 gap-y-2">
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="default_iva_rate" value="0" x-model="ivaRate"
+                        class="text-corteza focus:ring-horno border-gray-300">
+                    Sin IVA
+                </label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="default_iva_rate" value="0.105" x-model="ivaRate"
+                        class="text-corteza focus:ring-horno border-gray-300">
+                    10,5%
+                </label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="default_iva_rate" value="0.21" x-model="ivaRate"
+                        class="text-corteza focus:ring-horno border-gray-300">
+                    21%
+                </label>
+            </div>
         </div>
 
         <div>
@@ -178,24 +192,23 @@
             <x-input-error :messages="$errors->get('invoice')" class="mt-2" />
         </div>
 
-        <div class="bg-miga/50 rounded-md p-4 space-y-3">
-            <p class="text-xs font-semibold text-corteza">IVA de la factura</p>
-            <div class="flex flex-wrap gap-x-5 gap-y-2">
-                <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" name="default_iva_rate" value="0" x-model="ivaRate"
-                        class="text-corteza focus:ring-horno border-gray-300">
-                    Sin IVA
-                </label>
-                <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" name="default_iva_rate" value="0.105" x-model="ivaRate"
-                        class="text-corteza focus:ring-horno border-gray-300">
-                    10,5%
-                </label>
-                <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" name="default_iva_rate" value="0.21" x-model="ivaRate"
-                        class="text-corteza focus:ring-horno border-gray-300">
-                    21%
-                </label>
+        {{-- Notas: acordeón al final; abierto si ya hay una nota o falló su validación --}}
+        <div class="border border-miga rounded-md">
+            <button type="button" @click="notesOpen = !notesOpen" :aria-expanded="notesOpen"
+                class="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-corteza">
+                <span>Notas <span class="text-xs font-normal text-masa-madre">(opcional)</span></span>
+                <svg class="w-4 h-4 text-masa-madre transition-transform" :class="notesOpen ? 'rotate-180' : ''"
+                    fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            <div x-show="notesOpen" x-cloak class="px-4 pb-4">
+                <label for="edit_purchase_notes" class="sr-only">Notas</label>
+                <textarea id="edit_purchase_notes" name="notes"
+                    rows="2"
+                    class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm"
+                    placeholder="Opcional">{{ old('notes', $purchase->notes) }}</textarea>
+                <x-input-error :messages="$errors->get('notes')" class="mt-2" />
             </div>
         </div>
 

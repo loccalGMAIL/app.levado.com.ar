@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CatalogItemType;
+use App\Enums\PerceptionBase;
 use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Http\Requests\StoreScannedPurchaseRequest;
@@ -163,6 +164,7 @@ class PurchaseScanController extends Controller
                 : $candidates->sortBy(fn (PerceptionConcept $c) => abs((float) ($c->default_rate ?? 0) - $rate))->first();
 
             $row['perception_concept_id'] = $best?->id;
+            $row['base_type'] = $best?->base_type->value ?? PerceptionBase::NetTaxed->value;
 
             return $row;
         }, $perceptions);

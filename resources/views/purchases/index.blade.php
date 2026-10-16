@@ -27,7 +27,7 @@
                         Leer factura
                     </a>
                     <button type="button"
-                        @click="$dispatch('open-modal', 'perception-concepts')"
+                        @click="$dispatch('open-modal', 'perception-concepts-manage')"
                         class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
                         Percepciones
                     </button>
@@ -273,6 +273,7 @@
             @include('purchases.modals.create')
             @include('suppliers.modals.quick-create')
             @include('purchases.modals.perception-concepts')
+            @include('purchases.modals.perception-concepts-manage')
         @endcan
 
     </div>
