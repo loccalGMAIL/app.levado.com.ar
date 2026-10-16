@@ -165,3 +165,31 @@ test('el toggle de tabla completa es opcional y por defecto sigue activo', funct
         ->assertOk()
         ->assertSee('Ver tabla completa');
 });
+
+test('recetas: los íconos de cada fila salen del sprite y no se repiten como path inline', function () {
+    [$user, $tenant] = ownerForDataTable();
+    Recipe::factory()->for($tenant)->count(3)->create();
+
+    $html = $this->actingAs($user)->get(route('recipes.index'))->assertOk()->getContent();
+
+    expect($html)->toContain('/icons/sprite.svg?v=')
+        ->and(substr_count($html, '#i-print'))->toBe(3)
+        ->and(substr_count($html, '#i-copy'))->toBe(3)
+        // El path de «imprimir» vive una sola vez en public/icons/sprite.svg.
+        ->and($html)->not->toContain('M6.72 13.829c-.24.03');
+
+    expect(file_get_contents(public_path('icons/sprite.svg')))
+        ->toContain('id="i-print"')
+        ->toContain('id="i-copy"')
+        ->toContain('id="i-eye-off"');
+});
+
+test('x-icon sin sprite sigue renderizando el path inline', function () {
+    [$user, $tenant] = ownerForDataTable();
+    Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => Unit::Kilogramo->value]);
+
+    $this->actingAs($user)
+        ->get(route('ingredients.index'))
+        ->assertOk()
+        ->assertSee('M16.862 4.487l1.687-1.688', false);
+});
