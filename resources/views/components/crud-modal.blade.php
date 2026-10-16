@@ -4,9 +4,12 @@
     'maxWidth' => 'lg',
     'show' => false,
     'z' => 50,
+    // Un modal con muchos campos puede preferir no robar el foco al abrir (p. ej. para no
+    // desplegar de entrada un select con buscador).
+    'focusable' => true,
 ])
 
-<x-modal :name="$name" :max-width="$maxWidth" :show="$show" :z="$z" focusable>
+<x-modal :name="$name" :max-width="$maxWidth" :show="$show" :z="$z" :focusable="$focusable">
     <div class="bg-white rounded-lg">
         <div class="flex items-center justify-between px-6 py-4 border-b border-miga">
             <h3 class="text-base font-semibold text-corteza">{{ $title }}</h3>

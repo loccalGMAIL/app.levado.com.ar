@@ -51,16 +51,14 @@
             <form method="POST" action="{{ route('purchases.scan.store') }}" class="space-y-6"
                 x-data="{
                     globalIva: '0.21',
-                    globalPercepcion: '',
                     applyToAll() {
-                        $dispatch('apply-tax-defaults', { ivaRate: this.globalIva, percepcionRate: this.globalPercepcion });
+                        $dispatch('apply-tax-defaults', { ivaRate: this.globalIva });
                     }
                 }">
                 @csrf
                 <input type="hidden" name="invoice_image_path" value="{{ $imagePath }}">
                 <input type="hidden" name="invoice_total" value="{{ $header['total'] }}">
                 <input type="hidden" name="default_iva_rate" :value="globalIva">
-                <input type="hidden" name="default_percepcion_rate" :value="globalPercepcion">
 
                 {{-- Cabecera --}}
                 <div class="bg-white rounded-lg shadow p-6">
@@ -147,9 +145,9 @@
                     </div>
                 </div>
 
-                {{-- Control global IVA y percepciones --}}
+                {{-- Control global de IVA --}}
                 <div class="bg-white rounded-lg shadow p-5">
-                    <p class="text-sm font-semibold text-corteza mb-3">IVA y percepciones de la factura</p>
+                    <p class="text-sm font-semibold text-corteza mb-3">IVA de la factura</p>
                     <div class="flex flex-wrap items-end gap-5">
                         <div class="space-y-1.5">
                             <p class="text-xs font-medium text-masa-madre">Alícuota IVA</p>
@@ -172,22 +170,102 @@
                             </div>
                         </div>
 
-                        <div x-show="globalIva !== '0'" x-cloak class="space-y-1.5">
-                            <p class="text-xs font-medium text-masa-madre">Percepción</p>
-                            <div class="flex items-center gap-1.5">
-                                <input type="number" x-model="globalPercepcion"
-                                    step="0.01" min="0" max="100"
-                                    placeholder="0"
-                                    class="border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm w-24 text-right">
-                                <span class="text-sm text-masa-madre">%</span>
-                            </div>
-                        </div>
-
                         <button type="button" @click="applyToAll()"
                             class="px-4 py-2 text-sm font-medium bg-corteza text-white rounded-md hover:bg-horno transition-colors shrink-0">
                             Aplicar a todos los renglones
                         </button>
                     </div>
+                </div>
+
+                {{-- Percepciones e impuestos: listado propio, no por renglón --}}
+                @php
+                    $initialPerceptions = old('perceptions', collect($draft['perceptions'] ?? [])->map(fn ($p) => [
+                        'perception_concept_id' => $p['perception_concept_id'] ?? '',
+                        'type' => $p['type'],
+                        'jurisdiction' => $p['jurisdiction'] ?? '',
+                        'description' => $p['description'],
+                        'base_type' => $p['base_type'] ?? 'net_taxed',
+                        'rate' => $p['rate'] ?? '',
+                        'amount' => $p['amount'] ?? '',
+                    ])->all());
+                    $conceptsById = $perceptionConcepts->mapWithKeys(fn ($c) => [$c->id => [
+                        'name' => $c->name,
+                        'type' => $c->type->value,
+                        'jurisdiction' => $c->jurisdiction?->value ?? '',
+                        'default_rate' => $c->default_rate !== null ? (float) $c->default_rate : '',
+                        'base_type' => $c->base_type->value,
+                    ]]);
+                @endphp
+                <div class="bg-white rounded-lg shadow p-5"
+                    x-data="{
+                        rows: @js($initialPerceptions),
+                        concepts: @js($conceptsById),
+                        add() { this.rows.push({ perception_concept_id: '', type: 'otro', jurisdiction: '', description: '', base_type: 'net_taxed', rate: '', amount: '' }); },
+                        remove(i) { this.rows.splice(i, 1); },
+                        pick(row) {
+                            const c = this.concepts[row.perception_concept_id];
+                            if (!c) { return; }
+                            row.description = c.name;
+                            row.type = c.type;
+                            row.jurisdiction = c.jurisdiction;
+                            row.base_type = c.base_type;
+                            if (row.rate === '' || row.rate === null) { row.rate = c.default_rate; }
+                        },
+                    }">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-sm font-semibold text-corteza">Percepciones e impuestos</p>
+                        <button type="button" @click="add()"
+                            class="text-sm text-horno hover:text-corteza underline">+ Agregar percepción</button>
+                    </div>
+
+                    <p x-show="rows.length === 0" class="text-sm text-masa-madre">
+                        No se leyeron percepciones. Si la factura trae IIBB, percepción de IVA u otro impuesto, agregalos acá.
+                    </p>
+
+                    <div class="space-y-3">
+                        <template x-for="(row, i) in rows" :key="i">
+                            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                                <input type="hidden" :name="`perceptions[${i}][type]`" :value="row.type">
+                                <input type="hidden" :name="`perceptions[${i}][jurisdiction]`" :value="row.jurisdiction">
+                                <input type="hidden" :name="`perceptions[${i}][base_type]`" :value="row.base_type">
+
+                                <div class="sm:col-span-4">
+                                    <label class="text-xs text-masa-madre">Concepto</label>
+                                    <select :name="`perceptions[${i}][perception_concept_id]`" x-model="row.perception_concept_id"
+                                        @change="pick(row)"
+                                        class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
+                                        <option value="">— Sin concepto (libre) —</option>
+                                        @foreach($perceptionConcepts as $c)
+                                            <option value="{{ $c->id }}">{{ $c->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <label class="text-xs text-masa-madre">Descripción</label>
+                                    <input type="text" :name="`perceptions[${i}][description]`" x-model="row.description"
+                                        class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="text-xs text-masa-madre">Alícuota %</label>
+                                    <input type="number" :name="`perceptions[${i}][rate]`" x-model="row.rate"
+                                        step="0.01" min="0" max="100"
+                                        class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm text-right">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="text-xs text-masa-madre">Importe $</label>
+                                    <input type="number" :name="`perceptions[${i}][amount]`" x-model="row.amount"
+                                        step="0.01" min="0" placeholder="auto"
+                                        class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm text-right">
+                                </div>
+                                <div class="sm:col-span-1 text-right">
+                                    <button type="button" @click="remove(i)" class="text-sm text-red-600 hover:underline" aria-label="Quitar">Quitar</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <p class="mt-3 text-xs text-masa-madre">
+                        Si dejás el importe vacío se calcula como alícuota × la base del concepto (por defecto, el neto gravado). Si lo completás, se respeta tal cual figura en la factura.
+                    </p>
                 </div>
 
                 {{-- Renglones detectados --}}
@@ -209,9 +287,7 @@
                                         <th class="px-3 py-3 font-medium">Unidad</th>
                                         <th class="px-3 py-3 font-medium text-right">Precio unit.</th>
                                         <th class="px-3 py-3 font-medium text-center">IVA</th>
-                                        <th class="px-3 py-3 font-medium text-center">Perc. %</th>
                                         <th class="px-3 py-3 font-medium text-right">IVA $</th>
-                                        <th class="px-3 py-3 font-medium text-right">Perc. $</th>
                                         <th class="px-3 py-3 font-medium text-right">Total</th>
                                     </tr>
                                 </thead>
@@ -239,7 +315,6 @@
                                         })"
                                         @apply-tax-defaults.window="
                                             ivaRate = parseFloat($event.detail.ivaRate) || 0;
-                                            percepcionRate = parseFloat($event.detail.percepcionRate) || 0;
                                         ">
                                             <td class="px-3 py-3 text-center align-top">
                                                 <input type="checkbox" name="lines[{{ $i }}][include]" value="1"
@@ -307,25 +382,9 @@
                                                 </select>
                                             </td>
 
-                                            <td class="px-3 py-3 align-top text-center">
-                                                <div class="flex items-center gap-1 justify-center">
-                                                    <input type="number" name="lines[{{ $i }}][percepcion_rate]"
-                                                        x-model.number="percepcionRate"
-                                                        step="0.01" min="0" max="100"
-                                                        placeholder="0"
-                                                        class="border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm w-16 text-right">
-                                                    <span class="text-xs text-masa-madre">%</span>
-                                                </div>
-                                            </td>
-
                                             <td class="px-3 py-3 align-top text-right">
                                                 <span class="text-sm font-mono text-masa-madre"
                                                     x-text="'$ ' + fmt(ivaAmount)"></span>
-                                            </td>
-
-                                            <td class="px-3 py-3 align-top text-right">
-                                                <span class="text-sm font-mono text-masa-madre"
-                                                    x-text="percepcionRate > 0 ? '$ ' + fmt(percepcionAmount) : '—'"></span>
                                             </td>
 
                                             <td class="px-3 py-3 align-top text-right">

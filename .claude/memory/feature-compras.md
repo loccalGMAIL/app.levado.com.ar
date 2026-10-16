@@ -433,3 +433,40 @@ Feedback real de Confitería Orfano: un insumo que se usa entero (crema de leche
 Los cuatro modales ahora rotulan el campo "(opcional)", explican en texto cuándo dejarlo vacío vs. cuándo completarlo, y muestran un aviso Alpine en vivo con botón "Vaciar" si el usuario tipea `0` o `1` — resuelve el caso antes del submit; el servidor queda como red de contención.
 
 Lo que **no** se tocó, detectado pero fuera de alcance: `IngredientController::store()`/`update()` no limpian `subdivisions`/`subdivision_label` cuando `unit` deja de ser `u` (sólo limpian `cost_per_package`) — un insumo en `kg` puede quedar con `subdivisions` colgado sin que ninguna validación lo impida.
+
+## Percepciones como listado propio de la compra (v0.17.0)
+
+**El problema:** la percepción era una alícuota **por renglón** (`purchase_lines.percepcion_rate`) con un default de cabecera, igual que el IVA. Una factura real trae varias (IVA, IIBB de una o más provincias, Ganancias, impuestos internos) y la percepción es del **comprobante**, no de cada ítem. Las dos columnas se dropearon.
+
+**El IVA no cambió:** sigue por renglón (21 / 10,5 / 0). Sólo las percepciones se separaron.
+
+### Tablas
+
+- `perception_concepts` — catálogo por negocio (`BelongsToTenant`): `type` (enum `PerceptionType`: iva/iibb/ganancias/impuestos_internos/otro), `jurisdiction` (enum `Jurisdiction`, 24 jurisdicciones; **sólo IIBB la exige**, en otro tipo se descarta), `name`, `default_rate` (%), `is_active`.
+- `purchase_perceptions` — `type/jurisdiction/description` son **snapshot** del concepto (borrar o editar el catálogo no reescribe facturas viejas; FK `nullOnDelete`), `base_amount` (null = automática), `rate`, `amount`, `amount_is_manual`.
+
+### Reglas que no se deducen solas
+
+- **Base automática = la que define el concepto** (`PerceptionBase`: `net_taxed` por defecto, `net_total`, `gross`). `Purchase::baseFor()`; `net_taxed` = Σ subtotal de renglones con `iva_rate > 0`, y si no hay ninguno gravado (compra sin factura / exenta) cae al neto total (`taxedNet()`). Cada régimen fija su base; la práctica habitual (RG 2408, ARBA) es el neto gravado, según fuentes secundarias: confirmar con el contador. `base_type` es **snapshot** en `purchase_perceptions`; si el usuario elige otra en el formulario manda sobre la del concepto, y una `base_amount` escrita a mano gana sobre ambas.
+- Gotcha: tras `create()` el modelo no trae los defaults de la BD (`base_type`, `is_active`); `PerceptionConceptController::store()` hace `refresh()` antes de armar el JSON.
+- **`amount` siempre persistido** (los totales del índice salen por SQL con `withSum('perceptions','amount')`).
+- **Importe escrito = manual**: manda y nunca se recalcula (así cierra contra el papel). Sin importe se calcula base × alícuota y se recalcula con `PurchasePerceptionSync::refresh()`, llamado desde `storeLine`, `updateLine`, `updateLinePrice` y `destroyLine`. Si se agrega otro camino que cambie renglones, hay que llamarlo ahí también.
+- Total del índice = `lines_gross_total` (Σ subtotal×(1+iva)) + `perceptions_total`. Antes era un solo `gross_total`.
+- Los modelos con tenant scope devuelven **404** (no 403) ante un registro de otro negocio.
+
+### Migración de datos
+
+`move_line_percepciones_to_purchase_perceptions`: una fila por compra (`type=otro`, `description='Percepción'`) con el importe **congelado** (`amount_is_manual=true`) desde los renglones. En la BD local la alícuota nunca variaba entre renglones de una misma compra (100 compras), así que es exacta; el total migrado difiere ~4 centavos del original por redondeo por compra.
+
+### Escaneo con IA
+
+`InvoiceExtractor` devuelve `perceptions[]` (type, jurisdiction, description, base, rate, amount). `normalizePerceptions()` es fail-closed: tipo desconocido → `otro`, provincia desconocida o en tipo no-IIBB → null; se descartan las filas sin importe ni alícuota. `PurchaseScanController::matchPerceptionConcepts()` sugiere el concepto del catálogo por tipo + provincia (y alícuota más cercana). En la revisión el importe leído se guarda como **manual** (es lo impreso); si el usuario lo vacía, se calcula.
+
+### UI
+
+- `show.blade.php`: tarjeta «Percepciones e impuestos» + modal `modals/perception.blade.php` (Alpine `perceptionForm()` en `resources/js/purchases/perception-form.js`); se sacó la columna «Percepción $» de la tabla de renglones. El resumen neto + IVA + percepciones + total se refresca por el evento `line-price-saved`.
+- `modals/perception-concepts.blade.php`: administración del catálogo, abierta desde el botón «Percepciones» del índice y desde el modal de percepción.
+
+### Fuera de alcance
+
+Percepciones en notas de crédito, libro IVA compras / reportes fiscales, padrones o alícuotas automáticas por CUIT.

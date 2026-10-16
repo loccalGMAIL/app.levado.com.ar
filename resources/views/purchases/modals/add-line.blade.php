@@ -14,7 +14,6 @@
 
         @php
             $defaultIva = old('iva_rate', $purchase->default_iva_rate !== null ? (string) $purchase->default_iva_rate : '0.21');
-            $defaultPercepcion = old('percepcion_rate', $purchase->default_percepcion_rate !== null ? (string) $purchase->default_percepcion_rate : '');
             $selectedUnit = old('purchase_unit', \App\Enums\Unit::Kilogramo->value);
         @endphp
 
@@ -23,7 +22,6 @@
                 qty: @js(old('quantity_purchased')),
                 price: @js(old('unit_price')),
                 ivaRate: {{ (float) $defaultIva }},
-                percepcionRate: {{ (float) ($defaultPercepcion ?: 0) }},
                 isBonus: {{ old('is_bonus') ? 'true' : 'false' }},
             })"
             class="space-y-4">
@@ -94,17 +92,6 @@
                         <option value="0" @selected($defaultIva === '0' || $defaultIva === '0.0000')>0%</option>
                     </select>
                 </div>
-                <div class="flex items-center justify-between gap-4">
-                    <x-input-label value="Percepción" class="mb-0" />
-                    <div class="flex items-center gap-1.5">
-                        <input type="number" name="percepcion_rate"
-                            step="0.01" min="0" max="100"
-                            x-model.number="percepcionRate"
-                            placeholder="0"
-                            class="border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm w-24 text-right">
-                        <span class="text-sm text-masa-madre">%</span>
-                    </div>
-                </div>
                 <template x-if="net > 0">
                     <div class="border-t border-miga pt-2 space-y-1">
                         <div class="flex items-center justify-between text-sm">
@@ -115,12 +102,6 @@
                             <span class="text-masa-madre">IVA $</span>
                             <span class="font-mono text-masa-madre" x-text="'$ ' + fmt(ivaAmount)"></span>
                         </div>
-                        <template x-if="percepcionRate > 0">
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-masa-madre">Percepción $</span>
-                                <span class="font-mono text-masa-madre" x-text="'$ ' + fmt(percepcionAmount)"></span>
-                            </div>
-                        </template>
                         <div class="flex items-center justify-between text-sm border-t border-miga pt-1">
                             <span class="font-medium text-corteza">Total c/IVA</span>
                             <span class="font-mono font-medium text-corteza" x-text="'$ ' + fmt(lineTotal)"></span>

@@ -26,6 +26,7 @@ use App\Http\Controllers\MobileShortcutSettingsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\PackagingCostController;
+use App\Http\Controllers\PerceptionConceptController;
 use App\Http\Controllers\PriceListController;
 use App\Http\Controllers\ProductBulkCategoryController;
 use App\Http\Controllers\ProductCategoryController;
@@ -41,6 +42,7 @@ use App\Http\Controllers\ProductionRequestController;
 use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PurchasePerceptionController;
 use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeLineController;
@@ -249,6 +251,14 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::delete('purchases/{purchase}/lines/{line}', [PurchaseController::class, 'destroyLine'])->scopeBindings()->name('purchases.lines.destroy');
     Route::post('purchases/{purchase}/lines/{line}/match', [PurchaseController::class, 'matchLine'])->scopeBindings()->name('purchases.lines.match');
     Route::post('purchases/{purchase}/apply-suggestions', [PurchaseController::class, 'applyLineSuggestions'])->name('purchases.apply-suggestions');
+
+    Route::post('purchases/{purchase}/perceptions', [PurchasePerceptionController::class, 'store'])->name('purchases.perceptions.store');
+    Route::patch('purchases/{purchase}/perceptions/{perception}', [PurchasePerceptionController::class, 'update'])->scopeBindings()->name('purchases.perceptions.update');
+    Route::delete('purchases/{purchase}/perceptions/{perception}', [PurchasePerceptionController::class, 'destroy'])->scopeBindings()->name('purchases.perceptions.destroy');
+
+    Route::post('perception-concepts', [PerceptionConceptController::class, 'store'])->name('perception-concepts.store');
+    Route::put('perception-concepts/{perceptionConcept}', [PerceptionConceptController::class, 'update'])->name('perception-concepts.update');
+    Route::delete('perception-concepts/{perceptionConcept}', [PerceptionConceptController::class, 'destroy'])->name('perception-concepts.destroy');
 
     Route::post('credit-notes', [CreditNoteController::class, 'store'])->name('credit-notes.store');
     Route::patch('credit-notes/{creditNote}', [CreditNoteController::class, 'update'])->name('credit-notes.update');

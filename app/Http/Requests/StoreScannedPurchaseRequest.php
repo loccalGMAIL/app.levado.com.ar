@@ -3,6 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Enums\CatalogItemType;
+use App\Enums\Jurisdiction;
+use App\Enums\PerceptionBase;
+use App\Enums\PerceptionType;
 use App\Enums\Unit;
 use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
@@ -42,9 +45,16 @@ class StoreScannedPurchaseRequest extends FormRequest
             'lines.*.purchase_unit' => ['nullable', Rule::enum(Unit::class)],
             'lines.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'lines.*.iva_rate' => ['nullable', 'numeric', 'in:0,0.105,0.21'],
-            'lines.*.percepcion_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'default_iva_rate' => ['nullable', 'numeric', 'in:0,0.105,0.21'],
-            'default_percepcion_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+
+            'perceptions' => ['array', 'max:20'],
+            'perceptions.*.perception_concept_id' => ['nullable', 'integer'],
+            'perceptions.*.type' => ['nullable', Rule::enum(PerceptionType::class)],
+            'perceptions.*.jurisdiction' => ['nullable', Rule::enum(Jurisdiction::class)],
+            'perceptions.*.description' => ['nullable', 'string', 'max:255'],
+            'perceptions.*.base_type' => ['nullable', Rule::enum(PerceptionBase::class)],
+            'perceptions.*.rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'perceptions.*.amount' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
         ];
     }
 

@@ -27,6 +27,11 @@
                         Leer factura
                     </a>
                     <button type="button"
+                        @click="$dispatch('open-modal', 'perception-concepts-manage')"
+                        class="px-4 py-2 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors">
+                        Percepciones
+                    </button>
+                    <button type="button"
                         @click="$dispatch('open-modal', 'purchase-create')"
                         class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nueva compra
@@ -100,7 +105,7 @@
                     @foreach($purchases as $purchase)
                         @php
                             $cardTotal = $includeIva
-                                ? ($purchase->gross_total ?? 0)
+                                ? ($purchase->lines_gross_total ?? 0) + ($purchase->perceptions_total ?? 0)
                                 : ($purchase->net_total ?? 0);
                             $cardAllResolved = $purchase->lines_count > 0 && $purchase->resolved_count >= $purchase->lines_count;
                         @endphp
@@ -195,7 +200,7 @@
                                     </td>
                                     @php
                                         $rowTotal = $includeIva
-                                            ? ($purchase->gross_total ?? 0)
+                                            ? ($purchase->lines_gross_total ?? 0) + ($purchase->perceptions_total ?? 0)
                                             : ($purchase->net_total ?? 0);
                                     @endphp
                                     <td class="px-4 py-3 text-right font-mono text-corteza">
@@ -267,6 +272,8 @@
         @can('manage-costs')
             @include('purchases.modals.create')
             @include('suppliers.modals.quick-create')
+            @include('purchases.modals.perception-concepts')
+            @include('purchases.modals.perception-concepts-manage')
         @endcan
 
     </div>

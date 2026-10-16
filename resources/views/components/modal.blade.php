@@ -42,7 +42,7 @@ $maxWidth = [
     x-init="$watch('show', value => {
         if (value) {
             document.body.classList.add('overflow-y-hidden');
-            {{ $attributes->has('focusable') ? 'setTimeout(() => firstNonButtonFocusable().focus(), 100)' : '' }}
+            {{ $attributes->get('focusable') ? 'setTimeout(() => firstNonButtonFocusable().focus(), 100)' : '' }}
         } else {
             document.body.classList.remove('overflow-y-hidden');
         }

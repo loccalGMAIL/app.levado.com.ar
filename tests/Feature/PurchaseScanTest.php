@@ -488,3 +488,18 @@ test('un corte de conexion con la IA devuelve un error legible y no deja archivo
 
     expect(Storage::disk('local')->allFiles())->toBeEmpty();
 });
+
+test('con IVA el total de la factura va primero y el de renglones queda como dato secundario', function () {
+    [$user, $tenant] = ownerForScan();
+    $supplier = Supplier::factory()->for($tenant)->create();
+    $purchase = $tenant->purchases()->create(['supplier_id' => $supplier->id, 'invoice_date' => '2026-07-03']);
+    $purchase->lines()->create([
+        'raw_name' => 'HARINA', 'quantity_purchased' => 10, 'purchase_unit' => 'u',
+        'unit_price' => 1000, 'subtotal' => 10000, 'iva_rate' => 0.21,
+    ]);
+
+    $html = $this->actingAs($user)->get(route('purchases.show', $purchase))->assertOk()->getContent();
+
+    expect(strpos($html, 'Total factura (con IVA)'))->toBeLessThan(strpos($html, 'Total renglones (sin IVA)'))
+        ->and($html)->toContain('12.100,00');
+});

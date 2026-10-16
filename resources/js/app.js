@@ -15,6 +15,7 @@ Alpine.start();
 import './onboarding-tour';
 import './purchases/match';
 import './purchases/line-form';
+import './purchases/perception-form';
 import './expenses/receipt-scan';
 import './image-compress';
 import './scroll-restore';

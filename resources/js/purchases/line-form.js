@@ -31,7 +31,6 @@ window.purchaseLine = function purchaseLine(initial = {}) {
         qty: blankOrNumber(initial.qty),
         price: blankOrNumber(initial.price),
         ivaRate: Number(initial.ivaRate ?? 0.21),
-        percepcionRate: Number(initial.percepcionRate ?? 0),
         priceConversion: null,
 
         // Renglón sin cargo: obsequio, promo o muestra de la distribuidora. Suma
@@ -53,12 +52,8 @@ window.purchaseLine = function purchaseLine(initial = {}) {
             return this.net * this.ivaRate;
         },
 
-        get percepcionAmount() {
-            return this.net * (this.percepcionRate / 100);
-        },
-
         get lineTotal() {
-            return this.net * (1 + this.ivaRate + this.percepcionRate / 100);
+            return this.net * (1 + this.ivaRate);
         },
 
         /**
@@ -82,7 +77,6 @@ window.purchaseLine = function purchaseLine(initial = {}) {
             this.qty = blankOrNumber(line?.quantity_purchased);
             this.price = blankOrNumber(line?.unit_price);
             this.ivaRate = parseFloat(line?.iva_rate ?? 0.21);
-            this.percepcionRate = parseFloat(line?.percepcion_rate ?? 0);
             this.priceConversion = null;
             this.isBonus = Boolean(line?.is_bonus ?? false);
             this.bonusTouched = false;
