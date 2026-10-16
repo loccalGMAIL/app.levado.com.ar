@@ -335,7 +335,6 @@
                                             <span x-show="hasPolicy" x-text="policyBadge"
                                                 class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
                                         </div>
-                                        <x-price-cell-editor />
                                     @else
                                         {{ $price !== null ? '$ '.number_format($price, 2, ',', '.') : '—' }}
                                     @endcan

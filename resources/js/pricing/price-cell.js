@@ -2,9 +2,11 @@ import Alpine from 'alpinejs';
 
 /**
  * Celda de precio de artículo reutilizable: catálogo, Dashboard, /recipes y matriz.
- * Encapsula el estado de precio + política (manual / margen / recargo) y el guardado
- * contra `products.prices.update`. La UI del editor la aporta <x-price-cell-editor>,
- * que se monta dentro del mismo scope (lee draftType/draftPrice/draftValue y llama a save()).
+ * Solo muestra: precio formateado, badge de política, margen y el estado «guardando…».
+ * Al hacer click despacha `edit-price`; el editor (popover) es uno solo para toda la
+ * página y vive en el layout (ver price-editor.js y <x-price-cell-editor>). Cuando
+ * el editor guarda despacha `price-saving` / `price-saved`, y la celda cuya `url`
+ * coincide se actualiza.
  *
  * Init esperado (todo opcional salvo url para poder editar):
  *   { url, price, priceFormatted, marginPct, marginPctFormatted, marginColor, policyType, policyValue }
@@ -13,13 +15,9 @@ Alpine.data('priceCell', (init = {}) => ({
     url: init.url ?? '',
     canEdit: (init.url ?? '') !== '',
 
-    // El estado abierto/cerrado del popover. Se llama popoverOpen (no editing) a
-    // propósito: la página del catálogo tiene su propio `editing` (el artículo del
-    // modal) en un x-data padre, y un `editing` acá lo taparía desde el botón editar.
-    popoverOpen: false,
     saving: false,
 
-    // Estado mostrado (lo pisa la respuesta del endpoint tras guardar).
+    // Estado mostrado (lo pisa el evento price-saved tras guardar).
     price: init.price ?? null,
     priceFormatted: init.priceFormatted ?? '',
     marginPct: init.marginPct ?? null,
@@ -33,17 +31,36 @@ Alpine.data('priceCell', (init = {}) => ({
     suggested: init.suggested ?? null,
     suggestedFormatted: init.suggestedFormatted ?? '',
 
-    // Borrador del editor (se siembra en startEdit).
-    draftType: 'manual',
-    draftPrice: '',
-    draftValue: '',
+    init() {
+        if (!this.canEdit) {
+            return;
+        }
 
-    // Posición del popover (se teletransporta a <body> con position: fixed para
-    // no quedar recortado por el overflow-x-auto del contenedor de la tabla).
-    popTop: 0,
-    popLeft: 0,
-    get popStyle() {
-        return `position: fixed; top: ${this.popTop}px; left: ${this.popLeft}px;`;
+        this.onSaving = (e) => {
+            if (e.detail.url === this.url) {
+                this.saving = e.detail.saving;
+            }
+        };
+        this.onSaved = (e) => {
+            const d = e.detail;
+            if (d.url !== this.url) {
+                return;
+            }
+            this.price = d.price;
+            this.priceFormatted = d.priceFormatted;
+            this.marginPct = d.marginPct;
+            this.marginPctFormatted = d.marginPctFormatted;
+            this.marginColor = d.marginColor;
+            this.policyType = d.policyType;
+            this.policyValue = d.policyValue;
+        };
+        window.addEventListener('price-saving', this.onSaving);
+        window.addEventListener('price-saved', this.onSaved);
+    },
+
+    destroy() {
+        window.removeEventListener('price-saving', this.onSaving);
+        window.removeEventListener('price-saved', this.onSaved);
     },
 
     get hasPolicy() {
@@ -73,85 +90,13 @@ Alpine.data('priceCell', (init = {}) => ({
             return;
         }
 
-        // Ubica el popover debajo del trigger, alineado a su borde derecho; si no
-        // entra abajo, lo sube. Coordenadas fixed (viewport) porque va en <body>.
-        const trigger = e?.currentTarget ?? this.$el;
-        const rect = trigger.getBoundingClientRect();
-        const POP_W = 240;
-        const POP_H = 170;
-        let left = rect.right - POP_W;
-        if (left < 8) {
-            left = 8;
-        }
-        let top = rect.bottom + 4;
-        if (top + POP_H > window.innerHeight && rect.top - POP_H > 0) {
-            top = rect.top - POP_H - 4;
-        }
-        this.popLeft = left;
-        this.popTop = top;
-
-        this.draftType = this.policyType ?? 'manual';
-        // En manual sin precio, arrancamos del sugerido (matriz) si lo hay.
-        this.draftPrice = this.price !== null
-            ? parseFloat(this.price).toFixed(2)
-            : (this.suggested !== null ? parseFloat(this.suggested).toFixed(2) : '');
-        this.draftValue = this.policyValue !== null ? String(this.policyValue) : '';
-        this.popoverOpen = true;
-        this.$nextTick(() => {
-            const el = this.draftType === 'manual' ? this.$refs.priceInput : this.$refs.valueInput;
-            if (el) {
-                el.focus();
-                el.select?.();
-            }
+        this.$dispatch('edit-price', {
+            url: this.url,
+            price: this.price,
+            policyType: this.policyType,
+            policyValue: this.policyValue,
+            suggested: this.suggested,
+            anchor: e?.currentTarget ?? this.$el,
         });
-    },
-
-    cancel() {
-        this.popoverOpen = false;
-    },
-
-    async save() {
-        if (this.saving) {
-            return;
-        }
-
-        let payload;
-        if (this.draftType === 'manual') {
-            const raw = String(this.draftPrice).trim();
-            payload = { policy_type: 'manual', price: raw !== '' ? raw : null };
-        } else {
-            const raw = String(this.draftValue).trim();
-            if (raw === '') {
-                // Margen/recargo exigen un valor; no guardamos vacío.
-                return;
-            }
-            payload = { policy_type: this.draftType, policy_value: raw };
-        }
-
-        this.saving = true;
-        this.popoverOpen = false;
-        try {
-            const res = await fetch(this.url, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                    Accept: 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-            if (res.ok) {
-                const data = await res.json();
-                this.price = data.selling_price;
-                this.priceFormatted = data.selling_price_formatted ?? '';
-                this.marginPct = data.margin_pct;
-                this.marginPctFormatted = data.margin_pct_formatted ?? '';
-                this.marginColor = data.margin_color ?? 'text-masa-madre';
-                this.policyType = data.policy_type ?? 'manual';
-                this.policyValue = data.policy_value ?? null;
-            }
-        } finally {
-            this.saving = false;
-        }
     },
 }));

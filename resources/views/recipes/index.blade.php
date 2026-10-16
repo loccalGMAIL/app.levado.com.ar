@@ -116,7 +116,6 @@
                                                     class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
                                                 <svg x-show="!hasPolicy" class="w-3 h-3 text-masa-madre" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
                                             </div>
-                                            <x-price-cell-editor />
                                         @else
                                             <span class="text-xs text-masa-madre" title="Creá el artículo elaborado para ponerle precio">—</span>
                                         @endif
@@ -213,7 +212,6 @@
                                                     <span x-show="hasPolicy" x-text="policyBadge"
                                                         class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
                                                 </div>
-                                                <x-price-cell-editor />
                                             @else
                                                 <span class="text-xs text-masa-madre" title="Creá el artículo elaborado para ponerle precio">—</span>
                                             @endif

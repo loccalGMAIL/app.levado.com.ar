@@ -3,8 +3,8 @@
     puro: se monta DENTRO de un x-data que trae `previewLines`, `materialCost`,
     `laborCost`, `totalCost`, `loading`, `error`, `hasShortfall`, `fmt()` y
     `fmtQty()` — el shape que arma consumptionPreviewState() (ver
-    resources/js/production/consumption-preview.js). Mismo contrato que
-    <x-price-cell-editor>: el componente no define su propio x-data.
+    resources/js/production/consumption-preview.js). El componente no define
+    su propio x-data.
 
     `previewLines`, no `lines`: la orden instantánea combina este x-data con
     productionOrderLines() (artículos del pedido) en el mismo <form> — ambos

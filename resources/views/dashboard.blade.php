@@ -580,7 +580,6 @@
                                                     <span x-show="hasPolicy" x-text="policyBadge"
                                                         class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
                                                 </div>
-                                                <x-price-cell-editor />
                                             @else
                                                 {{-- Sin artículo elaborado: el precio se carga en Artículos --}}
                                                 <span class="text-[11px] text-masa-madre/50" title="Creá el artículo elaborado para ponerle precio">—</span>

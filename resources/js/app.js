@@ -7,6 +7,7 @@ window.Alpine = Alpine;
 window.TomSelect = TomSelect;
 
 import './pricing/price-cell';
+import './pricing/price-editor';
 import './production/consumption-preview';
 import './production/order-lines';
 
