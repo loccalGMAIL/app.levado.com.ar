@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg">
   <!-- Sprite de íconos de línea (Heroicons outline). Cada símbolo se define una sola
-       vez y los listados lo referencian con <x-icon sprite name="…"> en lugar de
+       vez y los listados lo referencian con <svg class="ico"><use href="{{ $iconSprite }}#i-…"> en lugar de
        repetir el path en cada fila. El trazo (color, grosor) lo pone el <svg> que lo
        usa; linecap/linejoin van acá para que se vean igual que los íconos inline. -->
   <symbol id="i-pencil" viewBox="0 0 24 24">

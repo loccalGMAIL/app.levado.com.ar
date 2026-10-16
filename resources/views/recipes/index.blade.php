@@ -118,7 +118,7 @@
                                                 <span x-show="saving" class="text-xs text-masa-madre">guardando…</span>
                                                 <span x-show="hasPolicy" x-text="policyBadge"
                                                     class="text-[10px] px-1.5 py-0.5 rounded bg-miga text-masa-madre font-sans leading-none"></span>
-                                                <x-icon sprite name="pencil" class="w-3 h-3 text-masa-madre md:hidden" x-show="!hasPolicy" />
+                                                <svg class="ico w-3 h-3 text-masa-madre md:hidden" x-show="!hasPolicy" aria-hidden="true"><use href="{{ $iconSprite }}#i-pencil"></use></svg>
                                             </div>
                                         </div>
                                     @else
@@ -144,13 +144,13 @@
                                     <a href="{{ $showUrl($recipe) }}"
                                         aria-label="Ver detalle de receta" title="Ver detalle"
                                         class="dt-action">
-                                        <x-icon sprite name="pencil" />
+                                        <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-pencil"></use></svg>
                                         <span class="dt-card-only">Ver receta</span>
                                     </a>
                                     <a href="{{ route('recipes.print', $recipe) }}"
                                         aria-label="Imprimir receta" title="Imprimir receta"
                                         class="dt-action max-md:hidden">
-                                        <x-icon sprite name="print" />
+                                        <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-print"></use></svg>
                                     </a>
                                     @can('manage-costs')
                                         <form method="POST" action="{{ route('recipes.copy', $recipe) }}">
@@ -158,7 +158,7 @@
                                             <button type="submit"
                                                 aria-label="Copiar receta" title="Copiar receta"
                                                 class="dt-action">
-                                                <x-icon sprite name="copy" />
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-copy"></use></svg>
                                                 <span class="dt-card-only">Copiar</span>
                                             </button>
                                         </form>
@@ -167,7 +167,7 @@
                                                 @click="openReplace({{ Js::from(['id' => $recipe->id, 'name' => $recipe->name]) }})"
                                                 aria-label="Reemplazar en recetas" title="Reemplazar en recetas"
                                                 class="dt-action">
-                                                <x-icon sprite name="arrow-path" />
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-arrow-path"></use></svg>
                                                 <span class="dt-card-only">Reemplazar</span>
                                             </button>
                                         @endif
@@ -177,7 +177,7 @@
                                             <button type="submit"
                                                 aria-label="{{ $recipe->active ? 'Desactivar' : 'Activar' }}" title="{{ $recipe->active ? 'Desactivar' : 'Activar' }}"
                                                 class="dt-action {{ $recipe->active ? 'dt-action--danger' : 'dt-action--success' }}">
-                                                <x-icon sprite :name="$recipe->active ? 'eye-off' : 'eye'" />
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-{{ $recipe->active ? 'eye-off' : 'eye' }}"></use></svg>
                                                 <span class="dt-card-only">{{ $recipe->active ? 'Desactivar' : 'Activar' }}</span>
                                             </button>
                                         </form>

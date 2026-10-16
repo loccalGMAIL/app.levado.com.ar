@@ -82,6 +82,18 @@
         border-top: 1px solid #f2ead8;
     }
 
+    /* Ícono de línea del sprite (public/icons/sprite.svg). Reemplaza los
+       atributos de presentación que repetía cada <svg> inline; el tamaño se
+       pisa con utilidades (w-3 h-3) y el color con text-*. */
+    .ico {
+        width: 1rem;
+        height: 1rem;
+        flex-shrink: 0;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.75;
+    }
+
     /* Acciones de fila: el mismo botón sirve de ícono en la tabla y de botón
        ancho con texto en la card. El label está oculto por defecto y lo
        muestra el modo card. */
