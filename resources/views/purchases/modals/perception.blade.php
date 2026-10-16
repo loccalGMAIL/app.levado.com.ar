@@ -23,18 +23,11 @@
         <div>
             <div class="flex items-center justify-between">
                 <x-input-label value="Concepto del catálogo" />
-                <div class="flex items-center gap-3">
-                    <button type="button"
-                        @click="openSubmodal('perception-concepts-manage')"
-                        class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                        Administrar
-                    </button>
-                    <button type="button"
-                        @click="openSubmodal('perception-concepts')"
-                        class="text-xs text-masa-madre hover:text-corteza hover:underline">
-                        + Nueva percepción
-                    </button>
-                </div>
+                <button type="button"
+                    @click="openSubmodal('perception-concepts-manage')"
+                    class="text-xs text-masa-madre hover:text-corteza hover:underline">
+                    Administrar
+                </button>
             </div>
             <select name="perception_concept_id" x-ref="conceptSelect" x-model="form.perception_concept_id" @change="pickConcept()"
                 class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
