@@ -306,6 +306,10 @@ Rama `v0.17.0-percepciones-compra`, sobre v0.16.0. Las percepciones dejan de ser
 - **Importe exacto de la factura**: si se escribe, se respeta tal cual y no se recalcula; si se deja vacío se calcula como base × alícuota (la base por defecto es el neto gravado) y se actualiza solo al editar renglones.
 - **El escaneo con IA lee las percepciones** de la factura y sugiere el concepto del catálogo por tipo y provincia. Se revisan en la pantalla de revisión antes de guardar.
 - El detalle muestra neto, IVA, percepciones y total de la factura.
+- **Administrar percepciones**: desde la compra o desde el índice se editan, desactivan y borran los conceptos del catálogo, y «+ Nueva percepción» los crea sin salir del modal (al cerrar vuelve al modal previo). El selector muestra la alícuota y la base de cada concepto. Las compras ya cargadas conservan sus datos al editar o borrar un concepto.
+- **Modal de compra**: el IVA va debajo de fecha y N° de factura, y las notas quedan al final en un acordeón. «Editar compra» marca la alícuota real de la factura y ya no abre el desplegable del proveedor al abrirse.
+- **Detalle de la compra**: el total con IVA es el importe destacado; el total de renglones queda como dato secundario (y es el único cuando no hay IVA ni percepciones).
+- **Base de cálculo por concepto**: cada concepto define si la percepción se calcula sobre el neto gravado (habitual), el neto total de los renglones o el total con IVA. Se puede cambiar en cada compra, y una base escrita a mano o el importe exacto de la factura siguen mandando.
 
 ### Cambiado
 
@@ -314,14 +318,14 @@ Rama `v0.17.0-percepciones-compra`, sobre v0.16.0. Las percepciones dejan de ser
 
 ### Técnico
 
-- Tablas `perception_concepts` y `purchase_perceptions`; enums `PerceptionType` y `Jurisdiction`; servicio `PurchasePerceptionSync` (alta, edición y recálculo de las no manuales).
+- Tablas `perception_concepts` y `purchase_perceptions` (con `base_type`, snapshot en la compra); enums `PerceptionType`, `Jurisdiction` y `PerceptionBase`; `Purchase::baseFor()`; servicio `PurchasePerceptionSync` (alta, edición y recálculo de las no manuales).
 - Se eliminan `purchase_lines.percepcion_rate` y `purchases.default_percepcion_rate`.
 - `InvoiceExtractor` normaliza las percepciones de forma estricta: tipo desconocido → «otro», provincia inválida o fuera de IIBB → vacía.
 - **Tests nuevos**: `PerceptionConceptTest` y `PurchasePerceptionTest` (21).
 
 ### Al deployar
 
-- Corre migraciones. La que mueve los datos crea una percepción «otro / Percepción» por cada compra que tenía alícuota en sus renglones, con el importe congelado desde los renglones. `npm run build`.
+- Corre migraciones (incluida `add_base_type_to_perception_tables`: lo existente queda en «neto gravado»). La que mueve los datos crea una percepción «otro / Percepción» por cada compra que tenía alícuota en sus renglones, con el importe congelado desde los renglones. `npm run build`.
 
 ---
 

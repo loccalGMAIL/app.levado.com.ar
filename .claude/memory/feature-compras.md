@@ -447,7 +447,8 @@ Lo que **no** se tocó, detectado pero fuera de alcance: `IngredientController::
 
 ### Reglas que no se deducen solas
 
-- **Base automática = neto gravado**: Σ subtotal de renglones con `iva_rate > 0`; si no hay ninguno gravado (compra sin factura / exenta) cae al neto total. `Purchase::taxedNet()`.
+- **Base automática = la que define el concepto** (`PerceptionBase`: `net_taxed` por defecto, `net_total`, `gross`). `Purchase::baseFor()`; `net_taxed` = Σ subtotal de renglones con `iva_rate > 0`, y si no hay ninguno gravado (compra sin factura / exenta) cae al neto total (`taxedNet()`). Cada régimen fija su base; la práctica habitual (RG 2408, ARBA) es el neto gravado, según fuentes secundarias: confirmar con el contador. `base_type` es **snapshot** en `purchase_perceptions`; si el usuario elige otra en el formulario manda sobre la del concepto, y una `base_amount` escrita a mano gana sobre ambas.
+- Gotcha: tras `create()` el modelo no trae los defaults de la BD (`base_type`, `is_active`); `PerceptionConceptController::store()` hace `refresh()` antes de armar el JSON.
 - **`amount` siempre persistido** (los totales del índice salen por SQL con `withSum('perceptions','amount')`).
 - **Importe escrito = manual**: manda y nunca se recalcula (así cierra contra el papel). Sin importe se calcula base × alícuota y se recalcula con `PurchasePerceptionSync::refresh()`, llamado desde `storeLine`, `updateLine`, `updateLinePrice` y `destroyLine`. Si se agrega otro camino que cambie renglones, hay que llamarlo ahí también.
 - Total del índice = `lines_gross_total` (Σ subtotal×(1+iva)) + `perceptions_total`. Antes era un solo `gross_total`.
