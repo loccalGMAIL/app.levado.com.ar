@@ -95,7 +95,7 @@
                                         <button type="button" @click="openEdit({{ Js::from($editPayload) }})"
                                             aria-label="Editar tipo de mano de obra" title="Editar tipo de mano de obra"
                                             class="dt-action">
-                                            <x-icon name="pencil" />
+                                            <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-pencil"></use></svg>
                                             <span class="dt-card-only">Editar</span>
                                         </button>
                                         <form method="POST" action="{{ route('labor-types.toggle-active', $laborType) }}">
@@ -105,7 +105,7 @@
                                                 aria-label="{{ $laborType->active ? 'Desactivar' : 'Activar' }}"
                                                 title="{{ $laborType->active ? 'Desactivar' : 'Activar' }}"
                                                 class="dt-action {{ $laborType->active ? 'dt-action--danger' : 'dt-action--success' }}">
-                                                <x-icon :name="$laborType->active ? 'eye-off' : 'eye'" />
+                                                <svg class="ico" aria-hidden="true"><use href="{{ $iconSprite }}#i-{{ $laborType->active ? 'eye-off' : 'eye' }}"></use></svg>
                                                 <span class="dt-card-only">{{ $laborType->active ? 'Desactivar' : 'Activar' }}</span>
                                             </button>
                                         </form>
