@@ -78,5 +78,5 @@ test('el catálogo de Artículos muestra costo, precio y margen del elaborado', 
         ->assertOk()
         ->assertSee('FacturasTest')
         ->assertSee('25,00')   // precio del artículo
-        ->assertSee('60,0%');  // margen (25 - 10) / 25
+        ->assertSee('60,0');   // margen (25 - 10) / 25, formateado en el payload de la fila (Alpine le agrega el %)
 });
