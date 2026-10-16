@@ -124,7 +124,9 @@ test('la edición inline de stock vive en la fila y no se duplica', function () 
 
     // Antes el editor existía sólo en la copia de tabla y la card mostraba el
     // stock de sólo lectura; ahora hay un único editor por ingrediente.
-    expect(substr_count($html, route('stock.level.update', ['ingredient', $ingredient->id])))->toBe(1)
+    // Js::from escapa las barras de la URL (\\\/): se normalizan para comparar.
+    $normalized = preg_replace('#\\\\+/#', '/', $html);
+    expect(substr_count($normalized, route('stock.level.update', ['ingredient', $ingredient->id])))->toBe(1)
         ->and($html)->toContain('data-label="Stock:"');
 });
 
@@ -184,12 +186,9 @@ test('recetas: los íconos de cada fila salen del sprite y no se repiten como pa
         ->toContain('id="i-eye-off"');
 });
 
-test('x-icon sin sprite sigue renderizando el path inline', function () {
-    [$user, $tenant] = ownerForDataTable();
-    Ingredient::factory()->for($tenant)->create(['name' => 'Harina 000', 'unit' => Unit::Kilogramo->value]);
-
-    $this->actingAs($user)
-        ->get(route('ingredients.index'))
+test('x-icon sin sprite sigue renderizando el path inline en las pantallas sueltas', function () {
+    // El login usa x-icon para el ojo del campo contraseña.
+    $this->get(route('login'))
         ->assertOk()
-        ->assertSee('M16.862 4.487l1.687-1.688', false);
+        ->assertSee('M2.036 12.322a1.012', false);
 });

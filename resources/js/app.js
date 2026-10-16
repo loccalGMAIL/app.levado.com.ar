@@ -8,6 +8,7 @@ window.TomSelect = TomSelect;
 
 import './pricing/price-cell';
 import './pricing/price-editor';
+import './inline-edit';
 import './production/consumption-preview';
 import './production/order-lines';
 
