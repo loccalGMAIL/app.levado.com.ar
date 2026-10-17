@@ -6,7 +6,8 @@
         $showUrl = fn ($purchase) => route('purchases.show', array_filter(['purchase' => $purchase->id, 'volver' => request()->getQueryString()]));
     @endphp
 
-    <div class="py-8 px-6 lg:px-8">
+    {{-- x-data vacío: sin un scope de Alpine los @click del encabezado no se inicializan. --}}
+    <div class="py-8 px-6 lg:px-8" x-data>
 
         <div class="space-y-6">
 
