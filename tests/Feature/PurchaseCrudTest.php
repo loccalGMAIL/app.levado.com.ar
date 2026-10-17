@@ -281,6 +281,17 @@ test('los modales de compra ponen el IVA bajo fecha y factura, y las notas al fi
     }
 });
 
+test('los botones del encabezado de compras quedan dentro de un scope de Alpine', function () {
+    // Sin un x-data ancestro, Alpine no inicializa los @click y «+ Nueva compra» no abre el modal.
+    [$user] = ownerForPurchaseCrud();
+
+    $html = $this->actingAs($user)->get(route('purchases.index'))->assertOk()->getContent();
+    $wrapper = '<div class="py-8 px-6 lg:px-8" x-data>';
+
+    expect(strpos($html, $wrapper))->not->toBeFalse()
+        ->and(strpos($html, $wrapper))->toBeLessThan(strpos($html, "\$dispatch('open-modal', 'purchase-create')"));
+});
+
 test('el modal de editar muestra la alícuota real de la factura y no roba el foco al abrir', function () {
     [$user, $tenant] = ownerForPurchaseCrud();
     $supplier = Supplier::factory()->for($tenant)->create();
