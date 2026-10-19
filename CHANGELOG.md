@@ -295,6 +295,38 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.20.0] — 2026-10-20
+
+Rama `v0.19.0-unidad-de-produccion`, sobre v0.19.0. La unidad de producción pasa a tener una equivalencia propia, los pedidos redondean las fracciones y la grilla avanza en saltos acordes a cada unidad.
+
+### Agregado
+
+- **Modal «Producción» en la receta**: un botón junto a «Guardar cambios» y «Cancelar» del modal de edición abre un modal con el nombre de la unidad de producción (ej. «Lata») y su equivalencia: «1 unidad de producción = N [unidad del rinde]». La equivalencia arranca con el rinde de la receta. Sirve para las recetas que rinden por jornada y no por lata (Pan Francés rinde 16 kg y una lata son 3 o 4 kg). Con ambos campos vacíos vuelve al default: el rinde completo, que se llama «Lata».
+- **Saltos en la grilla de pedidos**: cada renglón tiene botones − y + (y las flechas del teclado) que avanzan de a ¼ de lata, de a 1 en las unidades, de a ½ en kg y L, y de a 50 en gr, ml y cc. Desde un valor fuera de grilla (0,3) van al múltiplo siguiente o anterior.
+
+### Cambiado
+
+- **Redondeo hacia arriba** de lo que se produce cuando el pedido da fracciones: ¼ de una lata de 66 u son 16,5 y se hacen 17. Aplica sólo a los artículos en unidades; kg, L, gr y ml conservan sus decimales.
+- **Se redondea una sola vez, sobre el total del artículo en la orden**: cuatro pedidos de ¼ de lata suman 66 u, no 68. La cantidad de latas que se informa sale del total exacto («0,25 lata»).
+- **La ayuda del renglón** («= 33 u», o «≈ 17 u» cuando hubo redondeo) va en la misma línea que los controles, junto al selector de unidad, y no debajo. El detalle de la orden y la planilla de reparto muestran el mismo equivalente por línea («0,25 lata (≈ 17 u)»).
+- **Lata por defecto**: al agregar un artículo a un pedido, el renglón arranca en su unidad de producción cuando la tiene; las unidades sueltas siguen en el selector.
+- El formulario principal de la receta vuelve a tener sólo Rendimiento y Unidad: el nombre de la unidad de producción se carga en el modal nuevo.
+
+### Técnico
+
+- Ruta `PATCH recipes/{recipe}/production` (`recipes.production.update`), `RecipeController::updateProduction()` y `UpdateRecipeProductionRequest` (nombre y equivalencia van juntos, la equivalencia es mayor que cero). Queda registrado como `recipe.production_updated`.
+- `Product::roundForProduction()` es el único dueño de la regla de redondeo; `ProductionOrderLine::equivalentLabel()` arma el equivalente para las vistas y la planilla.
+- `LineMeasure::step(Unit)` es el único dueño de la tabla de saltos; `ProductionOrderService::producibleCatalog()` la manda a la grilla junto con la unidad de producción de cada artículo.
+- El input de cantidad usa `step="any"`: con un paso fijo el navegador bloquearía el envío del formulario al escribir un valor fuera de grilla.
+- **Tests nuevos**: casos en `RecipeProductionUnitTest` y `ProductionOrderMeasureTest` (redondeo, total, kg, saltos, modal y permisos). 1270 tests, todos verdes.
+
+### Al deployar
+
+- `npm run build`. No hay migraciones nuevas.
+- Cargar la equivalencia en las recetas que se tandan desde el botón «Producción»: Facturas Vigilantes (66 u), Surtidas de Manteca (64 u), Surtidas de Grasa (56 o 60 u, a confirmar), Medialunas de Manteca Fabián (72 u) y Pan Francés (3, 3,5 o 4 kg, a confirmar con los dueños). Después, desactivar los 15 artículos «Lata».
+
+---
+
 ## [0.19.0] — 2026-10-19
 
 Rama `v0.19.0-unidad-de-produccion`, sobre v0.18.0. Los pedidos de producción se pueden cargar en la unidad de producción de la receta (lata, tanda) y no sólo en unidades sueltas. En Producción manda la unidad de producción; en Artículos, la unidad de venta.
