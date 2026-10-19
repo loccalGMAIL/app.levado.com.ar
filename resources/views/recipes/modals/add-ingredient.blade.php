@@ -1,6 +1,10 @@
 <x-crud-modal name="recipe-add-ingredient" title="Agregar ingrediente" :show="$errorsInAddIngredient">
     <form method="POST" action="{{ route('recipes.ingredient-lines.store', $recipe) }}" class="space-y-4"
+        :action="kind === 'product' ? productAction : ingredientAction"
         x-data="{
+            kind: 'ingredient',
+            ingredientAction: @js(route('recipes.ingredient-lines.store', $recipe)),
+            productAction: @js(route('recipes.product-lines.store', $recipe)),
             groups: { gr: 'weight', kg: 'weight', ml: 'volume', L: 'volume', cc: 'volume', u: 'unit' },
             selectedGroup: null,
             selectedSubdivisions: null,
@@ -8,6 +12,7 @@
             init() {
                 const preselected = this.$el.querySelector('#add_ing_id option[selected]');
                 if (preselected) {
+                    this.kind = preselected.dataset.kind || 'ingredient';
                     this.selectedGroup = this.groups[preselected.dataset.unit] ?? null;
                     this.selectedSubdivisions = preselected.dataset.subdivisions ? parseInt(preselected.dataset.subdivisions) : null;
                     this.selectedSubdivisionLabel = preselected.dataset.subdivisionLabel || null;
@@ -15,6 +20,7 @@
             },
             onIngredientChange(event) {
                 const option = event.target.selectedOptions[0];
+                this.kind = option?.dataset?.kind || 'ingredient';
                 this.selectedGroup = option?.dataset?.unit ? (this.groups[option.dataset.unit] ?? null) : null;
                 this.selectedSubdivisions = option?.dataset?.subdivisions ? parseInt(option.dataset.subdivisions) : null;
                 this.selectedSubdivisionLabel = option?.dataset?.subdivisionLabel || null;
@@ -39,6 +45,7 @@
         <div>
             <x-input-label for="add_ing_id" value="Ingrediente" />
             <select id="add_ing_id" name="ingredient_id"
+                :name="kind === 'product' ? 'product_id' : 'ingredient_id'"
                 class="mt-1 block w-full border-gray-300 focus:border-corteza focus:ring-corteza rounded-md shadow-sm text-sm"
                 @change="onIngredientChange($event)"
                 required>
@@ -59,8 +66,21 @@
                         @endif
                     </option>
                 @endforeach
+                @if($resaleProducts->isNotEmpty())
+                    <optgroup label="Artículos de reventa">
+                        @foreach($resaleProducts as $product)
+                            <option value="{{ $product->id }}"
+                                data-kind="product"
+                                data-unit="{{ $product->unit->value }}"
+                                {{ old('product_id') == $product->id ? 'selected' : '' }}>
+                                {{ $product->name }} ({{ $product->unit->short() }})
+                            </option>
+                        @endforeach
+                    </optgroup>
+                @endif
             </select>
             <x-input-error :messages="$errors->get('ingredient_id')" class="mt-2" />
+            <x-input-error :messages="$errors->get('product_id')" class="mt-2" />
         </div>
 
         <template x-if="selectedSubdivisions">

@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Models\Ingredient;
+use App\Models\Product;
 use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
 use App\Models\RecipeLaborLine;
 use App\Models\RecipePackagingLine;
+use App\Models\RecipeProductLine;
 use App\Models\RecipeSubrecipeLine;
 use App\Models\Tenant;
 use App\Services\RecipeCostPropagator;
@@ -95,6 +98,76 @@ class RecipeLineController extends Controller
         $this->propagator->propagateFrom($recipe);
 
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Ingrediente eliminado.');
+    }
+
+    /**
+     * Línea con un artículo de reventa usado como insumo (ej. leche chocolatada).
+     * Solo reventa activa del mismo negocio: un elaborado se usa vía su receta.
+     */
+    public function storeProductLine(Request $request, Recipe $recipe): RedirectResponse
+    {
+        $this->authorize('update', $recipe);
+
+        $data = $request->validate([
+            'product_id' => [
+                'required', 'integer',
+                Rule::exists('products', 'id')
+                    ->where('tenant_id', app(Tenant::class)->id)
+                    ->where('type', ProductType::Resale->value)
+                    ->where('active', true),
+            ],
+            'quantity' => ['required', 'numeric', 'min:0.001'],
+            'unit' => ['required', Rule::enum(Unit::class)],
+        ]);
+
+        $product = Product::find($data['product_id']);
+
+        if (! $this->converter->compatible(Unit::from($data['unit']), $product->unit)) {
+            throw ValidationException::withMessages([
+                'unit' => 'La unidad seleccionada no es compatible con la unidad del artículo.',
+            ]);
+        }
+
+        $recipe->productLines()->create($data);
+        $this->propagator->propagateFrom($recipe);
+
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Artículo agregado.');
+    }
+
+    public function updateProductLine(Request $request, Recipe $recipe, RecipeProductLine $productLine): JsonResponse
+    {
+        $this->authorize('update', $recipe);
+
+        $data = $request->validate([
+            'quantity' => ['required', 'numeric', 'min:0.001'],
+            'unit' => ['required', Rule::enum(Unit::class)],
+        ]);
+
+        $product = $productLine->product;
+
+        if (! $this->converter->compatible(Unit::from($data['unit']), $product->unit)) {
+            throw ValidationException::withMessages([
+                'unit' => 'La unidad seleccionada no es compatible con la unidad del artículo.',
+            ]);
+        }
+
+        $productLine->update($data);
+        $this->propagator->propagateFrom($recipe);
+
+        return response()->json([
+            'ok' => true,
+            'unitLabel' => $productLine->unit->short(),
+            'costPerLineUnit' => $this->converter->convert(1.0, $productLine->unit, $product->unit) * (float) $product->cost_per_unit,
+        ]);
+    }
+
+    public function destroyProductLine(Recipe $recipe, RecipeProductLine $productLine): RedirectResponse
+    {
+        $this->authorize('update', $recipe);
+        $productLine->delete();
+        $this->propagator->propagateFrom($recipe);
+
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Artículo eliminado.');
     }
 
     public function storePackagingLine(Request $request, Recipe $recipe): RedirectResponse

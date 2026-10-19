@@ -190,7 +190,7 @@ class PurchaseLineRecorder
             // Igual que en la rama de ingrediente: un producto de reventa bonificado
             // no imputa costo, sólo entra al stock más abajo.
             if (! $isBonus) {
-                $this->applyProductCost($item, $costPerUnit, (float) $stockQuantity, $line);
+                $this->applyProductCost($item, $costPerUnit, (float) $stockQuantity, $line, $propagate);
             }
         } else {
             $item = Packaging::find($line->purchaseable_id);
@@ -351,14 +351,15 @@ class PurchaseLineRecorder
     }
 
     /**
-     * Un producto de reventa no interviene en el costo de ninguna receta, así que
-     * comprarlo actualiza su cost_per_unit sin propagar a ninguna receta, pero sí
-     * deja historial (product_cost_logs) y evalúa la alerta de salto de costo.
+     * Comprar un producto de reventa actualiza su cost_per_unit, deja historial
+     * (product_cost_logs), evalúa la alerta de salto de costo y, si el artículo se
+     * usa como insumo en alguna receta, propaga el costo nuevo a esas recetas
+     * (salvo $propagate = false: el llamador propaga una sola vez al final).
      * Según el método de costeo efectivo: último costo, o promedio ponderado entre el
      * stock existente (a su costo vigente) y lo comprado. El promedio se calcula ANTES
      * del alta de stock de esta compra (que ocurre después).
      */
-    private function applyProductCost(Product $item, float $costPerUnit, float $purchasedQty, PurchaseLine $line): void
+    private function applyProductCost(Product $item, float $costPerUnit, float $purchasedQty, PurchaseLine $line, bool $propagate = true): void
     {
         $item->loadMissing('tenant');
         $tenant = $item->tenant;
@@ -400,6 +401,10 @@ class PurchaseLineRecorder
 
         // Cambió el costo → recomputar los precios del artículo que tengan política.
         $this->priceRecalculator->recompute($item);
+
+        if ($propagate) {
+            $this->propagator->propagateFromProduct($item->id);
+        }
 
         // Se alerta contra el costo FINAL almacenado, no contra el de la factura:
         // un promedio ponderado que amortigua el salto no es un salto de costo.

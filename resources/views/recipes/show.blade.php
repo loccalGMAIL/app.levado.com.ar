@@ -3,7 +3,7 @@
 
     @php
         $errorsInEdit          = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit']) && old('_form') === 'edit';
-        $errorsInAddIngredient = $errors->hasAny(['ingredient_id', 'quantity', 'unit']) && old('_form') === 'add-ingredient';
+        $errorsInAddIngredient = $errors->hasAny(['ingredient_id', 'product_id', 'quantity', 'unit']) && old('_form') === 'add-ingredient';
         $errorsInAddPackaging  = $errors->hasAny(['packaging_id', 'quantity']) && old('_form') === 'add-packaging';
         $errorsInAddLabor      = $errors->hasAny(['labor_type_id', 'hours']) && old('_form') === 'add-labor';
         $errorsInAddSubrecipe  = $errors->hasAny(['child_recipe_id', 'quantity_used', 'unit']) && old('_form') === 'add-subrecipe';
@@ -213,7 +213,7 @@
                 return res.json();
             },
             async saveIngredientLine(line) {
-                const data = await this.patchLine('/recipes/{{ $recipe->id }}/ingredient-lines/' + line.id, line, { quantity: line.quantity, unit: line.unit });
+                const data = await this.patchLine(line.updateUrl, line, { quantity: line.quantity, unit: line.unit });
                 if (data) {
                     line.unitLabel = data.unitLabel;
                     line.costPerLineUnit = data.costPerLineUnit;
@@ -309,16 +309,21 @@
                             </button>
                         @endcan
                     </div>
-                    @if($recipe->ingredientLines->isEmpty())
+                    @if($recipe->ingredientLines->isEmpty() && $recipe->productLines->isEmpty())
                         <p class="px-4 py-4 text-sm text-masa-madre">Sin ingredientes todavía.</p>
                     @else
                         {{-- Cards (mobile) --}}
                         <div :class="mobileExpanded ? 'hidden' : 'md:hidden'" class="divide-y divide-miga">
-                            <template x-for="line in ingredientLines" :key="line.id">
+                            <template x-for="line in ingredientLines" :key="line.key">
                                 <div class="p-3 space-y-2">
                                     <div class="flex items-start justify-between gap-2">
                                         <div>
-                                            <div class="font-medium text-corteza text-sm" x-text="line.name"></div>
+                                            <div class="font-medium text-corteza text-sm">
+                                                <span x-text="line.name"></span>
+                                                <template x-if="line.kind === 'product'">
+                                                    <span class="ml-1 px-1.5 py-0.5 bg-miga rounded text-[10px] font-semibold uppercase text-masa-madre align-middle">Reventa</span>
+                                                </template>
+                                            </div>
                                             <div class="text-[11px] text-masa-madre mt-0.5" x-text="'$' + fmt(line.refCost) + '/' + line.refUnit"></div>
                                         </div>
                                         <div class="text-right shrink-0">
@@ -346,7 +351,7 @@
                                         </template>
                                         @can('manage-costs')
                                             <form method="POST" action="{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}"
-                                                :action="'{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                :action="line.destroyUrl">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors p-1" title="Quitar">
@@ -391,10 +396,15 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-miga">
-                                    <template x-for="line in sortedIngredientLines" :key="line.id">
+                                    <template x-for="line in sortedIngredientLines" :key="line.key">
                                         <tr>
                                             <td class="px-4 py-2.5">
-                                                <div class="font-medium text-corteza" x-text="line.name"></div>
+                                                <div class="font-medium text-corteza">
+                                                    <span x-text="line.name"></span>
+                                                    <template x-if="line.kind === 'product'">
+                                                        <span class="ml-1 px-1.5 py-0.5 bg-miga rounded text-[10px] font-semibold uppercase text-masa-madre align-middle">Reventa</span>
+                                                    </template>
+                                                </div>
                                                 <div class="text-[11px] text-masa-madre mt-0.5">
                                                     <span x-text="line.code"></span>
                                                     <span class="mx-1">·</span>
@@ -430,7 +440,7 @@
                                             @can('manage-costs')
                                                 <td class="px-4 py-2.5 text-center">
                                                     <form method="POST" action="{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}"
-                                                        :action="'{{ route('recipes.ingredient-lines.destroy', [$recipe, ':id']) }}'.replace(':id', line.id)">
+                                                        :action="line.destroyUrl">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">

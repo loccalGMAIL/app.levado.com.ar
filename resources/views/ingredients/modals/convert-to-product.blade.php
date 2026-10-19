@@ -6,8 +6,8 @@
 
         <p class="text-sm text-masa-madre">
             <span class="font-medium text-corteza" x-text="converting?.name"></span> deja de ser un insumo y pasa a
-            ser un artículo de reventa, con su costo, stock e historial de compras migrados. El insumo queda
-            desactivado (no se borra).
+            ser un artículo de reventa, con su costo, stock e historial de compras migrados. Las recetas que lo
+            usan pasan a usar el artículo. El insumo queda desactivado (no se borra).
         </p>
 
         <div class="bg-miga/50 rounded-md p-3 grid grid-cols-2 gap-2 text-sm">
@@ -31,10 +31,6 @@
                 @endforeach
             </select>
         </div>
-
-        <p class="text-xs text-masa-madre">
-            Si este insumo se usa en alguna receta, la conversión se va a rechazar: reemplazalo ahí primero.
-        </p>
 
         <div class="flex gap-3 pt-2">
             <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">

@@ -647,8 +647,8 @@ class ProductionOrderService
      * idea que la agregación interna de RecipeExploder, pero entre artículos
      * distintos en vez de entre líneas de una sola receta.
      *
-     * @param  Collection<int, Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>>  $collections
-     * @return Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>
+     * @param  Collection<int, Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>>  $collections
+     * @return Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>
      */
     private function mergeBase(Collection $collections): Collection
     {

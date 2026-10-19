@@ -6,6 +6,7 @@ use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
 use App\Models\RecipeLaborLine;
 use App\Models\RecipePackagingLine;
+use App\Models\RecipeProductLine;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -109,6 +110,7 @@ class RecipeCostPropagator
     {
         $recipes = Recipe::with([
             'ingredientLines.ingredient',
+            'productLines.product',
             'packagingLines.packaging',
             'laborLines.laborType',
             'subrecipeLines.childRecipe',
@@ -192,6 +194,15 @@ class RecipeCostPropagator
     }
 
     /**
+     * After a resale product's cost_per_unit changes, propagate from every recipe
+     * that uses it as an ingredient.
+     */
+    public function propagateFromProduct(int $productId): void
+    {
+        $this->propagateManyFrom($this->recipeIdsUsingProducts([$productId]));
+    }
+
+    /**
      * After a packaging's cost_per_unit changes, propagate from every recipe using it.
      */
     public function propagateFromPackaging(int $packagingId): void
@@ -226,6 +237,25 @@ class RecipeCostPropagator
         }
 
         return RecipeIngredientLine::whereIn('ingredient_id', $ingredientIds)
+            ->distinct()
+            ->pluck('recipe_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Ids de las recetas que usan alguno de estos artículos de reventa como insumo, sin propagar.
+     *
+     * @param  array<int, int>  $productIds
+     * @return array<int, int>
+     */
+    public function recipeIdsUsingProducts(array $productIds): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+
+        return RecipeProductLine::whereIn('product_id', $productIds)
             ->distinct()
             ->pluck('recipe_id')
             ->map(fn ($id) => (int) $id)

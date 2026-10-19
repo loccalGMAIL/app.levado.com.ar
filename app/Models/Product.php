@@ -180,6 +180,32 @@ class Product extends Model
     }
 
     /**
+     * Líneas de receta que usan este artículo de reventa como insumo.
+     *
+     * @return HasMany<RecipeProductLine, $this>
+     */
+    public function recipeLines(): HasMany
+    {
+        return $this->hasMany(RecipeProductLine::class);
+    }
+
+    /**
+     * Nombres de las recetas que usan este artículo como insumo.
+     *
+     * @return list<string>
+     */
+    public function recipeNamesUsingAsIngredient(bool $onlyActive = false): array
+    {
+        return $this->recipeLines()
+            ->join('recipes', 'recipes.id', '=', 'recipe_product_lines.recipe_id')
+            ->when($onlyActive, fn ($query) => $query->where('recipes.active', true))
+            ->distinct()
+            ->orderBy('recipes.name')
+            ->pluck('recipes.name')
+            ->all();
+    }
+
+    /**
      * @return BelongsTo<ProductCategory, $this>
      */
     public function category(): BelongsTo

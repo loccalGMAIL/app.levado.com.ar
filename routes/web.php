@@ -229,6 +229,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::patch('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeLineController::class, 'updateIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.update');
     Route::delete('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeLineController::class, 'destroyIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.destroy');
 
+    Route::post('recipes/{recipe}/product-lines', [RecipeLineController::class, 'storeProductLine'])->name('recipes.product-lines.store');
+    Route::patch('recipes/{recipe}/product-lines/{productLine}', [RecipeLineController::class, 'updateProductLine'])->scopeBindings()->name('recipes.product-lines.update');
+    Route::delete('recipes/{recipe}/product-lines/{productLine}', [RecipeLineController::class, 'destroyProductLine'])->scopeBindings()->name('recipes.product-lines.destroy');
+
     Route::post('recipes/{recipe}/packaging-lines', [RecipeLineController::class, 'storePackagingLine'])->name('recipes.packaging-lines.store');
     Route::patch('recipes/{recipe}/packaging-lines/{packagingLine}', [RecipeLineController::class, 'updatePackagingLine'])->scopeBindings()->name('recipes.packaging-lines.update');
     Route::delete('recipes/{recipe}/packaging-lines/{packagingLine}', [RecipeLineController::class, 'destroyPackagingLine'])->scopeBindings()->name('recipes.packaging-lines.destroy');

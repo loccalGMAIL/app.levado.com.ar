@@ -11,7 +11,8 @@ Ratificado con el usuario antes de reestructurar Producción. Ver [[feature-arti
 
 ## Decisión
 Separar **Insumos** (lo que se compra para consumir en producción; parte de las recetas; no se venden)
-de **Artículos** (lo único comercializable: elaborados vía Producción o de reventa), y **centralizar toda
+de **Artículos** (lo único comercializable: elaborados vía Producción o de reventa; la reventa además puede
+consumirse como insumo, ver "Reventa usable como insumo"), y **centralizar toda
 la lógica comercial (costo + precio) en el Artículo**. Compras, Producción, Stock y Ventas consumen esa
 información sin duplicar reglas.
 
@@ -83,6 +84,25 @@ información sin duplicar reglas.
 - **Órdenes de producción ✅ (P5)**. **Costo de producción + historial + alerta ✅ (16/09/2026)**: ver
   [[feature-articulos-produccion]] → "Punto 1 resuelto". Ratifica este ADR, no lo cambia — `currentCost()` sigue
   siendo la única fuente del costo vigente del elaborado.
+- **Reventa usable como insumo ✅ (16/10/2026, rama `v0.18.0-reventa-como-insumo`)**: Orfano tiene productos de
+  doble uso (leche chocolatada: se vende y entra en un milkshake) y estaban cargados dos veces (insumo + artículo).
+  **Excepción acotada a la regla "los insumos no se venden"**: un *Artículo de reventa* puede ser línea de receta
+  (`recipe_product_lines`, tabla propia como `recipe_packaging_lines`). Un solo registro dueño de compras, stock y costo.
+  - **Qué NO cambia**: un insumo (`Ingredient`) sigue sin poder venderse; un elaborado sigue sin ser línea de receta
+    (se usa vía sub-receta); la regla de costo/precio del Artículo queda igual.
+  - Cuenta como "ingredientes" en `RecipeCostCalculator` (mismo shape); `RecipeExploder` emite `CatalogItemType::Product`
+    y `ProductionService` lo descuenta con el ledger de siempre. Comprar o editar a mano el costo de la reventa
+    **ahora propaga a las recetas** (`RecipeCostPropagator::propagateFromProduct`) — antes no propagaba a ninguna.
+  - Guardas: no se desactiva un artículo usado en recetas activas ni se pasa a elaborado si está en alguna.
+  - **Unificación de duplicados**: `IngredientToProductConverter::convert($ingredient, $categoryId, $target)` ya no
+    bloquea por recetas (migra las líneas a `recipe_product_lines`); con `$target` unifica con un artículo existente
+    (misma unidad obligatoria, suma stock, reapunta compras/vínculos/movimientos). **Unificar con un artículo
+    existente es solo por consola** (decisión del usuario: sin pantalla para este caso, 19/10/2026):
+    `catalog:unify-ingredient --list | {ingrediente} {artículo} [--dry-run] [--force]`. El modal «Convertir» de
+    /ingredients solo crea un artículo nuevo (y migra las recetas). `--list` solo detecta pares de igual nombre
+    normalizado; con nombres distintos se pasan los ids.
+  - Insumo en `u` con `subdivisions`: el divisor pasa a `supplier_product_links.pkg_qty` (el artículo no tiene subdivisiones fijas).
+  - Fuera de alcance: `CatalogItemReplacer` no sabe reemplazar líneas de artículo.
 - **Próximo 🔲**: semi-elaborados stockeables / movimientos de stock por destino / mermas (parkeados, sin trabajar).
   Luego Ventas.
 

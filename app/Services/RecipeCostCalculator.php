@@ -15,6 +15,7 @@ class RecipeCostCalculator
     {
         $recipe->loadMissing([
             'ingredientLines.ingredient',
+            'productLines.product',
             'packagingLines.packaging',
             'laborLines.laborType',
             'subrecipeLines.childRecipe',
@@ -29,6 +30,18 @@ class RecipeCostCalculator
             );
             if ($converted !== null) {
                 $ingredientCost += $converted * (float) $line->ingredient->cost_per_unit;
+            }
+        }
+
+        // Un artículo de reventa usado como insumo cuenta como ingrediente.
+        foreach ($recipe->productLines as $line) {
+            $converted = $this->converter->convert(
+                (float) $line->quantity,
+                $line->unit,
+                $line->product->unit
+            );
+            if ($converted !== null) {
+                $ingredientCost += $converted * (float) $line->product->cost_per_unit;
             }
         }
 
