@@ -295,6 +295,43 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.18.0] — 2026-10-19
+
+Rama `v0.18.0-reventa-como-insumo`, sobre v0.17.0. Un artículo de reventa también puede usarse como ingrediente de una receta, para los productos que se venden y se consumen (ej. la leche chocolatada).
+
+### Agregado
+
+- **Artículos de reventa en las recetas**: «Agregar ingrediente» lista, además de los insumos, los artículos de reventa activos (grupo «Artículos de reventa»). Se muestran en la misma tabla de ingredientes con la marca «Reventa» y su código `ART-`, y se editan, cambian de unidad y quitan igual que un ingrediente. La receta impresa y la copia de una receta también los incluyen.
+- **Un solo registro para el producto de doble uso**: las compras, el stock y el costo viven en el artículo; ya no hace falta cargarlo como insumo y como artículo.
+- **Producción**: fabricar una receta con un artículo de reventa descuenta su stock y lo suma al costo de materiales. La vista previa lo muestra con su propia unidad.
+- **Unificar un duplicado por consola**: `php artisan catalog:unify-ingredient`.
+  - `--list [--tenant=]` muestra los insumos que tienen un artículo de reventa del mismo nombre (sin importar mayúsculas, acentos ni espacios), con sus recetas, compras y stock.
+  - `{insumo} {artículo}` los unifica: pasan al artículo las compras, el stock (se suma al que ya tenga), el historial de costo, los vínculos con proveedor y las recetas. El insumo queda desactivado y no se borra. Exige la misma unidad en ambos.
+  - `--dry-run` muestra qué se movería sin escribir nada, y `--force` omite la confirmación.
+  - Si el insumo y el artículo tienen nombres distintos no aparecen en `--list`, pero se unifican igual pasando los ids.
+
+### Cambiado
+
+- **Comprar un artículo de reventa, o editar su costo a mano, actualiza el costo de las recetas que lo usan** y el de sus recetas padre. Antes no tocaba ninguna receta.
+- **Convertir un insumo a artículo de reventa ya no se rechaza** si el insumo está en recetas: esas líneas pasan al artículo y el costo de la receta no cambia. El modal lo avisa.
+- **No se puede desactivar un artículo usado en una receta activa**, ni pasarlo a «elaborado» si está en alguna receta.
+
+### Técnico
+
+- Tabla `recipe_product_lines` (receta, artículo, cantidad y unidad; el artículo no se puede borrar mientras esté en una receta), modelo `RecipeProductLine` con factory, y relaciones `Recipe::productLines()` y `Product::recipeLines()`.
+- `RecipeCostCalculator` suma estas líneas como ingredientes; `RecipeExploder` las emite como `CatalogItemType::Product`, así que `ProductionService` y `ProductionOrderService` las tratan con el ledger de siempre. `RecipeCostPropagator` suma `propagateFromProduct()` y `recipeIdsUsingProducts()`.
+- `PurchaseLineRecorder::applyProductCost()` propaga a las recetas (respeta `propagate: false` para el lote de «Aplicar sugerencias»), y `Product::recipeNamesUsingAsIngredient()` alimenta las guardas.
+- `IngredientToProductConverter::convert()` acepta un artículo destino opcional y suma `preview()`. Un insumo en `u` con subdivisiones deja su divisor en el vínculo con el proveedor, porque el artículo no tiene subdivisiones fijas.
+- Larastan: se quitó del `phpstan-baseline.neon` una entrada que dejó de aplicar al ampliar el tipo del desglose.
+- **Tests nuevos**: `RecipeProductLineTest` (21) y casos de unificación en `IngredientToProductConversionTest`. 1233 tests, todos verdes.
+
+### Al deployar
+
+- `php artisan migrate` (crea `recipe_product_lines`) y `npm run build`.
+- Después, para unificar los duplicados que ya existan: `php artisan catalog:unify-ingredient --list` y, por cada par, `--dry-run` y luego la unificación real. En Orfano, la leche chocolatada ya está cargada como insumo y como artículo.
+
+---
+
 ## [0.17.0] — 2026-10-15
 
 Rama `v0.17.0-percepciones-compra`, sobre v0.16.0. Las percepciones dejan de ser una alícuota por renglón y pasan a un listado propio de la compra.
