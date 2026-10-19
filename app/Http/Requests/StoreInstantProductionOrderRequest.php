@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\DeliveryDestinationType;
+use App\Enums\LineMeasure;
 use App\Http\Requests\Concerns\ResolvesDestinationRef;
 use App\Models\Tenant;
 use App\Rules\ValidDestination;
@@ -52,6 +53,7 @@ class StoreInstantProductionOrderRequest extends FormRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', Rule::in($tenant->products()->producible()->pluck('id'))],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'items.*.measure' => ['nullable', Rule::enum(LineMeasure::class)],
         ];
     }
 

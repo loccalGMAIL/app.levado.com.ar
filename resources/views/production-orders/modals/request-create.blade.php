@@ -66,6 +66,7 @@
                 <span>
                     <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.product_id">
                     <input type="hidden" :name="`lines[${i}][quantity]`" :value="line.quantity">
+                    <input type="hidden" :name="`lines[${i}][measure]`" :value="line.measure ?? 'unit'">
                 </span>
             </template>
         </div>

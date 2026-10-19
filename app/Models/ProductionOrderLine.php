@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LineMeasure;
 use App\Enums\Unit;
 use Database\Factories\ProductionOrderLineFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,7 +23,13 @@ class ProductionOrderLine extends Model
         'product_id',
         'quantity',
         'unit',
+        'measure',
         'position',
+    ];
+
+    /** @var array<string, mixed> */
+    protected $attributes = [
+        'measure' => 'unit',
     ];
 
     protected function casts(): array
@@ -30,7 +37,28 @@ class ProductionOrderLine extends Model
         return [
             'quantity' => 'decimal:4',
             'unit' => Unit::class,
+            'measure' => LineMeasure::class,
         ];
+    }
+
+    /**
+     * Cantidad como se pidió, para las vistas de sólo lectura y las planillas:
+     * "30 u" o "1,5 lata (99 u)". Requiere `product.recipe` cargada cuando la
+     * línea está en unidades de producción.
+     */
+    public function quantityLabel(): string
+    {
+        $format = fn (float $value): string => rtrim(rtrim(number_format($value, 2, ',', '.'), '0'), ',');
+        $quantity = (float) $this->quantity;
+
+        if ($this->measure === LineMeasure::Unit || $this->product?->recipe === null) {
+            return number_format($quantity, 2, ',', '.').' '.$this->unit->short();
+        }
+
+        $base = $this->product->baseQuantityFor($quantity, $this->measure);
+
+        return $format($quantity).' '.$this->product->recipe->productionUnitLabel()
+            .($base !== null ? ' ('.$format($base).' '.$this->unit->short().')' : '');
     }
 
     /**

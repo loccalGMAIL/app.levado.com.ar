@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\LineMeasure;
 use App\Models\Product;
 use App\Models\RecurringProductionRequest;
 use App\Models\Tenant;
@@ -20,7 +21,7 @@ class RecurringProductionRequestService
      *     destination_type: string, destination_id: int,
      *     weekdays: array<int, int>, starts_on: string, ends_on?: ?string,
      *     notes?: ?string,
-     *     lines?: array<int, array{product_id: int, quantity: float|string}>,
+     *     lines?: array<int, array{product_id: int, quantity: float|string, measure?: string|null}>,
      * }  $attributes
      */
     public function create(Tenant $tenant, array $attributes, ?User $user = null): RecurringProductionRequest
@@ -78,13 +79,14 @@ class RecurringProductionRequestService
      * ProductionOrderService::placeRequest()/syncLines() — para copiarlas a
      * cada instancia nueva sin duplicar la forma del array en dos lugares.
      *
-     * @return array<int, array{product_id: int, quantity: float}>
+     * @return array<int, array{product_id: int, quantity: float, measure: string}>
      */
     public function snapshotLines(RecurringProductionRequest $recurring): array
     {
         return $recurring->lines->map(fn ($line) => [
             'product_id' => $line->product_id,
             'quantity' => (float) $line->quantity,
+            'measure' => $line->measure->value,
         ])->all();
     }
 
@@ -94,7 +96,7 @@ class RecurringProductionRequestService
      * falta preservar ids (las líneas del molde no se referencian desde
      * afuera), así que un delete+create alcanza.
      *
-     * @param  array<int, array{product_id: int, quantity: float|string}>  $lines
+     * @param  array<int, array{product_id: int, quantity: float|string, measure?: string|null}>  $lines
      */
     private function replaceLines(RecurringProductionRequest $recurring, array $lines): void
     {
@@ -114,6 +116,7 @@ class RecurringProductionRequestService
                 'product_id' => $product->id,
                 'quantity' => $line['quantity'],
                 'unit' => $product->unit->value,
+                'measure' => $line['measure'] ?? LineMeasure::Unit->value,
                 'position' => $i + 1,
             ]);
         }

@@ -29,6 +29,8 @@ class Recipe extends Model
         'description',
         'yield_quantity',
         'yield_unit',
+        'production_unit_name',
+        'production_unit_quantity',
         'active',
         'is_semi_elaborate',
         'unit_cost',
@@ -40,6 +42,7 @@ class Recipe extends Model
         return [
             'yield_quantity' => 'decimal:3',
             'yield_unit' => Unit::class,
+            'production_unit_quantity' => 'decimal:3',
             'active' => 'boolean',
             'is_semi_elaborate' => 'boolean',
             'unit_cost' => 'decimal:4',
@@ -50,6 +53,30 @@ class Recipe extends Model
     public function scopeActive(Builder $query): void
     {
         $query->where('active', true);
+    }
+
+    /** ¿La receta le puso nombre a su unidad de producción? */
+    public function hasCustomProductionUnit(): bool
+    {
+        return $this->production_unit_name !== null && $this->production_unit_name !== '';
+    }
+
+    /**
+     * Cuántas unidades del rinde (en yield_unit) trae 1 unidad de producción:
+     * el rinde completo, salvo que la receta fije otro tamaño (hoy sólo por
+     * datos, el formulario no lo expone).
+     */
+    public function productionUnitSize(): float
+    {
+        return (float) $this->production_unit_quantity > 0
+            ? (float) $this->production_unit_quantity
+            : (float) $this->yield_quantity;
+    }
+
+    /** Nombre de la unidad de producción; "Lata" si la receta no define una. */
+    public function productionUnitLabel(): string
+    {
+        return $this->hasCustomProductionUnit() ? (string) $this->production_unit_name : 'Lata';
     }
 
     /**

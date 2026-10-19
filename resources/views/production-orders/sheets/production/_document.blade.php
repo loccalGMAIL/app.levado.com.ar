@@ -41,7 +41,12 @@
                     @foreach($sheet['products'] as $row)
                         <tr>
                             <td>{{ $row['name'] }}</td>
-                            <td class="text-right amount">{{ number_format($row['quantity'], 2, ',', '.') }} {{ $row['unit'] }}</td>
+                            <td class="text-right amount">
+                                {{ number_format($row['quantity'], 2, ',', '.') }} {{ $row['unit'] }}
+                                @if($row['batches'])
+                                    <span class="footnote">({{ $row['batches'] }})</span>
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

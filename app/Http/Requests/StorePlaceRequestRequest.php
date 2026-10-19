@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\DeliveryDestinationType;
+use App\Enums\LineMeasure;
 use App\Http\Requests\Concerns\ResolvesDestinationRef;
 use App\Models\Tenant;
 use App\Rules\ValidDestination;
@@ -46,6 +47,7 @@ class StorePlaceRequestRequest extends FormRequest
             'lines' => ['present', 'array', 'max:200'],
             'lines.*.product_id' => ['required', 'integer', Rule::in($tenant->products()->producible()->pluck('id'))],
             'lines.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999'],
+            'lines.*.measure' => ['nullable', Rule::enum(LineMeasure::class)],
             // Recurrencia opcional: días de semana elegibles (ISO 1..7,
             // ver RecurringProductionRequest::occursOn()) + vigencia hasta
             // opcional. starts_on nunca se pide — nace de scheduled_for.

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\CatalogItemType;
 use App\Enums\DeliveryDestinationType;
+use App\Enums\LineMeasure;
 use App\Enums\ProductionOrderStatus;
 use App\Enums\ProductionOrderType;
 use App\Models\Ingredient;
@@ -145,7 +146,7 @@ class ProductionOrderService
      * ajena. La pertenencia de los product_id al gate producible ya la validó
      * SyncProductionOrderLinesRequest antes de llegar acá.
      *
-     * @param  array<int, array{id?: int|null, product_id: int, quantity: float|string}>  $lines
+     * @param  array<int, array{id?: int|null, product_id: int, quantity: float|string, measure?: string|null}>  $lines
      * @return int cantidad de líneas que quedaron en el pedido
      */
     public function syncLines(ProductionOrderRequest $request, array $lines): int
@@ -175,6 +176,7 @@ class ProductionOrderService
                     'product_id' => $product->id,
                     'quantity' => $line['quantity'],
                     'unit' => $product->unit->value,
+                    'measure' => $line['measure'] ?? LineMeasure::Unit->value,
                     'position' => $i + 1,
                 ];
 
@@ -280,6 +282,7 @@ class ProductionOrderService
                 'product_id' => $line->product_id,
                 'name' => $line->product->name,
                 'unit' => $line->unit->short(),
+                'measure' => $line->measure->value,
                 'quantity' => (float) $line->quantity,
             ])->all(),
             'skipped' => $skipped->map(fn (ProductionOrderLine $line) => $line->product->name ?? '—')->values()->all(),
@@ -309,7 +312,7 @@ class ProductionOrderService
      * @param  array{
      *     destination_type: string, destination_id: int, scheduled_for: string,
      *     notes?: ?string,
-     *     lines?: array<int, array{id?: int|null, product_id: int, quantity: float|string}>,
+     *     lines?: array<int, array{id?: int|null, product_id: int, quantity: float|string, measure?: string|null}>,
      *     copy_previous?: bool,
      *     recurrence?: array{weekdays: array<int, int>, ends_on?: ?string},
      *     recurring_production_request_id?: ?int,
@@ -360,6 +363,7 @@ class ProductionOrderService
                 $lines = $previous?->lines->map(fn (ProductionOrderLine $line) => [
                     'product_id' => $line->product_id,
                     'quantity' => (float) $line->quantity,
+                    'measure' => $line->measure->value,
                 ])->all() ?? [];
             }
 
@@ -434,17 +438,48 @@ class ProductionOrderService
     {
         $locations = $tenant->locations()->active()->orderBy('name')->get();
         $customers = $tenant->customers()->active()->orderBy('name')->get();
-        $products = $tenant->products()->producible()->orderBy('name')->get(['id', 'name', 'unit'])
-            ->map(fn (Product $product) => ['id' => $product->id, 'name' => $product->name, 'unit' => $product->unit->short()]);
 
-        return [$locations, $customers, $products];
+        return [$locations, $customers, $this->producibleCatalog($tenant)];
+    }
+
+    /**
+     * Catálogo liviano de artículos producibles para las grillas de líneas.
+     * `production_unit` es la unidad de producción de la receta del artículo
+     * (lata, tanda...) con su tamaño ya en unidades del artículo, o null si la
+     * unidad del artículo no es compatible con el rinde (no se puede pedir en
+     * unidades de producción). `preferred` marca las que la receta definió a
+     * propósito: la grilla arranca en ellas; las implícitas ("tanda" = rinde
+     * completo) sólo se ofrecen en el selector.
+     *
+     * @return Collection<int, array{id: int<0, max>, name: string, unit: string, production_unit: array{label: string, size: float, preferred: bool}|null}>
+     */
+    public function producibleCatalog(Tenant $tenant): Collection
+    {
+        return $tenant->products()->producible()->with('recipe')->orderBy('name')->get()
+            ->map(function (Product $product) {
+                $size = $product->baseQuantityFor(1, LineMeasure::ProductionUnit);
+
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'unit' => $product->unit->short(),
+                    'production_unit' => $size !== null && $size > 0 && $product->recipe !== null ? [
+                        'label' => $product->recipe->productionUnitLabel(),
+                        'size' => $size,
+                        'preferred' => $product->recipe->hasCustomProductionUnit(),
+                    ] : null,
+                ];
+            });
     }
 
     /**
      * Suma la cantidad pedida por artículo a través de todos los pedidos de
      * la orden. Es lo que se produce y lo que muestra el resumen agregado.
+     * Cada línea se pasa a unidades del artículo según su `measure` (una
+     * línea en latas aporta latas × tamaño de la lata); `batches` es el total
+     * expresado en unidades de producción, para mostrar en las planillas.
      *
-     * @return Collection<int, array{product: Product, quantity: float}>
+     * @return Collection<int, array{product: Product, quantity: float, batches: float, batch_label: string}>
      */
     public function aggregate(ProductionOrder $order): Collection
     {
@@ -465,9 +500,19 @@ class ProductionOrderService
                 /** @var Product $product */
                 $product = $line->product;
 
+                $quantity = (float) $group->sum(function (ProductionOrderLine $item) use ($product) {
+                    $base = $product->baseQuantityFor((float) $item->quantity, $item->measure);
+                    abort_if($base === null, 422, "La unidad de {$product->name} no es compatible con el rendimiento de su receta.");
+
+                    return $base;
+                });
+                $unitSize = $product->baseQuantityFor(1, LineMeasure::ProductionUnit);
+
                 return [
                     'product' => $product,
-                    'quantity' => (float) $group->sum('quantity'),
+                    'quantity' => $quantity,
+                    'batches' => $unitSize !== null && $unitSize > 0 ? $quantity / $unitSize : 0.0,
+                    'batch_label' => $product->recipe?->productionUnitLabel() ?? 'tanda',
                 ];
             })
             ->values();
@@ -490,12 +535,12 @@ class ProductionOrderService
      * que exista una orden persistida — lo usa la orden instantánea para
      * mostrar el consumo combinado antes de crear nada.
      *
-     * @param  Collection<int, array{product: Product, quantity: float}>  $pairs
+     * @param  iterable<int, array{product: Product, quantity: float, ...}>  $pairs
      * @return array{lines: array<int, array<string, mixed>>, material_cost: float, labor_cost: float, total_cost: float}
      */
-    public function previewFor(Collection $pairs, Location $location): array
+    public function previewFor(iterable $pairs, Location $location): array
     {
-        $consumptions = $pairs->map(
+        $consumptions = collect($pairs)->map(
             fn (array $entry) => $this->productions->baseConsumption($entry['product'], $entry['quantity'])
         );
 
@@ -544,16 +589,17 @@ class ProductionOrderService
      * El destino es informativo (arma la planilla): el stock entra igual al
      * obrador, nunca al destino elegido — ver decision-multi-sucursal.md.
      *
-     * @param  Collection<int, array{product: Product, quantity: float}>  $items  ya agrupados por artículo (sumar cantidades repetidas es responsabilidad del caller)
+     * @param  iterable<int, array{product: Product, quantity: float, requested?: array<int, array{quantity: float, measure: LineMeasure}>, ...}>  $items  ya agrupados por artículo (sumar cantidades repetidas es responsabilidad del caller); `quantity` va en unidades del artículo y `requested`, si viene, conserva en qué medida se pidió cada renglón
      */
     public function produceInstant(
         Tenant $tenant,
         User $user,
         DeliveryDestinationType $destinationType,
         int $destinationId,
-        Collection $items,
+        iterable $items,
         ?string $notes = null,
     ): ProductionOrder {
+        $items = collect($items);
         abort_if($items->isEmpty(), 422, 'La orden no tiene artículos para producir.');
 
         return DB::transaction(function () use ($tenant, $user, $destinationType, $destinationId, $items, $notes) {
@@ -573,11 +619,16 @@ class ProductionOrderService
             ]);
 
             foreach ($items as $entry) {
-                $request->lines()->create([
-                    'product_id' => $entry['product']->id,
-                    'quantity' => $entry['quantity'],
-                    'unit' => $entry['product']->unit->value,
-                ]);
+                $requested = $entry['requested'] ?? [['quantity' => $entry['quantity'], 'measure' => LineMeasure::Unit]];
+
+                foreach ($requested as $row) {
+                    $request->lines()->create([
+                        'product_id' => $entry['product']->id,
+                        'quantity' => $row['quantity'],
+                        'unit' => $entry['product']->unit->value,
+                        'measure' => $row['measure']->value,
+                    ]);
+                }
             }
 
             $this->transitionTo($order, ProductionOrderStatus::Confirmed, $user);

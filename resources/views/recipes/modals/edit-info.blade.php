@@ -21,7 +21,7 @@
             <x-input-error :messages="$errors->get('description')" class="mt-2" />
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-3 gap-3">
             <div>
                 <x-input-label for="edit_recipe_yield" value="Rendimiento" />
                 <x-text-input id="edit_recipe_yield" name="yield_quantity" type="number"
@@ -43,6 +43,13 @@
                     @endforeach
                 </select>
                 <x-input-error :messages="$errors->get('yield_unit')" class="mt-2" />
+            </div>
+            <div>
+                <x-input-label for="edit_recipe_pu_name" value="Unidad de prod." />
+                <x-text-input id="edit_recipe_pu_name" name="production_unit_name" type="text" maxlength="30"
+                    class="mt-1 block w-full" placeholder="Lata"
+                    :value="old('production_unit_name', $recipe->production_unit_name)" />
+                <x-input-error :messages="$errors->get('production_unit_name')" class="mt-2" />
             </div>
         </div>
 

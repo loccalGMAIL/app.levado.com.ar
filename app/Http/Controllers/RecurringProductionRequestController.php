@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateRecurringProductionRequestRequest;
-use App\Models\Product;
 use App\Models\RecurringProductionRequest;
 use App\Models\Tenant;
+use App\Services\ProductionOrderService;
 use App\Services\RecurringProductionRequestMaterializer;
 use App\Services\RecurringProductionRequestService;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +22,7 @@ class RecurringProductionRequestController extends Controller
     public function __construct(
         private readonly RecurringProductionRequestService $recurring,
         private readonly RecurringProductionRequestMaterializer $materializer,
+        private readonly ProductionOrderService $orders,
     ) {}
 
     public function index(): View
@@ -35,8 +36,7 @@ class RecurringProductionRequestController extends Controller
             ->orderBy('id')
             ->get();
 
-        $products = $tenant->products()->producible()->orderBy('name')->get(['id', 'name', 'unit'])
-            ->map(fn (Product $product) => ['id' => $product->id, 'name' => $product->name, 'unit' => $product->unit->short()]);
+        $products = $this->orders->producibleCatalog($tenant);
 
         return view('production-orders.recurring', compact('recurring', 'products', 'tenant'));
     }

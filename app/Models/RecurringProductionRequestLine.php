@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LineMeasure;
 use App\Enums\Unit;
 use Database\Factories\RecurringProductionRequestLineFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +13,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Artículo + cantidad plantilla de un pedido recurrente — espejo exacto de
  * ProductionOrderLine. Sin tenant_id propio, igual que su espejo: tenant-safe
  * por el padre (RecurringProductionRequest).
+ *
+ * @property LineMeasure $measure En qué se expresa `quantity` (el analizador estático no
+ *                                lee esta columna: la tabla nace con un constrained(indexName:) que no interpreta).
  */
 class RecurringProductionRequestLine extends Model
 {
@@ -23,7 +27,13 @@ class RecurringProductionRequestLine extends Model
         'product_id',
         'quantity',
         'unit',
+        'measure',
         'position',
+    ];
+
+    /** @var array<string, mixed> */
+    protected $attributes = [
+        'measure' => 'unit',
     ];
 
     protected function casts(): array
@@ -31,6 +41,7 @@ class RecurringProductionRequestLine extends Model
         return [
             'quantity' => 'decimal:4',
             'unit' => Unit::class,
+            'measure' => LineMeasure::class,
         ];
     }
 

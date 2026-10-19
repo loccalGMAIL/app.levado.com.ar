@@ -104,6 +104,7 @@ class RecurringProductionRequestMaterializer
                         'lines' => $r->lines->map(fn ($line) => [
                             'product_id' => $line->product_id,
                             'quantity' => (float) $line->quantity,
+                            'measure' => $line->measure->value,
                         ])->all(),
                         'recurring_production_request_id' => $r->id,
                     ], $r->user);

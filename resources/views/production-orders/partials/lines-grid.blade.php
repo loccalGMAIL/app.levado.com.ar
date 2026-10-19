@@ -26,11 +26,21 @@
             <tr>
                 <td class="px-5 py-2 text-corteza" x-text="line.name"></td>
                 <td class="px-5 py-2 text-right w-28">
-                    <input type="number" step="0.01" min="0.01" x-model="line.quantity"
+                    <input type="number" step="0.25" min="0.01" x-model="line.quantity"
                         @keydown.enter.prevent="focusPicker()"
                         class="w-full text-right border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                    <p x-show="baseHint(line)" x-cloak x-text="baseHint(line)" class="mt-0.5 text-[11px] text-masa-madre"></p>
                 </td>
-                <td class="px-5 py-2 text-masa-madre text-xs" x-text="line.unit"></td>
+                <td class="px-5 py-2 text-masa-madre text-xs">
+                    <template x-if="productionUnitOf(line)">
+                        <select x-model="line.measure"
+                            class="border-gray-300 rounded-md shadow-sm text-xs py-1 focus:border-horno focus:ring-horno">
+                            <option value="unit" x-text="line.unit"></option>
+                            <option value="production_unit" x-text="productionUnitOf(line).label"></option>
+                        </select>
+                    </template>
+                    <span x-show="! productionUnitOf(line)" x-text="line.unit"></span>
+                </td>
                 <td class="px-5 py-2 text-right w-8">
                     <button type="button" @click="removeLine(i)" tabindex="-1" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

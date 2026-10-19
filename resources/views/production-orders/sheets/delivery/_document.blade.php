@@ -55,7 +55,12 @@
                                     @foreach($request['lines'] as $line)
                                         <tr>
                                             <td>{{ $line['product'] }}</td>
-                                            <td class="text-right amount">{{ number_format($line['quantity'], 2, ',', '.') }} {{ $line['unit'] }}</td>
+                                            <td class="text-right amount">
+                                                {{ number_format($line['quantity'], 2, ',', '.') }} {{ $line['unit'] }}
+                                                @if($line['detail'])
+                                                    <span class="footnote">({{ $line['detail'] }})</span>
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>

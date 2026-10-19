@@ -11,7 +11,8 @@ import Alpine from 'alpinejs';
  * subyacente, que es lo que engancha addProduct().
  *
  * Init esperado:
- *   { saveUrl, previousUrl, products: [{id, name, unit}], lines: [{id, product_id, name, unit, quantity}], deferred }
+ *   { saveUrl, previousUrl, products: [{id, name, unit, production_unit}], lines: [{id, product_id, name, unit, measure, quantity}], deferred }
+ * `measure` es 'unit' o 'production_unit' (lata/tanda de la receta del artículo).
  * `products` viaja UNA sola vez por página (en el x-data raíz) y cada grilla
  * lo recibe acá por referencia — no lo dupliques por pedido.
  *
@@ -46,6 +47,26 @@ Alpine.data('productionOrderLines', (init = {}) => ({
         return this.products.find(p => String(p.id) === String(id));
     },
 
+    /** Unidad de producción de la receta del artículo de la línea (o null). */
+    productionUnitOf(line) {
+        return this.productById(line.product_id)?.production_unit ?? null;
+    },
+
+    /** Ayuda bajo la cantidad: "= 99 u" cuando la línea está en unidades de producción. */
+    baseHint(line) {
+        const pu = this.productionUnitOf(line);
+        const qty = Number(line.quantity);
+        if (line.measure !== 'production_unit' || !pu || !(qty > 0)) {
+            return '';
+        }
+        return '= ' + (Math.round(qty * pu.size * 100) / 100).toLocaleString('es-AR') + ' ' + line.unit;
+    },
+
+    /** Cantidad y medida de una línea tal como viajan al servidor. */
+    payload(line) {
+        return { quantity: line.quantity, measure: line.measure ?? 'unit' };
+    },
+
     /** Enganchado al @change del <select data-searchable> del picker. */
     addProduct(productId, pickerEl) {
         if (!productId) {
@@ -61,7 +82,10 @@ Alpine.data('productionOrderLines', (init = {}) => ({
         if (!product) {
             return;
         }
-        this.lines.push({ id: null, product_id: product.id, name: product.name, unit: product.unit, quantity: '' });
+        // Arranca en la unidad de producción sólo si la receta la definió a
+        // propósito (lata); la tanda implícita queda como opción del selector.
+        const measure = product.production_unit?.preferred ? 'production_unit' : 'unit';
+        this.lines.push({ id: null, product_id: product.id, name: product.name, unit: product.unit, measure, quantity: '' });
         this.resetPicker(pickerEl);
         this.$nextTick(() => {
             const inputs = this.$refs.rows?.querySelectorAll('input[type="number"]');
@@ -104,7 +128,7 @@ Alpine.data('productionOrderLines', (init = {}) => ({
                     'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
                 },
                 body: JSON.stringify({
-                    lines: this.lines.map(l => ({ id: l.id, product_id: l.product_id, quantity: l.quantity })),
+                    lines: this.lines.map(l => ({ id: l.id, product_id: l.product_id, ...this.payload(l) })),
                 }),
             });
             if (!res.ok) {
@@ -148,7 +172,7 @@ Alpine.data('productionOrderLines', (init = {}) => ({
                 alert('Todavía no hay un pedido anterior a este destino.');
                 return;
             }
-            this.lines = data.lines.map(l => ({ id: null, product_id: l.product_id, name: l.name, unit: l.unit, quantity: l.quantity }));
+            this.lines = data.lines.map(l => ({ id: null, product_id: l.product_id, name: l.name, unit: l.unit, measure: l.measure ?? 'unit', quantity: l.quantity }));
             if (data.skipped.length > 0) {
                 alert('Artículos del pedido anterior que ya no se producen y no se trajeron: ' + data.skipped.join(', '));
             }

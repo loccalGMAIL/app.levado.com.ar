@@ -22,6 +22,7 @@
                 'product_id' => $line->product_id,
                 'name' => $line->product->name ?? '—',
                 'unit' => $line->unit->short(),
+                'measure' => $line->measure->value,
                 'quantity' => (float) $line->quantity,
             ])),
         })"
@@ -35,7 +36,7 @@
                 <tr>
                     <td class="px-5 py-2 text-corteza">{{ $line->product?->name ?? '—' }}</td>
                     <td class="px-5 py-2 text-right font-mono text-corteza">
-                        {{ number_format($line->quantity, 2, ',', '.') }} {{ $line->unit->short() }}
+                        {{ $line->quantityLabel() }}
                     </td>
                 </tr>
             @endforeach

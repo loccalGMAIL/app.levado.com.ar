@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DeliveryDestinationType;
+use App\Enums\LineMeasure;
 use App\Http\Requests\StoreInstantProductionOrderRequest;
 use App\Models\Product;
 use App\Models\Tenant;
@@ -77,8 +78,11 @@ class InstantProductionOrderController extends Controller
      * artículo se suman en una sola producción, mismo criterio que
      * ProductionOrderService::aggregate().
      *
-     * @param  array<int, array{product_id: int, quantity: float}>  $items
-     * @return Collection<int, array{product: Product, quantity: float}>
+     * `quantity` queda en unidades del artículo (cada renglón se convierte
+     * según su medida); `requested` conserva cómo se pidió cada uno.
+     *
+     * @param  array<int, array{product_id: int, quantity: float, measure?: string|null}>  $items
+     * @return Collection<int, array{product: Product, quantity: float, requested: array<int, array{quantity: float, measure: LineMeasure}>}>
      */
     private function pairsFrom(Tenant $tenant, array $items): Collection
     {
@@ -96,9 +100,22 @@ class InstantProductionOrderController extends Controller
                 /** @var Product $product */
                 $product = $products[(int) $productId];
 
+                $requested = $group->map(fn (array $item) => [
+                    'quantity' => (float) $item['quantity'],
+                    'measure' => LineMeasure::tryFrom($item['measure'] ?? '') ?? LineMeasure::Unit,
+                ])->values()->all();
+
+                $base = collect($requested)->sum(function (array $row) use ($product) {
+                    $converted = $product->baseQuantityFor($row['quantity'], $row['measure']);
+                    abort_if($converted === null, 422, "La unidad de {$product->name} no es compatible con el rendimiento de su receta.");
+
+                    return $converted;
+                });
+
                 return [
                     'product' => $product,
-                    'quantity' => (float) $group->sum('quantity'),
+                    'quantity' => (float) $base,
+                    'requested' => $requested,
                 ];
             })
             ->values();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\LineMeasure;
 use App\Models\Tenant;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -32,6 +33,7 @@ class UpdateRecurringProductionRequestRequest extends FormRequest
             'lines' => ['present', 'array', 'max:200'],
             'lines.*.product_id' => ['required', 'integer', Rule::in($tenant->products()->producible()->pluck('id'))],
             'lines.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999'],
+            'lines.*.measure' => ['nullable', Rule::enum(LineMeasure::class)],
         ];
     }
 }

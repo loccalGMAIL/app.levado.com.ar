@@ -97,7 +97,7 @@ class ProductionOrderController extends Controller
     {
         $this->authorize('view', $productionOrder);
 
-        $productionOrder->load(['productionOrderRequests.destination', 'productionOrderRequests.lines.product', 'user']);
+        $productionOrder->load(['productionOrderRequests.destination', 'productionOrderRequests.lines.product.recipe', 'user']);
 
         [$locations, $customers, $products] = $this->orders->destinationAndCatalogData(app(Tenant::class));
 
@@ -121,6 +121,8 @@ class ProductionOrderController extends Controller
             'name' => $entry['product']->name,
             'unit' => $entry['product']->unit->short(),
             'quantity' => $entry['quantity'],
+            'batches' => $entry['batches'],
+            'batch_label' => $entry['batch_label'],
         ]);
 
         return response()->json($data);

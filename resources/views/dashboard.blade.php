@@ -21,7 +21,7 @@
         // Mismo chequeo que recipes/index.blade.php y purchases/index.blade.php
         // — acá con nombres propios porque los dos modales conviven en esta
         // misma página (ambos esperan una variable $errorsInCreate).
-        $errorsInRecipeCreate   = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit']) && old('_form') === 'create';
+        $errorsInRecipeCreate   = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit', 'production_unit_name']) && old('_form') === 'create';
         $errorsInPurchaseCreate = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'invoice']) && old('_form') === 'create';
     @endphp
 

@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\LineMeasure;
 use App\Models\Customer;
 use App\Models\Location;
 use App\Models\ProductionOrder;
+use App\Models\ProductionOrderLine;
 use App\Models\ProductionOrderRequest;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
@@ -28,7 +30,7 @@ class ProductionOrderSheets
      * @return array{
      *     business: array{name: string, razon_social: ?string, cuit: ?string, condicion_iva: ?string, currency: string, logo: ?string},
      *     meta: array{number: string, type: string, date: ?string, generated_at: string},
-     *     products: list<array{name: string, quantity: float, unit: string}>,
+     *     products: list<array{name: string, quantity: float, unit: string, batches: ?string}>,
      *     ingredients: list<array{name: string, quantity: float, unit: string, available: float, shortfall: float}>,
      * }
      */
@@ -44,6 +46,11 @@ class ProductionOrderSheets
                 'name' => $entry['product']->name,
                 'quantity' => $entry['quantity'],
                 'unit' => $entry['product']->unit->short(),
+                // Sólo si la unidad de producción difiere de 1 unidad: para
+                // un artículo que rinde 1 no aporta nada.
+                'batches' => abs($entry['batches'] - $entry['quantity']) > 0.0001
+                    ? rtrim(rtrim(number_format($entry['batches'], 2, ',', '.'), '0'), ',').' '.$entry['batch_label']
+                    : null,
             ])
             ->sortBy('name')
             ->values()
@@ -73,7 +80,7 @@ class ProductionOrderSheets
      * @return array{
      *     business: array{name: string, razon_social: ?string, cuit: ?string, condicion_iva: ?string, currency: string, logo: ?string},
      *     meta: array{number: string, type: string, date: ?string, generated_at: string},
-     *     groups: list<array{key: string, title: string, subtitle: ?string, requests: list<array{number: string, destination: string, address: ?string, city: ?string, notes: ?string, lines: list<array{product: string, quantity: float, unit: string}>}>, totals: list<array{product: string, quantity: float, unit: string}>}>,
+     *     groups: list<array{key: string, title: string, subtitle: ?string, requests: list<array{number: string, destination: string, address: ?string, city: ?string, notes: ?string, lines: list<array{product: string, quantity: float, unit: string, detail: ?string}>}>, totals: list<array{product: string, quantity: float, unit: string}>}>,
      * }
      */
     public function delivery(ProductionOrder $order): array
@@ -85,7 +92,9 @@ class ProductionOrderSheets
                 Customer::class => ['deliveryPerson'],
             ])])
             ->orderBy('position')
-            ->get();
+            ->get()
+            // recipe: la unidad de producción de cada línea (lata/tanda) sale de ahí.
+            ->loadMissing('lines.product.recipe');
 
         $groups = $this->groupRequests($requests, $order->location);
 
@@ -143,7 +152,7 @@ class ProductionOrderSheets
     }
 
     /**
-     * @return array{number: string, destination: string, address: ?string, city: ?string, notes: ?string, lines: list<array{product: string, quantity: float, unit: string}>}
+     * @return array{number: string, destination: string, address: ?string, city: ?string, notes: ?string, lines: list<array{product: string, quantity: float, unit: string, detail: ?string}>}
      */
     private function requestPayload(ProductionOrderRequest $request, Location|Customer|null $destination, Location $orderLocation): array
     {
@@ -158,11 +167,18 @@ class ProductionOrderSheets
                 ? trim('Retira en '.$orderLocation->name.($request->notes ? ' · '.$request->notes : ''))
                 : $request->notes,
             'lines' => $request->lines
-                ->map(fn ($line) => [
-                    'product' => $line->product->name ?? '—',
-                    'quantity' => (float) $line->quantity,
-                    'unit' => $line->unit->short(),
-                ])
+                ->map(function (ProductionOrderLine $line) {
+                    $inProductionUnit = $line->measure === LineMeasure::ProductionUnit && $line->product?->recipe !== null;
+                    $base = $inProductionUnit ? $line->product->baseQuantityFor((float) $line->quantity, $line->measure) : null;
+
+                    return [
+                        'product' => $line->product->name ?? '—',
+                        'quantity' => (float) $line->quantity,
+                        'unit' => $inProductionUnit ? $line->product->recipe->productionUnitLabel() : $line->unit->short(),
+                        // Equivalente en unidades del artículo, sólo cuando se pidió en lata/tanda.
+                        'detail' => $base !== null ? rtrim(rtrim(number_format($base, 2, ',', '.'), '0'), ',').' '.$line->unit->short() : null,
+                    ];
+                })
                 ->all(),
         ];
     }

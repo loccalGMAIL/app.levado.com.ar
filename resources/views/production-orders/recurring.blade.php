@@ -100,6 +100,7 @@
                                                         'product_id' => $line->product_id,
                                                         'name' => $line->product->name ?? '—',
                                                         'unit' => $line->unit->short(),
+                                                        'measure' => $line->measure->value,
                                                         'quantity' => (float) $line->quantity,
                                                     ]),
                                                     'updateUrl' => route('production-requests.recurring.update', $item),

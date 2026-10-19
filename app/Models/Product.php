@@ -4,9 +4,11 @@ namespace App\Models;
 
 use App\Enums\CatalogItemType;
 use App\Enums\CostingMethod;
+use App\Enums\LineMeasure;
 use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Models\Concerns\BelongsToTenant;
+use App\Services\UnitConverter;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -98,6 +100,25 @@ class Product extends Model
     public function isRecipePresentation(): bool
     {
         return $this->isManufactured() && $this->recipe_quantity !== null;
+    }
+
+    /**
+     * Cantidad en unidades del artículo (la que se produce y entra al stock)
+     * de una línea de pedido expresada en $measure. Único lugar de la
+     * conversión unidad de producción → unidades. Requiere `recipe` cargada.
+     * Null si la unidad del artículo no es compatible con el rinde de la receta.
+     */
+    public function baseQuantityFor(float $quantity, LineMeasure $measure): ?float
+    {
+        if ($measure === LineMeasure::Unit || $this->recipe === null) {
+            return $quantity;
+        }
+
+        return app(UnitConverter::class)->convert(
+            $quantity * $this->recipe->productionUnitSize(),
+            $this->recipe->yield_unit,
+            $this->unit,
+        );
     }
 
     /** Unidades de rendimiento de la receta que contiene 1 unidad del artículo. */

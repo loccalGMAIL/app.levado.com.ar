@@ -181,6 +181,10 @@
                                     <td class="px-5 py-2 text-corteza" x-text="entry.name"></td>
                                     <td class="px-5 py-2 text-right font-mono text-corteza">
                                         <span x-text="fmtQty(entry.quantity)"></span> <span x-text="entry.unit"></span>
+                                        <span x-show="entry.batches > 0 && Math.abs(entry.batches - entry.quantity) > 0.0001" x-cloak
+                                            class="text-xs text-masa-madre font-sans">
+                                            (<span x-text="fmtQty(entry.batches)"></span> <span x-text="entry.batch_label"></span>)
+                                        </span>
                                     </td>
                                 </tr>
                             </template>

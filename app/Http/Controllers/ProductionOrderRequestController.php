@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DeliveryDestinationType;
+use App\Enums\LineMeasure;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
 use App\Models\Tenant;
@@ -47,6 +48,7 @@ class ProductionOrderRequestController extends Controller
             'lines' => ['nullable', 'array', 'max:200'],
             'lines.*.product_id' => ['required', 'integer', Rule::in($tenant->products()->producible()->pluck('id'))],
             'lines.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999'],
+            'lines.*.measure' => ['nullable', Rule::enum(LineMeasure::class)],
         ]);
 
         $productionOrderRequest = $this->orders->addRequest($productionOrder, [

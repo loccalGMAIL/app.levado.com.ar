@@ -491,6 +491,28 @@ desde los quick actions del saludo en `/dashboard`, junto con altas de receta y 
 completo (gate `manage-costs`, grid 2×2 en mobile, colisión de `$errorsInCreate` al reusar modales
 ajenos) en [[feature-dashboard]].
 
+## Unidad de producción en la receta ✅ (19/10/2026, rama `v0.19.0-unidad-de-produccion`)
+Los dueños no siempre producen la receta entera (1 lata o ½ lata; "1 receta" de Facturas Surtidas = 56 u) y habían
+armado artículos "presentación" (`recipe_quantity`: "1/2 Lata Vigilantes", etc.) que nunca entraron en Producción.
+
+**Principio (decidido con el usuario, no re-litigar):** en **Producción manda la unidad de producción** (de la
+receta); en **Artículos manda la unidad de venta**. Se produce siempre el artículo base; el stock entra en sus unidades.
+- `recipes.production_unit_name` + `production_unit_quantity` (en `yield_unit`), ambos null = la tanda es el rinde
+  completo y se llama "tanda". `Recipe::productionUnitSize()/productionUnitLabel()/hasCustomProductionUnit()`.
+- Las líneas de pedido (y del molde recurrente) llevan `measure` (`LineMeasure`: `unit` | `production_unit`).
+  **`Product::baseQuantityFor()` es el único lugar de la conversión**; `ProductionOrderService::aggregate()` la
+  aplica y suma además `batches`/`batch_label` para las planillas. `produce()`/`preview()` no cambian.
+- La grilla (`order-lines.js`) ofrece un selector u / unidad de producción por artículo y arranca en la unidad de
+  producción sólo si la receta la **definió a propósito** (`preferred`); el catálogo sale de
+  `ProductionOrderService::producibleCatalog()` (único dueño, lo usan Órdenes, Dashboard y Recurrentes).
+- Las presentaciones NO se tocaron en código (siguen siendo unidad de venta con precio/costo propios); `producible()`
+  sigue excluyéndolas. Plan de datos con confirmación del usuario: cargar "lata" en las recetas y **desactivar los 15
+  artículos "Lata"** (no borrar: "1 LATA ML Grasa" tiene movimientos en el ledger inmutable).
+- **Pendiente de datos (dueños):** receta 2 "Medialunas de Grasa" no tiene artículo base (¿duplicado de la 136?);
+  Facturas Vigilantes usa masa de Manteca; ¿lata Surtida de Grasa = 60 o 56?; Chips x6 son el artículo base mal marcado.
+- Gotcha de Larastan: no lee `Schema::table` repetidos en una migración ni la tabla `recurring_production_request_lines`
+  (por su `constrained(indexName:)`) → una migración por tabla, y `@property LineMeasure $measure` en ese modelo.
+
 ## Próximo — lo que sigue sobre la mesa (parkeado, no para la sesión actual)
 2. **Semi-elaborados stockeables** — las sub-recetas son siempre phantom (`RecipeExploder`). BOM multinivel real.
 3. **Movimientos de stock por destino** de P5 (transferencias/reparto) — ver la sección de arriba. Ahora

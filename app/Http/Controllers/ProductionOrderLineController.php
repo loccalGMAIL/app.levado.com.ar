@@ -39,6 +39,7 @@ class ProductionOrderLineController extends Controller
                     'product_id' => $line->product_id,
                     'name' => $line->product->name,
                     'unit' => $line->unit->short(),
+                    'measure' => $line->measure->value,
                     'quantity' => (float) $line->quantity,
                 ]),
             'aggregated' => $this->orders->aggregate($productionOrder)->map(fn (array $entry) => [
@@ -46,6 +47,8 @@ class ProductionOrderLineController extends Controller
                 'name' => $entry['product']->name,
                 'unit' => $entry['product']->unit->short(),
                 'quantity' => $entry['quantity'],
+                'batches' => $entry['batches'],
+                'batch_label' => $entry['batch_label'],
             ]),
             'preview' => $this->orders->preview($productionOrder->load('location')),
         ]);
