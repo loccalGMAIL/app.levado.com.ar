@@ -2,6 +2,7 @@
 
 - Para cada nueva función, corrección o cambio en el sistema, crear una rama nueva a partir de `master`.
 - Formato del nombre de la rama: `vXX.XX.XX-notaDeLaVersion` (ej.: `v0.17.0-percepciones-compra`). El prefijo es la versión que va a salir con esa rama, no un número cualquiera; la nota describe de qué trata.
+- La rama se crea ANTES de tocar cualquier archivo (incluso al salir del modo plan, antes de la primera edición), no a mitad del trabajo. Si ya estás en `master` con cambios sin commitear, `git switch -c <rama>` los arrastra.
 - Nunca usar prefijos como `feature/` o `fix/`: el nombre de la rama ya dice la versión.
 - La versión de la rama es la que se sube en `config/app.php`, `package.json` y `package-lock.json` (commit `chore(release): subir versión a X.Y.Z`), y la que lleva la entrada del `CHANGELOG.md` (commit `docs(changelog): entrada de la versión X.Y.Z`).
 
