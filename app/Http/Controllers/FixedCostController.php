@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreFixedCostRequest;
 use App\Http\Requests\UpdateFixedCostRequest;
 use App\Models\FixedCost;
+use App\Models\FixedCostCategory;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\ArticlePriceRecalculator;
 use App\Services\FixedCostHistory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -25,9 +27,6 @@ class FixedCostController extends Controller
     public function index(): View
     {
         $tenant = app(Tenant::class);
-        $sortable = ['name', 'monthly_amount'];
-        $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
         $fixedCosts = $tenant->fixedCosts()
             ->with('category')
@@ -39,7 +38,12 @@ class FixedCostController extends Controller
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
             ->when(request('category'), fn ($q, $categoryId) => $q->where('fixed_cost_category_id', $categoryId))
-            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'name' => 'name',
+                'category' => FixedCostCategory::select('name')->whereColumn('fixed_cost_categories.id', 'fixed_costs.fixed_cost_category_id'),
+                'monthly_amount' => 'monthly_amount',
+                'active' => 'active',
+            ], fn (Builder $q) => $q->orderByDesc('active')->orderBy('name'), 'fixed_costs.id'))
             ->paginate($this->perPage())
             ->withQueryString();
 

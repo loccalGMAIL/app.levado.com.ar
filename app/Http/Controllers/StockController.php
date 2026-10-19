@@ -14,6 +14,7 @@ use App\Models\StockLevel;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\StockService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -45,14 +46,6 @@ class StockController extends Controller
             CatalogItemType::Product => $tenant->products()->active()->with('recipe'),
         };
 
-        $sortable = [
-            'name' => "{$table}.name",
-            'quantity' => DB::raw('COALESCE(stock_levels.quantity, 0)'),
-            'min_quantity' => 'stock_levels.min_quantity',
-        ];
-        $sort = array_key_exists(request('sort'), $sortable) ? request('sort') : null;
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
-
         $items = $itemsQuery
             ->leftJoin('stock_levels', function ($join) use ($table, $type, $tenant, $location) {
                 $join->on('stock_levels.stockable_id', '=', "{$table}.id")
@@ -66,11 +59,18 @@ class StockController extends Controller
 
                 return $q->where("{$table}.name", 'like', "%{$escaped}%");
             })
-            ->when(
-                $sort,
-                fn ($q) => $q->orderBy($sortable[$sort], $dir),
-                fn ($q) => $q->orderBy($sortable['name'], 'asc')
-            )
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'name' => "{$table}.name",
+                'quantity' => DB::raw('COALESCE(stock_levels.quantity, 0)'),
+                'min_quantity' => 'stock_levels.min_quantity',
+                // Mismo criterio que StockLevel::hasAlert() y la vista: sin alerta,
+                // «Bajo mínimo» y «Negativo», de menor a mayor gravedad.
+                'alert' => DB::raw('CASE
+                    WHEN COALESCE(stock_levels.quantity, 0) < 0 THEN 2
+                    WHEN stock_levels.min_quantity IS NOT NULL AND stock_levels.quantity <= stock_levels.min_quantity THEN 1
+                    ELSE 0
+                END'),
+            ], fn (Builder $q) => $q->orderBy("{$table}.name"), "{$table}.id"))
             ->paginate($this->perPage())
             ->withQueryString();
 

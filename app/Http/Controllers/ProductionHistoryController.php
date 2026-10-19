@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProductionStatus;
+use App\Models\Product;
+use App\Models\ProductionOrder;
 use App\Models\Tenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\View\View;
 
 /**
@@ -28,8 +31,15 @@ class ProductionHistoryController extends Controller
             ->when(request('status'), fn ($q, $status) => $q->where('status', $status))
             ->when(request('from'), fn ($q, $date) => $q->whereDate('produced_at', '>=', $date))
             ->when(request('to'), fn ($q, $date) => $q->whereDate('produced_at', '<=', $date))
-            ->latest('produced_at')
-            ->latest('id')
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'produced_at' => 'produced_at',
+                'product' => Product::select('name')->whereColumn('products.id', 'productions.product_id'),
+                'quantity' => 'quantity',
+                'total_cost' => 'total_cost',
+                // Las producciones ad-hoc (sin orden) quedan juntas al principio en ascendente.
+                'origin' => ProductionOrder::select('number')->whereColumn('production_orders.id', 'productions.production_order_id'),
+                'status' => 'status',
+            ], fn (Builder $q) => $q->latest('produced_at')->latest('id'), 'productions.id'))
             ->paginate($this->perPage())
             ->withQueryString();
 

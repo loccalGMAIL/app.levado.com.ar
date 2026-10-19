@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
 use App\Services\RecipeShowViewModel;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,10 +33,6 @@ class RecipeController extends Controller
 
     public function index(): View
     {
-        $sortable = ['name', 'yield_quantity', 'selling_price'];
-        $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
-
         $tenant = app(Tenant::class);
         $priceLists = $tenant->priceLists()->active()->orderByDesc('is_default')->orderBy('name')->get();
         $priceList = $priceLists->firstWhere('id', (int) request('price_list'))
@@ -56,9 +53,12 @@ class RecipeController extends Controller
             ->when(request('search'), fn ($q, $search) => $q->where('name', 'like', $this->containsPattern($search)))
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($sort === 'selling_price', fn ($q) => $q->orderBy($priceSubquery, $dir))
-            ->when($sort && $sort !== 'selling_price', fn ($q) => $q->orderBy($sort, $dir))
-            ->when(! $sort, fn ($q) => $q->orderByDesc('active')->orderBy('name'))
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'name' => 'name',
+                'yield_quantity' => 'yield_quantity',
+                'selling_price' => $priceSubquery,
+                'active' => 'active',
+            ], fn (Builder $q) => $q->orderByDesc('active')->orderBy('name'), 'recipes.id'))
             ->paginate($this->perPage())
             ->withQueryString();
 

@@ -4,6 +4,15 @@
     <div class="py-8 px-6 lg:px-8">
         <div class="space-y-6">
 
+            @php
+                // Sin default visible: por defecto ambas tablas van por fecha de alta,
+                // que no es una columna.
+                $sort = request('sort');
+                $dir = request('dir', 'asc');
+                $invSort = request('inv_sort');
+                $invDir = request('inv_dir', 'asc');
+            @endphp
+
             {{-- Invitar miembro --}}
             <div class="bg-white shadow rounded-lg p-6">
                 <h2 class="text-base font-semibold text-corteza mb-4">Invitar persona</h2>
@@ -75,9 +84,9 @@
                             <table class="w-full text-sm text-left">
                                 <thead class="text-masa-madre border-b border-miga">
                                     <tr>
-                                        <th class="pb-2">Email</th>
-                                        <th class="pb-2">Rol</th>
-                                        <th class="pb-2">Expira</th>
+                                        <x-sortable-th column="email" :sort="$invSort" :dir="$invDir" sort-param="inv_sort" dir-param="inv_dir" compact>Email</x-sortable-th>
+                                        <x-sortable-th column="role" :sort="$invSort" :dir="$invDir" sort-param="inv_sort" dir-param="inv_dir" compact>Rol</x-sortable-th>
+                                        <x-sortable-th column="expires_at" :sort="$invSort" :dir="$invDir" sort-param="inv_sort" dir-param="inv_dir" compact>Expira</x-sortable-th>
                                         <th class="pb-2"></th>
                                     </tr>
                                 </thead>
@@ -190,10 +199,10 @@
                         <table class="w-full text-sm text-left">
                             <thead class="text-masa-madre border-b border-miga">
                                 <tr>
-                                    <th class="pb-2">Nombre</th>
-                                    <th class="pb-2">Email</th>
-                                    <th class="pb-2">Rol</th>
-                                    <th class="pb-2">Estado</th>
+                                    <x-sortable-th column="name" :sort="$sort" :dir="$dir" compact>Nombre</x-sortable-th>
+                                    <x-sortable-th column="email" :sort="$sort" :dir="$dir" compact>Email</x-sortable-th>
+                                    <x-sortable-th column="role" :sort="$sort" :dir="$dir" compact>Rol</x-sortable-th>
+                                    <x-sortable-th column="active" :sort="$sort" :dir="$dir" compact>Estado</x-sortable-th>
                                     <th class="pb-2"></th>
                                 </tr>
                             </thead>

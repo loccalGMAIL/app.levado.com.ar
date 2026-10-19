@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\TenantUserRole;
 use App\Models\Tenant;
 use App\Models\TenantUser;
+use App\Models\User;
 use App\Services\AdminActivityRecorder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,13 +22,27 @@ class TeamController extends Controller
 
         $members = TenantUser::with('user')
             ->where('tenant_id', $tenant->id)
-            ->orderByDesc('created_at')
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'name' => User::select('name')->whereColumn('users.id', 'tenant_users.user_id'),
+                'email' => User::select('email')->whereColumn('users.id', 'tenant_users.user_id'),
+                'role' => 'role',
+                'active' => 'active',
+            ], fn (Builder $q) => $q->orderByDesc('created_at'), 'tenant_users.id'))
             ->get();
 
+        // Las dos tablas de la pantalla se ordenan por separado: las invitaciones
+        // usan inv_sort / inv_dir para no pisar el orden de los miembros.
         $pendingInvitations = $tenant->invitations()
             ->whereNull('accepted_at')
             ->where('expires_at', '>', now())
-            ->orderByDesc('created_at')
+            ->tap(fn (Builder $q) => $this->sortListing(
+                $q,
+                ['email' => 'email', 'role' => 'role', 'expires_at' => 'expires_at'],
+                fn (Builder $q) => $q->orderByDesc('created_at'),
+                'invitations.id',
+                'inv_sort',
+                'inv_dir',
+            ))
             ->get();
 
         return view('team.index', [

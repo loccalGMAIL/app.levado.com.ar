@@ -54,7 +54,7 @@
                     <x-slot:head>
                         <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
                         <x-sortable-th column="hourly_rate" :sort="$sort" :dir="$dir" align="right">Costo / hora</x-sortable-th>
-                        <th class="px-4 py-3 font-medium">Estado</th>
+                        <x-sortable-th column="active" :sort="$sort" :dir="$dir">Estado</x-sortable-th>
                         @can('manage-costs')
                             <th class="px-4 py-3"></th>
                         @endcan

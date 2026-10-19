@@ -104,9 +104,9 @@
                 <x-data-table :paginator="$fixedCosts" total-label="gasto">
                     <x-slot:head>
                         <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
-                        <th class="px-4 py-3 font-medium">Categoría</th>
+                        <x-sortable-th column="category" :sort="$sort" :dir="$dir">Categoría</x-sortable-th>
                         <x-sortable-th column="monthly_amount" :sort="$sort" :dir="$dir" align="right">Monto mensual</x-sortable-th>
-                        <th class="px-4 py-3 font-medium">Estado</th>
+                        <x-sortable-th column="active" :sort="$sort" :dir="$dir">Estado</x-sortable-th>
                         @can('manage-costs')
                             <th class="px-4 py-3"></th>
                         @endcan

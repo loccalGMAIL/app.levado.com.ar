@@ -10,6 +10,8 @@
 
             {{-- Filtros --}}
             <form method="GET" class="flex gap-3 items-end flex-wrap">
+                <input type="hidden" name="sort" value="{{ request('sort') }}">
+                <input type="hidden" name="dir" value="{{ request('dir') }}">
                 <div>
                     <label class="block text-xs text-masa-madre mb-1">Comercio</label>
                     <select name="tenant_id"
@@ -70,18 +72,23 @@
                 @endif
             </form>
 
+            @php
+                $sort = request('sort', 'created_at');
+                $dir  = request('dir', 'desc');
+            @endphp
+
             {{-- Tabla --}}
             <div class="bg-white shadow rounded-lg overflow-x-auto">
                 <table class="min-w-[900px] w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Fecha</th>
-                            <th class="px-4 py-3 font-medium">Comercio</th>
-                            <th class="px-4 py-3 font-medium">Actor</th>
-                            <th class="px-4 py-3 font-medium">Acción</th>
-                            <th class="px-4 py-3 font-medium">Objeto</th>
-                            <th class="px-4 py-3 font-medium">IP</th>
-                            <th class="px-4 py-3 font-medium">Flags</th>
+                            <x-sortable-th column="created_at" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
+                            <x-sortable-th column="tenant" :sort="$sort" :dir="$dir">Comercio</x-sortable-th>
+                            <x-sortable-th column="actor" :sort="$sort" :dir="$dir">Actor</x-sortable-th>
+                            <x-sortable-th column="action" :sort="$sort" :dir="$dir">Acción</x-sortable-th>
+                            <x-sortable-th column="target" :sort="$sort" :dir="$dir">Objeto</x-sortable-th>
+                            <x-sortable-th column="ip_address" :sort="$sort" :dir="$dir">IP</x-sortable-th>
+                            <x-sortable-th column="was_impersonating" :sort="$sort" :dir="$dir">Flags</x-sortable-th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-miga">

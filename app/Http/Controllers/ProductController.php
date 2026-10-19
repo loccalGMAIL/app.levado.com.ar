@@ -7,13 +7,16 @@ use App\Enums\ProductType;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Models\ProductPrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\ArticlePriceRecalculator;
 use App\Services\ProductCodeAssigner;
 use App\Services\RecipeCostPropagator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -28,9 +31,14 @@ class ProductController extends Controller
     public function index(): View
     {
         $tenant = app(Tenant::class);
-        $sortable = ['name'];
-        $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+
+        // Costo/precio/margen por artículo: costo total con overhead (fullCost) y precio
+        // del artículo en la lista elegida. El precio vive en product_prices (fuente única
+        // del artículo) y se edita inline desde el catálogo. La lista se resuelve antes
+        // del listado porque también se puede ordenar por su precio.
+        $tenant->defaultPriceList();
+        $priceLists = $tenant->priceLists()->active()->orderByDesc('is_default')->orderBy('name')->get();
+        $priceList = $priceLists->firstWhere('id', (int) request('price_list')) ?? $priceLists->firstWhere('is_default', true);
 
         $products = $tenant->products()
             ->with(['recipe', 'category', 'latestCostLog'])
@@ -51,7 +59,17 @@ class ProductController extends Controller
             ->when(request('category') && request('category') !== 'sin', fn ($q) => $q->where('product_category_id', request('category')))
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderBy('name'))
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                // La columna «Código» muestra el código de barras y, si no hay, el SKU.
+                'code' => DB::raw('COALESCE(products.barcode, products.sku)'),
+                'name' => 'name',
+                'type' => 'type',
+                'category' => ProductCategory::select('name')->whereColumn('product_categories.id', 'products.product_category_id'),
+                'unit' => 'unit',
+                'price' => ProductPrice::select('price')
+                    ->whereColumn('product_prices.product_id', 'products.id')
+                    ->where('product_prices.price_list_id', $priceList->id),
+            ], fn (Builder $q) => $q->orderBy('name'), 'products.id'))
             ->paginate($this->perPage())
             ->withQueryString();
 
@@ -61,12 +79,6 @@ class ProductController extends Controller
         $categories = $tenant->productCategories()->orderBy('name')->get();
         $showCategories = session('reopen_categories', false);
 
-        // Costo/precio/margen por artículo: costo total con overhead (fullCost) y precio
-        // del artículo en la lista elegida. El precio vive en product_prices (fuente única
-        // del artículo) y se edita inline desde el catálogo.
-        $tenant->defaultPriceList();
-        $priceLists = $tenant->priceLists()->active()->orderByDesc('is_default')->orderBy('name')->get();
-        $priceList = $priceLists->firstWhere('id', (int) request('price_list')) ?? $priceLists->firstWhere('is_default', true);
         $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
         $priceRows = ProductPrice::where('price_list_id', $priceList->id)
             ->whereIn('product_id', $products->pluck('id'))

@@ -12,6 +12,8 @@
             @include('products.tabs')
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
+                <input type="hidden" name="sort" value="{{ request('sort') }}">
+                <input type="hidden" name="dir" value="{{ request('dir') }}">
                 <div>
                     <label class="block text-xs text-masa-madre mb-1">Artículo</label>
                     <select name="product" class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
@@ -48,6 +50,11 @@
                 @endif
             </form>
 
+            @php
+                $sort = request('sort', 'produced_at');
+                $dir  = request('dir', 'desc');
+            @endphp
+
             @if($productions->isEmpty())
                 <x-empty-state>
                     @if(request()->hasAny(['product', 'status', 'from', 'to']))
@@ -59,12 +66,12 @@
             @else
                 <x-data-table :paginator="$productions" total-label="producción" total-suffix="(es)">
                     <x-slot:head>
-                        <th class="px-4 py-3 font-medium">Fecha</th>
-                        <th class="px-4 py-3 font-medium">Artículo</th>
-                        <th class="px-4 py-3 font-medium text-right">Cantidad</th>
-                        <th class="px-4 py-3 font-medium text-right">Costo total</th>
-                        <th class="px-4 py-3 font-medium">Origen</th>
-                        <th class="px-4 py-3 font-medium">Estado</th>
+                        <x-sortable-th column="produced_at" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
+                        <x-sortable-th column="product" :sort="$sort" :dir="$dir">Artículo</x-sortable-th>
+                        <x-sortable-th column="quantity" :sort="$sort" :dir="$dir" align="right">Cantidad</x-sortable-th>
+                        <x-sortable-th column="total_cost" :sort="$sort" :dir="$dir" align="right">Costo total</x-sortable-th>
+                        <x-sortable-th column="origin" :sort="$sort" :dir="$dir">Origen</x-sortable-th>
+                        <x-sortable-th column="status" :sort="$sort" :dir="$dir">Estado</x-sortable-th>
                         <th class="px-4 py-3"></th>
                     </x-slot:head>
 

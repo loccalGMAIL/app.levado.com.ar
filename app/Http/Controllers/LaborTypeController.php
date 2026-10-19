@@ -8,6 +8,7 @@ use App\Models\LaborType;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -20,10 +21,6 @@ class LaborTypeController extends Controller
 
     public function index(): View
     {
-        $sortable = ['name', 'hourly_rate'];
-        $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
-
         $laborTypes = app(Tenant::class)->laborTypes()
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
@@ -32,7 +29,12 @@ class LaborTypeController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('active')->orderBy('name'))
+            ->tap(fn (Builder $q) => $this->sortListing(
+                $q,
+                ['name' => 'name', 'hourly_rate' => 'hourly_rate', 'active' => 'active'],
+                fn (Builder $q) => $q->orderByDesc('active')->orderBy('name'),
+                'labor_types.id',
+            ))
             ->paginate($this->perPage())
             ->withQueryString();
 
