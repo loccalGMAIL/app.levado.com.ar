@@ -21,7 +21,7 @@
             <x-input-error :messages="$errors->get('description')" class="mt-2" />
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-2 gap-3">
             <div>
                 <x-input-label for="edit_recipe_yield" value="Rendimiento" />
                 <x-text-input id="edit_recipe_yield" name="yield_quantity" type="number"
@@ -44,13 +44,6 @@
                 </select>
                 <x-input-error :messages="$errors->get('yield_unit')" class="mt-2" />
             </div>
-            <div>
-                <x-input-label for="edit_recipe_pu_name" value="Unidad de prod." />
-                <x-text-input id="edit_recipe_pu_name" name="production_unit_name" type="text" maxlength="30"
-                    class="mt-1 block w-full" placeholder="Lata"
-                    :value="old('production_unit_name', $recipe->production_unit_name)" />
-                <x-input-error :messages="$errors->get('production_unit_name')" class="mt-2" />
-            </div>
         </div>
 
         <div class="flex items-start gap-3 pt-1">
@@ -67,8 +60,13 @@
         </div>
         <x-input-error :messages="$errors->get('is_semi_elaborate')" class="mt-2" />
 
-        <div class="flex gap-3 pt-2">
+        <div class="flex items-center gap-3 pt-2">
             <x-primary-button data-loading="Guardando…">Guardar cambios</x-primary-button>
+            <button type="button"
+                x-on:click="$dispatch('open-modal', 'recipe-production')"
+                class="px-4 py-2 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors">
+                Producción
+            </button>
             <button type="button"
                 x-on:click="$dispatch('close-modal', 'recipe-edit-info')"
                 class="px-4 py-2 text-sm text-masa-madre hover:text-corteza">

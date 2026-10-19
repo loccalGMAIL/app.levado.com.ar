@@ -25,21 +25,36 @@
         <template x-for="(line, i) in lines" :key="line.id ?? ('new-' + i)">
             <tr>
                 <td class="px-5 py-2 text-corteza" x-text="line.name"></td>
-                <td class="px-5 py-2 text-right w-28">
-                    <input type="number" step="0.25" min="0.01" x-model="line.quantity"
-                        @keydown.enter.prevent="focusPicker()"
-                        class="w-full text-right border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
-                    <p x-show="baseHint(line)" x-cloak x-text="baseHint(line)" class="mt-0.5 text-[11px] text-masa-madre"></p>
+                <td class="px-5 py-2 text-right w-40">
+                    {{-- step="any": con un paso fijo el navegador bloquea el envío del form al
+                         escribir un valor fuera de grilla (2,5 en un artículo por unidad). Los
+                         saltos los dan los botones y las flechas (stepQuantity), no el input. --}}
+                    <div class="flex items-center justify-end gap-1">
+                        <button type="button" @click="stepQuantity(line, -1)" tabindex="-1"
+                            class="w-6 h-7 shrink-0 rounded border border-miga text-masa-madre hover:text-corteza hover:bg-white" title="Restar">−</button>
+                        <input type="number" step="any" min="0.01" x-model="line.quantity"
+                            @keydown.enter.prevent="focusPicker()"
+                            @keydown.up.prevent="stepQuantity(line, 1)"
+                            @keydown.down.prevent="stepQuantity(line, -1)"
+                            class="w-16 text-right border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
+                        <button type="button" @click="stepQuantity(line, 1)" tabindex="-1"
+                            class="w-6 h-7 shrink-0 rounded border border-miga text-masa-madre hover:text-corteza hover:bg-white" title="Sumar">+</button>
+                    </div>
                 </td>
                 <td class="px-5 py-2 text-masa-madre text-xs">
-                    <template x-if="productionUnitOf(line)">
-                        <select x-model="line.measure"
-                            class="border-gray-300 rounded-md shadow-sm text-xs py-1 focus:border-horno focus:ring-horno">
-                            <option value="unit" x-text="line.unit"></option>
-                            <option value="production_unit" x-text="productionUnitOf(line).label"></option>
-                        </select>
-                    </template>
-                    <span x-show="! productionUnitOf(line)" x-text="line.unit"></span>
+                    {{-- La ayuda («= 33 u») va en la misma línea que los controles, no debajo:
+                         una fila de dos renglones por artículo hacía la grilla muy alta. --}}
+                    <div class="flex items-center gap-2">
+                        <template x-if="productionUnitOf(line)">
+                            <select x-model="line.measure"
+                                class="border-gray-300 rounded-md shadow-sm text-xs py-1 focus:border-horno focus:ring-horno">
+                                <option value="unit" x-text="line.unit"></option>
+                                <option value="production_unit" x-text="productionUnitOf(line).label"></option>
+                            </select>
+                        </template>
+                        <span x-show="! productionUnitOf(line)" x-text="line.unit"></span>
+                        <span x-show="baseHint(line)" x-cloak x-text="baseHint(line)" class="text-[11px] whitespace-nowrap"></span>
+                    </div>
                 </td>
                 <td class="px-5 py-2 text-right w-8">
                     <button type="button" @click="removeLine(i)" tabindex="-1" class="text-masa-madre hover:text-red-500 transition-colors" title="Quitar">

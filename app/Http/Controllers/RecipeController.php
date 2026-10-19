@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ProductType;
 use App\Http\Requests\StoreRecipeRequest;
+use App\Http\Requests\UpdateRecipeProductionRequest;
 use App\Http\Requests\UpdateRecipeRequest;
 use App\Models\ProductPrice;
 use App\Models\Recipe;
@@ -150,6 +151,32 @@ class RecipeController extends Controller
         );
 
         return back(fallback: route('recipes.show', $recipe))->with('status', 'Receta actualizada.');
+    }
+
+    /**
+     * Unidad de producción de la receta (nombre + equivalencia). Endpoint
+     * aparte de update(): no toca el rendimiento ni el costo, así que no hay
+     * nada que propagar.
+     */
+    public function updateProduction(UpdateRecipeProductionRequest $request, Recipe $recipe): RedirectResponse
+    {
+        $this->authorize('update', $recipe);
+
+        $recipe->update([
+            'production_unit_name' => $request->validated('production_unit_name'),
+            'production_unit_quantity' => $request->validated('production_unit_quantity'),
+        ]);
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'recipe',
+            targetId: $recipe->id,
+            action: 'recipe.production_updated',
+            payload: ['name' => $recipe->name],
+            tenantId: $recipe->tenant_id,
+        );
+
+        return back(fallback: route('recipes.show', $recipe))->with('status', 'Producción de la receta actualizada.');
     }
 
     public function copy(Recipe $recipe): RedirectResponse

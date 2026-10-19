@@ -11,7 +11,8 @@ import Alpine from 'alpinejs';
  * subyacente, que es lo que engancha addProduct().
  *
  * Init esperado:
- *   { saveUrl, previousUrl, products: [{id, name, unit, production_unit}], lines: [{id, product_id, name, unit, measure, quantity}], deferred }
+ *   { saveUrl, previousUrl, products: [{id, name, unit, step, production_unit}], lines: [{id, product_id, name, unit, measure, quantity}], deferred }
+ * `step` = salto de los botones −/+ por medida ({unit, production_unit}), viene de LineMeasure::step().
  * `measure` es 'unit' o 'production_unit' (lata/tanda de la receta del artículo).
  * `products` viaja UNA sola vez por página (en el x-data raíz) y cada grilla
  * lo recibe acá por referencia — no lo dupliques por pedido.
@@ -52,14 +53,38 @@ Alpine.data('productionOrderLines', (init = {}) => ({
         return this.productById(line.product_id)?.production_unit ?? null;
     },
 
-    /** Ayuda bajo la cantidad: "= 99 u" cuando la línea está en unidades de producción. */
+    /**
+     * Ayuda bajo la cantidad cuando la línea está en unidades de producción:
+     * "= 33 u", o "≈ 17 u" si el redondeo cambió el valor. Espejo de
+     * Product::roundForProduction(): las unidades ('u') suben al entero y el
+     * resto (kg, L...) conserva sus decimales.
+     */
     baseHint(line) {
         const pu = this.productionUnitOf(line);
         const qty = Number(line.quantity);
         if (line.measure !== 'production_unit' || !pu || !(qty > 0)) {
             return '';
         }
-        return '= ' + (Math.round(qty * pu.size * 100) / 100).toLocaleString('es-AR') + ' ' + line.unit;
+        const exact = qty * pu.size;
+        const rounded = line.unit === 'u' ? Math.ceil(Math.round(exact * 1e6) / 1e6) : Math.round(exact * 1000) / 1000;
+        const approx = Math.abs(rounded - exact) > 0.0001;
+        return (approx ? '≈ ' : '= ') + rounded.toLocaleString('es-AR', { maximumFractionDigits: 3 }) + ' ' + line.unit;
+    },
+
+    /** Salto de los botones −/+ y de las flechas para la medida actual de la línea. */
+    stepFor(line) {
+        return this.productById(line.product_id)?.step?.[line.measure ?? 'unit'] ?? 1;
+    },
+
+    /**
+     * Sube o baja la cantidad al múltiplo siguiente o anterior del salto (desde
+     * un valor fuera de grilla, como 0,3, va a 0,25 o 0,5), sin bajar de un salto.
+     */
+    stepQuantity(line, direction) {
+        const step = this.stepFor(line);
+        const ratio = (Number(line.quantity) || 0) / step;
+        const multiple = direction > 0 ? Math.floor(ratio + 1e-9) + 1 : Math.ceil(ratio - 1e-9) - 1;
+        line.quantity = Math.round(Math.max(step, multiple * step) * 10000) / 10000;
     },
 
     /** Cantidad y medida de una línea tal como viajan al servidor. */
@@ -82,9 +107,9 @@ Alpine.data('productionOrderLines', (init = {}) => ({
         if (!product) {
             return;
         }
-        // Arranca en la unidad de producción sólo si la receta la definió a
-        // propósito (lata); la tanda implícita queda como opción del selector.
-        const measure = product.production_unit?.preferred ? 'production_unit' : 'unit';
+        // Arranca en la unidad de producción (lata) cuando el artículo la tiene;
+        // las unidades sueltas quedan como opción del selector.
+        const measure = product.production_unit ? 'production_unit' : 'unit';
         this.lines.push({ id: null, product_id: product.id, name: product.name, unit: product.unit, measure, quantity: '' });
         this.resetPicker(pickerEl);
         this.$nextTick(() => {

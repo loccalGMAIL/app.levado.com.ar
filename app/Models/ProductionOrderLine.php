@@ -48,17 +48,42 @@ class ProductionOrderLine extends Model
      */
     public function quantityLabel(): string
     {
-        $format = fn (float $value): string => rtrim(rtrim(number_format($value, 2, ',', '.'), '0'), ',');
         $quantity = (float) $this->quantity;
+        $equivalent = $this->equivalentLabel();
 
-        if ($this->measure === LineMeasure::Unit || $this->product?->recipe === null) {
+        if ($equivalent === null) {
             return number_format($quantity, 2, ',', '.').' '.$this->unit->short();
         }
 
-        $base = $this->product->baseQuantityFor($quantity, $this->measure);
+        return $this->trimmed($quantity).' '.$this->product->recipe->productionUnitLabel().' ('.$equivalent.')';
+    }
 
-        return $format($quantity).' '.$this->product->recipe->productionUnitLabel()
-            .($base !== null ? ' ('.$format($base).' '.$this->unit->short().')' : '');
+    /**
+     * Equivalente de una línea en unidades de producción, en unidades del
+     * artículo y redondeado como se va a producir: "9 u", o "≈ 17 u" cuando
+     * el redondeo cambió el valor (¼ de lata de 66 u son 16,5). Null si la
+     * línea ya está en unidades, o no se puede convertir.
+     */
+    public function equivalentLabel(): ?string
+    {
+        if ($this->measure === LineMeasure::Unit || $this->product?->recipe === null) {
+            return null;
+        }
+
+        $exact = $this->product->baseQuantityFor((float) $this->quantity, $this->measure);
+
+        if ($exact === null) {
+            return null;
+        }
+
+        $rounded = $this->product->roundForProduction($exact);
+
+        return (abs($rounded - $exact) > 0.0001 ? '≈ ' : '').$this->trimmed($rounded).' '.$this->unit->short();
+    }
+
+    private function trimmed(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 2, ',', '.'), '0'), ',');
     }
 
     /**

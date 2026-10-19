@@ -20,7 +20,6 @@ class UpdateRecipeRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:1000'],
             'yield_quantity' => ['required', 'numeric', 'min:0.001'],
             'yield_unit' => ['required', new Enum(Unit::class)],
-            'production_unit_name' => ['nullable', 'string', 'max:30'],
             'is_semi_elaborate' => ['boolean'],
         ];
     }

@@ -2,7 +2,8 @@
     <x-slot name="title">{{ $recipe->name }}</x-slot>
 
     @php
-        $errorsInEdit          = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit', 'production_unit_name']) && old('_form') === 'edit';
+        $errorsInEdit          = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit']) && old('_form') === 'edit';
+        $errorsInProduction    = $errors->hasAny(['production_unit_name', 'production_unit_quantity']) && old('_form') === 'production';
         $errorsInAddIngredient = $errors->hasAny(['ingredient_id', 'product_id', 'quantity', 'unit']) && old('_form') === 'add-ingredient';
         $errorsInAddPackaging  = $errors->hasAny(['packaging_id', 'quantity']) && old('_form') === 'add-packaging';
         $errorsInAddLabor      = $errors->hasAny(['labor_type_id', 'hours']) && old('_form') === 'add-labor';
@@ -980,6 +981,7 @@
 
     @can('manage-costs')
         @include('recipes.modals.edit-info')
+        @include('recipes.modals.production')
         @include('recipes.modals.add-ingredient')
         @include('recipes.modals.add-packaging')
         @include('recipes.modals.add-labor')

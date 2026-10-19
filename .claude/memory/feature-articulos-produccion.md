@@ -497,13 +497,23 @@ armado artículos "presentación" (`recipe_quantity`: "1/2 Lata Vigilantes", etc
 
 **Principio (decidido con el usuario, no re-litigar):** en **Producción manda la unidad de producción** (de la
 receta); en **Artículos manda la unidad de venta**. Se produce siempre el artículo base; el stock entra en sus unidades.
-- `recipes.production_unit_name` + `production_unit_quantity` (en `yield_unit`), ambos null = la tanda es el rinde
-  completo y se llama "tanda". `Recipe::productionUnitSize()/productionUnitLabel()/hasCustomProductionUnit()`.
+- `recipes.production_unit_name` + `production_unit_quantity` (en `yield_unit`), ambos null = la unidad es el rinde
+  completo y se llama "Lata". `Recipe::productionUnitSize()/productionUnitLabel()/hasCustomProductionUnit()`.
+- **Equivalencia (20/10/2026, tras hablar con los dueños):** el rinde de la receta suele estar pensado para el trabajo
+  diario, no por lata (Surtidas: 56 u = 1 lata; Pan Francés: rinde 16 kg y 1 lata son 3-4 kg). Por eso se carga
+  "1 [Lata] = N [unidad del rinde]" en un **modal «Producción»** (`recipes/modals/production.blade.php`, abierto desde
+  el modal de edición; `PATCH recipes.production.update`). Ya no está en el formulario principal de la receta.
+- **Redondeo (decidido, no re-litigar):** `Product::roundForProduction()` sube al entero **sólo si el artículo está en
+  `u`** (¼ de 66 u = 16,5 → 17); kg/L/gr/ml conservan decimales. Se redondea **una sola vez sobre el total del
+  artículo** en `aggregate()` (4 × ¼ lata = 66 u, no 68); `batches` se calcula sobre el total exacto (0,25 lata).
+  Las vistas muestran el equivalente por línea redondeado con «≈» (`ProductionOrderLine::equivalentLabel()`).
+- **Saltos** de los botones −/+ y flechas de la grilla: `LineMeasure::step(Unit)` (lata ¼; u 1; kg/L 0,5;
+  gr/ml/cc 50), enviados en el catálogo. El input es `step="any"` a propósito: un paso fijo bloquea el envío del form.
 - Las líneas de pedido (y del molde recurrente) llevan `measure` (`LineMeasure`: `unit` | `production_unit`).
   **`Product::baseQuantityFor()` es el único lugar de la conversión**; `ProductionOrderService::aggregate()` la
   aplica y suma además `batches`/`batch_label` para las planillas. `produce()`/`preview()` no cambian.
 - La grilla (`order-lines.js`) ofrece un selector u / unidad de producción por artículo y arranca en la unidad de
-  producción sólo si la receta la **definió a propósito** (`preferred`); el catálogo sale de
+  producción (lata) cuando el artículo la tiene; el catálogo sale de
   `ProductionOrderService::producibleCatalog()` (único dueño, lo usan Órdenes, Dashboard y Recurrentes).
 - Las presentaciones NO se tocaron en código (siguen siendo unidad de venta con precio/costo propios); `producible()`
   sigue excluyéndolas. Plan de datos con confirmación del usuario: cargar "lata" en las recetas y **desactivar los 15

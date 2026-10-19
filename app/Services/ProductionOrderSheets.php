@@ -169,14 +169,13 @@ class ProductionOrderSheets
             'lines' => $request->lines
                 ->map(function (ProductionOrderLine $line) {
                     $inProductionUnit = $line->measure === LineMeasure::ProductionUnit && $line->product?->recipe !== null;
-                    $base = $inProductionUnit ? $line->product->baseQuantityFor((float) $line->quantity, $line->measure) : null;
 
                     return [
                         'product' => $line->product->name ?? '—',
                         'quantity' => (float) $line->quantity,
                         'unit' => $inProductionUnit ? $line->product->recipe->productionUnitLabel() : $line->unit->short(),
                         // Equivalente en unidades del artículo, sólo cuando se pidió en lata/tanda.
-                        'detail' => $base !== null ? rtrim(rtrim(number_format($base, 2, ',', '.'), '0'), ',').' '.$line->unit->short() : null,
+                        'detail' => $line->equivalentLabel(),
                     ];
                 })
                 ->all(),

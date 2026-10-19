@@ -2,7 +2,7 @@
     <x-slot name="title">Recetas</x-slot>
 
     @php
-        $errorsInCreate = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit', 'production_unit_name']) && old('_form') === 'create';
+        $errorsInCreate = $errors->hasAny(['name', 'description', 'yield_quantity', 'yield_unit']) && old('_form') === 'create';
         $showUrl = fn ($recipe) => route('recipes.show', array_filter(['recipe' => $recipe->id, 'volver' => request()->getQueryString()]));
     @endphp
 

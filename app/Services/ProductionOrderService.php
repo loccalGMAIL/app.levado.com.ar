@@ -447,11 +447,10 @@ class ProductionOrderService
      * `production_unit` es la unidad de producción de la receta del artículo
      * (lata, tanda...) con su tamaño ya en unidades del artículo, o null si la
      * unidad del artículo no es compatible con el rinde (no se puede pedir en
-     * unidades de producción). `preferred` marca las que la receta definió a
-     * propósito: la grilla arranca en ellas; las implícitas ("tanda" = rinde
-     * completo) sólo se ofrecen en el selector.
+     * unidades de producción). La grilla arranca cada renglón en ella cuando
+     * existe. `step` es el salto de los botones −/+ por medida (LineMeasure::step()).
      *
-     * @return Collection<int, array{id: int<0, max>, name: string, unit: string, production_unit: array{label: string, size: float, preferred: bool}|null}>
+     * @return Collection<int, array{id: int<0, max>, name: string, unit: string, step: array{unit: float, production_unit: float}, production_unit: array{label: string, size: float}|null}>
      */
     public function producibleCatalog(Tenant $tenant): Collection
     {
@@ -463,10 +462,13 @@ class ProductionOrderService
                     'id' => $product->id,
                     'name' => $product->name,
                     'unit' => $product->unit->short(),
+                    'step' => [
+                        LineMeasure::Unit->value => LineMeasure::Unit->step($product->unit),
+                        LineMeasure::ProductionUnit->value => LineMeasure::ProductionUnit->step($product->unit),
+                    ],
                     'production_unit' => $size !== null && $size > 0 && $product->recipe !== null ? [
                         'label' => $product->recipe->productionUnitLabel(),
                         'size' => $size,
-                        'preferred' => $product->recipe->hasCustomProductionUnit(),
                     ] : null,
                 ];
             });
@@ -500,7 +502,9 @@ class ProductionOrderService
                 /** @var Product $product */
                 $product = $line->product;
 
-                $quantity = (float) $group->sum(function (ProductionOrderLine $item) use ($product) {
+                // Total exacto: se redondea una sola vez al final, así cuatro
+                // renglones de ¼ de lata suman la lata entera y no 4 × 17.
+                $exact = (float) $group->sum(function (ProductionOrderLine $item) use ($product) {
                     $base = $product->baseQuantityFor((float) $item->quantity, $item->measure);
                     abort_if($base === null, 422, "La unidad de {$product->name} no es compatible con el rendimiento de su receta.");
 
@@ -510,9 +514,10 @@ class ProductionOrderService
 
                 return [
                     'product' => $product,
-                    'quantity' => $quantity,
-                    'batches' => $unitSize !== null && $unitSize > 0 ? $quantity / $unitSize : 0.0,
-                    'batch_label' => $product->recipe?->productionUnitLabel() ?? 'tanda',
+                    'quantity' => $product->roundForProduction($exact),
+                    // Sobre el exacto: «0,25 Lata», no «0,26» por el redondeo de arriba.
+                    'batches' => $unitSize !== null && $unitSize > 0 ? $exact / $unitSize : 0.0,
+                    'batch_label' => $product->recipe?->productionUnitLabel() ?? 'Lata',
                 ];
             })
             ->values();

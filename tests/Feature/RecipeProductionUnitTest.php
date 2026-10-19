@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\LineMeasure;
+use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Recipe;
 
@@ -54,39 +55,109 @@ test('baseQuantityFor devuelve null si la unidad del artículo no es compatible 
     expect($product->fresh('recipe')->baseQuantityFor(1, LineMeasure::ProductionUnit))->toBeNull();
 });
 
-test('el formulario de receta guarda la unidad de producción', function () {
+test('el modal de producción guarda el nombre y la equivalencia', function () {
     [$user, $tenant, $product] = productionSetup();
     $recipe = $product->recipe;
 
     $this->actingAs($user)
-        ->put(route('recipes.update', $recipe), [
-            'name' => $recipe->name,
-            'yield_quantity' => 12,
-            'yield_unit' => 'u',
-            'production_unit_name' => 'Lata grande',
+        ->patch(route('recipes.production.update', $recipe), [
+            'production_unit_name' => 'Lata',
+            'production_unit_quantity' => 3.5,
         ])
-        ->assertSessionHasNoErrors();
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('status');
 
-    expect($recipe->fresh()->production_unit_name)->toBe('Lata grande')
-        ->and($recipe->fresh()->productionUnitSize())->toBe(12.0);
+    expect($recipe->fresh()->production_unit_name)->toBe('Lata')
+        ->and($recipe->fresh()->productionUnitSize())->toBe(3.5);
 });
 
-test('dejar vacío el nombre de la unidad de producción vuelve al default', function () {
+test('vaciar el modal de producción vuelve al default', function () {
     [$user, $tenant, $product] = productionSetup();
     $recipe = $product->recipe;
-    $recipe->update(['production_unit_name' => 'Bandeja']);
+    $recipe->update(['production_unit_name' => 'Bandeja', 'production_unit_quantity' => 4]);
 
     $this->actingAs($user)
-        ->put(route('recipes.update', $recipe), [
-            'name' => $recipe->name,
-            'yield_quantity' => 12,
-            'yield_unit' => 'u',
-            'production_unit_name' => '',
-        ])
+        ->patch(route('recipes.production.update', $recipe), ['production_unit_name' => '', 'production_unit_quantity' => ''])
         ->assertSessionHasNoErrors();
 
     expect($recipe->fresh()->production_unit_name)->toBeNull()
-        ->and($recipe->fresh()->productionUnitLabel())->toBe('Lata');
+        ->and($recipe->fresh()->production_unit_quantity)->toBeNull()
+        ->and($recipe->fresh()->productionUnitLabel())->toBe('Lata')
+        ->and($recipe->fresh()->productionUnitSize())->toBe(12.0);
+});
+
+test('el nombre y la equivalencia van juntos y la equivalencia es positiva', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $url = route('recipes.production.update', $product->recipe);
+
+    $this->actingAs($user)->patch($url, ['production_unit_name' => 'Lata'])
+        ->assertSessionHasErrors('production_unit_quantity');
+    $this->actingAs($user)->patch($url, ['production_unit_quantity' => 6])
+        ->assertSessionHasErrors('production_unit_name');
+    $this->actingAs($user)->patch($url, ['production_unit_name' => 'Lata', 'production_unit_quantity' => 0])
+        ->assertSessionHasErrors('production_unit_quantity');
+});
+
+test('un viewer no puede cambiar la producción de la receta', function () {
+    [$user, $tenant, $product] = productionSetup(TenantUserRole::Viewer);
+
+    $this->actingAs($user)
+        ->patch(route('recipes.production.update', $product->recipe), ['production_unit_name' => 'Lata', 'production_unit_quantity' => 6])
+        ->assertForbidden();
+});
+
+test('no se puede cambiar la producción de la receta de otro negocio', function () {
+    [$user] = productionSetup();
+    [, , $otherProduct] = productionSetup();
+
+    $this->actingAs($user)
+        ->patch(route('recipes.production.update', $otherProduct->recipe), ['production_unit_name' => 'Lata', 'production_unit_quantity' => 6])
+        ->assertNotFound();
+});
+
+test('el formulario principal de la receta no toca la unidad de producción', function () {
+    [$user, $tenant, $product] = productionSetup();
+    $recipe = $product->recipe;
+    $recipe->update(['production_unit_name' => 'Lata', 'production_unit_quantity' => 6]);
+
+    $this->actingAs($user)
+        ->put(route('recipes.update', $recipe), [
+            'name' => 'Otro nombre',
+            'yield_quantity' => 12,
+            'yield_unit' => 'u',
+            'production_unit_name' => 'Intruso',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($recipe->fresh()->production_unit_name)->toBe('Lata')
+        ->and($recipe->fresh()->name)->toBe('Otro nombre');
+});
+
+test('el modal de edición ofrece el botón Producción junto a Guardar y Cancelar', function () {
+    [$user, $tenant, $product] = productionSetup();
+
+    $this->actingAs($user)
+        ->get(route('recipes.show', $product->recipe))
+        ->assertOk()
+        ->assertSeeInOrder(['Guardar cambios', "open-modal', 'recipe-production'", 'Producción', "close-modal', 'recipe-edit-info'", 'Cancelar'], false)
+        ->assertSee('recipes/'.$product->recipe->id.'/production', false);
+});
+
+test('la equivalencia del modal de producción arranca con el rinde de la receta', function () {
+    [$user, $tenant, $product] = productionSetup();
+
+    // La receta rinde 12 u y no tiene unidad de producción cargada.
+    $this->actingAs($user)
+        ->get(route('recipes.show', $product->recipe))
+        ->assertSeeInOrder(['id="production_unit_quantity"', 'value="12"'], false)
+        ->assertSeeInOrder(['id="production_unit_name"', 'value="Lata"'], false);
+
+    $product->recipe->update(['production_unit_name' => 'Bandeja', 'production_unit_quantity' => 3]);
+
+    $this->actingAs($user)
+        ->get(route('recipes.show', $product->recipe))
+        ->assertSeeInOrder(['id="production_unit_quantity"', 'value="3"'], false)
+        ->assertSeeInOrder(['id="production_unit_name"', 'value="Bandeja"'], false);
 });
 
 test('copiar una receta conserva su unidad de producción', function () {

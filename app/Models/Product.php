@@ -121,6 +121,21 @@ class Product extends Model
         );
     }
 
+    /**
+     * Cantidad a producir: lo que da la conversión, redondeado. Un artículo
+     * en unidades sube al entero (¼ de una lata de 66 u son 16,5: se hacen
+     * 17, no hay media factura); el resto de las unidades (kg, L...) conserva
+     * sus decimales. Único dueño de la regla — se aplica una sola vez, sobre
+     * el total del artículo, no por renglón.
+     */
+    public function roundForProduction(float $quantity): float
+    {
+        // El round previo evita que un 16,0000000001 de punto flotante suba a 17.
+        return $this->unit === Unit::Unidad
+            ? ceil(round($quantity, 6))
+            : round($quantity, 3);
+    }
+
     /** Unidades de rendimiento de la receta que contiene 1 unidad del artículo. */
     public function recipeUnitsPerItem(): float
     {

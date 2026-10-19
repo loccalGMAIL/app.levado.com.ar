@@ -114,7 +114,7 @@ class InstantProductionOrderController extends Controller
 
                 return [
                     'product' => $product,
-                    'quantity' => (float) $base,
+                    'quantity' => $product->roundForProduction((float) $base),
                     'requested' => $requested,
                 ];
             })

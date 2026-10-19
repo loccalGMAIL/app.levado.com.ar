@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\LineMeasure;
+use App\Enums\Unit;
 use App\Models\Production;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderRequest;
@@ -123,12 +124,12 @@ test('el catálogo de la grilla ofrece la unidad de producción de cada receta',
 
     $entry = productionOrderService()->producibleCatalog($tenant)->firstWhere('id', $product->id);
 
-    expect($entry['production_unit'])->toBe(['label' => 'lata', 'size' => 6.0, 'preferred' => true]);
+    expect($entry['production_unit'])->toBe(['label' => 'lata', 'size' => 6.0]);
 
     $product->recipe->update(['production_unit_name' => null, 'production_unit_quantity' => null]);
     $implicit = productionOrderService()->producibleCatalog($tenant)->firstWhere('id', $product->id);
 
-    expect($implicit['production_unit'])->toBe(['label' => 'Lata', 'size' => 12.0, 'preferred' => false]);
+    expect($implicit['production_unit'])->toBe(['label' => 'Lata', 'size' => 12.0]);
 });
 
 test('traer del pedido anterior conserva la medida', function () {
@@ -186,4 +187,145 @@ test('quantityLabel describe la línea en lata y en unidades', function () {
 
     expect($inLata->load('product.recipe')->quantityLabel())->toBe('1,5 lata (9 u)')
         ->and($inUnits->load('product.recipe')->quantityLabel())->toBe('4,00 u');
+});
+
+// Redondeo y saltos. productWithLata(): receta de 12 u con 1 lata = 6 u. Acá se
+// ajusta la equivalencia para armar los casos de la pastelería.
+
+function setLataSize($product, float $size, string $yieldUnit = 'u', ?string $productUnit = null): void
+{
+    $product->recipe->update(['yield_quantity' => $size, 'yield_unit' => $yieldUnit, 'production_unit_quantity' => $size]);
+
+    if ($productUnit !== null) {
+        $product->update(['unit' => $productUnit]);
+    }
+}
+
+test('un cuarto de lata de 66 u se produce redondeado hacia arriba y muestra 0,25 latas', function () {
+    [$user, $tenant, $product] = productWithLata();
+    setLataSize($product, 66);
+    [$order, $request] = requestFor($tenant);
+    $request->lines()->create(['product_id' => $product->id, 'quantity' => 0.25, 'unit' => 'u', 'measure' => 'production_unit', 'position' => 1]);
+
+    $entry = productionOrderService()->aggregate($order)->first();
+
+    expect($entry['quantity'])->toBe(17.0)
+        ->and($entry['batches'])->toEqualWithDelta(0.25, 0.0001);
+});
+
+test('el redondeo se hace sobre el total: cuatro cuartos suman la lata entera', function () {
+    [$user, $tenant, $product] = productWithLata();
+    setLataSize($product, 66);
+    [$order] = requestFor($tenant);
+    foreach (range(1, 4) as $i) {
+        $request = ProductionOrderRequest::factory()->for($tenant)->create(['production_order_id' => $order->id]);
+        $request->lines()->create(['product_id' => $product->id, 'quantity' => 0.25, 'unit' => 'u', 'measure' => 'production_unit', 'position' => 1]);
+    }
+
+    expect(productionOrderService()->aggregate($order)->first()['quantity'])->toBe(66.0);
+});
+
+test('un resultado exacto no sube', function () {
+    [$user, $tenant, $product] = productWithLata();
+    setLataSize($product, 66);
+    [$order, $request] = requestFor($tenant);
+    $request->lines()->create(['product_id' => $product->id, 'quantity' => 0.5, 'unit' => 'u', 'measure' => 'production_unit', 'position' => 1]);
+
+    expect(productionOrderService()->aggregate($order)->first()['quantity'])->toBe(33.0);
+});
+
+test('un artículo en kg conserva los decimales', function () {
+    [$user, $tenant, $product] = productWithLata();
+    setLataSize($product, 3.5, 'kg', 'kg');
+    [$order, $request] = requestFor($tenant);
+    $request->lines()->create(['product_id' => $product->id, 'quantity' => 0.25, 'unit' => 'kg', 'measure' => 'production_unit', 'position' => 1]);
+
+    expect(productionOrderService()->aggregate($order)->first()['quantity'])->toBe(0.875);
+});
+
+test('producir fabrica la cantidad redondeada', function () {
+    [$user, $tenant, $product, $harina] = productWithLata();
+    setLataSize($product, 66);
+    seedStock($harina, 50000, $user);
+    [$order, $request] = requestFor($tenant);
+    $request->lines()->create(['product_id' => $product->id, 'quantity' => 0.25, 'unit' => 'u', 'measure' => 'production_unit', 'position' => 1]);
+
+    productionOrderService()->produce($order, $user);
+
+    expect((float) Production::where('production_order_id', $order->id)->first()->quantity)->toBe(17.0);
+});
+
+test('la orden instantánea redondea hacia arriba', function () {
+    [$user, $tenant, $product, $harina] = productWithLata();
+    setLataSize($product, 66);
+    seedStock($harina, 50000, $user);
+
+    $this->actingAs($user)
+        ->post(route('production-orders.instant.store'), [
+            'destination_type' => 'location',
+            'destination_id' => $tenant->defaultLocation()->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 0.25, 'measure' => 'production_unit']],
+        ])
+        ->assertRedirect();
+
+    $order = ProductionOrder::where('tenant_id', $tenant->id)->first();
+    expect((float) Production::where('production_order_id', $order->id)->first()->quantity)->toBe(17.0);
+});
+
+test('roundForProduction sube las unidades y deja los decimales de las demás', function () {
+    [$user, $tenant, $product] = productWithLata();
+
+    expect($product->roundForProduction(16.5))->toBe(17.0)
+        ->and($product->roundForProduction(16.0000000001))->toBe(16.0)
+        ->and($product->roundForProduction(33.0))->toBe(33.0);
+
+    $product->update(['unit' => 'kg']);
+
+    expect($product->roundForProduction(0.8754))->toBe(0.875);
+});
+
+test('el equivalente de una línea marca el redondeo con ≈', function () {
+    [$user, $tenant, $product] = productWithLata();
+    setLataSize($product, 66);
+    [$order, $request] = requestFor($tenant);
+    $quarter = $request->lines()->create(['product_id' => $product->id, 'quantity' => 0.25, 'unit' => 'u', 'measure' => 'production_unit', 'position' => 1]);
+    $half = $request->lines()->create(['product_id' => $product->id, 'quantity' => 0.5, 'unit' => 'u', 'measure' => 'production_unit', 'position' => 2]);
+
+    expect($quarter->load('product.recipe')->equivalentLabel())->toBe('≈ 17 u')
+        ->and($quarter->quantityLabel())->toBe('0,25 lata (≈ 17 u)')
+        ->and($half->load('product.recipe')->equivalentLabel())->toBe('33 u');
+
+    $sheet = app(ProductionOrderSheets::class)->delivery($order);
+    expect(collect($sheet['groups'][0]['requests'][0]['lines'])->pluck('detail')->all())->toBe(['≈ 17 u', '33 u']);
+});
+
+test('el catálogo trae los saltos de cada medida según la unidad del artículo', function () {
+    [$user, $tenant, $product] = productWithLata();
+
+    expect(productionOrderService()->producibleCatalog($tenant)->firstWhere('id', $product->id)['step'])
+        ->toBe(['unit' => 1.0, 'production_unit' => 0.25]);
+
+    $product->update(['unit' => 'kg']);
+    expect(productionOrderService()->producibleCatalog($tenant)->firstWhere('id', $product->id)['step'])
+        ->toBe(['unit' => 0.5, 'production_unit' => 0.25]);
+});
+
+test('LineMeasure::step cubre todas las unidades', function () {
+    expect(LineMeasure::Unit->step(Unit::Unidad))->toBe(1.0)
+        ->and(LineMeasure::Unit->step(Unit::Kilogramo))->toBe(0.5)
+        ->and(LineMeasure::Unit->step(Unit::Litro))->toBe(0.5)
+        ->and(LineMeasure::Unit->step(Unit::Gramo))->toBe(50.0)
+        ->and(LineMeasure::Unit->step(Unit::Mililitro))->toBe(50.0)
+        ->and(LineMeasure::Unit->step(Unit::Centimetro3))->toBe(50.0)
+        ->and(LineMeasure::ProductionUnit->step(Unit::Kilogramo))->toBe(0.25);
+});
+
+test('la grilla muestra los botones de salto y el modal de pedido los saltos del catálogo', function () {
+    [$user, $tenant, $product] = productWithLata();
+
+    $this->actingAs($user)
+        ->get(route('production-orders.index'))
+        ->assertOk()
+        ->assertSee('stepQuantity(line, 1)', false)
+        ->assertViewHas('products', fn ($products) => $products->firstWhere('id', $product->id)['step'] === ['unit' => 1.0, 'production_unit' => 0.25]);
 });
