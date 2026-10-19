@@ -5,11 +5,13 @@ namespace App\Services;
 use App\Enums\CatalogItemType;
 use App\Models\Ingredient;
 use App\Models\Packaging;
+use App\Models\Product;
 use App\Models\Recipe;
 use Illuminate\Support\Collection;
 
 /**
- * Explota el BOM de una receta a sus insumos base (ingredientes + descartables),
+ * Explota el BOM de una receta a sus insumos base (ingredientes, artículos de
+ * reventa usados como insumo y descartables),
  * escalado por un factor. Las sub-recetas son phantom: se explotan recursivamente
  * hasta sus insumos reales y nunca aparecen como ítem consumido.
  *
@@ -24,7 +26,7 @@ class RecipeExploder
     public function __construct(private UnitConverter $converter) {}
 
     /**
-     * @return Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>
+     * @return Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>
      */
     public function explode(Recipe $recipe, float $factor): Collection
     {
@@ -32,7 +34,7 @@ class RecipeExploder
     }
 
     /**
-     * @return array{items: Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>, labor_cost: float, labor_hours: float}
+     * @return array{items: Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>, labor_cost: float, labor_hours: float}
      */
     public function explodeWithLabor(Recipe $recipe, float $factor): array
     {
@@ -48,7 +50,7 @@ class RecipeExploder
     }
 
     /**
-     * @param  array<string, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>  $accumulator
+     * @param  array<string, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>  $accumulator
      * @param  array{cost: float, hours: float}  $labor
      * @param  array<int, bool>  $visited  ids de recetas ya recorridas en esta rama (guarda anti-ciclo)
      */
@@ -61,6 +63,7 @@ class RecipeExploder
 
         $recipe->loadMissing([
             'ingredientLines.ingredient',
+            'productLines.product',
             'packagingLines.packaging',
             'laborLines.laborType',
             'subrecipeLines.childRecipe',
@@ -70,6 +73,13 @@ class RecipeExploder
             $converted = $this->converter->convert((float) $line->quantity, $line->unit, $line->ingredient->unit);
             if ($converted !== null) {
                 $this->add($accumulator, CatalogItemType::Ingredient, $line->ingredient, $converted * $factor);
+            }
+        }
+
+        foreach ($recipe->productLines as $line) {
+            $converted = $this->converter->convert((float) $line->quantity, $line->unit, $line->product->unit);
+            if ($converted !== null) {
+                $this->add($accumulator, CatalogItemType::Product, $line->product, $converted * $factor);
             }
         }
 
@@ -96,9 +106,9 @@ class RecipeExploder
     }
 
     /**
-     * @param  array<string, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>  $accumulator
+     * @param  array<string, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>  $accumulator
      */
-    private function add(array &$accumulator, CatalogItemType $type, Ingredient|Packaging $item, float $quantity): void
+    private function add(array &$accumulator, CatalogItemType $type, Ingredient|Packaging|Product $item, float $quantity): void
     {
         $key = $type->value.':'.$item->id;
 

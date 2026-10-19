@@ -156,7 +156,7 @@ class RecipeController extends Controller
     {
         $this->authorize('update', $recipe);
 
-        $recipe->load(['ingredientLines', 'laborLines', 'packagingLines', 'subrecipeLines']);
+        $recipe->load(['ingredientLines', 'productLines', 'laborLines', 'packagingLines', 'subrecipeLines']);
 
         $newRecipe = DB::transaction(function () use ($recipe) {
             $newRecipe = $recipe->replicate(['unit_cost']);
@@ -168,6 +168,13 @@ class RecipeController extends Controller
             foreach ($recipe->ingredientLines as $line) {
                 $newRecipe->ingredientLines()->create([
                     'ingredient_id' => $line->ingredient_id,
+                    'quantity' => $line->quantity,
+                    'unit' => $line->unit,
+                ]);
+            }
+            foreach ($recipe->productLines as $line) {
+                $newRecipe->productLines()->create([
+                    'product_id' => $line->product_id,
                     'quantity' => $line->quantity,
                     'unit' => $line->unit,
                 ]);

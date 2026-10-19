@@ -30,6 +30,7 @@ class RecipePrintSheet
         $recipe->loadMissing([
             'tenant',
             'ingredientLines.ingredient',
+            'productLines.product',
             'subrecipeLines.childRecipe',
             'packagingLines.packaging',
             'laborLines.laborType',
@@ -52,6 +53,11 @@ class RecipePrintSheet
                         ? ($line->ingredient->subdivision_label ?? 'u')
                         : $line->unit->short(),
                 ])
+                ->concat($recipe->productLines->map(fn ($line) => [
+                    'name' => $line->product->name,
+                    'quantity' => (float) $line->quantity,
+                    'unit' => $line->unit->short(),
+                ]))
                 ->all(),
             'subrecipes' => $recipe->subrecipeLines
                 ->map(fn ($line) => [

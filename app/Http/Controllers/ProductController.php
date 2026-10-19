@@ -12,6 +12,7 @@ use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\ArticlePriceRecalculator;
 use App\Services\ProductCodeAssigner;
+use App\Services\RecipeCostPropagator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -21,6 +22,7 @@ class ProductController extends Controller
         private readonly AdminActivityRecorder $recorder,
         private readonly ProductCodeAssigner $codeAssigner,
         private readonly ArticlePriceRecalculator $priceRecalculator,
+        private readonly RecipeCostPropagator $propagator,
     ) {}
 
     public function index(): View
@@ -151,6 +153,19 @@ class ProductController extends Controller
     {
         $this->authorize('update', $product);
 
+        // Un elaborado no puede ser línea de receta: pasar a elaborado un artículo
+        // usado como insumo dejaría esas recetas apuntando a algo sin costo propio.
+        if ($product->isResale() && $request->validated('type') === ProductType::Manufactured->value) {
+            $usedIn = $product->recipeNamesUsingAsIngredient();
+
+            if ($usedIn !== []) {
+                return back()->withErrors([
+                    'type' => 'No podés pasar a elaborado un artículo que se usa como insumo en: '
+                        .implode(', ', $usedIn).'.',
+                ])->withInput();
+            }
+        }
+
         $product->update($this->normalizeByType($request->validated()));
 
         // Se lee antes de assignIfMissing(): ese save() del código de barras
@@ -175,6 +190,11 @@ class ProductController extends Controller
             $this->priceRecalculator->recompute($product->refresh());
         }
 
+        // Un artículo de reventa puede ser insumo de recetas: su costo nuevo se propaga.
+        if ($costValueChanged && $product->isResale()) {
+            $this->propagator->propagateFromProduct($product->id);
+        }
+
         $this->recorder->record(
             actor: $request->user(),
             targetType: 'product',
@@ -190,6 +210,19 @@ class ProductController extends Controller
     public function toggleActive(Product $product): RedirectResponse
     {
         $this->authorize('update', $product);
+
+        // Mismo guard que IngredientController::toggleActive(): las recetas activas
+        // seguirían costeando y consumiendo stock de un artículo dado de baja.
+        if ($product->active) {
+            $blockedBy = $product->recipeNamesUsingAsIngredient(onlyActive: true);
+
+            if ($blockedBy !== []) {
+                return back()->withErrors([
+                    'toggle' => 'No podés desactivar este artículo porque lo usan como insumo: '
+                        .implode(', ', $blockedBy).'. Quitalo de esas recetas primero.',
+                ]);
+            }
+        }
 
         $product->update(['active' => ! $product->active]);
         $action = $product->active ? 'product.activated' : 'product.deactivated';

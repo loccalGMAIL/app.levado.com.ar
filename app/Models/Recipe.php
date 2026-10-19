@@ -69,6 +69,16 @@ class Recipe extends Model
     }
 
     /**
+     * Artículos de reventa consumidos como insumo.
+     *
+     * @return HasMany<RecipeProductLine, $this>
+     */
+    public function productLines(): HasMany
+    {
+        return $this->hasMany(RecipeProductLine::class);
+    }
+
+    /**
      * @return HasMany<RecipePackagingLine, $this>
      */
     public function packagingLines(): HasMany

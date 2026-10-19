@@ -11,6 +11,7 @@ use App\Http\Requests\UpdatePurchaseLineRequest;
 use App\Http\Requests\UpdatePurchaseRequest;
 use App\Models\Ingredient;
 use App\Models\Packaging;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Supplier;
@@ -652,6 +653,7 @@ class PurchaseController extends Controller
         $failed = 0;
         $touchedIngredientIds = [];
         $touchedPackagingIds = [];
+        $touchedProductIds = [];
 
         $pending = $purchase->lines()
             ->whereNotNull('purchaseable_id')
@@ -663,7 +665,7 @@ class PurchaseController extends Controller
             // Evita que apply()/recompute() lazy-loadeen línea→compra→tenant.
             $line->setRelation('purchase', $purchase->loadMissing('tenant'));
             try {
-                DB::transaction(function () use ($line, &$touchedIngredientIds, &$touchedPackagingIds) {
+                DB::transaction(function () use ($line, &$touchedIngredientIds, &$touchedPackagingIds, &$touchedProductIds) {
                     $item = $this->lineRecorder->apply($line, propagate: false);
 
                     // Una bonificación no imputa costo, así que no hay nada que
@@ -673,11 +675,10 @@ class PurchaseController extends Controller
                             $touchedIngredientIds[] = $item->id;
                         } elseif ($item instanceof Packaging) {
                             $touchedPackagingIds[] = $item->id;
+                        } elseif ($item instanceof Product) {
+                            $touchedProductIds[] = $item->id;
                         }
                     }
-                    // Un artículo de reventa no interviene en ninguna receta: no
-                    // se acumula en ninguna lista. Antes caía en el else y su id
-                    // se propagaba como si fuera el del descartable homónimo.
 
                     // Aceptar en masa también es una decisión humana. Sin esto la
                     // memoria sólo aprendería de las correcciones una por una, y
@@ -697,10 +698,11 @@ class PurchaseController extends Controller
         // Propagar UNA vez con los ítems tocados de todo el lote (N8): un
         // ancestro compartido por varias líneas se recalcula una sola vez en
         // vez de una vez por línea que lo afecta.
-        if ($touchedIngredientIds !== [] || $touchedPackagingIds !== []) {
+        if ($touchedIngredientIds !== [] || $touchedPackagingIds !== [] || $touchedProductIds !== []) {
             $recipeIds = array_merge(
                 $this->propagator->recipeIdsUsingIngredients(array_values(array_unique($touchedIngredientIds))),
                 $this->propagator->recipeIdsUsingPackagings(array_values(array_unique($touchedPackagingIds))),
+                $this->propagator->recipeIdsUsingProducts(array_values(array_unique($touchedProductIds))),
             );
             $this->propagator->propagateManyFrom($recipeIds);
         }

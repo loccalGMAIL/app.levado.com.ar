@@ -183,6 +183,7 @@ class DashboardController extends Controller
             ->active()
             ->with([
                 'ingredientLines.ingredient',
+                'productLines.product',
                 'packagingLines.packaging',
                 'laborLines.laborType',
                 'subrecipeLines.childRecipe',

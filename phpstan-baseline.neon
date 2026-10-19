@@ -42,8 +42,3 @@ parameters:
 			count: 1
 			path: app/Services/ProductionOrderSheets.php
 
-		-
-			message: '#^Parameter \#1 \.\.\.\$values of method Illuminate\\Support\\Collection\<int,array\<string, App\\Models\\Ingredient\|App\\Models\\Packaging\|float\|string\>\>\:\:push\(\) expects array\{sort\: string, item\: App\\Models\\Ingredient\|App\\Models\\Packaging, quantity\: float, unit_cost\: float\}, array\{sort\: string, item\: App\\Models\\Product, quantity\: float, unit_cost\: float\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/ProductionService.php

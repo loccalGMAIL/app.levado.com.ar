@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ProductType;
 use App\Models\ProductPrice;
 use App\Models\Recipe;
 use App\Models\Tenant;
@@ -30,6 +31,7 @@ class RecipeShowViewModel
     {
         $recipe->loadMissing([
             'ingredientLines.ingredient.supplier',
+            'productLines.product',
             'packagingLines.packaging',
             'laborLines.laborType',
             'subrecipeLines.childRecipe',
@@ -74,6 +76,7 @@ class RecipeShowViewModel
             'costPerUnit' => $costs['cost_per_unit'],
             'overheadPerHour' => $tenant->overheadPerHour() ?? 0.0,
             'ingredients' => $tenant->ingredients()->active()->orderBy('name')->get(),
+            'resaleProducts' => $tenant->products()->active()->where('type', ProductType::Resale->value)->orderBy('name')->get(),
             'packagings' => $tenant->packagings()->active()->orderBy('name')->get(),
             'laborTypes' => $tenant->laborTypes()->active()->orderBy('name')->get(),
             'ingredientLinesData' => $this->ingredientLinesData($recipe),
@@ -84,13 +87,22 @@ class RecipeShowViewModel
         ];
     }
 
+    /**
+     * Ingredientes y artículos de reventa usados como insumo, en una sola lista:
+     * para la tabla son lo mismo. Cada fila trae sus propias URLs de guardado y
+     * baja, así la vista no distingue de qué tabla viene.
+     */
     private function ingredientLinesData(Recipe $recipe): Collection
     {
-        return $recipe->ingredientLines->map(function ($line) {
+        $ingredientRows = $recipe->ingredientLines->map(function ($line) use ($recipe) {
             $ingredient = $line->ingredient;
             $subLabel = $ingredient->subdivisions ? ($ingredient->subdivision_label ?? 'u') : null;
 
             return [
+                'key' => 'ing-'.$line->id,
+                'kind' => 'ingredient',
+                'updateUrl' => route('recipes.ingredient-lines.update', [$recipe, $line]),
+                'destroyUrl' => route('recipes.ingredient-lines.destroy', [$recipe, $line]),
                 'id' => $line->id,
                 'name' => $ingredient->name,
                 'code' => 'ING-'.str_pad((string) $ingredient->id, 3, '0', STR_PAD_LEFT),
@@ -104,6 +116,30 @@ class RecipeShowViewModel
                 'refUnit' => $subLabel ?? $ingredient->unit->short(),
             ];
         });
+
+        $productRows = $recipe->productLines->map(function ($line) use ($recipe) {
+            $product = $line->product;
+
+            return [
+                'key' => 'prod-'.$line->id,
+                'kind' => 'product',
+                'updateUrl' => route('recipes.product-lines.update', [$recipe, $line]),
+                'destroyUrl' => route('recipes.product-lines.destroy', [$recipe, $line]),
+                'id' => $line->id,
+                'name' => $product->name,
+                'code' => 'ART-'.str_pad((string) $product->id, 3, '0', STR_PAD_LEFT),
+                'supplier' => null,
+                'quantity' => (float) $line->quantity,
+                'unit' => $line->unit->value,
+                'unitLabel' => $line->unit->short(),
+                'ingredientUnit' => $product->unit->value,
+                'costPerLineUnit' => $this->converter->convert(1.0, $line->unit, $product->unit) * (float) $product->cost_per_unit,
+                'refCost' => (float) $product->cost_per_unit,
+                'refUnit' => $product->unit->short(),
+            ];
+        });
+
+        return $ingredientRows->concat($productRows)->values();
     }
 
     private function laborLinesData(Recipe $recipe): Collection

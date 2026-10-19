@@ -26,6 +26,7 @@ class RefreshRecipeCosts extends Command
 
             Recipe::query()->with([
                 'ingredientLines.ingredient',
+                'productLines.product',
                 'packagingLines.packaging',
                 'laborLines.laborType',
                 'subrecipeLines.childRecipe',

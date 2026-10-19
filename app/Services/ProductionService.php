@@ -56,7 +56,7 @@ class ProductionService
      * ProductionOrderService pueda combinar el consumo de varios artículos en
      * una sola orden.
      *
-     * @return array{items: Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>, labor_cost: float}
+     * @return array{items: Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>, labor_cost: float}
      */
     public function baseConsumption(Product $product, float $quantity): array
     {
@@ -73,7 +73,7 @@ class ProductionService
      * combinado de una orden de producción. La mano de obra no es un ítem
      * stockeable: no genera línea, se suma aparte al total.
      *
-     * @param  Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging, quantity: float}>  $items
+     * @param  Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>  $items
      * @return array{lines: array<int, array{type: CatalogItemType, id: int, name: string, quantity: float, available: float, shortfall: float, unit_cost: float, line_cost: float}>, material_cost: float, labor_cost: float, total_cost: float}
      */
     public function summarize(Collection $items, Location $location, float $laborCost): array
@@ -87,7 +87,7 @@ class ProductionService
                 'type' => $entry['type'],
                 'id' => $item->id,
                 'name' => $item->name,
-                'unit' => $entry['type'] === CatalogItemType::Ingredient ? $item->unit->short() : Unit::Unidad->short(),
+                'unit' => $entry['type'] === CatalogItemType::Packaging ? Unit::Unidad->short() : $item->unit->short(),
                 'quantity' => $entry['quantity'],
                 'available' => $available,
                 'shortfall' => max(0.0, $entry['quantity'] - $available),
