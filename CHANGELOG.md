@@ -295,6 +295,37 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.19.0] — 2026-10-19
+
+Rama `v0.19.0-unidad-de-produccion`, sobre v0.18.0. Los pedidos de producción se pueden cargar en la unidad de producción de la receta (lata, tanda) y no sólo en unidades sueltas. En Producción manda la unidad de producción; en Artículos, la unidad de venta.
+
+### Agregado
+
+- **Unidad de producción en la receta**: un campo opcional «Unidad de producción» (ej. «Lata») junto a Rendimiento y Unidad, en el alta y la edición de la receta. Una unidad de producción equivale al rendimiento completo de la receta. Sin nombre, se llama «Lata».
+- **Pedidos en lata o en unidades**: cada renglón de un pedido tiene un selector entre las unidades del artículo y la unidad de producción de su receta, con la ayuda «= 99 u» debajo de la cantidad. Admite fracciones («½ lata»). Si la receta tiene la unidad cargada, el renglón arranca en ella. Aplica a la orden instantánea, «+ Nuevo pedido», la grilla dentro de una orden y los pedidos recurrentes (que conservan la medida al generar cada instancia).
+- **Planillas y detalle de la orden**: la planilla de producción informa las unidades y las latas («99 u (1,5 Lata)»), la de reparto muestra cada línea como se pidió con su equivalente («1,5 Lata (99 u)») y «Total a producir» suma las latas.
+
+### Cambiado
+
+- **Al producir** se fabrica siempre el artículo base: cada renglón se convierte a sus unidades y se suman todos los del mismo artículo en una sola producción, así que el stock y el consumo de insumos no cambian de criterio.
+- Los artículos «presentación» (`recipe_quantity`, ej. «1/2 Lata Vigilantes») no se tocan: siguen siendo la unidad de venta, con su precio y su costo. Producción no los usa.
+
+### Técnico
+
+- Columnas `recipes.production_unit_name` y `production_unit_quantity` (esta última sin campo en el formulario: si tiene valor fija otro tamaño que el rinde), y `measure` en `production_order_lines` y `recurring_production_request_lines` (default `unit`, las filas existentes no cambian). Enum `LineMeasure`.
+- `Product::baseQuantityFor()` es el único lugar de la conversión; `ProductionOrderService::aggregate()` la aplica y suma `batches`/`batch_label`. `ProductionOrderService::producibleCatalog()` arma el catálogo de las grillas (antes se repetía en dos lugares). `produce()`, `preview()` y `ProductionService` no cambian.
+- `ProductionOrderLine::quantityLabel()` para las vistas de sólo lectura.
+- Larastan: una migración por tabla y `@property LineMeasure $measure` en `RecurringProductionRequestLine`, porque el análisis estático no lee esa tabla.
+- **Tests nuevos**: `RecipeProductionUnitTest` y `ProductionOrderMeasureTest` (21 en total). 1254 tests, todos verdes.
+
+### Al deployar
+
+- `php artisan migrate` y `npm run build`.
+- Después, con los dueños: cargar la unidad de producción en las recetas que se tandan (Facturas Vigilantes, Surtidas de Manteca, Surtidas de Grasa, Medialunas de Manteca Fabián) y desactivar los 15 artículos «Lata», que Producción ya no usa. No se borran: «1 LATA ML Grasa» tiene movimientos de stock.
+- Pendientes de datos: «Medialunas de Grasa» (receta 2) no tiene artículo base; Facturas Vigilantes usa masa de manteca; Chips Rellenos x6 y Chips Vacíos x6 son en realidad el artículo base.
+
+---
+
 ## [0.18.0] — 2026-10-19
 
 Rama `v0.18.0-reventa-como-insumo`, sobre v0.17.0. Un artículo de reventa también puede usarse como ingrediente de una receta, para los productos que se venden y se consumen (ej. la leche chocolatada).
