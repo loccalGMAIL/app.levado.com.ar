@@ -11,6 +11,7 @@ use App\Models\ProductPrice;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\ProductPriceWriter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -25,10 +26,6 @@ class PriceListController extends Controller
 
     public function index(): View
     {
-        $sortable = ['name', 'adjustment_pct'];
-        $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
-
         $tenant = app(Tenant::class);
         $tenant->defaultPriceList();
 
@@ -41,7 +38,12 @@ class PriceListController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('is_default')->orderByDesc('active')->orderBy('name'))
+            ->tap(fn (Builder $q) => $this->sortListing(
+                $q,
+                ['name' => 'name', 'adjustment_pct' => 'adjustment_pct', 'prices_count' => 'prices_count', 'active' => 'active'],
+                fn (Builder $q) => $q->orderByDesc('is_default')->orderByDesc('active')->orderBy('name'),
+                'price_lists.id',
+            ))
             ->paginate($this->perPage())
             ->withQueryString();
 

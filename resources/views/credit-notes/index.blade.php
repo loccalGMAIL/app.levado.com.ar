@@ -56,8 +56,8 @@
                         <x-sortable-th column="date" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
                         <x-sortable-th column="note_number" :sort="$sort" :dir="$dir">N° de nota</x-sortable-th>
                         <x-sortable-th column="supplier" :sort="$sort" :dir="$dir">Proveedor</x-sortable-th>
-                        <th class="px-4 py-3 font-medium">Compra de origen</th>
-                        <th class="px-4 py-3 font-medium text-center">Renglones</th>
+                        <x-sortable-th column="purchase" :sort="$sort" :dir="$dir">Compra de origen</x-sortable-th>
+                        <x-sortable-th column="lines" :sort="$sort" :dir="$dir" align="right">Renglones</x-sortable-th>
                         <x-sortable-th column="total" :sort="$sort" :dir="$dir" align="right">Total</x-sortable-th>
                         @can('manage-costs')
                             <th class="px-4 py-3"></th>

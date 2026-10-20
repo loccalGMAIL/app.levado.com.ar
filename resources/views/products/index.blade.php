@@ -181,13 +181,13 @@
                                     class="rounded border-gray-300 text-horno focus:ring-horno">
                             </th>
                         @endcan
-                        <th class="px-4 py-3 font-medium">Código</th>
+                        <x-sortable-th column="code" :sort="$sort" :dir="$dir">Código</x-sortable-th>
                         <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
-                        <th class="px-4 py-3 font-medium">Tipo</th>
-                        <th class="px-4 py-3 font-medium">Categoría</th>
-                        <th class="px-4 py-3 font-medium">Unidad</th>
+                        <x-sortable-th column="type" :sort="$sort" :dir="$dir">Tipo</x-sortable-th>
+                        <x-sortable-th column="category" :sort="$sort" :dir="$dir">Categoría</x-sortable-th>
+                        <x-sortable-th column="unit" :sort="$sort" :dir="$dir">Unidad</x-sortable-th>
                         <th class="px-4 py-3 font-medium text-right">Costo/u</th>
-                        <th class="px-4 py-3 font-medium text-right">Precio ({{ $priceList->name }})/u</th>
+                        <x-sortable-th column="price" :sort="$sort" :dir="$dir" align="right">Precio ({{ $priceList->name }})/u</x-sortable-th>
                         <th class="px-4 py-3 font-medium text-right">Margen</th>
                         @can('manage-costs')
                             <th class="px-4 py-3"></th>

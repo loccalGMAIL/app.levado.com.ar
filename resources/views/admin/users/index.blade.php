@@ -16,6 +16,8 @@
             {{-- Búsqueda y acción --}}
             <div class="flex items-center gap-3">
                 <form method="GET" class="flex gap-3 flex-1">
+                    <input type="hidden" name="sort" value="{{ request('sort') }}">
+                    <input type="hidden" name="dir" value="{{ request('dir') }}">
                     <input type="text" name="search" value="{{ request('search') }}"
                         placeholder="Buscar por nombre o email..."
                         class="flex-1 max-w-sm border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
@@ -36,16 +38,21 @@
                 </button>
             </div>
 
+            @php
+                $sort = request('sort', 'created_at');
+                $dir  = request('dir', 'desc');
+            @endphp
+
             {{-- Tabla --}}
             <div class="bg-white shadow rounded-lg overflow-x-auto">
                 <table class="min-w-[700px] w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
-                            <th class="px-4 py-3 font-medium">Nombre</th>
-                            <th class="px-4 py-3 font-medium">Email</th>
-                            <th class="px-4 py-3 font-medium">Registro</th>
-                            <th class="px-4 py-3 font-medium">Estado</th>
-                            <th class="px-4 py-3 font-medium">Comercios</th>
+                            <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
+                            <x-sortable-th column="email" :sort="$sort" :dir="$dir">Email</x-sortable-th>
+                            <x-sortable-th column="created_at" :sort="$sort" :dir="$dir">Registro</x-sortable-th>
+                            <x-sortable-th column="active" :sort="$sort" :dir="$dir">Estado</x-sortable-th>
+                            <x-sortable-th column="tenant_users_count" :sort="$sort" :dir="$dir">Comercios</x-sortable-th>
                             <th class="px-4 py-3 font-medium">Acciones</th>
                         </tr>
                     </thead>

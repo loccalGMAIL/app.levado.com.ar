@@ -295,6 +295,39 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.19.0] — 2026-10-19
+
+Rama `ccr-440135ed-pip419`, sobre v0.18.0. Todas las columnas de datos de los listados se pueden ordenar de menor a mayor (y al revés, con un segundo clic).
+
+### Agregado
+
+- **Nuevas columnas ordenables**:
+  - Insumos: marca, proveedor, unidad, por envase y stock.
+  - Envases: marca, proveedor, por presentación, stock y estado.
+  - Gastos variables: categoría y proveedor.
+  - Costos fijos: categoría y estado.
+  - Mano de obra y recetas: estado.
+  - Listas de precios: precios cargados y estado.
+  - Artículos: código, tipo, categoría, unidad y precio de la lista elegida.
+  - Historial de producción: todas las columnas (antes no se ordenaba).
+  - Notas de crédito: compra de origen y renglones.
+  - Stock: alerta (sin alerta → bajo mínimo → negativo).
+- **Personal**: miembros e invitaciones pendientes se ordenan por sus columnas, cada tabla por su lado.
+- **Backoffice**: tenants, usuarios y auditoría se ordenan por todas sus columnas.
+
+### Cambiado
+
+- **Orden estable al paginar**: los empates (mismo estado, misma categoría) se desempatan por id, así que un registro ya no puede repetirse o perderse entre páginas.
+- Compras usa el mismo encabezado ordenable que el resto de los listados (con la flecha de la columna activa).
+- El stock de Insumos y Envases ordena un ítem sin movimientos como 0, igual que lo muestra.
+
+### Técnico
+
+- Trait `SortsListings` (en el `Controller` base): `sortListing()` recibe la lista blanca columna → expresión/subconsulta/closure, el orden por defecto y la columna de desempate. Los nombres de relaciones se ordenan con subconsultas, sin joins.
+- `StockLevel::orderCatalogByQuantity()` para ordenar el catálogo por stock en una sucursal.
+- `<x-sortable-th>` acepta `sort-param` / `dir-param` (dos tablas en una pantalla) y `compact` (tablas chicas dentro de una card).
+- Quedan sin ordenar las columnas calculadas en PHP: costo y margen de Artículos y valuación de Stock.
+
 ## [0.18.0] — 2026-10-19
 
 Rama `v0.18.0-reventa-como-insumo`, sobre v0.17.0. Un artículo de reventa también puede usarse como ingrediente de una receta, para los productos que se venden y se consumen (ej. la leche chocolatada).

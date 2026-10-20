@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreVariableExpenseRequest;
 use App\Http\Requests\UpdateVariableExpenseRequest;
+use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Models\VariableExpense;
+use App\Models\VariableExpenseCategory;
 use App\Services\AdminActivityRecorder;
 use App\Services\ReceiptStorer;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -23,9 +26,6 @@ class VariableExpenseController extends Controller
     public function index(): View
     {
         $tenant = app(Tenant::class);
-        $sortable = ['name', 'amount', 'expense_date'];
-        $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
         $filtered = $tenant->variableExpenses()
             ->when(request('search'), function ($q, $search) {
@@ -46,7 +46,13 @@ class VariableExpenseController extends Controller
 
         $variableExpenses = $filtered
             ->with(['category', 'supplier'])
-            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderByDesc('expense_date')->orderBy('name'))
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'name' => 'name',
+                'category' => VariableExpenseCategory::select('name')->whereColumn('variable_expense_categories.id', 'variable_expenses.variable_expense_category_id'),
+                'supplier' => Supplier::select('name')->whereColumn('suppliers.id', 'variable_expenses.supplier_id'),
+                'expense_date' => 'expense_date',
+                'amount' => 'amount',
+            ], fn (Builder $q) => $q->orderByDesc('expense_date')->orderBy('name'), 'variable_expenses.id'))
             ->paginate($this->perPage())
             ->withQueryString();
 

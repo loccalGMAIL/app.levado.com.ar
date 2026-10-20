@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateCreditNoteLineRequest;
 use App\Http\Requests\UpdateCreditNoteRequest;
 use App\Models\CreditNote;
 use App\Models\CreditNoteLine;
+use App\Models\Purchase;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\CreditNoteLineRecorder;
@@ -49,6 +50,11 @@ class CreditNoteController extends Controller
                 ->select('credit_notes.*')
                 ->orderBy('suppliers.name', $sortDir)
                 ->orderByDesc('credit_notes.id'),
+            'purchase' => $query->orderBy(
+                Purchase::select('invoice_number')->whereColumn('purchases.id', 'credit_notes.purchase_id'),
+                $sortDir,
+            )->orderByDesc('credit_notes.id'),
+            'lines' => $query->orderBy('lines_count', $sortDir)->orderByDesc('id'),
             'total' => $query->orderBy('net_total', $sortDir)->orderByDesc('id'),
             default => $query->orderBy('note_date', $sortDir)->orderByDesc('id'),
         };

@@ -9,6 +9,7 @@ use App\Mail\TeamInvitation;
 use App\Models\Invitation;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -31,7 +32,13 @@ class TenantController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->latest()
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'name' => 'name',
+                'country' => 'country',
+                'active' => 'active',
+                'active_users_count' => 'active_users_count',
+                'created_at' => 'created_at',
+            ], fn (Builder $q) => $q->latest(), 'tenants.id'))
             ->paginate($this->perPage())
             ->withQueryString();
 

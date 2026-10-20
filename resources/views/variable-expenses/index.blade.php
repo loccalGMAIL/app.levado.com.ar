@@ -141,8 +141,8 @@
                 <x-data-table :paginator="$variableExpenses" total-label="gasto">
                     <x-slot:head>
                         <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
-                        <th class="px-4 py-3 font-medium">Categoría</th>
-                        <th class="px-4 py-3 font-medium">Proveedor</th>
+                        <x-sortable-th column="category" :sort="$sort" :dir="$dir">Categoría</x-sortable-th>
+                        <x-sortable-th column="supplier" :sort="$sort" :dir="$dir">Proveedor</x-sortable-th>
                         <x-sortable-th column="expense_date" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
                         <x-sortable-th column="amount" :sort="$sort" :dir="$dir" align="right">Monto</x-sortable-th>
                         @can('manage-costs')

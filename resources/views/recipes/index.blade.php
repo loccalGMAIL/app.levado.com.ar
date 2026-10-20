@@ -76,7 +76,7 @@
                         <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
                         <x-sortable-th column="yield_quantity" :sort="$sort" :dir="$dir" align="right">Rendimiento</x-sortable-th>
                         <x-sortable-th column="selling_price" :sort="$sort" :dir="$dir" align="right">Precio ({{ $priceList->name }}) / u</x-sortable-th>
-                        <th class="px-4 py-3 font-medium">Estado</th>
+                        <x-sortable-th column="active" :sort="$sort" :dir="$dir">Estado</x-sortable-th>
                         <th class="px-4 py-3"></th>
                     </x-slot:head>
 

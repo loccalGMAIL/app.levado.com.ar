@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
 use App\Services\AdminActivityRecorder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -22,13 +23,20 @@ class UserController extends Controller
     public function index(): View
     {
         $users = User::with(['tenantUsers.tenant'])
+            ->withCount('tenantUsers')
             ->when(request('search'), function ($q, $search) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
                 return $q->where('name', 'like', "%{$escaped}%")
                     ->orWhere('email', 'like', "%{$escaped}%");
             })
-            ->latest()
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'name' => 'name',
+                'email' => 'email',
+                'created_at' => 'created_at',
+                'active' => 'active',
+                'tenant_users_count' => 'tenant_users_count',
+            ], fn (Builder $q) => $q->latest(), 'users.id'))
             ->paginate($this->perPage())
             ->withQueryString();
 

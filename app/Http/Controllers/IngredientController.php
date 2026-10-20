@@ -7,10 +7,12 @@ use App\Http\Requests\StoreIngredientRequest;
 use App\Http\Requests\UpdateIngredientRequest;
 use App\Models\Ingredient;
 use App\Models\StockLevel;
+use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\IngredientToProductConverter;
 use App\Services\RecipeCostPropagator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,9 +30,7 @@ class IngredientController extends Controller
     public function index(): View
     {
         $tenant = app(Tenant::class);
-        $sortable = ['name', 'cost_per_unit'];
-        $sort = in_array(request('sort'), $sortable) ? request('sort') : null;
-        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+        $locationId = $tenant->defaultLocation()->id;
 
         $ingredients = $tenant->ingredients()
             ->with('supplier')
@@ -42,7 +42,15 @@ class IngredientController extends Controller
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($sort, fn ($q) => $q->orderBy($sort, $dir), fn ($q) => $q->orderBy('name'))
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'name' => 'name',
+                'brand' => 'brand',
+                'supplier' => Supplier::select('name')->whereColumn('suppliers.id', 'ingredients.supplier_id'),
+                'unit' => 'unit',
+                'cost_per_package' => 'cost_per_package',
+                'cost_per_unit' => 'cost_per_unit',
+                'stock' => fn (Builder $q, string $dir) => StockLevel::orderCatalogByQuantity($q, 'ingredients', CatalogItemType::Ingredient, $locationId, $dir),
+            ], fn (Builder $q) => $q->orderBy('name'), 'ingredients.id'))
             ->paginate($this->perPage())
             ->withQueryString();
         // Todos, no sólo los activos: el modal de alta filtra a activos, pero el de edición
@@ -52,7 +60,7 @@ class IngredientController extends Controller
 
         $stockLevels = StockLevel::query()
             ->where('tenant_id', $tenant->id)
-            ->where('location_id', $tenant->defaultLocation()->id)
+            ->where('location_id', $locationId)
             ->where('stockable_type', CatalogItemType::Ingredient->value)
             ->whereIn('stockable_id', $ingredients->pluck('id'))
             ->get()

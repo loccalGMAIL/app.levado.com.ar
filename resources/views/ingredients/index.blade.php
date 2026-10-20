@@ -72,12 +72,12 @@
                 <x-data-table :paginator="$ingredients" total-label="ingrediente">
                     <x-slot:head>
                         <x-sortable-th column="name" :sort="$sort" :dir="$dir">Nombre</x-sortable-th>
-                        <th class="px-4 py-3 font-medium">Marca</th>
-                        <th class="px-4 py-3 font-medium">Proveedor</th>
-                        <th class="px-4 py-3 font-medium">Unidad</th>
-                        <th class="px-4 py-3 font-medium text-right">Por envase</th>
+                        <x-sortable-th column="brand" :sort="$sort" :dir="$dir">Marca</x-sortable-th>
+                        <x-sortable-th column="supplier" :sort="$sort" :dir="$dir">Proveedor</x-sortable-th>
+                        <x-sortable-th column="unit" :sort="$sort" :dir="$dir">Unidad</x-sortable-th>
+                        <x-sortable-th column="cost_per_package" :sort="$sort" :dir="$dir" align="right">Por envase</x-sortable-th>
                         <x-sortable-th column="cost_per_unit" :sort="$sort" :dir="$dir" align="right">Costo / sub-unidad</x-sortable-th>
-                        <th class="px-4 py-3 font-medium text-right">Stock</th>
+                        <x-sortable-th column="stock" :sort="$sort" :dir="$dir" align="right">Stock</x-sortable-th>
                         @can('manage-costs')
                             <th class="px-4 py-3"></th>
                         @endcan

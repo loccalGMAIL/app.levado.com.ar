@@ -99,7 +99,7 @@
                         <x-sortable-th column="quantity" :sort="$sort" :dir="$dir" align="right">Stock actual</x-sortable-th>
                         <x-sortable-th column="min_quantity" :sort="$sort" :dir="$dir" align="right">Mínimo</x-sortable-th>
                         <th class="px-4 py-3 font-medium text-right">Valuación</th>
-                        <th class="px-4 py-3 font-medium">Alerta</th>
+                        <x-sortable-th column="alert" :sort="$sort" :dir="$dir">Alerta</x-sortable-th>
                         @can('manage-costs')
                             <th class="px-4 py-3"></th>
                         @endcan

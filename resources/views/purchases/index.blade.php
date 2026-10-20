@@ -82,13 +82,6 @@
             @php
                 $sort = request('sort', 'date');
                 $dir  = request('dir', 'desc');
-                $sortUrl = fn (string $col): string => request()->url() . '?' . http_build_query(
-                    array_merge(request()->except(['sort', 'dir', 'page']), [
-                        'sort' => $col,
-                        'dir'  => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
-                    ])
-                );
-                $sortIcon = fn (string $col): string => $sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '';
             @endphp
 
             @if($purchases->isEmpty())
@@ -102,21 +95,11 @@
             @else
                 <x-data-table :paginator="$purchases" total-label="compra">
                     <x-slot:head>
-                        <th class="px-4 py-3 font-medium">
-                            <a href="{{ $sortUrl('date') }}" class="hover:text-corteza">Fecha {{ $sortIcon('date') }}</a>
-                        </th>
-                        <th class="px-4 py-3 font-medium">
-                            <a href="{{ $sortUrl('invoice_number') }}" class="hover:text-corteza">N° Factura {{ $sortIcon('invoice_number') }}</a>
-                        </th>
-                        <th class="px-4 py-3 font-medium">
-                            <a href="{{ $sortUrl('supplier') }}" class="hover:text-corteza">Proveedor {{ $sortIcon('supplier') }}</a>
-                        </th>
-                        <th class="px-4 py-3 font-medium text-center">
-                            <a href="{{ $sortUrl('items') }}" class="hover:text-corteza">Ítems {{ $sortIcon('items') }}</a>
-                        </th>
-                        <th class="px-4 py-3 font-medium text-right">
-                            <a href="{{ $sortUrl('total') }}" class="hover:text-corteza">Total {{ $includeIva ? '(c/IVA)' : '(s/IVA)' }} {{ $sortIcon('total') }}</a>
-                        </th>
+                        <x-sortable-th column="date" :sort="$sort" :dir="$dir">Fecha</x-sortable-th>
+                        <x-sortable-th column="invoice_number" :sort="$sort" :dir="$dir">N° Factura</x-sortable-th>
+                        <x-sortable-th column="supplier" :sort="$sort" :dir="$dir">Proveedor</x-sortable-th>
+                        <x-sortable-th column="items" :sort="$sort" :dir="$dir" class="text-center">Ítems</x-sortable-th>
+                        <x-sortable-th column="total" :sort="$sort" :dir="$dir" align="right">Total {{ $includeIva ? '(c/IVA)' : '(s/IVA)' }}</x-sortable-th>
                         <th class="px-4 py-3 font-medium"></th>
                     </x-slot:head>
 

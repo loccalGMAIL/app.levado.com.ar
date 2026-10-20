@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminAuditLog;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\View\View;
 
 class AuditLogController extends Controller
@@ -23,7 +24,15 @@ class AuditLogController extends Controller
             ->when($from && strtotime($from), fn ($q) => $q->whereDate('created_at', '>=', $from))
             ->when($to && strtotime($to), fn ($q) => $q->whereDate('created_at', '<=', $to))
             ->when(request('was_impersonating') !== null && request('was_impersonating') !== '', fn ($q) => $q->where('was_impersonating', (bool) request('was_impersonating')))
-            ->latest()
+            ->tap(fn (Builder $q) => $this->sortListing($q, [
+                'created_at' => 'created_at',
+                'tenant' => Tenant::select('name')->whereColumn('tenants.id', 'admin_audit_logs.tenant_id'),
+                'actor' => User::select('name')->whereColumn('users.id', 'admin_audit_logs.actor_user_id'),
+                'action' => 'action',
+                'target' => fn (Builder $q, string $dir) => $q->orderBy('target_type', $dir)->orderBy('target_id', $dir),
+                'ip_address' => 'ip_address',
+                'was_impersonating' => 'was_impersonating',
+            ], fn (Builder $q) => $q->latest(), 'admin_audit_logs.id'))
             ->paginate($this->perPage())
             ->withQueryString();
 

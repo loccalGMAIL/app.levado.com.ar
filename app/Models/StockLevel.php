@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CatalogItemType;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -65,6 +66,24 @@ class StockLevel extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'stockable_id');
+    }
+
+    /**
+     * Ordena un listado del catálogo (insumos, envases) por su stock en una
+     * sucursal. Un ítem sin fila de stock cuenta como 0, igual que en la vista.
+     *
+     * @param  Builder<covariant Model>  $query
+     * @param  'asc'|'desc'  $dir
+     */
+    public static function orderCatalogByQuantity(Builder $query, string $itemTable, CatalogItemType $type, int $locationId, string $dir): void
+    {
+        $quantity = static::query()
+            ->select('quantity')
+            ->where('location_id', $locationId)
+            ->where('stockable_type', $type->value)
+            ->whereColumn('stockable_id', "{$itemTable}.id");
+
+        $query->orderByRaw("COALESCE(({$quantity->toSql()}), 0) {$dir}", $quantity->getBindings());
     }
 
     public function hasAlert(): bool
