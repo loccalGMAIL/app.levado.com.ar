@@ -160,7 +160,7 @@
                             </div>
                             <div class="flex items-center justify-between text-xs text-masa-madre">
                                 <span x-text="fmt(r.quantity, 3) + ' ' + r.unit"></span>
-                                <span x-show="scaled" class="font-mono" x-text="'→ ' + fmt(r.scaled_quantity, 3) + ' ' + r.unit"></span>
+                                <span x-show="scaled" class="font-mono" x-text="'→ ' + fmt(r.quantity * scale, 3) + ' ' + r.unit"></span>
                             </div>
                             <template x-if="r.toggleUrl && canEdit">
                                 <label class="flex items-center gap-2 text-xs text-masa-madre">
@@ -210,7 +210,7 @@
                                     <td class="px-4 py-2 text-right font-mono" x-text="fmt(r.quantity, 3)"></td>
                                     <td class="px-4 py-2 text-masa-madre" x-text="r.unit"></td>
                                     <td class="px-4 py-2 text-right font-mono" x-text="fmtPercent(r)"></td>
-                                    <td class="px-4 py-2 text-right font-mono" x-show="scaled" x-text="fmt(r.scaled_quantity, 3) + ' ' + r.unit"></td>
+                                    <td class="px-4 py-2 text-right font-mono" x-show="scaled" x-text="fmt(r.quantity * scale, 3) + ' ' + r.unit"></td>
                                 </tr>
                             </template>
                         </tbody>
@@ -230,7 +230,7 @@
                             <span class="text-corteza min-w-0 truncate" x-text="r.name"></span>
                             <span class="flex items-center gap-4 shrink-0">
                                 <span class="font-mono text-masa-madre" x-text="fmt(r.quantity, 3) + ' ' + r.unit"></span>
-                                <span x-show="scaled" class="font-mono text-masa-madre" x-text="'→ ' + fmt(r.scaled_quantity, 3) + ' ' + r.unit"></span>
+                                <span x-show="scaled" class="font-mono text-masa-madre" x-text="'→ ' + fmt(r.quantity * scale, 3) + ' ' + r.unit"></span>
                                 <span class="font-mono text-corteza w-16 text-right" x-text="fmtPercent(r)"></span>
                             </span>
                         </div>
