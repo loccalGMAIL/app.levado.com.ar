@@ -13,6 +13,7 @@ class RecipeIngredientLine extends Model
         'ingredient_id',
         'quantity',
         'unit',
+        'is_flour',
     ];
 
     protected function casts(): array
@@ -20,6 +21,7 @@ class RecipeIngredientLine extends Model
         return [
             'quantity' => 'decimal:3',
             'unit' => Unit::class,
+            'is_flour' => 'boolean',
         ];
     }
 

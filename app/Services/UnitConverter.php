@@ -28,6 +28,18 @@ class UnitConverter
         return $this->dimension($a) === $this->dimension($b);
     }
 
+    /**
+     * Gramos equivalentes (volumen se toma como 1 ml = 1 gr). Null para unidades.
+     */
+    public function toGrams(float $amount, Unit $unit): ?float
+    {
+        if ($this->dimension($unit) === 'unit') {
+            return null;
+        }
+
+        return $this->toBase($amount, $unit);
+    }
+
     private function dimension(Unit $unit): string
     {
         return match ($unit) {

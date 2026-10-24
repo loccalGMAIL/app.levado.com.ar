@@ -21,7 +21,7 @@
                     ← Volver a la receta
                 </a>
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('recipes.print.pdf', $recipe) }}"
+                    <a href="{{ route('recipes.print.pdf', ['recipe' => $recipe] + request()->only('flour')) }}"
                         class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                         Descargar PDF
                     </a>

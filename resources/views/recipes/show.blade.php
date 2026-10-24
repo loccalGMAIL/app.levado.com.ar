@@ -275,6 +275,10 @@
                         class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
                         Imprimir
                     </a>
+                    <a href="{{ route('recipes.baker', $recipe) }}"
+                        class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
+                        % panadero
+                    </a>
                     <form method="POST" action="{{ route('recipes.copy', $recipe) }}">
                         @csrf
                         <button type="submit"
