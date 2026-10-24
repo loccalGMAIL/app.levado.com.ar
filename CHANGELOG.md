@@ -295,6 +295,33 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.20.0] — 2026-10-24
+
+Rama `v0.20.0-porcentaje-panadero`, sobre v0.19.0. **Porcentaje panadero** en recetas: la harina total es el 100% y cada ingrediente se expresa como % sobre ella.
+
+### Agregado
+
+- **Marca de harina**: cada línea de ingrediente se puede marcar como harina (se pueden marcar varias). La copia de una receta conserva la marca.
+- **Vista "% panadero"** (botón en el detalle de la receta): tabla con cantidad, unidad y %, resumen de harina total / masa total / suma de %, y aviso si no hay harina marcada. Los % se recalculan al marcar o desmarcar harinas.
+- **Calculadora de escalado**: se indica los kg de harina o de masa total que se quieren producir y la vista muestra la cantidad escalada de cada componente (no se guarda).
+- **Hoja imprimible**: columna % en Ingredientes y Sub-recetas cuando hay harina marcada, y opción "Imprimir escalada" (`?flour=` en gramos, también en el PDF) con la leyenda "Escalada a X kg de harina".
+
+### Reglas de cálculo
+
+- Peso (gr/kg) directo; volumen (ml/L/cc) se toma como 1 ml = 1 gr.
+- Las líneas en unidades y los insumos con subdivisiones muestran "—" y no entran en la masa total.
+- Las sub-recetas (masa madre, poolish) cuentan como un ingrediente más, con su % sobre la harina de esta receta; no se desglosan.
+
+### Técnico
+
+- Servicio `BakerPercentages` (sólo arrays/escalares, apto dompdf) y `UnitConverter::toGrams()`.
+- `RecipePrintSheet::for()` acepta los gramos de harina a los que escalar.
+- Ruta `PATCH recipes/{recipe}/ingredient-lines/{ingredientLine}/flour`; no recalcula costos.
+
+#### Al deployar
+
+- `php artisan migrate` (columna `is_flour` en `recipe_ingredient_lines`). `npm run build`.
+
 ## [0.19.0] — 2026-10-19
 
 Rama `ccr-440135ed-pip419`, sobre v0.18.0. Todas las columnas de datos de los listados se pueden ordenar de menor a mayor (y al revés, con un segundo clic).
