@@ -13,6 +13,7 @@ use App\Models\RecipePackagingLine;
 use App\Models\RecipeProductLine;
 use App\Models\RecipeSubrecipeLine;
 use App\Models\Tenant;
+use App\Services\BakerPercentages;
 use App\Services\RecipeCostPropagator;
 use App\Services\UnitConverter;
 use Illuminate\Http\JsonResponse;
@@ -89,6 +90,21 @@ class RecipeLineController extends Controller
             'unitLabel' => $subLabel ?? $ingredientLine->unit->short(),
             'costPerLineUnit' => $this->converter->convert(1.0, $ingredientLine->unit, $ingredient->unit) * (float) $ingredient->cost_per_unit,
         ]);
+    }
+
+    /**
+     * Marca/desmarca la línea como harina (base 100% del porcentaje panadero).
+     * No afecta costos, por eso no propaga.
+     */
+    public function toggleIngredientLineFlour(Request $request, Recipe $recipe, RecipeIngredientLine $ingredientLine, BakerPercentages $baker): JsonResponse
+    {
+        $this->authorize('update', $recipe);
+
+        $data = $request->validate(['is_flour' => ['required', 'boolean']]);
+
+        $ingredientLine->update($data);
+
+        return response()->json(['ok' => true] + $baker->for($recipe->fresh()));
     }
 
     public function destroyIngredientLine(Recipe $recipe, RecipeIngredientLine $ingredientLine): RedirectResponse

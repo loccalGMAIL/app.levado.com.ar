@@ -22,6 +22,11 @@
                 <p class="report-meta">
                     Rendimiento: {{ $sheet['meta']['yield'] }} · Emitido: {{ $sheet['meta']['generated_at'] }}
                 </p>
+                @if($sheet['baker']['scaled'])
+                    <p class="report-meta">
+                        Escalada a {{ rtrim(rtrim(number_format($sheet['baker']['flour_grams'] / 1000, 3, ',', '.'), '0'), ',') }} kg de harina
+                    </p>
+                @endif
             </td>
         </tr>
     </table>
@@ -42,13 +47,16 @@
             <p class="section-title">Ingredientes</p>
             <table class="data">
                 <thead>
-                    <tr><th>Ingrediente</th><th class="text-right">Cantidad</th></tr>
+                    <tr><th>Ingrediente</th><th class="text-right">Cantidad</th>@if($sheet['baker']['has_flour'])<th class="text-right">%</th>@endif</tr>
                 </thead>
                 <tbody>
                     @foreach($sheet['ingredients'] as $row)
                         <tr>
                             <td>{{ $row['name'] }}</td>
                             <td class="text-right amount">{{ number_format($row['quantity'], 3, ',', '.') }} {{ $row['unit'] }}</td>
+                            @if($sheet['baker']['has_flour'])
+                                <td class="text-right amount">{{ $row['percent'] === null ? '—' : number_format($row['percent'], 1, ',', '.').' %' }}</td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>
@@ -61,13 +69,16 @@
             <p class="section-title">Sub-recetas</p>
             <table class="data">
                 <thead>
-                    <tr><th>Sub-receta</th><th class="text-right">Cantidad</th></tr>
+                    <tr><th>Sub-receta</th><th class="text-right">Cantidad</th>@if($sheet['baker']['has_flour'])<th class="text-right">%</th>@endif</tr>
                 </thead>
                 <tbody>
                     @foreach($sheet['subrecipes'] as $row)
                         <tr>
                             <td>{{ $row['name'] }}</td>
                             <td class="text-right amount">{{ number_format($row['quantity'], 3, ',', '.') }} {{ $row['unit'] }}</td>
+                            @if($sheet['baker']['has_flour'])
+                                <td class="text-right amount">{{ $row['percent'] === null ? '—' : number_format($row['percent'], 1, ',', '.').' %' }}</td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>

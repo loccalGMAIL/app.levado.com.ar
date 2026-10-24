@@ -78,6 +78,46 @@ test('el PDF de la receta se descarga', function () {
         ->assertHeader('content-type', 'application/pdf');
 });
 
+test('la receta imprimible muestra la columna % sólo si hay harina marcada', function () {
+    [$user, $tenant] = recipePrintUser(TenantUserRole::Owner);
+    $recipe = recipeToPrint($tenant);
+
+    $this->actingAs($user)
+        ->get(route('recipes.print', $recipe))
+        ->assertOk()
+        ->assertDontSee('<th class="text-right">%</th>', false);
+
+    $recipe->ingredientLines()->update(['is_flour' => true]);
+
+    $this->actingAs($user)
+        ->get(route('recipes.print', $recipe))
+        ->assertOk()
+        ->assertSee('<th class="text-right">%</th>', false)
+        ->assertSee('100,0 %');
+});
+
+test('?flour= escala la hoja imprimible en pantalla y en PDF', function () {
+    [$user, $tenant] = recipePrintUser(TenantUserRole::Owner);
+    $recipe = recipeToPrint($tenant);
+    $recipe->ingredientLines()->update(['is_flour' => true]);
+
+    $this->actingAs($user)
+        ->get(route('recipes.print', [$recipe, 'flour' => 2000]))
+        ->assertOk()
+        ->assertSee('Escalada a 2 kg de harina')
+        ->assertSee('2.000,000')
+        ->assertSee(route('recipes.print.pdf', [$recipe, 'flour' => 2000]), false);
+
+    $this->actingAs($user)
+        ->get(route('recipes.print.pdf', [$recipe, 'flour' => 2000]))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
+
+    $this->actingAs($user)
+        ->get(route('recipes.print', [$recipe, 'flour' => -5]))
+        ->assertSessionHasErrors('flour');
+});
+
 test('el listado de recetas tiene un botón de impresión por receta', function () {
     [$user, $tenant] = recipePrintUser(TenantUserRole::Viewer);
     $recipe = recipeToPrint($tenant);

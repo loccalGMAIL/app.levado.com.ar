@@ -13,19 +13,26 @@ use Illuminate\Support\Carbon;
  */
 class RecipePrintSheet
 {
-    public function __construct(private readonly ReportLetterhead $letterhead) {}
+    public function __construct(
+        private readonly ReportLetterhead $letterhead,
+        private readonly BakerPercentages $baker,
+    ) {}
 
     /**
+     * Con $flourGrams las cantidades de ingredientes y sub-recetas salen
+     * escaladas a esa cantidad de harina.
+     *
      * @return array{
      *     business: array{name: string, razon_social: ?string, cuit: ?string, condicion_iva: ?string, currency: string, logo: ?string},
      *     meta: array{name: string, description: ?string, yield: string, kind: string, generated_at: string},
-     *     ingredients: list<array{name: string, quantity: float, unit: string}>,
-     *     subrecipes: list<array{name: string, quantity: float, unit: string}>,
+     *     baker: array{has_flour: bool, scaled: bool, flour_grams: float},
+     *     ingredients: list<array{name: string, quantity: float, unit: string, percent: ?float}>,
+     *     subrecipes: list<array{name: string, quantity: float, unit: string, percent: ?float}>,
      *     packagings: list<array{name: string, quantity: float}>,
      *     labor: list<array{name: string, hours: float}>,
      * }
      */
-    public function for(Recipe $recipe): array
+    public function for(Recipe $recipe, ?float $flourGrams = null): array
     {
         $recipe->loadMissing([
             'tenant',
@@ -36,8 +43,22 @@ class RecipePrintSheet
             'laborLines.laborType',
         ]);
 
+        $baker = $this->baker->for($recipe, $flourGrams);
+        $bakerRows = collect($baker['rows'])->groupBy('kind');
+        $toRow = fn (array $row) => [
+            'name' => $row['name'],
+            'quantity' => $row['scaled_quantity'],
+            'unit' => $row['unit'],
+            'percent' => $row['percent'],
+        ];
+
         return [
             'business' => $this->letterhead->for($recipe->tenant),
+            'baker' => [
+                'has_flour' => $baker['has_flour'],
+                'scaled' => $baker['has_flour'] && $flourGrams !== null && $flourGrams > 0,
+                'flour_grams' => $baker['flour_grams'] * $baker['scale'],
+            ],
             'meta' => [
                 'name' => $recipe->name,
                 'description' => $recipe->description,
@@ -45,26 +66,14 @@ class RecipePrintSheet
                 'kind' => $recipe->is_semi_elaborate ? 'Sub-receta' : 'Receta',
                 'generated_at' => Carbon::now()->format('d/m/Y H:i'),
             ],
-            'ingredients' => $recipe->ingredientLines
-                ->map(fn ($line) => [
-                    'name' => $line->ingredient->name,
-                    'quantity' => (float) $line->quantity,
-                    'unit' => $line->ingredient->subdivisions
-                        ? ($line->ingredient->subdivision_label ?? 'u')
-                        : $line->unit->short(),
-                ])
-                ->concat($recipe->productLines->map(fn ($line) => [
-                    'name' => $line->product->name,
-                    'quantity' => (float) $line->quantity,
-                    'unit' => $line->unit->short(),
-                ]))
+            'ingredients' => $bakerRows->get('ingredient', collect())
+                ->concat($bakerRows->get('product', collect()))
+                ->map($toRow)
+                ->values()
                 ->all(),
-            'subrecipes' => $recipe->subrecipeLines
-                ->map(fn ($line) => [
-                    'name' => $line->childRecipe->name,
-                    'quantity' => (float) $line->quantity_used,
-                    'unit' => $line->unit->short(),
-                ])
+            'subrecipes' => $bakerRows->get('subrecipe', collect())
+                ->map($toRow)
+                ->values()
                 ->all(),
             'packagings' => $recipe->packagingLines
                 ->map(fn ($line) => [

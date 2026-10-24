@@ -170,6 +170,7 @@ class RecipeController extends Controller
                     'ingredient_id' => $line->ingredient_id,
                     'quantity' => $line->quantity,
                     'unit' => $line->unit,
+                    'is_flour' => $line->is_flour,
                 ]);
             }
             foreach ($recipe->productLines as $line) {

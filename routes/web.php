@@ -44,6 +44,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchasePerceptionController;
 use App\Http\Controllers\PurchaseScanController;
+use App\Http\Controllers\RecipeBakerController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeLineController;
 use App\Http\Controllers\RecipePrintController;
@@ -114,6 +115,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         ->middleware('role:super_admin,owner,admin')
         ->name('recipes.semi-options');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
+    Route::get('recipes/{recipe}/baker', [RecipeBakerController::class, 'show'])->name('recipes.baker');
     Route::get('recipes/{recipe}/print', [RecipePrintController::class, 'show'])->name('recipes.print');
     Route::get('recipes/{recipe}/print/pdf', [RecipePrintController::class, 'pdf'])
         ->middleware('throttle:20,1')
@@ -227,6 +229,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     // sin necesidad de chequeos manuales de recipe_id/purchase_id en el controller.
     Route::post('recipes/{recipe}/ingredient-lines', [RecipeLineController::class, 'storeIngredientLine'])->name('recipes.ingredient-lines.store');
     Route::patch('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeLineController::class, 'updateIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.update');
+    Route::patch('recipes/{recipe}/ingredient-lines/{ingredientLine}/flour', [RecipeLineController::class, 'toggleIngredientLineFlour'])->scopeBindings()->name('recipes.ingredient-lines.flour');
     Route::delete('recipes/{recipe}/ingredient-lines/{ingredientLine}', [RecipeLineController::class, 'destroyIngredientLine'])->scopeBindings()->name('recipes.ingredient-lines.destroy');
 
     Route::post('recipes/{recipe}/product-lines', [RecipeLineController::class, 'storeProductLine'])->name('recipes.product-lines.store');
