@@ -2,10 +2,10 @@
     <x-slot name="title">Ingredientes</x-slot>
 
     @php
-        $errorsInCreate = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit', 'subdivisions', 'subdivision_label']) && old('_form') === 'create';
-        $errorsInEdit   = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit', 'subdivisions', 'subdivision_label']) && old('_form') === 'edit';
+        $errorsInCreate = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit', 'subdivisions', 'subdivision_label', 'grams_per_unit']) && old('_form') === 'create';
+        $errorsInEdit   = $errors->hasAny(['name', 'brand', 'supplier_id', 'unit', 'cost_per_unit', 'subdivisions', 'subdivision_label', 'grams_per_unit']) && old('_form') === 'edit';
         $supplierErrorsInCreate = $errors->hasAny(['name', 'phone', 'email', 'notes']) && old('_form') === 'supplier-quick-create';
-        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'unit' => '', 'cost_per_unit' => '', 'cost_per_package' => null, 'subdivisions' => '', 'subdivision_label' => ''];
+        $editingDefault = ['id' => null, 'name' => '', 'brand' => '', 'supplier_id' => '', 'unit' => '', 'cost_per_unit' => '', 'cost_per_package' => null, 'subdivisions' => '', 'subdivision_label' => '', 'grams_per_unit' => ''];
         $editingOnError = $errorsInEdit ? [
             'id'                => old('ingredient_id'),
             'name'              => old('name'),
@@ -16,6 +16,7 @@
             'cost_per_package'  => old('cost_per_package'),
             'subdivisions'      => old('subdivisions'),
             'subdivision_label' => old('subdivision_label'),
+            'grams_per_unit'    => old('grams_per_unit'),
         ] : $editingDefault;
     @endphp
 
@@ -100,6 +101,7 @@
                                 'cost_per_package'  => $ingredient->cost_per_package !== null ? round((float) $ingredient->cost_per_package, 2) : null,
                                 'subdivisions'      => $ingredient->subdivisions ?? '',
                                 'subdivision_label' => $ingredient->subdivision_label ?? '',
+                                'grams_per_unit'    => $ingredient->grams_per_unit !== null ? (float) $ingredient->grams_per_unit : '',
                             ];
                         @endphp
                         <x-data-table.row :dimmed="! $ingredient->active">

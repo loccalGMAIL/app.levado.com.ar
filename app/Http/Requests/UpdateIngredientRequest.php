@@ -30,6 +30,7 @@ class UpdateIngredientRequest extends FormRequest
             'cost_per_unit' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'subdivisions' => ['nullable', 'integer', 'min:2'],
             'subdivision_label' => ['nullable', 'string', 'max:50'],
+            'grams_per_unit' => ['nullable', 'numeric', 'gt:0', 'max:9999999'],
         ];
     }
 
@@ -39,6 +40,7 @@ class UpdateIngredientRequest extends FormRequest
         return [
             'subdivisions' => 'unidades por envase',
             'subdivision_label' => 'nombre de la unidad',
+            'grams_per_unit' => 'peso por unidad',
         ];
     }
 

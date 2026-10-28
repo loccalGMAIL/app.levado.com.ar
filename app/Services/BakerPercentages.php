@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\Unit;
 use App\Models\Recipe;
+use App\Models\RecipeIngredientLine;
 
 /**
  * Porcentaje panadero: la harina (suma de las líneas marcadas) es el 100% y
@@ -43,7 +45,7 @@ class BakerPercentages
                 'is_flour' => (bool) $line->is_flour,
                 'quantity' => (float) $line->quantity,
                 'unit' => $subdivided ? ($line->ingredient->subdivision_label ?? 'u') : $line->unit->short(),
-                'grams' => $subdivided ? null : $this->converter->toGrams((float) $line->quantity, $line->unit),
+                'grams' => $this->ingredientGrams($line, $subdivided),
             ];
         }
 
@@ -101,5 +103,21 @@ class BakerPercentages
             'has_flour' => $hasFlour,
             'scale' => $scale,
         ];
+    }
+
+    /**
+     * Gramos de una línea de ingrediente. Lo que va en unidades sólo pesa si el
+     * ingrediente tiene cargado su peso por unidad (huevo ≈ 50 gr); si no, queda
+     * fuera de la masa.
+     */
+    private function ingredientGrams(RecipeIngredientLine $line, bool $subdivided): ?float
+    {
+        $gramsPerUnit = $line->ingredient->grams_per_unit;
+
+        if ($line->unit === Unit::Unidad && $gramsPerUnit !== null) {
+            return (float) $line->quantity * (float) $gramsPerUnit;
+        }
+
+        return $subdivided ? null : $this->converter->toGrams((float) $line->quantity, $line->unit);
     }
 }

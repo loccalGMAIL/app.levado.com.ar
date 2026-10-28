@@ -44,6 +44,9 @@
             fmt(n, d = 2) {
                 return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: d });
             },
+            fmtScaled(r) {
+                return this.fmt(r.quantity * this.scale, r.unit === 'u' ? 1 : 3) + ' ' + r.unit;
+            },
             fmtPercent(r) {
                 const p = this.percent(r);
                 return p === null ? '—' : this.fmt(p, 1) + ' %';
@@ -160,7 +163,7 @@
                             </div>
                             <div class="flex items-center justify-between text-xs text-masa-madre">
                                 <span x-text="fmt(r.quantity, 3) + ' ' + r.unit"></span>
-                                <span x-show="scaled" class="font-mono" x-text="'→ ' + fmt(r.quantity * scale, 3) + ' ' + r.unit"></span>
+                                <span x-show="scaled" class="font-mono" x-text="'→ ' + fmtScaled(r)"></span>
                             </div>
                             <template x-if="r.toggleUrl && canEdit">
                                 <label class="flex items-center gap-2 text-xs text-masa-madre">
@@ -194,6 +197,7 @@
                                 <tr :class="r.is_flour ? 'bg-harina/60' : ''">
                                     <td class="px-4 py-2 text-corteza">
                                         <span x-text="r.name"></span>
+                                        <span x-show="r.grams === null" class="ml-1 text-xs text-masa-madre">sin peso</span>
                                         <template x-if="r.kind === 'product'">
                                             <span class="ml-1 px-1.5 py-0.5 bg-miga rounded text-[10px] font-semibold uppercase text-masa-madre align-middle">Reventa</span>
                                         </template>
@@ -210,7 +214,7 @@
                                     <td class="px-4 py-2 text-right font-mono" x-text="fmt(r.quantity, 3)"></td>
                                     <td class="px-4 py-2 text-masa-madre" x-text="r.unit"></td>
                                     <td class="px-4 py-2 text-right font-mono" x-text="fmtPercent(r)"></td>
-                                    <td class="px-4 py-2 text-right font-mono" x-show="scaled" x-text="fmt(r.quantity * scale, 3) + ' ' + r.unit"></td>
+                                    <td class="px-4 py-2 text-right font-mono" x-show="scaled" x-text="fmtScaled(r)"></td>
                                 </tr>
                             </template>
                         </tbody>
