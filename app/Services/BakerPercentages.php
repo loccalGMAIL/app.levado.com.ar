@@ -14,6 +14,9 @@ use App\Models\RecipeIngredientLine;
  */
 class BakerPercentages
 {
+    /** Peso aproximado de un huevo cuando el insumo no tiene «peso por unidad» cargado. */
+    private const DEFAULT_EGG_GRAMS = 60;
+
     public function __construct(private readonly UnitConverter $converter) {}
 
     /**
@@ -113,6 +116,10 @@ class BakerPercentages
     private function ingredientGrams(RecipeIngredientLine $line, bool $subdivided): ?float
     {
         $gramsPerUnit = $line->ingredient->grams_per_unit;
+
+        if ($gramsPerUnit === null && $line->unit === Unit::Unidad && stripos($line->ingredient->name, 'huevo') !== false) {
+            $gramsPerUnit = self::DEFAULT_EGG_GRAMS;
+        }
 
         if ($line->unit === Unit::Unidad && $gramsPerUnit !== null) {
             return (float) $line->quantity * (float) $gramsPerUnit;

@@ -86,13 +86,13 @@ test('kg se convierte a gramos y ml cuenta como gramo', function () {
 test('las unidades y los insumos con subdivisiones no entran en la masa', function () {
     $recipe = Recipe::factory()->for(Tenant::factory()->create())->create();
     bakerLine($recipe, 'Harina 000', 1000, Unit::Gramo, true);
-    bakerLine($recipe, 'Huevo', 3, Unit::Unidad);
+    bakerLine($recipe, 'Sobre de vainilla', 3, Unit::Unidad);
     bakerLine($recipe, 'Levadura', 2, Unit::Gramo, false, ['subdivisions' => 10, 'subdivision_label' => 'sobre']);
 
     $result = app(BakerPercentages::class)->for($recipe);
 
-    expect(bakerRow($result, 'Huevo')['grams'])->toBeNull()
-        ->and(bakerRow($result, 'Huevo')['percent'])->toBeNull()
+    expect(bakerRow($result, 'Sobre de vainilla')['grams'])->toBeNull()
+        ->and(bakerRow($result, 'Sobre de vainilla')['percent'])->toBeNull()
         ->and(bakerRow($result, 'Levadura')['grams'])->toBeNull()
         ->and($result['dough_grams'])->toBe(1000.0);
 });
@@ -230,4 +230,16 @@ test('copiar una receta conserva la marca de harina', function () {
 
     $copy = Recipe::where('name', $recipe->name.' (copia)')->firstOrFail();
     expect($copy->ingredientLines()->first()->is_flour)->toBeTrue();
+});
+
+test('un huevo sin peso por unidad cargado asume 60 gr', function () {
+    $recipe = Recipe::factory()->for(Tenant::factory()->create())->create();
+    bakerLine($recipe, 'Harina 000', 1000, Unit::Gramo, true);
+    bakerLine($recipe, 'Huevos', 5, Unit::Unidad);
+
+    $result = app(BakerPercentages::class)->for($recipe);
+
+    expect(bakerRow($result, 'Huevos')['grams'])->toBe(300.0)
+        ->and(bakerRow($result, 'Huevos')['percent'])->toBe(30.0)
+        ->and($result['dough_grams'])->toBe(1300.0);
 });
