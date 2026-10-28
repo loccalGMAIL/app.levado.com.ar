@@ -303,6 +303,8 @@ Rama `v0.20.2-panadero-peso-por-unidad`, sobre v0.20.0. El porcentaje panadero a
 
 - **Peso por unidad** en el insumo (ej.: huevo ≈ 50 gr): las líneas en unidades de ese insumo entran en la masa total y tienen su %.
 
+- **Huevos sin peso cargado**: los insumos con «huevo» en el nombre, en unidades y sin peso por unidad, asumen ≈ 60 gr para entrar en la masa y tener su %.
+
 ### Cambiado
 
 - Se quitó el aviso de "ingredientes en unidades sin peso cargado" de la vista % panadero; esas líneas siguen mostrando "sin peso" en la tabla.
