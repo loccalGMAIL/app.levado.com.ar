@@ -105,6 +105,16 @@
             </div>
         </div>
 
+        <div x-show="editing.unit === 'u'" class="border-t border-miga pt-4">
+            <x-input-label for="edit_grams_per_unit" value="Peso por unidad en gr (opcional)" />
+            <x-text-input id="edit_grams_per_unit" name="grams_per_unit" type="number"
+                step="any" min="0"
+                class="mt-1 block w-full"
+                x-model="editing.grams_per_unit" />
+            <p class="mt-1 text-xs text-masa-madre">Sólo para el % panadero (ej.: huevo ≈ 50 gr). Así la unidad cuenta en la masa.</p>
+            <x-input-error :messages="$errors->get('grams_per_unit')" class="mt-2" />
+        </div>
+
         <div class="flex gap-3 pt-2">
             <x-primary-button data-loading="Guardando…">Guardar cambios</x-primary-button>
             <button type="button"

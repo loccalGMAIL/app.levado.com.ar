@@ -29,7 +29,6 @@ class RecipePrintSheet
      *     ingredients: list<array{name: string, quantity: float, unit: string, percent: ?float}>,
      *     subrecipes: list<array{name: string, quantity: float, unit: string, percent: ?float}>,
      *     packagings: list<array{name: string, quantity: float}>,
-     *     labor: list<array{name: string, hours: float}>,
      * }
      */
     public function for(Recipe $recipe, ?float $flourGrams = null): array
@@ -40,7 +39,6 @@ class RecipePrintSheet
             'productLines.product',
             'subrecipeLines.childRecipe',
             'packagingLines.packaging',
-            'laborLines.laborType',
         ]);
 
         $baker = $this->baker->for($recipe, $flourGrams);
@@ -79,12 +77,6 @@ class RecipePrintSheet
                 ->map(fn ($line) => [
                     'name' => $line->packaging->name,
                     'quantity' => (float) $line->quantity,
-                ])
-                ->all(),
-            'labor' => $recipe->laborLines
-                ->map(fn ($line) => [
-                    'name' => $line->laborType->name,
-                    'hours' => (float) $line->hours,
                 ])
                 ->all(),
         ];

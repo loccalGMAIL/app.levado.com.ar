@@ -77,6 +77,10 @@ class IngredientController extends Controller
         $tenant = app(Tenant::class);
         $data = $request->validated();
 
+        if (($data['unit'] ?? '') !== 'u') {
+            $data['grams_per_unit'] = null;
+        }
+
         if (! empty($data['subdivisions']) && ($data['unit'] ?? '') === 'u') {
             $data['cost_per_package'] = $data['cost_per_unit'];
             $data['cost_per_unit'] = $data['cost_per_unit'] / $data['subdivisions'];
@@ -106,6 +110,10 @@ class IngredientController extends Controller
         $this->authorize('update', $ingredient);
 
         $data = $request->validated();
+
+        if (($data['unit'] ?? $ingredient->unit->value) !== 'u') {
+            $data['grams_per_unit'] = null;
+        }
 
         if (! empty($data['subdivisions']) && ($data['unit'] ?? $ingredient->unit->value) === 'u') {
             $data['cost_per_package'] = $data['cost_per_unit'];

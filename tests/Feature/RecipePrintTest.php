@@ -53,7 +53,7 @@ test('la receta imprimible muestra el encabezado del comercio y los ingredientes
         ->assertDontSee('Precio de venta');
 });
 
-test('la receta imprimible incluye envases y mano de obra', function () {
+test('la receta imprimible incluye envases pero no mano de obra', function () {
     [$user, $tenant] = recipePrintUser(TenantUserRole::Owner);
     $recipe = recipeToPrint($tenant);
 
@@ -65,7 +65,10 @@ test('la receta imprimible incluye envases y mano de obra', function () {
     $this->actingAs($user)
         ->get(route('recipes.print', $recipe))
         ->assertOk()
-        ->assertSeeInOrder(['Envases', 'Caja chica', 'Mano de obra', 'Oficial panadero', '1,50 h']);
+        ->assertSeeInOrder(['Envases', 'Caja chica'])
+        ->assertDontSee('Mano de obra')
+        ->assertDontSee('Oficial panadero')
+        ->assertDontSee('1,50 h');
 });
 
 test('el PDF de la receta se descarga', function () {
@@ -100,10 +103,14 @@ test('?flour= escala la hoja imprimible en pantalla y en PDF', function () {
     [$user, $tenant] = recipePrintUser(TenantUserRole::Owner);
     $recipe = recipeToPrint($tenant);
     $recipe->ingredientLines()->update(['is_flour' => true]);
+    $oficial = LaborType::factory()->for($tenant)->create(['name' => 'Oficial panadero']);
+    $recipe->laborLines()->create(['labor_type_id' => $oficial->id, 'hours' => 1.5]);
 
     $this->actingAs($user)
         ->get(route('recipes.print', [$recipe, 'flour' => 2000]))
         ->assertOk()
+        ->assertDontSee('Mano de obra')
+        ->assertDontSee('Oficial panadero')
         ->assertSee('Escalada a 2 kg de harina')
         ->assertSee('2.000,000')
         ->assertSee(route('recipes.print.pdf', [$recipe, 'flour' => 2000]), false);

@@ -14,3 +14,4 @@ Harina total = 100%; cada componente se expresa como % sobre ella. Rama `v0.20.0
 
 **Why:** leer la fórmula en %/escalar por harina o masa es la forma de trabajo del panadero.
 **How to apply:** si se agregan tipos de línea a la receta, decidir si entran en `BakerPercentages`; no usar `json_encode` de `@js` en tests con `"` (se serializa como `"`).
+- **v0.20.2**: `ingredients.grams_per_unit` (nullable); las líneas en `u` de un insumo con peso por unidad pesan `quantity * grams_per_unit` y entran en la masa. Sin él (o con `subdivisions`) siguen en null. El escalado muestra `u` con 1 decimal (`fmtScaled`).

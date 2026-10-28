@@ -97,6 +97,33 @@ test('las unidades y los insumos con subdivisiones no entran en la masa', functi
         ->and($result['dough_grams'])->toBe(1000.0);
 });
 
+test('una unidad con peso por unidad cargado entra en la masa y escala de forma lineal', function () {
+    $recipe = Recipe::factory()->for(Tenant::factory()->create())->create();
+    bakerLine($recipe, 'Harina 000', 1000, Unit::Gramo, true);
+    bakerLine($recipe, 'Huevo', 10, Unit::Unidad, false, ['grams_per_unit' => 50]);
+
+    $result = app(BakerPercentages::class)->for($recipe, 2000);
+
+    expect(bakerRow($result, 'Huevo')['grams'])->toBe(500.0)
+        ->and(bakerRow($result, 'Huevo')['percent'])->toBe(50.0)
+        ->and($result['dough_grams'])->toBe(1500.0)
+        ->and(bakerRow($result, 'Huevo')['scaled_quantity'])->toBe(20.0);
+});
+
+test('el peso por unidad se guarda sólo cuando la unidad del ingrediente es unidad', function () {
+    [$user, $tenant] = bakerUser(TenantUserRole::Owner);
+
+    $this->actingAs($user)->post(route('ingredients.store'), [
+        'name' => 'Huevos', 'unit' => 'u', 'cost_per_unit' => 100, 'grams_per_unit' => 50,
+    ])->assertSessionHasNoErrors();
+    $this->actingAs($user)->post(route('ingredients.store'), [
+        'name' => 'Harina', 'unit' => 'gr', 'cost_per_unit' => 1, 'grams_per_unit' => 50,
+    ])->assertSessionHasNoErrors();
+
+    expect((float) Ingredient::where('name', 'Huevos')->value('grams_per_unit'))->toBe(50.0)
+        ->and(Ingredient::where('name', 'Harina')->value('grams_per_unit'))->toBeNull();
+});
+
 test('una sub-receta se cuenta como una línea más con su porcentaje', function () {
     $tenant = Tenant::factory()->create();
     $recipe = Recipe::factory()->for($tenant)->create();

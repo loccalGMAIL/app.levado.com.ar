@@ -27,6 +27,7 @@ class Ingredient extends Model
         'cost_per_package',
         'subdivisions',
         'subdivision_label',
+        'grams_per_unit',
         'active',
         'converted_to_product_id',
     ];
@@ -38,6 +39,7 @@ class Ingredient extends Model
             'cost_per_unit' => 'decimal:4',
             'cost_per_package' => 'decimal:4',
             'subdivisions' => 'integer',
+            'grams_per_unit' => 'decimal:3',
             'active' => 'boolean',
         ];
     }
