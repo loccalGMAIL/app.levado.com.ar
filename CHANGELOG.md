@@ -295,6 +295,27 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.20.2] — 2026-10-28
+
+Rama `v0.20.2-panadero-peso-por-unidad`, sobre v0.20.0. El porcentaje panadero ahora cuenta los ingredientes que se miden en unidades (huevos).
+
+### Agregado
+
+- **Peso por unidad** en el insumo (ej.: huevo ≈ 50 gr): las líneas en unidades de ese insumo entran en la masa total y tienen su %.
+
+### Cambiado
+
+- Se quitó el aviso de "ingredientes en unidades sin peso cargado" de la vista % panadero; esas líneas siguen mostrando "sin peso" en la tabla.
+- En el escalado, las cantidades en unidades se muestran con un solo decimal.
+
+### Técnico
+
+- Columna `grams_per_unit` (nullable) en `ingredients`; `BakerPercentages` la usa para las líneas en `Unit::Unidad`.
+
+#### Al deployar
+
+- `php artisan migrate`.
+
 ## [0.20.0] — 2026-10-24
 
 Rama `v0.20.0-porcentaje-panadero`, sobre v0.19.0. **Porcentaje panadero** en recetas: la harina total es el 100% y cada ingrediente se expresa como % sobre ella.
