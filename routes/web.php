@@ -396,6 +396,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'super-a
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
     Route::post('users', [AdminUserController::class, 'store'])->name('users.store');
     Route::patch('users/{user}', [AdminUserController::class, 'update'])->name('users.update');
+    Route::patch('users/{user}/memberships/{tenantUser}', [AdminUserController::class, 'updateMembership'])->name('users.memberships.update');
     Route::patch('users/{user}/toggle-active', [AdminUserController::class, 'toggleActive'])->name('users.toggle-active');
     Route::post('users/{user}/send-password-reset', [AdminUserController::class, 'sendPasswordReset'])->name('users.send-password-reset');
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
