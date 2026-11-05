@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\TenantUserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Models\Tenant;
@@ -13,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\View\View;
 
@@ -131,6 +133,64 @@ class UserController extends Controller
             ->with('status', $passwordChanged
                 ? "Usuario {$user->email} actualizado. Se cambió su contraseña."
                 : "Usuario {$user->email} actualizado.");
+    }
+
+    /**
+     * Cambia el comercio y/o el rol de una membresía del usuario.
+     */
+    public function updateMembership(Request $request, User $user, TenantUser $tenantUser): RedirectResponse
+    {
+        abort_unless($tenantUser->user_id === $user->id, 404);
+
+        $validated = $request->validateWithBag('updateMembership', [
+            'tenant_id' => [
+                'required',
+                'integer',
+                'exists:tenants,id',
+                Rule::unique('tenant_users', 'tenant_id')
+                    ->where('user_id', $user->id)
+                    ->ignore($tenantUser->id),
+            ],
+            'role' => ['required', Rule::enum(TenantUserRole::class)],
+        ], [
+            'tenant_id.unique' => 'El usuario ya pertenece a ese comercio.',
+        ]);
+
+        $newRole = TenantUserRole::from($validated['role']);
+
+        if ($user->is($request->user())
+            && $tenantUser->role === TenantUserRole::SuperAdmin
+            && $newRole !== TenantUserRole::SuperAdmin) {
+            return back()->with('error', 'No podés quitarte el rol de super admin a vos mismo.');
+        }
+
+        $previousTenant = $tenantUser->tenant()->firstOrFail();
+        $previousRole = $tenantUser->role;
+
+        $tenantUser->update([
+            'tenant_id' => (int) $validated['tenant_id'],
+            'role' => $newRole,
+        ]);
+
+        $newTenant = $tenantUser->tenant()->firstOrFail();
+
+        $this->recorder->record(
+            actor: $request->user(),
+            targetType: 'user',
+            targetId: $user->id,
+            action: 'user.membership_updated',
+            payload: [
+                'email' => $user->email,
+                'from_tenant' => $previousTenant->name,
+                'to_tenant' => $newTenant->name,
+                'from_role' => $previousRole->value,
+                'to_role' => $newRole->value,
+            ],
+            tenantId: $newTenant->id,
+        );
+
+        return back(fallback: route('admin.users.index'))
+            ->with('status', "Usuario {$user->email} ahora pertenece a {$newTenant->name} como {$newRole->label()}.");
     }
 
     public function toggleActive(Request $request, User $user): RedirectResponse

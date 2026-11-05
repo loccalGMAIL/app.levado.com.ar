@@ -173,3 +173,107 @@ test('editar usuario con confirmación distinta falla en el bag updateUser', fun
 
     expect(Hash::check('Clave-original-1', $user->fresh()->password))->toBeTrue();
 });
+
+test('cambiar el comercio y rol de un usuario mueve su membresía', function () {
+    $from = Tenant::factory()->create();
+    $to = Tenant::factory()->create(['name' => 'Panadería Destino']);
+    $user = User::factory()->create();
+    $membership = TenantUser::create([
+        'tenant_id' => $from->id,
+        'user_id' => $user->id,
+        'role' => TenantUserRole::Viewer->value,
+    ]);
+
+    $this->actingAs(adminUserCreationSuperAdmin())
+        ->patch(route('admin.users.memberships.update', [$user, $membership]), [
+            'tenant_id' => $to->id,
+            'role' => TenantUserRole::Admin->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('status');
+
+    $membership->refresh();
+
+    expect($membership->tenant_id)->toBe($to->id)
+        ->and($membership->role)->toBe(TenantUserRole::Admin)
+        ->and($user->tenantUsers()->count())->toBe(1);
+
+    $this->assertDatabaseHas('admin_audit_logs', [
+        'action' => 'user.membership_updated',
+        'target_id' => $user->id,
+        'tenant_id' => $to->id,
+    ]);
+});
+
+test('no se puede mover un usuario a un comercio al que ya pertenece', function () {
+    $tenantA = Tenant::factory()->create();
+    $tenantB = Tenant::factory()->create();
+    $user = User::factory()->create();
+    $membership = TenantUser::create(['tenant_id' => $tenantA->id, 'user_id' => $user->id, 'role' => TenantUserRole::Viewer->value]);
+    TenantUser::create(['tenant_id' => $tenantB->id, 'user_id' => $user->id, 'role' => TenantUserRole::Viewer->value]);
+
+    $this->actingAs(adminUserCreationSuperAdmin())
+        ->patch(route('admin.users.memberships.update', [$user, $membership]), [
+            'tenant_id' => $tenantB->id,
+            'role' => TenantUserRole::Viewer->value,
+        ])
+        ->assertSessionHasErrorsIn('updateMembership', 'tenant_id');
+
+    expect($membership->fresh()->tenant_id)->toBe($tenantA->id);
+});
+
+test('la membresía debe pertenecer al usuario de la ruta', function () {
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    $otherMembership = TenantUser::create([
+        'tenant_id' => Tenant::factory()->create()->id,
+        'user_id' => $other->id,
+        'role' => TenantUserRole::Viewer->value,
+    ]);
+
+    $this->actingAs(adminUserCreationSuperAdmin())
+        ->patch(route('admin.users.memberships.update', [$user, $otherMembership]), [
+            'tenant_id' => Tenant::factory()->create()->id,
+            'role' => TenantUserRole::Viewer->value,
+        ])
+        ->assertNotFound();
+});
+
+test('un super admin no puede quitarse su propio rol de super admin', function () {
+    $admin = adminUserCreationSuperAdmin();
+    $membership = $admin->tenantUsers()->firstOrFail();
+
+    $this->actingAs($admin)
+        ->patch(route('admin.users.memberships.update', [$admin, $membership]), [
+            'tenant_id' => $membership->tenant_id,
+            'role' => TenantUserRole::Owner->value,
+        ])
+        ->assertSessionHas('error');
+
+    expect($membership->fresh()->role)->toBe(TenantUserRole::SuperAdmin);
+});
+
+test('un usuario que no es super admin no puede cambiar membresías', function () {
+    $tenant = Tenant::factory()->create();
+    $owner = User::factory()->create();
+    $membership = TenantUser::create(['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => TenantUserRole::Owner->value]);
+
+    $this->actingAs($owner)
+        ->patch(route('admin.users.memberships.update', [$owner, $membership]), [
+            'tenant_id' => Tenant::factory()->create()->id,
+            'role' => TenantUserRole::Owner->value,
+        ])
+        ->assertForbidden();
+
+    expect($membership->fresh()->tenant_id)->toBe($tenant->id);
+});
+
+test('el listado de usuarios muestra el editor de comercios', function () {
+    $user = User::factory()->create();
+    TenantUser::create(['tenant_id' => Tenant::factory()->create()->id, 'user_id' => $user->id, 'role' => TenantUserRole::Viewer->value]);
+
+    $this->actingAs(adminUserCreationSuperAdmin())
+        ->get(route('admin.users.index'))
+        ->assertOk()
+        ->assertSee('memberships', false);
+});

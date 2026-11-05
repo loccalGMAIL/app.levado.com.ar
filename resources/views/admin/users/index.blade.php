@@ -5,10 +5,35 @@
         <h2 class="font-semibold text-xl text-corteza leading-tight">Usuarios</h2>
     </x-slot>
 
+    @php
+        $editPayloads = $users->getCollection()->mapWithKeys(fn ($user) => [$user->id => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'memberships' => $user->tenantUsers->map(fn ($tu) => [
+                'id' => $tu->id,
+                'tenant_id' => $tu->tenant_id,
+                'role' => $tu->role->value,
+            ])->values()->all(),
+        ]]);
+
+        $reopenUserId = (int) old('_edit_user_id');
+        $reopenEdit = null;
+
+        if ($errors->updateUser->any()) {
+            $reopenEdit = array_merge($editPayloads[$reopenUserId] ?? ['id' => $reopenUserId, 'memberships' => []], [
+                'name' => old('name'),
+                'email' => old('email'),
+            ]);
+        } elseif ($errors->updateMembership->any()) {
+            $reopenEdit = $editPayloads[$reopenUserId] ?? null;
+        }
+    @endphp
+
     <div class="py-10" x-data="{
         showCreate: false,
-        editUser: @js($errors->updateUser->any() ? ['id' => (int) old('_edit_user_id'), 'name' => old('name'), 'email' => old('email')] : null),
-        openEdit(user) { this.editUser = user; },
+        editUser: @js($reopenEdit),
+        openEdit(user) { this.editUser = JSON.parse(JSON.stringify(user)); },
         closeEdit() { this.editUser = null; }
     }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -101,7 +126,7 @@
                                     <div class="flex items-center gap-2">
                                         {{-- Editar --}}
                                         <button
-                                            @click="openEdit({ id: {{ $user->id }}, name: '{{ addslashes($user->name) }}', email: '{{ addslashes($user->email) }}' })"
+                                            @click="openEdit(@js($editPayloads[$user->id]))"
                                             title="Editar usuario"
                                             class="p-1.5 rounded text-masa-madre hover:text-corteza hover:bg-miga transition-colors">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -326,6 +351,51 @@
                             </button>
                         </div>
                     </form>
+                </template>
+
+                {{-- Comercios del usuario --}}
+                <template x-if="editUser && editUser.memberships.length > 0">
+                    <div class="mt-6 pt-5 border-t border-miga space-y-3">
+                        <h4 class="text-sm font-semibold text-corteza">Comercios</h4>
+
+                        @if($errors->updateMembership->any())
+                            <p class="text-xs text-red-600">{{ $errors->updateMembership->first() }}</p>
+                        @endif
+
+                        <template x-for="membership in editUser.memberships" :key="membership.id">
+                            <form method="POST" :action="`/admin/users/${editUser.id}/memberships/${membership.id}`"
+                                class="flex items-end gap-2">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="_edit_user_id" :value="editUser.id">
+
+                                <div class="flex-1 min-w-0">
+                                    <label class="block text-xs font-medium text-masa-madre mb-1">Comercio</label>
+                                    <select name="tenant_id" x-model.number="membership.tenant_id" required
+                                        class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                                        @foreach($tenants as $tenant)
+                                            <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="w-32">
+                                    <label class="block text-xs font-medium text-masa-madre mb-1">Rol</label>
+                                    <select name="role" x-model="membership.role" required
+                                        class="w-full border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                                        @foreach(\App\Enums\TenantUserRole::cases() as $role)
+                                            <option value="{{ $role->value }}">{{ $role->label() }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <button type="submit"
+                                    class="px-3 py-2 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors">
+                                    Guardar
+                                </button>
+                            </form>
+                        </template>
+                    </div>
                 </template>
             </div>
         </div>
