@@ -56,3 +56,12 @@ test('la edición de una compra ofrece girar el comprobante', function () {
         ->assertSee('rotateInvoice(-1)', escape: false)
         ->assertSee('rotateInvoice(1)', escape: false);
 });
+
+test('la pantalla de escaneo recoge la foto sacada desde compras', function () {
+    [$user] = ownerForScan();
+
+    $this->actingAs($user)
+        ->get(route('purchases.scan.create', ['desde' => 'camara']))
+        ->assertOk()
+        ->assertSee('takeStashedInvoiceFile');
+});

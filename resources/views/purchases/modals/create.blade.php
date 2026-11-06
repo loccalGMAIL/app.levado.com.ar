@@ -1,4 +1,4 @@
-<x-crud-modal name="purchase-create" title="Nueva compra" :show="$errorsInCreate">
+<x-crud-modal name="purchase-create" title="Nueva compra" :show="$errorsInCreate" :focusable="false">
     <form method="POST" action="{{ route('purchases.store') }}" enctype="multipart/form-data" class="space-y-4"
           x-data="{
               supplierId: '{{ old('supplier_id', '') }}',

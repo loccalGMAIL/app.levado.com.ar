@@ -20,6 +20,7 @@ import './purchases/line-form';
 import './purchases/perception-form';
 import './expenses/receipt-scan';
 import './image-compress';
+import './invoice-handoff';
 import './scroll-restore';
 import './dashboard-charts';
 

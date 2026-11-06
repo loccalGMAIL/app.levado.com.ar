@@ -318,3 +318,29 @@ test('el modal de editar muestra la alícuota real de la factura y no roba el fo
     expect($editInit)->not->toContain('firstNonButtonFocusable().focus()')
         ->and($addInit)->toContain('firstNonButtonFocusable().focus()');
 });
+
+test('«Leer factura» es la acción principal de compras y abre la cámara en el celular', function () {
+    [$user] = ownerForPurchaseCrud();
+
+    $html = $this->actingAs($user)->get(route('purchases.index'))->assertOk()->getContent();
+    $scanUrl = route('purchases.scan.create');
+
+    $enlaceLeer = str($html)->after('href="'.$scanUrl.'"')->before('</a>')->toString();
+    $botonNueva = str($html)->after("\$dispatch('open-modal', 'purchase-create')")->before('</button>')->toString();
+
+    expect($enlaceLeer)->toContain('Leer factura')
+        ->and(str($html)->after('href="'.$scanUrl.'"')->before('>')->toString())->toContain('bg-corteza')
+        ->and($botonNueva)->toContain('border-corteza')->not->toContain('bg-corteza')
+        ->and($html)->toContain('capture="environment"')
+        ->toContain('stashInvoiceFile');
+});
+
+test('el modal de nueva compra no roba el foco al abrir', function () {
+    // Con foco inicial se abría solo el desplegable de proveedor.
+    [$user] = ownerForPurchaseCrud();
+
+    $html = $this->actingAs($user)->get(route('purchases.index'))->assertOk()->getContent();
+    $createInit = substr($html, strpos($html, "== 'purchase-create'") - 700, 700);
+
+    expect($createInit)->not->toContain('firstNonButtonFocusable().focus()');
+});

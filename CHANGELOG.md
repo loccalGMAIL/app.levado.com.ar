@@ -295,6 +295,26 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.20.3] — 2026-11-06
+
+Rama `v0.20.3-compras-leer-factura`, sobre v0.20.2. Ajustes de la pantalla de Compras: **Leer factura** pasa a ser la acción principal y en el celular abre la cámara directamente.
+
+### Cambiado
+
+- **Leer factura** es ahora el botón principal del encabezado de Compras (relleno); **+ Nueva compra** queda con borde.
+- **En el celular, Leer factura abre la cámara** al tocarlo y lleva la foto a la pantalla de lectura, lista para girar o revisar antes de enviarla. En escritorio sigue yendo a la pantalla de lectura. Si el navegador no deja guardar la foto (modo privado), se abre la pantalla vacía como antes.
+- El modal **Nueva compra** ya no abre solo el desplegable de proveedor.
+- En el celular, el botón **Percepciones** se abrevia a «Percep.» para no desbordar.
+
+### Técnico
+
+- `resources/js/invoice-handoff.js`: traspaso de la foto entre páginas por IndexedDB (`stashInvoiceFile` / `takeStashedInvoiceFile`). `scan/create.blade.php` la recoge con `?desde=camara` (`onPick` pasó a `loadFile`).
+- Ícono `camera` en `x-icon`. `x-list-header` fuerza `inline-flex` en sus hijos: para ocultar por breakpoint se usa `!hidden`.
+
+#### Al deployar
+
+- `npm run build`.
+
 ## [0.20.2] — 2026-10-28
 
 Rama `v0.20.2-panadero-peso-por-unidad`, sobre v0.20.0. El porcentaje panadero ahora cuenta los ingredientes que se miden en unidades (huevos).
