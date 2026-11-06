@@ -470,3 +470,9 @@ Lo que **no** se tocó, detectado pero fuera de alcance: `IngredientController::
 ### Fuera de alcance
 
 Percepciones en notas de crédito, libro IVA compras / reportes fiscales, padrones o alícuotas automáticas por CUIT.
+
+### Encabezado del índice y lectura de factura (v0.20.3)
+
+- «Leer factura» es el botón principal (relleno); «+ Nueva compra» queda con borde. `x-list-header` fuerza `inline-flex` en sus hijos (`[&>*]:inline-flex`): para ocultar uno por breakpoint hay que usar `!hidden` / `sm:!hidden`.
+- En el celular «Leer factura» es un `<label>` con `<input capture="environment">`: abre la cámara en el acto y deja la foto en IndexedDB (`resources/js/invoice-handoff.js`); `scan/create.blade.php` la recoge con `?desde=camara`. En el modo mobile de DevTools `capture` se ignora (abre el selector de archivos): hace falta un celular real.
+- El modal `purchase-create` va con `:focusable="false"` para que no se abra solo el desplegable de proveedor.
