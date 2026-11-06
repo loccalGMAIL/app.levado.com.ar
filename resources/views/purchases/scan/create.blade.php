@@ -37,9 +37,23 @@
                     pickError: '',
                     baseFile: null,
                     rotation: 0,
-                    async onPick(e) {
-                        const input = e.target;
-                        const original = input.files[0];
+                    async init() {
+                        // Viene de la cámara de Compras: la foto quedó guardada en el navegador.
+                        if (new URLSearchParams(window.location.search).get('desde') !== 'camara'
+                            || !window.takeStashedInvoiceFile) { return; }
+
+                        const stashed = await window.takeStashedInvoiceFile();
+                        if (!stashed) { return; }
+
+                        const file = stashed instanceof File
+                            ? stashed
+                            : new File([stashed], 'factura.jpg', { type: stashed.type });
+                        await this.loadFile(document.getElementById('scan_invoice_file'), file);
+                    },
+                    onPick(e) {
+                        return this.loadFile(e.target, e.target.files[0]);
+                    },
+                    async loadFile(input, original) {
                         this.pickError = '';
                         this.baseFile = null;
                         this.rotation = 0;
