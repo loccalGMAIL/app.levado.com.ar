@@ -28,7 +28,7 @@
             </div>
 
             <form method="POST" action="{{ route('purchases.scan') }}" enctype="multipart/form-data"
-                class="bg-white rounded-lg shadow p-6 space-y-5"
+                class="bg-superficie rounded-lg shadow p-6 space-y-5"
                 x-data="{
                     submitting: false,
                     preparing: false,
@@ -150,7 +150,7 @@
                     </p>
                     <button type="submit"
                         x-bind:disabled="submitting || preparing || !fileName"
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <template x-if="submitting">
                             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />

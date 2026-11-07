@@ -68,7 +68,7 @@
             <button type="button"
                 @click="submit()"
                 :disabled="loading || !name.trim()"
-                class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors disabled:opacity-50">
+                class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors disabled:opacity-50">
                 <span x-text="loading ? 'Creando…' : 'Crear proveedor'"></span>
             </button>
             <button type="button"

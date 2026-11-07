@@ -32,12 +32,12 @@
                     </button>
                     {{-- Escritorio: va a la pantalla de lectura. --}}
                     <a href="{{ route('purchases.scan.create') }}"
-                        class="!hidden sm:!inline-flex gap-1.5 px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="!hidden sm:!inline-flex gap-1.5 px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         <x-icon name="camera" />
                         Leer factura
                     </a>
                     {{-- Celular: abre la cámara en el acto y pasa la foto a la pantalla de lectura. --}}
-                    <label class="sm:!hidden gap-1.5 px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors cursor-pointer">
+                    <label class="sm:!hidden gap-1.5 px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors cursor-pointer">
                         <x-icon name="camera" />
                         Leer factura
                         <input type="file" accept="image/*,application/pdf" capture="environment" class="hidden"
@@ -83,7 +83,7 @@
                     <input type="date" name="to" value="{{ request('to') }}"
                         class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
-                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
                 @if(request('supplier_id') || request('from') || request('to') || request('search'))
@@ -97,7 +97,7 @@
             @endphp
 
             @if($purchases->isEmpty())
-                <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
+                <div class="bg-superficie rounded-lg shadow p-8 text-center text-masa-madre text-sm">
                     @if(request('supplier_id') || request('from') || request('to'))
                         No se encontraron compras con esos filtros.
                     @else

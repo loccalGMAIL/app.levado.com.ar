@@ -32,7 +32,7 @@
                 <form method="POST" action="{{ route('admin.impersonate.start', $tenant) }}">
                     @csrf
                     <button type="submit"
-                        class="px-3 py-1.5 text-sm bg-horno text-white rounded-md hover:bg-corteza transition-colors">
+                        class="px-3 py-1.5 text-sm bg-horno text-white rounded-md hover:bg-tinta transition-colors">
                         Operar como este tenant
                     </button>
                 </form>
@@ -63,7 +63,7 @@
             </div>
 
             {{-- Tab: Configuración --}}
-            <div x-show="tab === 'config'" class="bg-white shadow rounded-lg p-6">
+            <div x-show="tab === 'config'" class="bg-superficie shadow rounded-lg p-6">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                     <div>
                         <dt class="text-masa-madre font-medium">Nombre</dt>
@@ -93,7 +93,7 @@
             </div>
 
             {{-- Tab: Usuarios --}}
-            <div x-show="tab === 'users'" class="bg-white shadow rounded-lg overflow-x-auto">
+            <div x-show="tab === 'users'" class="bg-superficie shadow rounded-lg overflow-x-auto">
                 <table class="w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
@@ -123,7 +123,7 @@
             </div>
 
             {{-- Tab: Métricas --}}
-            <div x-show="tab === 'metrics'" class="bg-white shadow rounded-lg p-6">
+            <div x-show="tab === 'metrics'" class="bg-superficie shadow rounded-lg p-6">
                 <div class="grid grid-cols-3 gap-6 text-sm">
                     <div class="text-center">
                         <div class="text-2xl font-bold text-corteza">{{ $metrics['active_users'] }}</div>

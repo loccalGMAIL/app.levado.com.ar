@@ -61,7 +61,7 @@
                 <input type="hidden" name="default_iva_rate" :value="globalIva">
 
                 {{-- Cabecera --}}
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-superficie rounded-lg shadow p-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div class="sm:col-span-2"
@@ -146,7 +146,7 @@
                 </div>
 
                 {{-- Control global de IVA --}}
-                <div class="bg-white rounded-lg shadow p-5">
+                <div class="bg-superficie rounded-lg shadow p-5">
                     <p class="text-sm font-semibold text-corteza mb-3">IVA de la factura</p>
                     <div class="flex flex-wrap items-end gap-5">
                         <div class="space-y-1.5">
@@ -171,7 +171,7 @@
                         </div>
 
                         <button type="button" @click="applyToAll()"
-                            class="px-4 py-2 text-sm font-medium bg-corteza text-white rounded-md hover:bg-horno transition-colors shrink-0">
+                            class="px-4 py-2 text-sm font-medium bg-tinta text-white rounded-md hover:bg-horno transition-colors shrink-0">
                             Aplicar a todos los renglones
                         </button>
                     </div>
@@ -196,7 +196,7 @@
                         'base_type' => $c->base_type->value,
                     ]]);
                 @endphp
-                <div class="bg-white rounded-lg shadow p-5"
+                <div class="bg-superficie rounded-lg shadow p-5"
                     x-data="{
                         rows: @js($initialPerceptions),
                         concepts: @js($conceptsById),
@@ -273,11 +273,11 @@
                     <h3 class="text-sm font-semibold text-corteza mb-3">Renglones detectados ({{ count($draft['lines']) }})</h3>
 
                     @if(empty($draft['lines']))
-                        <div class="bg-white rounded-lg shadow p-6 text-center text-masa-madre text-sm">
+                        <div class="bg-superficie rounded-lg shadow p-6 text-center text-masa-madre text-sm">
                             No se detectaron renglones en la factura. Podés cargarlos manualmente desde la compra.
                         </div>
                     @else
-                        <div class="bg-white rounded-lg shadow overflow-x-auto">
+                        <div class="bg-superficie rounded-lg shadow overflow-x-auto">
                             <table class="w-full text-sm text-left">
                                 <thead class="bg-miga text-masa-madre border-b border-miga">
                                     <tr>

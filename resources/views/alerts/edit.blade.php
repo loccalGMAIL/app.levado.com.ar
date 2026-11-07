@@ -23,7 +23,7 @@
                 @method('PATCH')
 
                 {{-- Stock bajo --}}
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-superficie rounded-lg shadow p-6">
                     <label class="flex items-start gap-3 cursor-pointer">
                         <input type="checkbox" name="low_stock_enabled" value="1"
                                class="mt-0.5 rounded text-horno border-gray-300 focus:ring-horno"
@@ -36,7 +36,7 @@
                 </div>
 
                 {{-- Salto de costo --}}
-                <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <div class="bg-superficie rounded-lg shadow p-6 space-y-4">
                     <label class="flex items-start gap-3 cursor-pointer">
                         <input type="checkbox" name="cost_spike_enabled" value="1"
                                class="mt-0.5 rounded text-horno border-gray-300 focus:ring-horno"
@@ -57,7 +57,7 @@
                 </div>
 
                 {{-- Costo desactualizado --}}
-                <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <div class="bg-superficie rounded-lg shadow p-6 space-y-4">
                     <label class="flex items-start gap-3 cursor-pointer">
                         <input type="checkbox" name="stale_cost_enabled" value="1"
                                class="mt-0.5 rounded text-horno border-gray-300 focus:ring-horno"
@@ -78,7 +78,7 @@
                 </div>
 
                 {{-- Compras sin imputar --}}
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-superficie rounded-lg shadow p-6">
                     <label class="flex items-start gap-3 cursor-pointer">
                         <input type="checkbox" name="unapplied_purchase_enabled" value="1"
                                class="mt-0.5 rounded text-horno border-gray-300 focus:ring-horno"

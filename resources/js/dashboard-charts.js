@@ -1,6 +1,24 @@
 // Gráficos del dashboard (gauge / barras / dona). Los datos llegan desde un
 // <script type="application/json" id="dashboard-chart-data"> que emite la vista,
 // así que este módulo no depende de variables globales ni de JS inline.
+
+/**
+ * Lee un token de color de app.css (`--c-corteza: 61 43 31`) y lo devuelve en hex:
+ * ApexCharts calcula sombras y degradés a partir del color y no resuelve var().
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+function themeColor(name) {
+    const channels = getComputedStyle(document.documentElement)
+        .getPropertyValue(`--c-${name}`)
+        .trim()
+        .split(/\s+/)
+        .map(Number);
+
+    return '#' + channels.map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
 async function initDashboardCharts() {
     const dataEl = document.getElementById('dashboard-chart-data');
     const gaugeEl = document.querySelector('#gaugeChart');
@@ -17,14 +35,16 @@ async function initDashboardCharts() {
 
     const { default: ApexCharts } = await import('apexcharts');
 
-    const brown500 = '#9B6240';
-    const brown300 = '#C49272';
-    const brown200 = '#DEC4A8';
-    const brown100 = '#EFE3D5';
-    const textSecondary = '#6B5B45';
-    const textMuted = '#a08873';
-    const borderColor = '#F2EAD8';
-    const green = '#2C9B6A';
+    const brown500 = themeColor('brown-500');
+    const brown300 = themeColor('brown-300');
+    const brown200 = themeColor('brown-200');
+    const brown100 = themeColor('brown-100');
+    const textPrimary = themeColor('corteza');
+    const textSecondary = themeColor('masa-madre');
+    const textMuted = themeColor('grafico-suave');
+    const borderColor = themeColor('miga');
+    const surface = themeColor('superficie');
+    const green = themeColor('grafico-ok');
 
     /* ── Gauge ── */
     new ApexCharts(gaugeEl, {
@@ -41,10 +61,10 @@ async function initDashboardCharts() {
                 startAngle: -135,
                 endAngle: 135,
                 hollow: { margin: 0, size: '65%' },
-                track: { background: '#EFE3D5', strokeWidth: '100%', margin: 0 },
+                track: { background: brown100, strokeWidth: '100%', margin: 0 },
                 dataLabels: {
                     name: { show: true, offsetY: 18, fontSize: '12px', color: textMuted, fontFamily: 'Inter, sans-serif' },
-                    value: { offsetY: -10, fontSize: '28px', fontWeight: '700', fontFamily: 'Inter, sans-serif', color: '#3D2B1F', formatter: v => v + '%' }
+                    value: { offsetY: -10, fontSize: '28px', fontWeight: '700', fontFamily: 'Inter, sans-serif', color: textPrimary, formatter: v => v + '%' }
                 }
             }
         },
@@ -64,9 +84,9 @@ async function initDashboardCharts() {
         const names = topRecipes.map(r => r.name);
         const values = topRecipes.map(r => r.margin_pct);
         const colors = values.map(v =>
-            v >= 60 ? '#2C9B6A' :
-            v >= 40 ? '#D97706' :
-            v >= 20 ? '#EA580C' : '#DC2626'
+            v >= 60 ? green :
+            v >= 40 ? themeColor('amber-600') :
+            v >= 20 ? themeColor('orange-600') : themeColor('red-600')
         );
         new ApexCharts(barEl, {
             series: [{ name: 'Margen %', data: values }],
@@ -118,13 +138,13 @@ async function initDashboardCharts() {
                         labels: {
                             show: true,
                             total: { show: true, label: 'Total', fontSize: '11px', fontFamily: 'Inter, sans-serif', color: textMuted, formatter: () => '100%' },
-                            value: { fontSize: '20px', fontWeight: '700', fontFamily: 'Inter, sans-serif', color: '#3D2B1F', formatter: v => v + '%' }
+                            value: { fontSize: '20px', fontWeight: '700', fontFamily: 'Inter, sans-serif', color: textPrimary, formatter: v => v + '%' }
                         }
                     }
                 }
             },
             dataLabels: { enabled: false },
-            stroke: { width: 2, colors: ['#FFFFFF'] },
+            stroke: { width: 2, colors: [surface] },
             tooltip: { y: { formatter: v => v + '%' } }
         }).render();
     }

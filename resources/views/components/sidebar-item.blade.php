@@ -5,8 +5,8 @@
     class="flex items-center gap-2.5 px-4 py-2 text-[13.5px] transition-colors
         border-l-[3px]
         {{ $active
-            ? 'border-horno bg-horno/10 text-harina font-medium'
-            : 'border-transparent text-harina/65 hover:bg-harina/5 hover:text-harina font-normal' }}">
+            ? 'border-horno bg-horno/10 text-sobre-barra font-medium'
+            : 'border-transparent text-sobre-barra/65 hover:bg-sobre-barra/5 hover:text-sobre-barra font-normal' }}">
     <svg class="w-[17px] h-[17px] shrink-0 {{ $active ? 'opacity-100' : 'opacity-60' }}"
         fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
         {!! $icon !!}

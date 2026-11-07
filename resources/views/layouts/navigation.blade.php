@@ -6,19 +6,19 @@
     }
 @endphp
 
-<nav class="bg-white border-b border-miga">
+<nav class="bg-superficie border-b border-miga">
     <div class="flex h-16">
 
         {{-- Bloque de marca — mismo ancho que el sidebar, fondo oscuro para continuidad visual --}}
         <a href="{{ route('dashboard') }}"
-            class="hidden sm:flex w-52 shrink-0 bg-masa-madre border-r border-white/10 items-center justify-center p-2
-                   hover:bg-masa-madre/90 transition-colors">
+            class="hidden sm:flex w-52 shrink-0 bg-barra border-r border-white/10 items-center justify-center p-2
+                   hover:bg-barra/90 transition-colors">
             @if($navTenant?->logo_path)
                 <img src="{{ Storage::url($navTenant->logo_path) }}"
                      alt="{{ $navTenant->name }}"
                      class="w-full h-full object-contain">
             @else
-                <x-application-logo class="w-full h-full text-harina" />
+                <x-application-logo class="w-full h-full text-sobre-barra" />
             @endif
         </a>
 

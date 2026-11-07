@@ -13,7 +13,7 @@
             <x-list-header title="Historial de gastos fijos" subtitle="Monto de cada gasto fijo mes a mes.">
                 <button type="button" x-data
                     @click="$dispatch('open-modal', 'fixed-cost-report')"
-                    class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                    class="px-4 py-2 bg-superficie border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                     Imprimir
                 </button>
                 <a href="{{ route('fixed-costs.index') }}" class="px-4 py-2 border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
@@ -58,7 +58,7 @@
                         <input type="hidden" name="period" value="{{ $period->format('Y-m') }}">
                 @endcan
 
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <div class="bg-superficie rounded-lg shadow overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>

@@ -14,7 +14,7 @@
             @endphp
 
             {{-- Invitar miembro --}}
-            <div class="bg-white shadow rounded-lg p-6">
+            <div class="bg-superficie shadow rounded-lg p-6">
                 <h2 class="text-base font-semibold text-corteza mb-4">Invitar persona</h2>
 
                 <form method="POST" action="{{ route('team.invitations.store') }}" class="flex flex-col sm:flex-row gap-3 sm:items-end">
@@ -45,7 +45,7 @@
 
             {{-- Invitaciones pendientes --}}
             @if($pendingInvitations->isNotEmpty())
-                <div class="bg-white shadow rounded-lg p-6" x-data="{ mobileExpanded: false }">
+                <div class="bg-superficie shadow rounded-lg p-6" x-data="{ mobileExpanded: false }">
                     <h2 class="text-base font-semibold text-corteza mb-4">Invitaciones pendientes</h2>
 
                     {{-- Cards (mobile) --}}
@@ -117,7 +117,7 @@
             @endif
 
             {{-- Miembros del equipo --}}
-            <div class="bg-white shadow rounded-lg p-6" x-data="{ mobileExpanded: false }">
+            <div class="bg-superficie shadow rounded-lg p-6" x-data="{ mobileExpanded: false }">
                 <h2 class="text-base font-semibold text-corteza mb-4">Miembros</h2>
 
                 {{-- Cards (mobile) --}}

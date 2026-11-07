@@ -62,7 +62,7 @@
                     </select>
                 </div>
                 <button type="submit"
-                    class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                    class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
                 @if(request()->hasAny(['actor_id', 'tenant_id', 'target_type', 'action', 'from', 'to', 'was_impersonating']))
@@ -78,7 +78,7 @@
             @endphp
 
             {{-- Tabla --}}
-            <div class="bg-white shadow rounded-lg overflow-x-auto">
+            <div class="bg-superficie shadow rounded-lg overflow-x-auto">
                 <table class="min-w-[900px] w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>

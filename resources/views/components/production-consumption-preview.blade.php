@@ -18,7 +18,7 @@
 {{-- x-data propio (sólo `open`, no colisiona con lo que traiga el padre —
      previewLines/loading/etc siguen resolviendo contra el x-data de arriba,
      Alpine encadena scopes): acordeón cerrado por default, compacto. --}}
-<div class="bg-white border border-miga rounded-lg shadow-sm overflow-hidden" x-data="{ open: false }">
+<div class="bg-superficie border border-miga rounded-lg shadow-sm overflow-hidden" x-data="{ open: false }">
     <button type="button" @click="open = ! open"
         class="w-full px-5 py-3 flex items-center justify-between gap-3 text-left"
         :class="open && 'border-b border-miga'">

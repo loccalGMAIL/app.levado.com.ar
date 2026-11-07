@@ -11,7 +11,7 @@
     <div class="fixed inset-0 z-40" @click="cancel()"></div>
 
     <div :style="popStyle" x-transition.opacity
-         class="z-50 w-60 bg-white border border-miga rounded-lg shadow-lg p-3 text-left font-sans">
+         class="z-50 w-60 bg-superficie border border-miga rounded-lg shadow-lg p-3 text-left font-sans">
         <div class="flex flex-col gap-2">
             <label class="text-[11px] font-medium text-masa-madre uppercase tracking-wide">Política de precio</label>
 
@@ -52,7 +52,7 @@
                 <button type="button" @click="cancel()"
                         class="text-xs text-masa-madre hover:text-corteza transition-colors">Cancelar</button>
                 <button type="button" @click="save()" :disabled="saving"
-                        class="text-xs px-3 py-1 bg-corteza text-white rounded hover:bg-horno transition-colors disabled:opacity-50">
+                        class="text-xs px-3 py-1 bg-tinta text-white rounded hover:bg-horno transition-colors disabled:opacity-50">
                     Guardar
                 </button>
             </div>

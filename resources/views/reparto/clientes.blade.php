@@ -38,7 +38,7 @@
             <x-list-header title="Clientes">
                 <button type="button"
                     @click="$dispatch('open-modal', 'customer-create')"
-                    class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                    class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     + Nuevo cliente
                 </button>
             </x-list-header>
@@ -50,7 +50,7 @@
             @else
                 <div class="space-y-3">
                     @foreach($customers as $customer)
-                        <div class="bg-white rounded-lg shadow px-5 py-4 flex items-start justify-between gap-4">
+                        <div class="bg-superficie rounded-lg shadow px-5 py-4 flex items-start justify-between gap-4">
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2">
                                     <span class="font-medium text-corteza text-sm">{{ $customer->name }}</span>

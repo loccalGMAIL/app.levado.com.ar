@@ -18,7 +18,7 @@
                     @csrf
                     @method('PATCH')
                     <button type="submit"
-                        class="text-[13px] font-medium text-masa-madre border border-miga rounded-lg px-3 py-2 bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        class="text-[13px] font-medium text-masa-madre border border-miga rounded-lg px-3 py-2 bg-superficie hover:bg-miga hover:text-corteza transition-colors">
                         Marcar todas como leídas
                     </button>
                 </form>
@@ -30,7 +30,7 @@
             @foreach(['unread' => 'Sin leer', 'all' => 'Todas'] as $key => $label)
                 <a href="{{ route('notifications.index', ['filter' => $key]) }}"
                     class="px-3 py-1.5 rounded-full text-[12.5px] font-medium border transition-colors
-                        {{ $filter === $key ? 'bg-corteza text-white border-corteza' : 'bg-harina text-masa-madre border-miga hover:border-brown-300' }}">
+                        {{ $filter === $key ? 'bg-tinta text-white border-corteza' : 'bg-harina text-masa-madre border-miga hover:border-brown-300' }}">
                     {{ $label }}
                 </a>
             @endforeach
@@ -46,11 +46,11 @@
         @endphp
 
         @if($notifications->total() === 0)
-            <div class="bg-white border border-miga rounded-xl py-16 text-center text-masa-madre text-sm">
+            <div class="bg-superficie border border-miga rounded-xl py-16 text-center text-masa-madre text-sm">
                 {{ $filter === 'unread' ? 'No tenés alertas sin leer.' : 'No hay alertas.' }}
             </div>
         @else
-            <div class="bg-white border border-miga rounded-xl divide-y divide-miga/60 overflow-hidden">
+            <div class="bg-superficie border border-miga rounded-xl divide-y divide-miga/60 overflow-hidden">
                 @foreach($notifications as $notification)
                     <div class="flex items-start gap-3 p-4 {{ $notification->isRead() ? 'opacity-60' : '' }}">
                         <span class="text-xl leading-none mt-0.5 shrink-0">{{ $notification->type->icon() }}</span>

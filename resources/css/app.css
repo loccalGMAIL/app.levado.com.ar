@@ -24,11 +24,20 @@
 @layer base {
     :root {
         --c-harina:     250 247 242; /* #FAF7F2 fondo */
+        --c-superficie: 255 255 255; /* #FFFFFF cards, header, modales, inputs */
         --c-miga:       242 234 216; /* #F2EAD8 superficie alternativa, bordes suaves */
         --c-corteza:    61 43 31;    /* #3D2B1F texto principal */
         --c-masa-madre: 107 91 69;   /* #6B5B45 texto secundario */
         --c-horno:      200 98 42;   /* #C8622A acento */
         --c-membrillo:  232 168 32;  /* #E8A820 acento secundario */
+
+        /* Fondos oscuros con texto claro encima en todos los temas. Tienen el
+           mismo valor que corteza / masa-madre / harina en el tema claro, pero
+           no el mismo rol: en el oscuro el texto (corteza) se aclara y un
+           botón (tinta) no puede aclararse con él. */
+        --c-tinta:       61 43 31;    /* #3D2B1F botones primarios, chips activos */
+        --c-barra:       107 91 69;   /* #6B5B45 sidebar y barra inferior mobile */
+        --c-sobre-barra: 250 247 242; /* #FAF7F2 texto e íconos sobre la barra */
 
         --c-brown-50:  250 246 241; /* #FAF6F1 */
         --c-brown-100: 239 227 213; /* #EFE3D5 */
@@ -38,6 +47,89 @@
         --c-brown-500: 155 98 64;   /* #9B6240 */
         --c-brown-700: 107 61 30;   /* #6B3D1E */
         --c-brown-900: 26 17 10;    /* #1A110A */
+
+        /* Sólo para los gráficos del dashboard (resources/js/dashboard-charts.js). */
+        --c-grafico-suave: 160 136 115; /* #A08873 etiquetas secundarias */
+        --c-grafico-ok:    44 155 106;  /* #2C9B6A margen alto, fin del degradé del gauge */
+
+        /* Escalas de Tailwind (estados, badges, inputs heredados de Breeze), con
+           los valores de Tailwind 3. Sólo los tonos que usa la app: ver
+           `scale()` en tailwind.config.js. */
+        --c-gray-50:     249 250 251;
+        --c-gray-100:    243 244 246;
+        --c-gray-200:    229 231 235;
+        --c-gray-300:    209 213 219;
+        --c-gray-400:    156 163 175;
+        --c-gray-500:    107 114 128;
+        --c-gray-600:    75 85 99;
+        --c-gray-700:    55 65 81;
+        --c-gray-800:    31 41 55;
+        --c-gray-900:    17 24 39;
+
+        --c-red-50:      254 242 242;
+        --c-red-100:     254 226 226;
+        --c-red-200:     254 202 202;
+        --c-red-300:     252 165 165;
+        --c-red-400:     248 113 113;
+        --c-red-500:     239 68 68;
+        --c-red-600:     220 38 38;
+        --c-red-700:     185 28 28;
+        --c-red-800:     153 27 27;
+
+        --c-green-50:    240 253 244;
+        --c-green-100:   220 252 231;
+        --c-green-200:   187 247 208;
+        --c-green-300:   134 239 172;
+        --c-green-500:   34 197 94;
+        --c-green-600:   22 163 74;
+        --c-green-700:   21 128 61;
+        --c-green-800:   22 101 52;
+
+        --c-amber-50:    255 251 235;
+        --c-amber-100:   254 243 199;
+        --c-amber-200:   253 230 138;
+        --c-amber-300:   252 211 77;
+        --c-amber-400:   251 191 36;
+        --c-amber-500:   245 158 11;
+        --c-amber-600:   217 119 6;
+        --c-amber-700:   180 83 9;
+        --c-amber-800:   146 64 14;
+        --c-amber-900:   120 53 15;
+
+        --c-yellow-50:   254 252 232;
+        --c-yellow-300:  253 224 71;
+        --c-yellow-600:  202 138 4;
+        --c-yellow-700:  161 98 7;
+        --c-yellow-800:  133 77 14;
+        --c-yellow-900:  113 63 18;
+
+        --c-orange-100:  255 237 213;
+        --c-orange-200:  254 215 170;
+        --c-orange-400:  251 146 60;
+        --c-orange-600:  234 88 12;
+        --c-orange-700:  194 65 12;
+
+        --c-blue-50:     239 246 255;
+        --c-blue-100:    219 234 254;
+        --c-blue-200:    191 219 254;
+        --c-blue-300:    147 197 253;
+        --c-blue-700:    29 78 216;
+        --c-blue-800:    30 64 175;
+
+        --c-indigo-50:   238 242 255;
+        --c-indigo-100:  224 231 255;
+        --c-indigo-400:  129 140 248;
+        --c-indigo-500:  99 102 241;
+        --c-indigo-700:  67 56 202;
+        --c-indigo-800:  55 48 163;
+
+        --c-violet-100:  237 233 254;
+        --c-violet-600:  124 58 237;
+        --c-violet-700:  109 40 217;
+
+        --c-sky-50:      240 249 255;
+        --c-sky-100:     224 242 254;
+        --c-sky-700:     3 105 161;
     }
 }
 
@@ -116,7 +208,7 @@
        porque también pone `border-bottom-width: 0`, y en modo card eso le
        comería el borde inferior a todas las cards menos la primera. */
     .data-table tbody > tr + tr {
-        border-top: 1px solid #f2ead8;
+        border-top: 1px solid rgb(var(--c-miga));
     }
 
     /* Ícono de línea del sprite (public/icons/sprite.svg). Reemplaza los
@@ -142,20 +234,20 @@
         padding: 0.375rem;
         border-radius: 0.25rem;
         font-size: 0.875rem;
-        color: #6b5b45;
+        color: rgb(var(--c-masa-madre));
         transition: color 0.15s, background-color 0.15s, border-color 0.15s;
     }
 
     .dt-action:hover {
-        color: #3d2b1f;
-        background-color: #f2ead8;
+        color: rgb(var(--c-corteza));
+        background-color: rgb(var(--c-miga));
     }
 
-    .dt-action--danger { color: #ef4444; }
-    .dt-action--danger:hover { color: #b91c1c; background-color: #fef2f2; }
+    .dt-action--danger { color: rgb(var(--c-red-500)); }
+    .dt-action--danger:hover { color: rgb(var(--c-red-700)); background-color: rgb(var(--c-red-50)); }
 
-    .dt-action--success { color: #16a34a; }
-    .dt-action--success:hover { color: #15803d; background-color: #f0fdf4; }
+    .dt-action--success { color: rgb(var(--c-green-600)); }
+    .dt-action--success:hover { color: rgb(var(--c-green-700)); background-color: rgb(var(--c-green-50)); }
 
     /* Contenido que sólo tiene sentido en la card: el texto del botón de acción
        (en la tabla alcanza el ícono) o la unidad de un importe (en la tabla ya
@@ -173,7 +265,7 @@
     }
 
     /* Celda sin valor: la tabla muestra «—», la card la omite (más abajo). */
-    .data-table td[data-empty] { color: #6b5b45; }
+    .data-table td[data-empty] { color: rgb(var(--c-masa-madre)); }
 
     @media (max-width: 767.98px) {
         .data-table[data-view="cards"] .data-table__surface {
@@ -199,8 +291,8 @@
             column-gap: 0.5rem;
             row-gap: 0.25rem;
             padding: 1rem;
-            background-color: #fff;
-            border: 1px solid #f2ead8;
+            background-color: rgb(var(--c-superficie));
+            border: 1px solid rgb(var(--c-miga));
             border-radius: 0.5rem;
             box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
         }
@@ -224,7 +316,7 @@
             order: 10;
             flex: 1 1 0;
             font-weight: 500;
-            color: #3d2b1f;
+            color: rgb(var(--c-corteza));
         }
 
         .data-table[data-view="cards"] td[data-role="badge"] {
@@ -247,7 +339,7 @@
             order: 30;
             flex: 0 1 auto;
             font-size: 0.75rem;
-            color: #6b5b45;
+            color: rgb(var(--c-masa-madre));
         }
 
         .data-table[data-view="cards"] td[data-role="figure"] { order: 40; }
@@ -255,14 +347,14 @@
         .data-table[data-view="cards"] td[data-role="meta"] {
             order: 50;
             font-size: 0.75rem;
-            color: #6b5b45;
+            color: rgb(var(--c-masa-madre));
         }
 
         .data-table[data-view="cards"] td[data-role="actions"] {
             order: 60;
             margin-top: 0.25rem;
             padding-top: 0.75rem;
-            border-top: 1px solid #f2ead8;
+            border-top: 1px solid rgb(var(--c-miga));
         }
 
         /* Los subtítulos van en una línea separados por «·». El separador va al
@@ -295,12 +387,12 @@
         .data-table[data-view="cards"] .dt-action {
             width: 100%;
             padding: 0.375rem 0.75rem;
-            border: 1px solid #d1d5db;
-            color: #3d2b1f;
+            border: 1px solid rgb(var(--c-gray-300));
+            color: rgb(var(--c-corteza));
         }
 
-        .data-table[data-view="cards"] .dt-action--danger { border-color: #fca5a5; color: #dc2626; }
-        .data-table[data-view="cards"] .dt-action--success { border-color: #86efac; color: #16a34a; }
+        .data-table[data-view="cards"] .dt-action--danger { border-color: rgb(var(--c-red-300)); color: rgb(var(--c-red-600)); }
+        .data-table[data-view="cards"] .dt-action--success { border-color: rgb(var(--c-green-300)); color: rgb(var(--c-green-600)); }
 
         .data-table[data-view="cards"] .dt-card-only { display: inline; }
     }
@@ -310,34 +402,34 @@
 .ts-wrapper { position: relative; }
 
 .ts-control {
-    border: 1px solid #d1d5db;
+    border: 1px solid rgb(var(--c-gray-300));
     border-radius: 0.375rem;
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     padding: 0.35rem 0.625rem;
     font-size: 0.875rem;
     line-height: 1.5rem;
-    color: #3D2B1F;
-    background-color: #fff;
+    color: rgb(var(--c-corteza));
+    background-color: rgb(var(--c-superficie));
     cursor: pointer;
     min-height: unset;
 }
 
 .ts-wrapper.single.input-active .ts-control,
 .ts-wrapper.multi.input-active .ts-control {
-    border-color: #C8622A;
-    box-shadow: 0 0 0 3px rgb(200 98 42 / 0.15);
+    border-color: rgb(var(--c-horno));
+    box-shadow: 0 0 0 3px rgb(var(--c-horno) / 0.15);
     outline: none;
 }
 
 .ts-control input {
     font-size: 0.875rem;
-    color: #3D2B1F;
+    color: rgb(var(--c-corteza));
     line-height: 1.5;
 }
 
 .ts-control .item {
     font-size: 0.875rem;
-    color: #3D2B1F;
+    color: rgb(var(--c-corteza));
 }
 
 /* Dropdown panel. Con dropdownParent: 'body' (ver app.js) este panel cuelga
@@ -345,7 +437,7 @@
    modal — incluido uno anidado (x-modal admite :z, el más alto en uso hoy
    es 60 en suppliers/modals/quick-create.blade.php). */
 .ts-dropdown {
-    border: 1px solid #d1d5db;
+    border: 1px solid rgb(var(--c-gray-300));
     border-radius: 0.375rem;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     font-size: 0.875rem;
@@ -360,36 +452,36 @@
 .ts-dropdown .option,
 .ts-dropdown .optgroup-header {
     padding: 0.375rem 0.75rem;
-    color: #3D2B1F;
+    color: rgb(var(--c-corteza));
 }
 
 .ts-dropdown .option:hover,
 .ts-dropdown .option.active {
-    background-color: #F2EAD8;
-    color: #3D2B1F;
+    background-color: rgb(var(--c-miga));
+    color: rgb(var(--c-corteza));
 }
 
 .ts-dropdown .option.selected,
 .ts-dropdown .option.selected.active {
-    background-color: #C8622A;
-    color: #fff;
+    background-color: rgb(var(--c-horno));
+    color: white;
 }
 
 .ts-dropdown .optgroup-header {
     font-size: 0.7rem;
     font-weight: 600;
-    color: #6B5B45;
+    color: rgb(var(--c-masa-madre));
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding-top: 0.5rem;
     padding-bottom: 0.25rem;
-    background: #fafafa;
+    background: rgb(var(--c-gray-50));
 }
 
 /* Caret arrow for single selects */
 .ts-wrapper.single .ts-control::after {
-    border-color: #6B5B45 transparent transparent;
+    border-color: rgb(var(--c-masa-madre)) transparent transparent;
 }
 .ts-wrapper.single.dropdown-active .ts-control::after {
-    border-color: transparent transparent #6B5B45;
+    border-color: transparent transparent rgb(var(--c-masa-madre));
 }

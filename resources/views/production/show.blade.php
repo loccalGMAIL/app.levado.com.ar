@@ -33,40 +33,40 @@
 
         {{-- Resumen --}}
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+            <div class="bg-superficie border border-miga rounded-lg p-4 shadow-sm">
                 <div class="text-xs text-masa-madre">Producido</div>
                 <div class="mt-1 font-mono text-corteza">{{ number_format($production->quantity, 2, ',', '.') }} {{ $production->unit->short() }}</div>
             </div>
-            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+            <div class="bg-superficie border border-miga rounded-lg p-4 shadow-sm">
                 <div class="text-xs text-masa-madre">Costo por unidad</div>
                 <div class="mt-1 font-mono text-corteza">$ {{ number_format($production->unit_cost, 2, ',', '.') }}</div>
             </div>
-            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+            <div class="bg-superficie border border-miga rounded-lg p-4 shadow-sm">
                 <div class="text-xs text-masa-madre">Costo total</div>
                 <div class="mt-1 font-mono text-corteza">$ {{ number_format($production->total_cost, 2, ',', '.') }}</div>
             </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+            <div class="bg-superficie border border-miga rounded-lg p-4 shadow-sm">
                 <div class="text-xs text-masa-madre">Insumos</div>
                 <div class="mt-1 font-mono text-corteza">$ {{ number_format($production->material_cost, 2, ',', '.') }}</div>
             </div>
-            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm">
+            <div class="bg-superficie border border-miga rounded-lg p-4 shadow-sm">
                 <div class="text-xs text-masa-madre">Mano de obra</div>
                 <div class="mt-1 font-mono text-corteza">$ {{ number_format($production->labor_cost, 2, ',', '.') }}</div>
             </div>
         </div>
 
         @if($production->notes)
-            <div class="bg-white border border-miga rounded-lg p-4 shadow-sm text-sm text-corteza">
+            <div class="bg-superficie border border-miga rounded-lg p-4 shadow-sm text-sm text-corteza">
                 <span class="text-xs text-masa-madre block mb-1">Notas</span>
                 {{ $production->notes }}
             </div>
         @endif
 
         {{-- Insumos consumidos --}}
-        <div class="bg-white border border-miga rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-superficie border border-miga rounded-lg shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-miga">
                 <h3 class="text-sm font-semibold text-corteza">Insumos consumidos</h3>
             </div>

@@ -18,7 +18,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
 
                     {{-- Datos del negocio --}}
-                    <div class="bg-white rounded-lg shadow p-6 space-y-5">
+                    <div class="bg-superficie rounded-lg shadow p-6 space-y-5">
                         <div>
                             <h2 class="text-base font-semibold text-corteza mb-1">Datos del negocio</h2>
                             <p class="text-sm text-masa-madre">
@@ -110,7 +110,7 @@
                     </div>
 
                     {{-- Datos fiscales --}}
-                    <div class="bg-white rounded-lg shadow p-6 space-y-5">
+                    <div class="bg-superficie rounded-lg shadow p-6 space-y-5">
                         <div>
                             <h2 class="text-base font-semibold text-corteza mb-1">Datos fiscales</h2>
                             <p class="text-sm text-masa-madre">
@@ -154,7 +154,7 @@
                 </div>
 
                 {{-- Mensaje personalizado de invitación --}}
-                <div class="bg-white rounded-lg shadow p-6 space-y-5">
+                <div class="bg-superficie rounded-lg shadow p-6 space-y-5">
                     <div>
                         <h2 class="text-base font-semibold text-corteza mb-1">Mensaje de invitación</h2>
                         <p class="text-sm text-masa-madre">
@@ -177,7 +177,7 @@
                 </div>
 
                 {{-- Precios de compra e IVA --}}
-                <div class="bg-white rounded-lg shadow p-6 space-y-5">
+                <div class="bg-superficie rounded-lg shadow p-6 space-y-5">
                     <div>
                         <h2 class="text-base font-semibold text-corteza mb-1">Precios de compra</h2>
                         <p class="text-sm text-masa-madre">
@@ -222,7 +222,7 @@
                 </div>
 
                 {{-- Capacidad productiva --}}
-                <div class="bg-white rounded-lg shadow p-6" id="field-horas-productivas">
+                <div class="bg-superficie rounded-lg shadow p-6" id="field-horas-productivas">
                     <div class="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-8">
                         <div class="flex-1 space-y-1">
                             <h2 class="text-base font-semibold text-corteza">Capacidad productiva</h2>

@@ -27,7 +27,7 @@
     <body class="font-sans antialiased bg-harina text-corteza">
 
         {{-- Barra superior del backoffice --}}
-        <nav class="bg-corteza text-white">
+        <nav class="bg-tinta text-white">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-14 items-center">
                     <div class="flex items-center gap-6">
@@ -68,7 +68,7 @@
         </nav>
 
         @isset($header)
-            <header class="bg-white border-b border-miga">
+            <header class="bg-superficie border-b border-miga">
                 <div class="max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
                     {{ $header }}
                 </div>

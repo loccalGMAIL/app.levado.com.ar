@@ -6,5 +6,5 @@
           text-anchor="middle"
           fill="currentColor"
           letter-spacing="-2">levado</text>
-    <path d="M 175 122 Q 240 130 305 122" stroke="#C8622A" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85"/>
+    <path d="M 175 122 Q 240 130 305 122" class="stroke-horno" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85"/>
 </svg>

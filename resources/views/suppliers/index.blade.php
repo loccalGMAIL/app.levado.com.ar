@@ -29,7 +29,7 @@
                 @can('manage-costs')
                     <button type="button" id="btn-nuevo-proveedor"
                         @click="$dispatch('open-modal', 'supplier-create')"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nuevo proveedor
                     </button>
                 @endcan
@@ -47,7 +47,7 @@
                     <option value="active"   @selected(request('status') === 'active')>Activos</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactivos</option>
                 </select>
-                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
                 @if(request('search') || request('status'))
@@ -86,7 +86,7 @@
             @else
                 <div class="space-y-3">
                     @foreach($suppliers as $supplier)
-                        <div class="bg-white rounded-lg shadow px-5 py-4 flex items-start justify-between gap-4 {{ $supplier->active ? '' : 'opacity-50' }}">
+                        <div class="bg-superficie rounded-lg shadow px-5 py-4 flex items-start justify-between gap-4 {{ $supplier->active ? '' : 'opacity-50' }}">
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2">
                                     @can('manage-costs')
@@ -158,7 +158,7 @@
                 </div>
 
                 @if($suppliers->hasPages())
-                    <div class="bg-white rounded-lg shadow px-4 py-3">
+                    <div class="bg-superficie rounded-lg shadow px-4 py-3">
                         {{ $suppliers->links() }}
                     </div>
                 @endif

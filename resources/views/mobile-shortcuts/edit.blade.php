@@ -22,7 +22,7 @@
                 @csrf
                 @method('PATCH')
 
-                <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <div class="bg-superficie rounded-lg shadow p-6 space-y-4">
                     @foreach($selected as $index => $current)
                         <div>
                             <x-input-label for="shortcut_{{ $index }}" value="Acceso {{ $index + 1 }}" />

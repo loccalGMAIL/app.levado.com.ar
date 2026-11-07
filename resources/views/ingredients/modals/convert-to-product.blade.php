@@ -33,7 +33,7 @@
         </div>
 
         <div class="flex gap-3 pt-2">
-            <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+            <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                 Convertir
             </button>
             <button type="button"

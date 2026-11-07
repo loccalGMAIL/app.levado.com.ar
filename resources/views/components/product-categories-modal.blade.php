@@ -72,7 +72,7 @@
                                     Se produce
                                 </label>
                                 <button type="submit"
-                                    class="px-3 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors">
+                                    class="px-3 py-1.5 text-xs bg-tinta text-white rounded-md hover:bg-horno transition-colors">
                                     Guardar
                                 </button>
                                 <button type="button"
@@ -104,7 +104,7 @@
                     Se produce
                 </label>
                 <button type="submit"
-                    class="px-4 py-2 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors whitespace-nowrap">
+                    class="px-4 py-2 text-sm bg-tinta text-white rounded-md hover:bg-horno transition-colors whitespace-nowrap">
                     + Agregar
                 </button>
             </form>

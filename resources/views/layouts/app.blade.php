@@ -54,7 +54,7 @@
             <div class="flex-1 min-w-0 flex flex-col pb-16 sm:pb-0">
 
                 @isset($header)
-                    <header class="bg-white border-b border-miga">
+                    <header class="bg-superficie border-b border-miga">
                         <div class="py-5 px-6 lg:px-8">
                             {{ $header }}
                         </div>

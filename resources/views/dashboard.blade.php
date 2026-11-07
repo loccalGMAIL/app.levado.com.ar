@@ -52,7 +52,7 @@
                 @can('manage-costs')
                     <button type="button"
                         @click="$dispatch('open-modal', 'production-request-create')"
-                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-superficie hover:bg-miga hover:text-corteza transition-colors">
                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                         </svg>
@@ -60,7 +60,7 @@
                     </button>
                     <button type="button"
                         @click="$dispatch('open-modal', 'production-instant-create')"
-                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-superficie hover:bg-miga hover:text-corteza transition-colors">
                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
                         </svg>
@@ -68,7 +68,7 @@
                     </button>
                     <button type="button"
                         @click="$dispatch('open-modal', 'recipe-create')"
-                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-superficie hover:bg-miga hover:text-corteza transition-colors">
                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                         </svg>
@@ -76,7 +76,7 @@
                     </button>
                     <button type="button"
                         @click="$dispatch('open-modal', 'purchase-create')"
-                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-white hover:bg-miga hover:text-corteza transition-colors">
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-superficie hover:bg-miga hover:text-corteza transition-colors">
                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                         </svg>
@@ -98,7 +98,7 @@
                 default => 'bg-miga text-masa-madre border-miga',
             };
         @endphp
-        <div class="bg-white border border-miga rounded-xl p-4 shadow-[0_1px_4px_rgba(61,43,31,.06)]">
+        <div class="bg-superficie border border-miga rounded-xl p-4 shadow-[0_1px_4px_rgba(61,43,31,.06)]">
             <div class="flex items-center justify-between mb-2.5">
                 <div class="text-[9.5px] font-semibold uppercase tracking-widest text-masa-madre/60">
                     Alertas
@@ -129,7 +129,7 @@
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
             {{-- Recetas activas --}}
-            <div class="order-1 kpi-card bg-white border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow group">
+            <div class="order-1 kpi-card bg-superficie border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow group">
                 <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
                     <div class="w-10 h-10 rounded-xl bg-brown-100 flex items-center justify-center text-lg shrink-0">📖</div>
                     {{-- La píldora no entra al lado del ícono en una card de media
@@ -145,7 +145,7 @@
             </div>
 
             {{-- Gastos fijos --}}
-            <div class="col-span-2 order-3 sm:col-span-1 sm:order-2 kpi-card bg-white border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
+            <div class="col-span-2 order-3 sm:col-span-1 sm:order-2 kpi-card bg-superficie border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
                 <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
                     <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-lg shrink-0">💰</div>
                     <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full bg-miga text-masa-madre whitespace-nowrap">
@@ -163,7 +163,7 @@
             </div>
 
             {{-- Overhead / hora --}}
-            <div class="col-span-2 order-4 sm:col-span-1 sm:order-3 kpi-card bg-white border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
+            <div class="col-span-2 order-4 sm:col-span-1 sm:order-3 kpi-card bg-superficie border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
                 <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
                     <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-lg shrink-0">🏭</div>
                     <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-1 rounded-full bg-miga text-masa-madre whitespace-nowrap">
@@ -189,7 +189,7 @@
             </div>
 
             {{-- Utilidad promedio --}}
-            <div class="order-2 sm:order-4 kpi-card bg-white border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
+            <div class="order-2 sm:order-4 kpi-card bg-superficie border border-miga rounded-xl p-4 sm:p-5 shadow-[0_1px_4px_rgba(61,43,31,.06)] hover:shadow-[0_4px_16px_rgba(61,43,31,.09)] transition-shadow">
                 <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
                     <div class="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-lg shrink-0">📊</div>
                     @if($avgMarginPct !== null)
@@ -218,7 +218,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
             {{-- Resumen operativo --}}
-            <div class="lg:col-span-2 bg-white border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)] overflow-hidden">
+            <div class="lg:col-span-2 bg-superficie border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)] overflow-hidden">
                 <div class="flex items-center justify-between px-5 pt-5 pb-1">
                     <div>
                         <div class="font-semibold text-sm text-corteza">Resumen operativo</div>
@@ -296,7 +296,7 @@
             </div>
 
             {{-- Gauge rentabilidad --}}
-            <div class="bg-white border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)] flex flex-col">
+            <div class="bg-superficie border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)] flex flex-col">
                 <div class="px-5 pt-5 pb-1">
                     <div class="font-semibold text-sm text-corteza">Rentabilidad promedio</div>
                     <div class="text-[12px] text-masa-madre mt-0.5">Objetivo: 38%</div>
@@ -337,7 +337,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
             {{-- Top recetas bar chart --}}
-            <div class="lg:col-span-2 bg-white border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)]">
+            <div class="lg:col-span-2 bg-superficie border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)]">
                 <div class="flex items-center justify-between px-5 pt-5 pb-1">
                     <div>
                         <div class="font-semibold text-sm text-corteza">Top recetas por rentabilidad</div>
@@ -355,7 +355,7 @@
             </div>
 
             {{-- Distribución de costos --}}
-            <div class="bg-white border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)]">
+            <div class="bg-superficie border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)]">
                 <div class="px-5 pt-5 pb-1">
                     <div class="font-semibold text-sm text-corteza">Distribución de costos</div>
                     <div class="text-[12px] text-masa-madre mt-0.5">Composición del costo total</div>
@@ -365,7 +365,7 @@
                     <div class="px-5 pb-5 space-y-2">
                         @php
                             $donutLabels = ['Ingredientes', 'Mano de obra', 'Gastos fijos', 'Descartables'];
-                            $donutColors = ['#9B6240','#C49272','#DEC4A8','#EFE3D5'];
+                            $donutColors = ['rgb(var(--c-brown-500))', 'rgb(var(--c-brown-300))', 'rgb(var(--c-brown-200))', 'rgb(var(--c-brown-100))'];
                         @endphp
                         @foreach($donutLabels as $i => $label)
                         <div class="flex items-center justify-between text-[12.5px]">
@@ -390,7 +390,7 @@
         {{-- ═══════════════════════════════════════════════
              TABLA DE RECETAS
         ════════════════════════════════════════════════ --}}
-        <div id="tabla-recetas" style="scroll-margin-top:1.5rem" class="bg-white border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)] overflow-hidden">
+        <div id="tabla-recetas" style="scroll-margin-top:1.5rem" class="bg-superficie border border-miga rounded-xl shadow-[0_1px_4px_rgba(61,43,31,.06)] overflow-hidden">
 
             {{-- Toolbar --}}
             <div class="px-5 py-4 border-b border-miga flex items-center gap-3 flex-wrap">
@@ -407,7 +407,7 @@
                         </svg>
                         <input type="text" name="search" value="{{ request('search') }}"
                             placeholder="Buscar receta…"
-                            class="w-full pl-9 pr-3 py-2 text-[13px] border border-miga rounded-lg bg-harina focus:bg-white focus:border-brown-300 focus:ring-1 focus:ring-brown-200 outline-none transition-all placeholder-masa-madre/50 text-corteza">
+                            class="w-full pl-9 pr-3 py-2 text-[13px] border border-miga rounded-lg bg-harina focus:bg-superficie focus:border-brown-300 focus:ring-1 focus:ring-brown-200 outline-none transition-all placeholder-masa-madre/50 text-corteza">
                     </div>
 
                     {{-- Selector de lista --}}
@@ -434,7 +434,7 @@
                             data-filter="{{ $filter['param'] }}"
                             class="margin-filter-btn px-3 py-1.5 rounded-full text-[11.5px] font-medium border transition-colors
                                 {{ request('margin_filter', '') === $filter['param']
-                                    ? 'bg-corteza text-white border-corteza'
+                                    ? 'bg-tinta text-white border-corteza'
                                     : 'bg-harina text-masa-madre border-miga hover:border-brown-300' }}">
                             {{ $filter['label'] }}
                         </button>
@@ -443,7 +443,7 @@
                     </div>
 
                     <button type="submit"
-                        class="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-corteza rounded-lg hover:bg-horno transition-colors ml-auto sm:ml-0">
+                        class="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-tinta rounded-lg hover:bg-horno transition-colors ml-auto sm:ml-0">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>

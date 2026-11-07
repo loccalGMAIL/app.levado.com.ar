@@ -20,7 +20,7 @@
                 Previsualizá y editá los emails que Levado envía automáticamente.
             </p>
 
-            <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="bg-superficie shadow rounded-lg overflow-hidden">
                 <table class="w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
@@ -80,7 +80,7 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
             @keydown.escape.window="closeModal()">
 
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl flex flex-col"
+            <div class="bg-superficie rounded-lg shadow-xl w-full max-w-3xl flex flex-col"
                 style="max-height: 90vh;"
                 @click.outside="closeModal()">
 
@@ -172,7 +172,7 @@
                                     Cancelar
                                 </button>
                                 <button type="submit"
-                                    class="px-4 py-2 text-sm bg-horno text-white rounded-md hover:bg-corteza transition-colors">
+                                    class="px-4 py-2 text-sm bg-horno text-white rounded-md hover:bg-tinta transition-colors">
                                     Guardar cambios
                                 </button>
                             </div>

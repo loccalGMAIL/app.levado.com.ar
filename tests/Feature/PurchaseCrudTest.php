@@ -329,8 +329,8 @@ test('«Leer factura» es la acción principal de compras y abre la cámara en e
     $botonNueva = str($html)->after("\$dispatch('open-modal', 'purchase-create')")->before('</button>')->toString();
 
     expect($enlaceLeer)->toContain('Leer factura')
-        ->and(str($html)->after('href="'.$scanUrl.'"')->before('>')->toString())->toContain('bg-corteza')
-        ->and($botonNueva)->toContain('border-corteza')->not->toContain('bg-corteza')
+        ->and(str($html)->after('href="'.$scanUrl.'"')->before('>')->toString())->toContain('bg-tinta')
+        ->and($botonNueva)->toContain('border-corteza')->not->toContain('bg-tinta')
         ->and($html)->toContain('capture="environment"')
         ->toContain('stashInvoiceFile');
 });

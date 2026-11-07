@@ -47,7 +47,7 @@
                     @can('manage-costs')
                         @if($editable)
                             <button type="button" @click="$dispatch('open-modal', 'production-order-request-create')"
-                                class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                                class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                                 + Nuevo pedido
                             </button>
                         @endif
@@ -68,7 +68,7 @@
                             <form method="POST" action="{{ route('production-orders.transition', $productionOrder) }}">
                                 @csrf @method('PATCH')
                                 <input type="hidden" name="status" value="confirmed">
-                                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">Confirmar</button>
+                                <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">Confirmar</button>
                             </form>
                         @endif
 
@@ -89,7 +89,7 @@
                             <form method="POST" action="{{ route('production-orders.produce', $productionOrder) }}"
                                 onsubmit="return confirm('¿Producir esta orden? Se descuentan los insumos y se suma el stock de cada artículo.');">
                                 @csrf
-                                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">Producir</button>
+                                <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">Producir</button>
                             </form>
                         @endif
 
@@ -119,7 +119,7 @@
                 <x-empty-state>Todavía no hay pedidos en esta orden.</x-empty-state>
             @else
                 @foreach($productionOrder->productionOrderRequests as $request)
-                    <div class="bg-white border border-miga rounded-lg shadow-sm" x-data="{ open: false }">
+                    <div class="bg-superficie border border-miga rounded-lg shadow-sm" x-data="{ open: false }">
                         <button type="button" @click="open = ! open"
                             class="w-full px-5 py-3 flex items-center justify-between gap-3 text-left"
                             :class="open && 'border-b border-miga'">
@@ -170,7 +170,7 @@
              en el mismo viaje): show() ya no calcula $aggregated aparte. --}}
         <template x-if="aggregated.length > 0">
             <div>
-                <div class="bg-white border border-miga rounded-lg shadow-sm overflow-hidden mb-6">
+                <div class="bg-superficie border border-miga rounded-lg shadow-sm overflow-hidden mb-6">
                     <div class="px-5 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Total a producir</h3>
                     </div>

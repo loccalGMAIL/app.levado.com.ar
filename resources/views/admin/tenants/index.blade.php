@@ -5,7 +5,7 @@
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-corteza leading-tight">Tenants</h2>
             <a href="{{ route('admin.tenants.create') }}"
-                class="px-4 py-2 bg-horno text-white text-sm font-medium rounded-md hover:bg-corteza transition-colors">
+                class="px-4 py-2 bg-horno text-white text-sm font-medium rounded-md hover:bg-tinta transition-colors">
                 + Nuevo tenant
             </a>
         </div>
@@ -32,7 +32,7 @@
                     </select>
                 </div>
                 <button type="submit"
-                    class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                    class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
                 @if(request('search') || request('status'))
@@ -48,7 +48,7 @@
             @endphp
 
             {{-- Tabla --}}
-            <div class="bg-white shadow rounded-lg overflow-x-auto">
+            <div class="bg-superficie shadow rounded-lg overflow-x-auto">
                 <table class="w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>

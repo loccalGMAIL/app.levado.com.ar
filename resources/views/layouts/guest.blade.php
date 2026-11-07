@@ -32,7 +32,7 @@
             </a>
         </div>
 
-        <div class="w-full sm:max-w-md px-6 py-8 bg-white shadow-sm rounded-xl border border-miga">
+        <div class="w-full sm:max-w-md px-6 py-8 bg-superficie shadow-sm rounded-xl border border-miga">
             {{ $slot }}
         </div>
 

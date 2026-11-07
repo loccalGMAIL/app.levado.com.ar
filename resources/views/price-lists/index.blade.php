@@ -44,7 +44,7 @@
                 @can('manage-costs')
                     <button type="button" id="btn-nueva-lista"
                         @click="$dispatch('open-modal', 'price-list-create')"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nueva lista
                     </button>
                 @endcan
@@ -64,7 +64,7 @@
                     <option value="active"   @selected(request('status') === 'active')>Activas</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactivas</option>
                 </select>
-                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
                 @if(request('search') || request('status'))

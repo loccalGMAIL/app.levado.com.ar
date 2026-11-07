@@ -27,7 +27,7 @@
             @endif
 
             {{-- Header --}}
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-superficie rounded-lg shadow p-6">
                 <div class="flex items-start justify-between gap-4 flex-wrap">
                     <div class="space-y-1">
                         <div class="flex items-center gap-3 text-sm text-masa-madre">
@@ -78,12 +78,12 @@
 
             {{-- Tabla --}}
             @if($purchase->lines->isEmpty())
-                <div class="bg-white rounded-lg shadow p-8 text-center text-masa-madre text-sm">
+                <div class="bg-superficie rounded-lg shadow p-8 text-center text-masa-madre text-sm">
                     Esta compra no tiene renglones. Agregalos desde
                     <a href="{{ route('purchases.show', $purchase) }}" class="underline hover:text-corteza">Ver factura</a>.
                 </div>
             @else
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <div class="bg-superficie rounded-lg shadow overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
@@ -330,7 +330,7 @@
                                                         {{-- Botón --}}
                                                         <button type="submit"
                                                             :disabled="!selected || incompatiblePkg || (!isBonus && unitCost <= 0)"
-                                                            class="px-3 py-1.5 bg-corteza text-white text-sm rounded hover:bg-horno transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
+                                                            class="px-3 py-1.5 bg-tinta text-white text-sm rounded hover:bg-horno transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
                                                             {{ $line->isMatched() ? 'Aplicar sugerencia' : 'Asociar' }}
                                                         </button>
                                                     </div>
@@ -345,7 +345,7 @@
                                                             placeholder="Ej: servicios administrativos, consumo personal… (no obligatorio)"
                                                             class="w-72 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm py-1">
                                                         <button type="submit"
-                                                            class="px-3 py-1.5 bg-corteza text-white text-sm rounded hover:bg-horno transition-colors whitespace-nowrap">
+                                                            class="px-3 py-1.5 bg-tinta text-white text-sm rounded hover:bg-horno transition-colors whitespace-nowrap">
                                                             Confirmar
                                                         </button>
                                                     </div>
@@ -353,7 +353,7 @@
                                                     {{-- Botón cuando aún no hay catálogUnit (selección recién elegida sin calcular) --}}
                                                     <div x-show="selected && !catalogUnit && !incompatiblePkg && !isExcluded" x-cloak>
                                                         <button type="submit"
-                                                            class="px-3 py-1.5 bg-corteza text-white text-sm rounded hover:bg-horno transition-colors">
+                                                            class="px-3 py-1.5 bg-tinta text-white text-sm rounded hover:bg-horno transition-colors">
                                                             Asociar
                                                         </button>
                                                     </div>

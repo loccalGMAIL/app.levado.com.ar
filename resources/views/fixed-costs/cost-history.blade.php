@@ -25,7 +25,7 @@
             @if($timeline->isEmpty())
                 <x-empty-state>Todavía no hay montos registrados para este gasto.</x-empty-state>
             @else
-                <div class="bg-white rounded-lg shadow divide-y divide-miga">
+                <div class="bg-superficie rounded-lg shadow divide-y divide-miga">
                     @foreach($timeline as $point)
                         <div class="px-4 py-3 flex items-center gap-4">
                             <div class="w-28 shrink-0 text-sm text-corteza">

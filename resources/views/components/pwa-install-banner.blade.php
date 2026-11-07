@@ -63,7 +63,7 @@
     style="display: none"
     class="print:hidden sm:hidden fixed bottom-16 inset-x-0 z-40 px-3 pb-2"
 >
-    <div class="bg-white border border-miga rounded-xl shadow-lg p-3 flex items-start gap-3">
+    <div class="bg-superficie border border-miga rounded-xl shadow-lg p-3 flex items-start gap-3">
         <img src="/icons/icon-192.png" alt="{{ config('app.name') }}" class="w-11 h-11 rounded-lg border border-miga shrink-0">
 
         <div class="flex-1 min-w-0">
@@ -72,7 +72,7 @@
             <div x-show="!showSteps" class="mt-1.5">
                 <p class="text-xs text-masa-madre">Accedé más rápido, a pantalla completa y desde tu inicio.</p>
                 <button type="button" @click="install()"
-                    class="mt-2 px-4 py-1.5 bg-corteza text-white text-xs font-medium rounded-md hover:bg-horno transition-colors">
+                    class="mt-2 px-4 py-1.5 bg-tinta text-white text-xs font-medium rounded-md hover:bg-horno transition-colors">
                     Instalar
                 </button>
             </div>

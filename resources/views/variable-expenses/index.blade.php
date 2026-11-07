@@ -42,18 +42,18 @@
             <x-list-header title="Gastos" subtitle="Gastos ocasionales o imprevistos. No intervienen en el costo de las recetas.">
                 <button type="button"
                     @click="$dispatch('open-modal', 'fixed-cost-report')"
-                    class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                    class="px-4 py-2 bg-superficie border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                     Imprimir
                 </button>
                 @can('manage-costs')
                     <button type="button"
                         @click="$dispatch('open-modal', 'variable-expense-categories')"
-                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        class="px-4 py-2 bg-superficie border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                         Categorías
                     </button>
                     <button type="button" id="btn-nuevo-gasto-variable"
                         @click="$dispatch('open-modal', 'variable-expense-create')"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nuevo gasto
                     </button>
                 @endcan
@@ -75,14 +75,14 @@
                      misma interacción para elegir y para sacar. --}}
                 <div class="relative" x-data="{ open: false, selected: {{ Js::from((array) request('category', [])) }} }" @click.outside="open = false">
                     <button type="button" @click="open = !open"
-                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno px-3 py-2 bg-white text-corteza flex items-center gap-2 min-w-[11rem] justify-between">
+                        class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno px-3 py-2 bg-superficie text-corteza flex items-center gap-2 min-w-[11rem] justify-between">
                         <span x-text="selected.length ? 'Categoría (' + selected.length + ')' : 'Todas las categorías'"></span>
                         <svg class="w-4 h-4 text-masa-madre shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                         </svg>
                     </button>
                     <div x-show="open" x-transition
-                        class="absolute z-20 mt-1 w-56 max-h-64 overflow-y-auto bg-white border border-gray-300 rounded-md shadow-lg p-2 space-y-1"
+                        class="absolute z-20 mt-1 w-56 max-h-64 overflow-y-auto bg-superficie border border-gray-300 rounded-md shadow-lg p-2 space-y-1"
                         style="display: none;">
                         @foreach($categories as $cat)
                             <label class="flex items-center gap-2 text-sm text-corteza px-1.5 py-1 hover:bg-miga rounded cursor-pointer">
@@ -116,7 +116,7 @@
                     <input type="date" id="filter_ve_to" name="to" value="{{ request('to') }}"
                         class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                 </div>
-                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
                 @if(request('search') || request('category') || request('supplier') || request('from') || request('to'))

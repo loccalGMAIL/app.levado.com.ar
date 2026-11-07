@@ -90,7 +90,7 @@
         <div class="flex gap-3 pt-2">
             <button type="submit"
                 :disabled="!toId || (replacing && Number(toId) === replacing.id)"
-                class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 Reemplazar
             </button>
             <button type="button"

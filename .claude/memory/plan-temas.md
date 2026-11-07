@@ -22,9 +22,28 @@ el token a la config + la variable en cada tema.
 - Se mantienen los nombres de marca como **roles**: `harina` = fondo, `miga` = superficie
   alternativa/bordes suaves, `corteza` = texto, `masa-madre` = texto secundario,
   `horno` = acento, `membrillo` = acento 2. No renombrar (no ahorra bytes, diff enorme).
-- Tokens nuevos (fase 2): `superficie` (← `bg-white`), `linea` (← `border-gray-300` y
-  `gray-*`), `exito`/`peligro`/`aviso`/`info` con `-fondo`/`-borde` (← `red/green/amber/violet/sky-*`).
-  `text-white` sobre acentos se queda.
+- Tokens nuevos (fase 2): `superficie` (← `bg-white`) y los **inversos** `tinta` (← `bg-corteza`:
+  botones primarios, chips activos), `barra` (← `bg-masa-madre`: sidebar y barra mobile) y
+  `sobre-barra` (← `text-harina`, sólo usado sobre la barra). Mismo valor que corteza/masa-madre/
+  harina en claro, pero en oscuro no se pueden invertir con el texto: un botón `bg-corteza`
+  quedaría claro con letra blanca. `text-white` sobre tinta/horno se queda literal.
+- **Cambio respecto del plan original:** NO se consolidaron los estados en `exito/peligro/…` ni
+  `border-gray-300` en `linea`. Las escalas de Tailwind que usa la app (`gray/red/green/amber/
+  yellow/orange/blue/indigo/violet/sky`) son variables, limitadas a los tonos en uso
+  (`scale()` en `tailwind.config.js`; un tono fuera de la lista no genera clase). El tema oscuro
+  invierte las escalas (50 = fondo oscuro teñido, 700 = texto claro) y centeno, que es claro,
+  hereda las de claro. **Why:** consolidar eran ~600 decisiones a mano con cambio visual para
+  ahorrar ~1 KB gzip; con variables el cambio fue cero visual y cero codemod de estados.
+- `white`/`black` quedan literales (overlays `bg-black/40`, `border-white/10` sobre la barra).
+- `theme.colors` reemplaza la paleta completa (no `extend`): los colores de Tailwind que no se
+  usan no existen.
+- `@tailwindcss/forms` detecta `var(` y usa el gris por defecto para el chevron del select
+  (data-URI); el fondo de los inputs que pone el plugin es `#fff` literal → pisarlo en fase 3.
+- La vista de paginación de Laravel (vendor) usa `bg-white` y clases `dark:` con estrategia
+  `media`: hoy ya se oscurece con el SO en modo oscuro. En fase 3: `darkMode` por selector
+  `[data-theme="oscuro"]` o publicar la vista con tokens.
+- Test de prevención: `tests/Unit/ThemeTokensTest.php` (sin `bg-white`, sin inversos con nombre
+  de texto, sin hex en vistas/JS/app.css, todo token usado definido en `:root`).
 - Tres temas en el mismo `app.css` (sin archivos por tema: un request más y parpadeo por <1 KB).
 - Cero JS para aplicar: el servidor renderiza `<html data-theme>` según `users.theme`
   (nullable, `null` = automático vía `@media (prefers-color-scheme: dark)` entre claro/oscuro;
@@ -50,8 +69,11 @@ el token a la config + la variable en cada tema.
 1. ✅ Variables en config + `:root` con los valores actuales. Verificado sin cambio visual:
    se compila una página con todas las utilidades de marca usadas (old vs new config) y se
    comparan los estilos computados en Chromium (51 clases, 0 diferencias).
-2. Codemod de colores crudos (~600 clases) y hex de `app.css` / `dashboard-charts.js` a
-   tokens + test Pest que prohíba `bg-white`, `gray-*` y hex en vistas.
+2. ✅ Escalas como variables, codemod de `bg-white`/inversos (248 clases), hex de `app.css`,
+   gráficos (`themeColor()` lee el token y devuelve hex: ApexCharts no resuelve `var()`),
+   leyenda del donut y logo; `storage/framework/views` fuera del `content`. Verificado: CSS
+   completo normalizado regla por regla (vars resueltas, colores a RGBA) contra el de fase 1
+   = sólo diferencias equivalentes; único cambio real `#fafafa` → gray-50 en tom-select.
 3. Temas oscuro y centeno, preferencia por usuario, selector, charts, theme-color, print.
 4. QA visual (~10 pantallas × 3 temas) y contraste.
 
@@ -65,7 +87,7 @@ El content `./storage/framework/views/*.php` mete en el build las vistas compila
 página de errores de Laravel (`dark:bg-[#1a1a1a]`, `neutral-*`, `rose-*`…): ~185 selectores
 que la app no usa (~1,7 KB gzip). El build de la fase 1 se hizo sin esa caché y salió de
 80 → 68 KB (14,8 → 13,1 KB gzip); si se vuelve a compilar en Windows con la caché, vuelven.
-Pendiente decidir si se saca esa entrada del `content`.
+Se sacó esa entrada del `content` en la fase 2.
 
 ## Track aparte (peso web, no hecho)
 `app.js` (44 KB gzip) carga en todas las páginas módulos de una sola (compras, escaneo,
