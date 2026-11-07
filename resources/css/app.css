@@ -5,6 +5,43 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────
+   Tokens de color
+
+   La paleta de tailwind.config.js no tiene valores: cada color
+   apunta a una variable de acá (`rgb(var(--c-…) / <alpha-value>)`).
+   Así un tema es sólo otro bloque que redefine estas variables, sin
+   generar una clase `dark:` por cada utilidad: los tres temas
+   cuestan ~1 KB de CSS en vez de duplicar las reglas de color.
+
+   Los valores van como canales RGB sueltos ("61 43 31") y no como
+   hex porque Tailwind necesita insertar la opacidad
+   (`text-corteza/40` → `rgb(var(--c-corteza) / 0.4)`).
+
+   Los nombres son roles, no colores literales: `harina` es el fondo
+   de la app y `corteza` el texto principal, aunque en un tema oscuro
+   el fondo sea oscuro y el texto claro.
+   ───────────────────────────────────────────────────────────── */
+@layer base {
+    :root {
+        --c-harina:     250 247 242; /* #FAF7F2 fondo */
+        --c-miga:       242 234 216; /* #F2EAD8 superficie alternativa, bordes suaves */
+        --c-corteza:    61 43 31;    /* #3D2B1F texto principal */
+        --c-masa-madre: 107 91 69;   /* #6B5B45 texto secundario */
+        --c-horno:      200 98 42;   /* #C8622A acento */
+        --c-membrillo:  232 168 32;  /* #E8A820 acento secundario */
+
+        --c-brown-50:  250 246 241; /* #FAF6F1 */
+        --c-brown-100: 239 227 213; /* #EFE3D5 */
+        --c-brown-200: 222 196 168; /* #DEC4A8 */
+        --c-brown-300: 196 146 114; /* #C49272 */
+        --c-brown-400: 184 121 79;  /* #B8794F */
+        --c-brown-500: 155 98 64;   /* #9B6240 */
+        --c-brown-700: 107 61 30;   /* #6B3D1E */
+        --c-brown-900: 26 17 10;    /* #1A110A */
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
    Cifras de las cards de resumen
 
    Un importe de 8 o 9 dígitos ("$ 123.456.789") mide 7,8em en

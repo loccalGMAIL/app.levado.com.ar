@@ -1,6 +1,14 @@
 import defaultTheme from 'tailwindcss/defaultTheme';
 import forms from '@tailwindcss/forms';
 
+/**
+ * Los colores viven como variables CSS en resources/css/app.css (canales RGB)
+ * para que cada tema sólo redefina las variables.
+ *
+ * @param {string} name
+ */
+const token = (name) => `rgb(var(--c-${name}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
     content: [
@@ -12,21 +20,21 @@ export default {
     theme: {
         extend: {
             colors: {
-                'masa-madre': '#6B5B45',
-                'corteza':    '#3D2B1F',
-                'harina':     '#FAF7F2',
-                'miga':       '#F2EAD8',
-                'horno':      '#C8622A',
-                'membrillo':  '#E8A820',
+                'masa-madre': token('masa-madre'),
+                'corteza':    token('corteza'),
+                'harina':     token('harina'),
+                'miga':       token('miga'),
+                'horno':      token('horno'),
+                'membrillo':  token('membrillo'),
                 'brown': {
-                    50:  '#FAF6F1',
-                    100: '#EFE3D5',
-                    200: '#DEC4A8',
-                    300: '#C49272',
-                    400: '#B8794F',
-                    500: '#9B6240',
-                    700: '#6B3D1E',
-                    900: '#1A110A',
+                    50:  token('brown-50'),
+                    100: token('brown-100'),
+                    200: token('brown-200'),
+                    300: token('brown-300'),
+                    400: token('brown-400'),
+                    500: token('brown-500'),
+                    700: token('brown-700'),
+                    900: token('brown-900'),
                 },
             },
             fontFamily: {
