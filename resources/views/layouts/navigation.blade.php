@@ -164,7 +164,7 @@
 
         {{-- Usuario (desktop) --}}
         <div class="hidden sm:flex sm:items-center sm:px-4">
-            <x-dropdown align="right" width="48">
+            <x-dropdown align="right" width="w-60">
                 <x-slot name="trigger">
                     <button class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-masa-madre hover:text-corteza hover:bg-miga focus:outline-none transition duration-150">
                         {{ Auth::user()->name }}
@@ -178,6 +178,8 @@
                     <x-dropdown-link :href="route('profile.edit')">
                         Mi perfil
                     </x-dropdown-link>
+
+                    <x-theme-switcher class="my-1 border-y border-miga px-4 py-3" />
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

@@ -23,25 +23,7 @@
     {{-- Con JS el cambio se aplica en la página y se guarda por fetch; sin JS
          queda el botón Guardar del <noscript>. --}}
     <form method="post" action="{{ route('profile.theme') }}" class="mt-6"
-          x-data="{
-              theme: @js($user->theme?->value ?? ''),
-              status: null,
-              async choose() {
-                  window.levadoTheme?.set(this.theme);
-                  this.status = null;
-                  const response = await fetch(@js(route('profile.theme')), {
-                      method: 'PATCH',
-                      headers: {
-                          'Content-Type': 'application/json',
-                          'Accept': 'application/json',
-                          'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                      },
-                      body: JSON.stringify({ theme: this.theme || null }),
-                  }).catch(() => null);
-                  this.status = response?.ok ? 'saved' : 'error';
-                  if (this.status === 'saved') setTimeout(() => this.status = null, 2000);
-              },
-          }"
+          x-data="themePicker({ theme: @js($user->theme?->value ?? ''), url: @js(route('profile.theme')) })"
           @change="choose()">
         @csrf
         @method('patch')

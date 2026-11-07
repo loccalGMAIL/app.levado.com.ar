@@ -136,6 +136,8 @@
         @endauth
 
         <div class="px-4 pb-4 border-t border-miga pt-3">
+            <x-theme-switcher class="px-1 pb-3" />
+
             <a href="{{ route('profile.edit') }}" @click="open = false"
                 class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
                     {{ request()->routeIs('profile.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">

@@ -31,6 +31,16 @@ enum Theme: string
         };
     }
 
+    /** Ícono de x-icon para el selector compacto del menú de usuario. */
+    public function icon(): string
+    {
+        return match ($this) {
+            self::Claro => 'sun',
+            self::Oscuro => 'moon',
+            self::Centeno => 'swatch',
+        };
+    }
+
     /**
      * Color de la barra del navegador y de la PWA (`<meta name="theme-color">`).
      * Tiene que ser hex: el meta no entiende variables CSS. Es el fondo

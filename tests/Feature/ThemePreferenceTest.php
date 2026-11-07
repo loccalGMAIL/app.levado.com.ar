@@ -97,3 +97,18 @@ test('perfil muestra el selector con el tema actual marcado', function () {
         ->and(preg_match('/value="centeno"[^>]*checked/', $html))->toBe(1)
         ->and(preg_match('/value=""[^>]*checked/', $html))->toBe(0);
 });
+
+test('el menú de usuario y el panel «Más» mobile tienen el selector de tema', function (?Theme $theme, string $marcado) {
+    $user = User::factory()->create(['theme' => $theme]);
+
+    $html = $this->actingAs($user)->get(route('profile.edit'))->assertOk()->getContent();
+
+    preg_match_all('/<button type="button" role="radio" title="([^"]+)"\s+aria-checked="true"/', $html, $checked);
+
+    expect(substr_count($html, 'role="radiogroup" aria-label="Tema"'))->toBe(2)
+        ->and($checked[1])->toBe([$marcado, $marcado]);
+})->with([
+    'automático' => [null, 'Automático'],
+    'oscuro' => [Theme::Oscuro, 'Oscuro'],
+    'centeno' => [Theme::Centeno, 'Centeno'],
+]);
