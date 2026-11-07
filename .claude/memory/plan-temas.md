@@ -67,6 +67,12 @@ el token a la config + la variable en cada tema.
 - `color-scheme: dark` sólo en oscuro. **No** declarar `color-scheme: light`: el navegador ya lo
   usa y, declarado, Chromium cambia el suavizado del texto en mobile (detectado comparando
   píxeles).
+- **Selector compacto** `<x-theme-switcher />` (4 botones con ícono: `computer-desktop`, `sun`,
+  `moon`, `swatch`; `Theme::icon()`) en el menú de usuario desktop (`navigation.blade.php`,
+  dropdown `w-60`) y en el panel «Más» mobile. `@click.stop` para que elegir no cierre el menú.
+  La lógica es el componente Alpine `themePicker` (`resources/js/theme-picker.js`), compartido
+  con la sección Apariencia de Perfil; cada instancia escucha `theme-changed` y relee
+  `levadoTheme.preference()`, así los selectores de una misma página quedan sincronizados.
 - `dashboard-charts.js` guarda las instancias y las rehace en `theme-changed`.
 - Tom Select y Shepherd (tour) tienen overrides en app.css; los que cambiarían claro van con
   prefijo `[data-theme="oscuro"]`.
@@ -88,6 +94,8 @@ el token a la config + la variable en cada tema.
 | barra | #6B5B45 | #2A2018 | #4A5550 |
 
 ## Fases
+Publicado como **v0.21.0** en la rama `v0.21.0-temas` (fases 1–3 + selector en el menú).
+
 1. ✅ Variables en config + `:root` con los valores actuales. Verificado sin cambio visual:
    se compila una página con todas las utilidades de marca usadas (old vs new config) y se
    comparan los estilos computados en Chromium (51 clases, 0 diferencias).
