@@ -21,7 +21,6 @@ const scale = (name, shades) => Object.fromEntries(shades.map((shade) => [shade,
 /** @type {import('tailwindcss').Config} */
 export default {
     content: [
-        './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './resources/views/**/*.blade.php',
     ],
 
@@ -43,6 +42,7 @@ export default {
             'tinta':       token('tinta'),
             'barra':       token('barra'),
             'sobre-barra': token('sobre-barra'),
+            'velo':        token('velo'),
 
             brown:  scale('brown', [50, 100, 200, 300, 400, 500, 700, 900]),
             gray:   scale('gray', [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]),

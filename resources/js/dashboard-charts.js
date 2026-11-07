@@ -19,6 +19,17 @@ function themeColor(name) {
     return '#' + channels.map(c => c.toString(16).padStart(2, '0')).join('');
 }
 
+/** Gráficos dibujados, para rehacerlos con los colores nuevos al cambiar de tema. */
+let renderedCharts = [];
+
+/**
+ * @param {object} chart instancia de ApexCharts
+ */
+function renderChart(chart) {
+    chart.render();
+    renderedCharts.push(chart);
+}
+
 async function initDashboardCharts() {
     const dataEl = document.getElementById('dashboard-chart-data');
     const gaugeEl = document.querySelector('#gaugeChart');
@@ -35,6 +46,9 @@ async function initDashboardCharts() {
 
     const { default: ApexCharts } = await import('apexcharts');
 
+    renderedCharts.forEach(chart => chart.destroy());
+    renderedCharts = [];
+
     const brown500 = themeColor('brown-500');
     const brown300 = themeColor('brown-300');
     const brown200 = themeColor('brown-200');
@@ -47,7 +61,7 @@ async function initDashboardCharts() {
     const green = themeColor('grafico-ok');
 
     /* ── Gauge ── */
-    new ApexCharts(gaugeEl, {
+    renderChart(new ApexCharts(gaugeEl, {
         series: [data.gaugeValue],
         chart: {
             type: 'radialBar',
@@ -75,7 +89,7 @@ async function initDashboardCharts() {
         stroke: { lineCap: 'round' },
         labels: ['Utilidad media'],
         colors: [brown500],
-    }).render();
+    }));
 
     /* ── Bar chart ── */
     const barEl = document.querySelector('#barChart');
@@ -88,7 +102,7 @@ async function initDashboardCharts() {
             v >= 40 ? themeColor('amber-600') :
             v >= 20 ? themeColor('orange-600') : themeColor('red-600')
         );
-        new ApexCharts(barEl, {
+        renderChart(new ApexCharts(barEl, {
             series: [{ name: 'Margen %', data: values }],
             chart: {
                 type: 'bar', height: Math.max(220, names.length * 38),
@@ -114,14 +128,14 @@ async function initDashboardCharts() {
             grid: { borderColor, strokeDashArray: 3, xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
             legend: { show: false },
             tooltip: { y: { formatter: v => v + '% de margen' } }
-        }).render();
+        }));
     }
 
     /* ── Donut ── */
     const donutEl = document.querySelector('#donutChart');
     const donutData = data.costDistribution || [];
     if (donutEl && donutData.some(v => v > 0)) {
-        new ApexCharts(donutEl, {
+        renderChart(new ApexCharts(donutEl, {
             series: donutData,
             chart: {
                 type: 'donut', height: 200,
@@ -146,7 +160,7 @@ async function initDashboardCharts() {
             dataLabels: { enabled: false },
             stroke: { width: 2, colors: [surface] },
             tooltip: { y: { formatter: v => v + '%' } }
-        }).render();
+        }));
     }
 }
 
@@ -164,6 +178,14 @@ function wireMarginFilter() {
         });
     });
 }
+
+// El script del <head> (components/theme-head) avisa cuando cambia el tema: desde
+// el selector de Perfil o porque el sistema pasó a modo oscuro en «Automático».
+window.addEventListener('theme-changed', () => {
+    if (renderedCharts.length > 0) {
+        initDashboardCharts();
+    }
+});
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

@@ -38,32 +38,54 @@ el token a la config + la variable en cada tema.
 - `theme.colors` reemplaza la paleta completa (no `extend`): los colores de Tailwind que no se
   usan no existen.
 - `@tailwindcss/forms` detecta `var(` y usa el gris por defecto para el chevron del select
-  (data-URI); el fondo de los inputs que pone el plugin es `#fff` literal → pisarlo en fase 3.
-- La vista de paginación de Laravel (vendor) usa `bg-white` y clases `dark:` con estrategia
-  `media`: hoy ya se oscurece con el SO en modo oscuro. En fase 3: `darkMode` por selector
-  `[data-theme="oscuro"]` o publicar la vista con tokens.
+  (data-URI). El fondo `#fff` literal que pone a inputs/selects/textareas se pisa en el
+  `@layer base` de app.css con `superficie`.
+- **Paginación publicada** (`resources/views/vendor/pagination/{tailwind,simple-tailwind}`) sin
+  clases `dark:` y con `bg-superficie`: la de vendor se oscurecía con el SO (estrategia `media`)
+  aunque la app estuviera en claro. Ya no hay `vendor/` en el `content` de Tailwind.
+- Token `velo` (fondo de modales y del menú «Más» mobile, con opacidad): gris en claro, negro en
+  oscuro. El menú mobile pasó de `bg-corteza/60` (marrón) a `bg-velo/60` (gris): único cambio
+  visible en claro, a propósito.
 - Test de prevención: `tests/Unit/ThemeTokensTest.php` (sin `bg-white`, sin inversos con nombre
-  de texto, sin hex en vistas/JS/app.css, todo token usado definido en `:root`).
+  de texto, sin `dark:`, sin hex en vistas/JS/app.css, todo token usado definido, oscuro redefine
+  TODAS las variables, centeno sólo existentes, `Theme::themeColor()` = `--c-harina` de cada
+  tema, piso de contraste AA de los pares de texto principales en los tres temas).
 - Tres temas en el mismo `app.css` (sin archivos por tema: un request más y parpadeo por <1 KB).
-- Cero JS para aplicar: el servidor renderiza `<html data-theme>` según `users.theme`
-  (nullable, `null` = automático vía `@media (prefers-color-scheme: dark)` entre claro/oscuro;
-  centeno sólo explícito). Enum `App\Enums\Theme` (Claro, Oscuro, Centeno).
-- Cambio sin recarga: componente Alpine que setea `data-theme` y hace `PATCH`.
-- ApexCharts lee colores con `getComputedStyle` y escucha `theme-changed`.
-- `color-scheme` por tema; `theme-color` meta renderizado por servidor; `@media print` fuerza claro.
-- Mails y PDFs (`fixed-costs/report/_styles.blade.php` copia la paleta a mano) quedan en claro.
+  `:root, [data-theme="claro"]` + `@media screen { [data-theme="oscuro"] {…} [data-theme="centeno"] {…} }`:
+  al imprimir siempre claro sin duplicar nada. `[data-theme="claro"]` explícito para que las
+  miniaturas del selector muestren cada tema con `data-theme` en un elemento (sin hex).
+- `users.theme` nullable (`null` = Automático). Enum `App\Enums\Theme` (Claro, Oscuro,
+  Centeno) con `label()`, `description()`, `themeColor()` (hex del `<meta name="theme-color">`).
+  `PATCH /profile/theme` (`profile.theme`, `ProfileController@updateTheme`, `ThemeUpdateRequest`):
+  204 por fetch, redirect sin JS. Selector en Perfil → «Apariencia» (Alpine inline).
+- El layout pone `data-theme` en `<html>` si hay tema elegido (sin JS). `<x-theme-head />` (en
+  los 3 layouts) emite el meta y un script inline (~600 B) que resuelve Automático según
+  `prefers-color-scheme` antes de pintar, sigue los cambios del SO, expone
+  `window.levadoTheme.set()` y dispara `theme-changed`. **Cambio respecto del plan:** Automático
+  era CSS puro con `@media (prefers-color-scheme)`, pero duplicaba el bloque oscuro entero en
+  el CSS; el script es más chico y deja una sola fuente de valores.
+- `color-scheme: dark` sólo en oscuro. **No** declarar `color-scheme: light`: el navegador ya lo
+  usa y, declarado, Chromium cambia el suavizado del texto en mobile (detectado comparando
+  píxeles).
+- `dashboard-charts.js` guarda las instancias y las rehace en `theme-changed`.
+- Tom Select y Shepherd (tour) tienen overrides en app.css; los que cambiarían claro van con
+  prefijo `[data-theme="oscuro"]`.
+- Botón de peligro en oscuro: blanco sobre `red-600` = 3,7:1 (se priorizó `text-red-600` sobre
+  fondo oscuro, ~150 usos, en 4,7:1).
+- Mails, PDFs (`*/_styles.blade.php` de dompdf) y `errors/minimal` quedan en claro.
 
-## Paletas iniciales (validar contraste AA)
+## Paletas (valores finales en app.css)
 | token | claro | oscuro | centeno |
 |---|---|---|---|
-| harina | #FAF7F2 | #17110C | #F2F3EF |
+| harina | #FAF7F2 | #16100B | #F2F3EF |
 | superficie | #FFFFFF | #211912 | #FFFFFF |
-| miga | #F2EAD8 | #2E241B | #E4E7DF |
-| linea | #D1D5DB | #3D3126 | #CDD2C6 |
+| miga | #F2EAD8 | #2D231A | #E4E7DF |
 | corteza | #3D2B1F | #F2EAD8 | #262C2A |
-| masa-madre | #6B5B45 | #BFAE96 | #5A6460 |
-| horno | #C8622A | #E07A3F | #5E7A3A |
-| membrillo | #E8A820 | #F0B83A | #B08A2E |
+| masa-madre | #6B5B45 | #C4B39C | #56605B |
+| horno | #C8622A | #C8622A | #55702F |
+| membrillo | #E8A820 | #F0B83A | #A07A22 |
+| tinta | #3D2B1F | #5A4636 | #262C2A |
+| barra | #6B5B45 | #2A2018 | #4A5550 |
 
 ## Fases
 1. ✅ Variables en config + `:root` con los valores actuales. Verificado sin cambio visual:
@@ -74,20 +96,22 @@ el token a la config + la variable en cada tema.
    leyenda del donut y logo; `storage/framework/views` fuera del `content`. Verificado: CSS
    completo normalizado regla por regla (vars resueltas, colores a RGBA) contra el de fase 1
    = sólo diferencias equivalentes; único cambio real `#fafafa` → gray-50 en tom-select.
-3. Temas oscuro y centeno, preferencia por usuario, selector, charts, theme-color, print.
-4. QA visual (~10 pantallas × 3 temas) y contraste.
+3. ✅ Temas oscuro y centeno, preferencia por usuario, selector, charts, theme-color, print,
+   paginación publicada. QA: capturas de 8 pantallas × 3 temas (desktop y mobile), chequeos de
+   comportamiento con Playwright (Automático sigue al SO, selector instantáneo + persistencia,
+   print en claro, inputs/velo en oscuro, gauge se redibuja) y regresión píxel a píxel de claro
+   contra el CSS de fase 2 (18 pantallas, sólo ruido de render que también aparece comparando
+   el CSS nuevo consigo mismo). Para QA local: SQLite descartable con `DB_CONNECTION=sqlite
+   DB_DATABASE=…` + `db:seed` + `DemoCatalogSeeder`, login `owner@demo.com` / `password`.
+   Para comparar CSS hay que usar contextos de navegador separados: en la misma página la
+   segunda carga sale de la caché en memoria aunque haya `route()`.
 
-## Trampa del build
-`public/build` está versionado. Para que el CSS salga igual al del equipo de desarrollo hace
-falta `vendor/laravel/framework/src/Illuminate/Pagination/resources/views` (Tailwind las escanea).
-En la nube `composer install` falla (api.github.com corta las descargas); alcanza con un sparse
-clone de `laravel/framework` en el tag del lock y copiar esa carpeta a `vendor/`.
-
-El content `./storage/framework/views/*.php` mete en el build las vistas compiladas de la
-página de errores de Laravel (`dark:bg-[#1a1a1a]`, `neutral-*`, `rose-*`…): ~185 selectores
-que la app no usa (~1,7 KB gzip). El build de la fase 1 se hizo sin esa caché y salió de
-80 → 68 KB (14,8 → 13,1 KB gzip); si se vuelve a compilar en Windows con la caché, vuelven.
-Se sacó esa entrada del `content` en la fase 2.
+## Build
+`public/build` está versionado. Desde la fase 3 el `content` de Tailwind es sólo
+`resources/views`, así que el CSS compilado no depende de `vendor/` ni de la caché de vistas.
+(En la nube `composer install` fallaba porque api.github.com corta las descargas: se resolvió
+con `--prefer-source` y, para `phpstan/phpstan`, que sólo publica zip, sembrando la caché de
+composer con un zip armado desde un clone por git del commit del lock.)
 
 ## Track aparte (peso web, no hecho)
 `app.js` (44 KB gzip) carga en todas las páginas módulos de una sola (compras, escaneo,

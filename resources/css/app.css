@@ -22,7 +22,10 @@
    el fondo sea oscuro y el texto claro.
    ───────────────────────────────────────────────────────────── */
 @layer base {
-    :root {
+    /* [data-theme="claro"] además de :root: las miniaturas del selector de
+       Perfil muestran cada tema poniendo data-theme en un elemento. */
+    :root,
+    [data-theme="claro"] {
         --c-harina:     250 247 242; /* #FAF7F2 fondo */
         --c-superficie: 255 255 255; /* #FFFFFF cards, header, modales, inputs */
         --c-miga:       242 234 216; /* #F2EAD8 superficie alternativa, bordes suaves */
@@ -38,6 +41,7 @@
         --c-tinta:       61 43 31;    /* #3D2B1F botones primarios, chips activos */
         --c-barra:       107 91 69;   /* #6B5B45 sidebar y barra inferior mobile */
         --c-sobre-barra: 250 247 242; /* #FAF7F2 texto e íconos sobre la barra */
+        --c-velo:        107 114 128; /* #6B7280 fondo detrás de modales (con opacidad) */
 
         --c-brown-50:  250 246 241; /* #FAF6F1 */
         --c-brown-100: 239 227 213; /* #EFE3D5 */
@@ -130,6 +134,163 @@
         --c-sky-50:      240 249 255;
         --c-sky-100:     224 242 254;
         --c-sky-700:     3 105 161;
+    }
+
+    /* Los temas van dentro de `screen`: al imprimir, la página usa siempre los
+       valores de :root (claro), elija el usuario el tema que elija. */
+    @media screen {
+        [data-theme="oscuro"] {
+            /* Las escalas se invierten: los tonos bajos (50–200) son fondos y
+               bordes oscuros teñidos y los altos (600–900), texto claro. Así
+               `bg-red-50 text-red-700` sigue siendo «fondo suave, texto fuerte».
+               orange-200 no se invierte: sólo se usa como texto sobre la barra
+               del backoffice (bg-tinta), que es oscura en todos los temas.
+               Tiene que redefinir TODAS las variables de :root (lo verifica
+               tests/Unit/ThemeTokensTest.php): una que falte quedaría clara. */
+            /* Scrollbars, date pickers y demás controles nativos en oscuro. Claro
+               no declara `color-scheme: light`: es lo que el navegador ya usa y,
+               declarado, Chromium cambia el suavizado del texto en mobile. */
+            color-scheme: dark;
+
+            --c-harina:       22 16 11;
+            --c-superficie:   33 25 18;
+            --c-miga:         45 35 26;
+            --c-corteza:      242 234 216;
+            --c-masa-madre:   196 179 156;
+            --c-horno:        200 98 42;
+            --c-membrillo:    240 184 58;
+
+            --c-tinta:        90 70 54;
+            --c-barra:        42 32 24;
+            --c-sobre-barra:  242 234 216;
+            --c-velo:         0 0 0;
+
+            --c-brown-50:     30 22 16;
+            --c-brown-100:    58 44 33;
+            --c-brown-200:    92 69 51;
+            --c-brown-300:    126 94 69;
+            --c-brown-400:    160 115 79;
+            --c-brown-500:    192 138 94;
+            --c-brown-700:    226 195 165;
+            --c-brown-900:    250 240 230;
+
+            --c-grafico-suave: 156 139 120;
+            --c-grafico-ok:   63 181 126;
+
+            --c-gray-50:      31 24 19;
+            --c-gray-100:     42 34 27;
+            --c-gray-200:     58 48 39;
+            --c-gray-300:     84 71 58;
+            --c-gray-400:     125 110 96;
+            --c-gray-500:     163 148 132;
+            --c-gray-600:     191 178 163;
+            --c-gray-700:     214 203 190;
+            --c-gray-800:     232 224 214;
+            --c-gray-900:     245 240 234;
+
+            --c-red-50:       44 21 21;
+            --c-red-100:      61 26 26;
+            --c-red-200:      94 37 37;
+            --c-red-300:      130 48 48;
+            --c-red-400:      181 64 64;
+            --c-red-500:      201 68 68;
+            --c-red-600:      226 85 85;
+            --c-red-700:      245 154 154;
+            --c-red-800:      250 194 194;
+
+            --c-green-50:     17 36 26;
+            --c-green-100:    22 48 33;
+            --c-green-200:    31 74 49;
+            --c-green-300:    42 99 66;
+            --c-green-500:    58 168 102;
+            --c-green-600:    76 193 122;
+            --c-green-700:    134 217 166;
+            --c-green-800:    176 232 197;
+
+            --c-amber-50:     42 32 12;
+            --c-amber-100:    58 44 16;
+            --c-amber-200:    87 65 21;
+            --c-amber-300:    122 90 26;
+            --c-amber-400:    201 154 46;
+            --c-amber-500:    217 166 55;
+            --c-amber-600:    235 181 76;
+            --c-amber-700:    245 201 110;
+            --c-amber-800:    249 218 152;
+            --c-amber-900:    252 232 191;
+
+            --c-yellow-50:    41 36 12;
+            --c-yellow-300:   122 106 26;
+            --c-yellow-600:   232 197 71;
+            --c-yellow-700:   240 211 106;
+            --c-yellow-800:   245 224 143;
+            --c-yellow-900:   250 237 184;
+
+            --c-orange-100:   58 32 16;
+            --c-orange-200:   254 215 170;
+            --c-orange-400:   194 101 42;
+            --c-orange-600:   240 138 75;
+            --c-orange-700:   246 167 115;
+
+            --c-blue-50:      17 29 46;
+            --c-blue-100:     20 37 64;
+            --c-blue-200:     29 58 99;
+            --c-blue-300:     43 82 136;
+            --c-blue-700:     141 184 245;
+            --c-blue-800:     181 208 250;
+
+            --c-indigo-50:    23 26 51;
+            --c-indigo-100:   30 34 69;
+            --c-indigo-400:   79 87 184;
+            --c-indigo-500:   124 133 232;
+            --c-indigo-700:   165 172 245;
+            --c-indigo-800:   197 202 250;
+
+            --c-violet-100:   42 29 69;
+            --c-violet-600:   167 139 250;
+            --c-violet-700:   196 177 253;
+
+            --c-sky-50:       15 34 48;
+            --c-sky-100:      18 41 59;
+            --c-sky-700:      124 200 240;
+        }
+
+        [data-theme="centeno"] {
+            /* Neutro frío con acento oliva. Es un tema claro: hereda de :root
+               las escalas de estado, los grises y el velo. `brown` es la escala
+               de los gráficos, así que acá pasa a ser salvia. */
+
+            --c-harina:       242 243 239;
+            --c-superficie:   255 255 255;
+            --c-miga:         228 231 223;
+            --c-corteza:      38 44 42;
+            --c-masa-madre:   86 96 91;
+            --c-horno:        85 112 47;
+            --c-membrillo:    160 122 34;
+
+            --c-tinta:        38 44 42;
+            --c-barra:        74 85 80;
+            --c-sobre-barra:  242 243 239;
+
+            --c-brown-50:     244 246 241;
+            --c-brown-100:    226 232 218;
+            --c-brown-200:    199 211 184;
+            --c-brown-300:    163 181 140;
+            --c-brown-400:    134 160 106;
+            --c-brown-500:    107 134 80;
+            --c-brown-700:    69 88 47;
+            --c-brown-900:    28 36 20;
+
+            --c-grafico-suave: 138 148 142;
+        }
+    }
+
+    /* @tailwindcss/forms les pone fondo `#fff` literal a inputs, selects y
+       textareas: sin esto quedan blancos en el tema oscuro. En claro y centeno
+       superficie vale #fff, así que ahí no cambia nada. */
+    input:where(:not([type=button], [type=submit], [type=reset], [type=image], [type=range], [type=color], [type=file])),
+    select,
+    textarea {
+        background-color: rgb(var(--c-superficie));
     }
 }
 
@@ -484,4 +645,45 @@
 }
 .ts-wrapper.single.dropdown-active .ts-control::after {
     border-color: transparent transparent rgb(var(--c-masa-madre));
+}
+
+/* El CSS por defecto de Tom Select fija blanco y gris oscuro. El fondo del
+   panel vale lo mismo que superficie en los temas claros; el resto se pisa
+   sólo en el oscuro para no tocar cómo se ve hoy. */
+.ts-dropdown {
+    background: rgb(var(--c-superficie));
+}
+
+[data-theme="oscuro"] .ts-dropdown {
+    color: rgb(var(--c-corteza));
+}
+
+[data-theme="oscuro"] .ts-wrapper.disabled .ts-control {
+    background-color: rgb(var(--c-gray-100));
+}
+
+/* Shepherd (tour de onboarding) trae su propio CSS, que se carga después de
+   éste; el prefijo [data-theme] le gana por especificidad. */
+[data-theme="oscuro"] .shepherd-element,
+[data-theme="oscuro"] .shepherd-arrow:before {
+    background: rgb(var(--c-superficie));
+}
+
+[data-theme="oscuro"] .shepherd-has-title .shepherd-content .shepherd-header,
+[data-theme="oscuro"] .shepherd-element.shepherd-has-title[data-popper-placement^=bottom] > .shepherd-arrow:before {
+    background: rgb(var(--c-miga));
+}
+
+[data-theme="oscuro"] .shepherd-title,
+[data-theme="oscuro"] .shepherd-text {
+    color: rgb(var(--c-corteza));
+}
+
+[data-theme="oscuro"] .shepherd-cancel-icon {
+    color: rgb(var(--c-masa-madre));
+}
+
+[data-theme="oscuro"] .shepherd-button.shepherd-button-secondary {
+    background: rgb(var(--c-miga));
+    color: rgb(var(--c-corteza));
 }

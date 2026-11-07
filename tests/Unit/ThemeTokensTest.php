@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\Theme;
+
 /*
  * Los temas (claro / oscuro / centeno) funcionan redefiniendo variables CSS: cada
  * color de tailwind.config.js es `rgb(var(--c-…) / <alpha-value>)` y los valores
@@ -86,14 +88,50 @@ function appCssWithoutComments(): string
 }
 
 /**
+ * Variables de un bloque de tema de app.css.
+ *
+ * @param  string  $selector  `:root` (claro), `oscuro` o `centeno`
+ * @return array<string, string> nombre (sin `--c-`) => canales RGB
+ */
+function themeTokens(string $selector): array
+{
+    $pattern = $selector === ':root'
+        ? '/:root,\s*\[data-theme="claro"\]\s*\{(.*?)\}/s'
+        : '/\[data-theme="'.$selector.'"\]\s*\{(.*?)\}/s';
+
+    preg_match($pattern, appCssWithoutComments(), $block);
+    preg_match_all('/--c-([\w-]+)\s*:\s*([\d ]+);/', $block[1] ?? '', $tokens);
+
+    return array_combine($tokens[1], array_map('trim', $tokens[2]));
+}
+
+/**
  * @return list<string>
  */
 function definedColorTokens(): array
 {
-    preg_match('/:root\s*\{(.*?)\}/s', appCssWithoutComments(), $root);
-    preg_match_all('/--c-([\w-]+)\s*:/', $root[1] ?? '', $names);
+    return array_keys(themeTokens(':root'));
+}
 
-    return $names[1];
+/**
+ * Contraste WCAG entre dos colores dados como canales RGB ("61 43 31").
+ */
+function contrastRatio(string $foreground, string $background): float
+{
+    $luminance = function (string $channels): float {
+        $linear = array_map(function (string $channel): float {
+            $value = ((int) $channel) / 255;
+
+            return $value <= 0.03928 ? $value / 12.92 : (($value + 0.055) / 1.055) ** 2.4;
+        }, explode(' ', $channels));
+
+        return 0.2126 * $linear[0] + 0.7152 * $linear[1] + 0.0722 * $linear[2];
+    };
+
+    $lighter = max($luminance($foreground), $luminance($background));
+    $darker = min($luminance($foreground), $luminance($background));
+
+    return ($lighter + 0.05) / ($darker + 0.05);
 }
 
 it('no usa bg-white en las vistas: el fondo de cards y modales es bg-superficie', function () {
@@ -153,3 +191,62 @@ it('define en :root cada token que usan la config de Tailwind, el CSS, las vista
     expect($used)->not->toBeEmpty()
         ->and(array_values(array_diff($used, definedColorTokens())))->toBe([]);
 });
+
+it('no usa variantes dark: en las vistas: el tema oscuro sale de las variables', function () {
+    // Tailwind resuelve dark: con prefers-color-scheme, así que se aplicaría según
+    // el sistema operativo y no según el tema que eligió el usuario.
+    $views = sourceFiles('resources/views', '.blade.php', VISTAS_CON_COLORES_LITERALES);
+
+    expect(matchesIn($views, '#(?<![\w-])dark:#'))->toBe([]);
+});
+
+it('el tema oscuro redefine todas las variables: una que falte quedaría clara', function () {
+    $claro = themeTokens(':root');
+    $oscuro = themeTokens('oscuro');
+
+    expect($claro)->not->toBeEmpty()
+        ->and(array_values(array_diff(array_keys($claro), array_keys($oscuro))))->toBe([])
+        ->and(array_values(array_diff(array_keys($oscuro), array_keys($claro))))->toBe([]);
+});
+
+it('centeno sólo redefine variables que existen', function () {
+    $centeno = themeTokens('centeno');
+
+    expect($centeno)->not->toBeEmpty()
+        ->and(array_values(array_diff(array_keys($centeno), definedColorTokens())))->toBe([]);
+});
+
+it('el color de la barra del navegador coincide con el fondo de cada tema', function (Theme $theme) {
+    $tokens = [...themeTokens(':root'), ...($theme === Theme::Claro ? [] : themeTokens($theme->value))];
+    $hex = sprintf('#%02X%02X%02X', ...array_map('intval', explode(' ', $tokens['harina'])));
+
+    expect($theme->themeColor())->toBe($hex);
+})->with(Theme::cases());
+
+it('mantiene el contraste de los textos principales en cada tema', function (Theme $theme) {
+    // Pisos: 4,5 (AA) para texto; 3 para el acento, que en claro ya está en 4,0
+    // como texto sobre blanco y se usa sobre todo en botones y enlaces.
+    $tokens = [...themeTokens(':root'), ...($theme === Theme::Claro ? [] : themeTokens($theme->value)), 'white' => '255 255 255'];
+
+    $pairs = [
+        ['corteza', 'harina', 4.5], ['corteza', 'superficie', 4.5], ['corteza', 'miga', 4.5],
+        ['masa-madre', 'harina', 4.5], ['masa-madre', 'superficie', 4.5], ['masa-madre', 'miga', 4.5],
+        ['sobre-barra', 'barra', 4.5], ['white', 'tinta', 4.5],
+        ['horno', 'superficie', 3], ['white', 'horno', 3],
+        ['gray-500', 'superficie', 4.5], ['gray-600', 'superficie', 4.5],
+        ['red-600', 'superficie', 4.5], ['red-700', 'red-50', 4.5],
+        ['green-700', 'green-50', 4.5], ['amber-700', 'amber-50', 4.5],
+    ];
+
+    $failing = [];
+
+    foreach ($pairs as [$foreground, $background, $minimum]) {
+        $ratio = contrastRatio($tokens[$foreground], $tokens[$background]);
+
+        if ($ratio < $minimum) {
+            $failing[] = sprintf('%s sobre %s: %.2f (mínimo %.1f)', $foreground, $background, $ratio, $minimum);
+        }
+    }
+
+    expect($failing)->toBe([]);
+})->with(Theme::cases());

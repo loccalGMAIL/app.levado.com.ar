@@ -10,7 +10,7 @@
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
         @click="open = false"
-        class="fixed inset-0 z-40 bg-tinta/60"
+        class="fixed inset-0 z-40 bg-velo/60"
         style="display: none;"
     ></div>
 
