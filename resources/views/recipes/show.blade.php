@@ -258,7 +258,7 @@
             @can('manage-costs')
                 <div class="flex items-center gap-1 sm:gap-2 shrink-0">
                     <button type="button" @click="savePrice()" :disabled="savingPrice"
-                        class="px-2 sm:px-3 py-1.5 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors whitespace-nowrap disabled:opacity-50">
+                        class="px-2 sm:px-3 py-1.5 text-sm bg-tinta text-white rounded-md hover:bg-horno transition-colors whitespace-nowrap disabled:opacity-50">
                         <span x-show="!savingPrice"><span class="hidden sm:inline">Guardar </span>precio</span>
                         <span x-show="savingPrice" class="text-xs">Guardando…</span>
                     </button>
@@ -266,29 +266,29 @@
                         @csrf
                         @method('PATCH')
                         <button type="submit"
-                            class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
+                            class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-superficie transition-colors whitespace-nowrap">
                             <span class="sm:hidden">{{ $recipe->active ? 'Desact.' : 'Activar' }}</span>
                             <span class="hidden sm:inline">{{ $recipe->active ? 'Desactivar' : 'Activar' }}</span>
                         </button>
                     </form>
                     <a href="{{ route('recipes.print', $recipe) }}"
-                        class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
+                        class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-superficie transition-colors whitespace-nowrap">
                         Imprimir
                     </a>
                     <a href="{{ route('recipes.baker', $recipe) }}"
-                        class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
+                        class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-superficie transition-colors whitespace-nowrap">
                         % panadero
                     </a>
                     <form method="POST" action="{{ route('recipes.copy', $recipe) }}">
                         @csrf
                         <button type="submit"
-                            class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
+                            class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-superficie transition-colors whitespace-nowrap">
                             Copiar
                         </button>
                     </form>
                     <button type="button"
                         @click="$dispatch('open-modal', 'recipe-edit-info')"
-                        class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
+                        class="px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-superficie transition-colors whitespace-nowrap">
                         Editar<span class="hidden sm:inline"> info</span>
                     </button>
                 </div>
@@ -302,7 +302,7 @@
             <div class="flex-1 min-w-0 space-y-4">
 
                 {{-- Ingredientes --}}
-                <div class="bg-white rounded-lg shadow" x-data="{ mobileExpanded: false }">
+                <div class="bg-superficie rounded-lg shadow" x-data="{ mobileExpanded: false }">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Ingredientes</h3>
                         @can('manage-costs')
@@ -464,7 +464,7 @@
                 </div>
 
                 {{-- Mano de obra --}}
-                <div class="bg-white rounded-lg shadow" x-data="{ mobileExpanded: false }">
+                <div class="bg-superficie rounded-lg shadow" x-data="{ mobileExpanded: false }">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Mano de obra</h3>
                         @can('manage-costs')
@@ -588,7 +588,7 @@
                 </div>
 
                 {{-- Envases --}}
-                <div class="bg-white rounded-lg shadow" x-data="{ mobileExpanded: false }">
+                <div class="bg-superficie rounded-lg shadow" x-data="{ mobileExpanded: false }">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Envases</h3>
                         @can('manage-costs')
@@ -702,7 +702,7 @@
                 </div>
 
                 {{-- Sub-recetas --}}
-                <div class="bg-white rounded-lg shadow" x-data="{ mobileExpanded: false }">
+                <div class="bg-superficie rounded-lg shadow" x-data="{ mobileExpanded: false }">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-miga">
                         <h3 class="text-sm font-semibold text-corteza">Sub-recetas</h3>
                         @can('manage-costs')
@@ -837,7 +837,7 @@
             <div class="w-full lg:w-64 lg:shrink-0 lg:sticky lg:top-20 space-y-3">
 
                 {{-- Resumen --}}
-                <div class="bg-white rounded-lg shadow p-4 space-y-2">
+                <div class="bg-superficie rounded-lg shadow p-4 space-y-2">
                     <p class="text-xs font-semibold text-masa-madre uppercase tracking-wide">Resumen en tiempo real</p>
 
                     <div class="space-y-1.5 text-sm pt-1">
@@ -877,7 +877,7 @@
                 </div>
 
                 {{-- Precio de venta --}}
-                <div class="bg-white rounded-lg shadow p-4 space-y-3"
+                <div class="bg-superficie rounded-lg shadow p-4 space-y-3"
                     x-effect="if (policyType !== 'manual' && costPerUnit !== null && policyValue) recomputePreview()">
                     <div class="flex items-center justify-between gap-2">
                         <p class="text-xs font-semibold text-masa-madre uppercase tracking-wide">Precio de venta</p>
@@ -961,7 +961,7 @@
                 </div>
 
                 {{-- Simular margen --}}
-                <div class="bg-white rounded-lg shadow p-4 space-y-2">
+                <div class="bg-superficie rounded-lg shadow p-4 space-y-2">
                     <p class="text-xs font-semibold text-masa-madre uppercase tracking-wide">Simular margen</p>
                     <div class="flex items-center gap-3">
                         <input type="range" x-model.number="targetMargin" min="0" max="80" step="1"

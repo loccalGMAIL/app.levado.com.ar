@@ -37,7 +37,7 @@
                     Todavía no hay pedidos recurrentes. Se crean tildando "Se repite" al cargar un pedido nuevo.
                 </x-empty-state>
             @else
-                <div class="bg-white border border-miga rounded-lg shadow-sm overflow-hidden">
+                <div class="bg-superficie border border-miga rounded-lg shadow-sm overflow-hidden">
                     <table class="w-full text-sm">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>
@@ -59,7 +59,7 @@
                                     <td class="px-4 py-3">
                                         <div class="flex gap-1">
                                             @foreach($weekdayLabels as [$iso, $label])
-                                                <span class="w-5 h-5 flex items-center justify-center rounded text-[11px] {{ in_array($iso, $item->weekdays, true) ? 'bg-corteza text-white' : 'bg-miga text-masa-madre' }}">
+                                                <span class="w-5 h-5 flex items-center justify-center rounded text-[11px] {{ in_array($iso, $item->weekdays, true) ? 'bg-tinta text-white' : 'bg-miga text-masa-madre' }}">
                                                     {{ $label }}
                                                 </span>
                                             @endforeach

@@ -13,7 +13,7 @@
 
     <div class="py-10">
         <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="bg-white shadow rounded-lg p-6">
+            <div class="bg-superficie shadow rounded-lg p-6">
                 <form method="POST" action="{{ route('admin.tenants.update', $tenant) }}" class="space-y-5">
                     @csrf
                     @method('PUT')

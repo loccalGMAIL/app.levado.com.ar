@@ -107,7 +107,7 @@
                             class="flex-1 text-sm border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm" />
                         <button type="button" @click="createCategory()"
                             :disabled="newCatLoading || !newCatName.trim()"
-                            class="px-3 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
+                            class="px-3 py-1.5 text-xs bg-tinta text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
                             <span x-text="newCatLoading ? 'Creando…' : 'Crear'"></span>
                         </button>
                     </div>

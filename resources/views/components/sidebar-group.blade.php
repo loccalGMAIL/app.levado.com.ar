@@ -10,7 +10,7 @@
         }
     }">
     <button type="button" @click="toggle()"
-        class="w-full flex items-center justify-between px-5 pt-4 pb-1 text-[9.5px] font-semibold uppercase tracking-widest text-harina/35 hover:text-harina/60 transition-colors">
+        class="w-full flex items-center justify-between px-5 pt-4 pb-1 text-[9.5px] font-semibold uppercase tracking-widest text-sobre-barra/35 hover:text-sobre-barra/60 transition-colors">
         {{ $title }}
         <svg class="w-2.5 h-2.5 shrink-0 transition-transform" :class="open ? '' : '-rotate-90'"
             fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">

@@ -110,7 +110,7 @@
             @endif
 
             {{-- Header de la compra --}}
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-superficie rounded-lg shadow p-6">
                 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div class="min-w-0 space-y-2">
                         <div class="flex items-center gap-2">
@@ -230,13 +230,13 @@
                 @endif
 
                 @if($purchase->lines->isEmpty())
-                    <div class="bg-white rounded-lg shadow p-6 text-center text-masa-madre text-sm">
+                    <div class="bg-superficie rounded-lg shadow p-6 text-center text-masa-madre text-sm">
                         No hay renglones. Agregá uno con el botón de arriba.
                     </div>
                 @else
                     {{-- Vista tarjetas: mobile (oculta cuando se expande la tabla) --}}
                     <div :class="mobileExpanded ? 'hidden' : 'md:hidden'"
-                         class="bg-white rounded-lg shadow divide-y divide-miga">
+                         class="bg-superficie rounded-lg shadow divide-y divide-miga">
                         @foreach($purchase->lines as $line)
                             @php
                                 $mSub   = (float) $line->subtotal;
@@ -353,7 +353,7 @@
 
                     {{-- Tabla completa: siempre visible en desktop; en mobile solo al expandir --}}
                     <div :class="mobileExpanded ? '' : 'hidden md:block'"
-                         class="bg-white rounded-lg shadow overflow-x-auto">
+                         class="bg-superficie rounded-lg shadow overflow-x-auto">
                         {{-- Botón colapsar (solo mobile) --}}
                         <div class="md:hidden px-4 py-2.5 border-b border-miga flex items-center justify-between">
                             <span class="text-xs font-medium text-masa-madre">Vista completa</span>
@@ -573,7 +573,7 @@
             </div>
 
             {{-- Percepciones e impuestos: listado propio de la compra (no por renglón) --}}
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-superficie rounded-lg shadow p-6">
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <h3 class="text-sm font-semibold text-corteza">Percepciones e impuestos</h3>
@@ -687,7 +687,7 @@
             </div>
 
             {{-- Notas de crédito de esta compra --}}
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-superficie rounded-lg shadow p-6">
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <h3 class="text-sm font-semibold text-corteza">Notas de crédito</h3>
@@ -772,7 +772,7 @@
                     @endif
                     <div class="flex justify-end">
                         <a href="{{ route('purchases.invoice', $purchase) }}" download
-                            class="inline-flex items-center gap-1.5 px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                            class="inline-flex items-center gap-1.5 px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>

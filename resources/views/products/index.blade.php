@@ -89,7 +89,7 @@
                     </button>
                     <button type="button" id="btn-nuevo-producto"
                         @click="$dispatch('open-modal', 'product-create')"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nuevo artículo
                     </button>
                 @endcan
@@ -136,7 +136,7 @@
                         @endforeach
                     </select>
                 @endif
-                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
                 @if(request('search') || request('status') || request('type') || request('category'))
@@ -149,7 +149,7 @@
                     class="flex items-center gap-3 bg-miga rounded-md px-4 py-2 text-sm">
                     <span class="text-corteza"><span x-text="selectedIds.length"></span> artículo(s) seleccionados (de esta página)</span>
                     <button type="button" @click="$dispatch('open-modal', 'product-bulk-category')"
-                        class="px-3 py-1 bg-corteza text-white text-xs rounded-md hover:bg-horno transition-colors">
+                        class="px-3 py-1 bg-tinta text-white text-xs rounded-md hover:bg-horno transition-colors">
                         Asignar categoría
                     </button>
                     <button type="button" @click="clearSelection()" class="text-masa-madre hover:text-corteza hover:underline">

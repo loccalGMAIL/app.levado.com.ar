@@ -64,7 +64,7 @@
     <div class="px-5 py-3 flex items-center justify-end gap-3 border-t border-miga">
         <span x-show="dirty" x-cloak class="text-xs text-amber-700">Sin guardar</span>
         <button type="button" @click="save()" :disabled="saving || ! dirty"
-            class="px-4 py-1.5 bg-corteza text-white text-xs rounded-md hover:bg-horno transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            class="px-4 py-1.5 bg-tinta text-white text-xs rounded-md hover:bg-horno transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             <span x-show="! saving">Guardar pedido</span>
             <span x-show="saving">Guardando…</span>
         </button>

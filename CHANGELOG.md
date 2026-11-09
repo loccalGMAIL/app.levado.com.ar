@@ -295,6 +295,34 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.21.0] — 2026-11-07
+
+Rama `v0.21.0-temas`, sobre v0.20.3. **Temas visuales**: además del claro de siempre, un tema **oscuro** cálido y **centeno** (neutro frío con acento oliva). Cada usuario elige el suyo o lo deja en **Automático**, que sigue la configuración del dispositivo.
+
+### Agregado
+
+- **Apariencia** en Mi perfil: cuatro opciones (Automático, Claro, Oscuro, Centeno) con una miniatura de cada tema. El cambio se aplica al instante y se guarda solo.
+- **Selector de tema en el menú de usuario** (escritorio) y en el panel **Más** (celular), para cambiarlo sin entrar a Perfil.
+- En **Automático** la app pasa sola a oscuro cuando el dispositivo lo hace, sin recargar.
+- La barra del navegador y de la app instalada toma el color del tema.
+
+### Cambiado
+
+- Al **imprimir** se usan siempre los colores del tema claro, se elija el tema que se elija.
+- El fondo detrás del menú **Más** en el celular pasa de marrón a gris, igual que el de los modales.
+
+### Técnico
+
+- **Colores como variables CSS**: cada color de `tailwind.config.js` es `rgb(var(--c-…) / <alpha-value>)` y los valores viven en `app.css` (`:root` / `[data-theme="claro"]`, y `[data-theme="oscuro"]`, `[data-theme="centeno"]` dentro de `@media screen`). Los tres temas cuestan ~2 KB de CSS en vez de duplicar las utilidades con `dark:`.
+- `theme.colors` reemplaza la paleta: las escalas de Tailwind que usa la app son variables limitadas a los tonos en uso. Tokens nuevos `superficie` (ex `bg-white`), `tinta` (ex `bg-corteza`), `barra` / `sobre-barra` (ex `bg-masa-madre` / `text-harina`) y `velo`.
+- Columna `users.theme` (nullable = Automático), enum `App\Enums\Theme`, `PATCH /profile/theme` (`profile.theme`). `<x-theme-head />` en los layouts resuelve Automático antes de pintar; `themePicker` (Alpine) compartido por Perfil y el menú (`<x-theme-switcher />`).
+- Gráficos del dashboard leen los colores del tema y se redibujan al cambiarlo. Paginación publicada en `resources/views/vendor/pagination` con tokens; el build de Tailwind ya no escanea `vendor/` ni `storage/framework/views`.
+- `tests/Unit/ThemeTokensTest.php` impide colores literales (`bg-white`, hex, `dark:`), exige que el oscuro redefina todas las variables y fija un piso de contraste AA en los tres temas.
+
+#### Al deployar
+
+- `php artisan migrate` (columna `theme` en `users`). `npm run build`.
+
 ## [0.20.3] — 2026-11-06
 
 Rama `v0.20.3-compras-leer-factura`, sobre v0.20.2. Ajustes de la pantalla de Compras: **Leer factura** pasa a ser la acción principal y en el celular abre la cámara directamente.

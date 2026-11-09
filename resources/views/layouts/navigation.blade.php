@@ -6,19 +6,19 @@
     }
 @endphp
 
-<nav class="bg-white border-b border-miga">
+<nav class="bg-superficie border-b border-miga">
     <div class="flex h-16">
 
         {{-- Bloque de marca — mismo ancho que el sidebar, fondo oscuro para continuidad visual --}}
         <a href="{{ route('dashboard') }}"
-            class="hidden sm:flex w-52 shrink-0 bg-masa-madre border-r border-white/10 items-center justify-center p-2
-                   hover:bg-masa-madre/90 transition-colors">
+            class="hidden sm:flex w-52 shrink-0 bg-barra border-r border-white/10 items-center justify-center p-2
+                   hover:bg-barra/90 transition-colors">
             @if($navTenant?->logo_path)
                 <img src="{{ Storage::url($navTenant->logo_path) }}"
                      alt="{{ $navTenant->name }}"
                      class="w-full h-full object-contain">
             @else
-                <x-application-logo class="w-full h-full text-harina" />
+                <x-application-logo class="w-full h-full text-sobre-barra" />
             @endif
         </a>
 
@@ -164,7 +164,7 @@
 
         {{-- Usuario (desktop) --}}
         <div class="hidden sm:flex sm:items-center sm:px-4">
-            <x-dropdown align="right" width="48">
+            <x-dropdown align="right" width="w-60">
                 <x-slot name="trigger">
                     <button class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-masa-madre hover:text-corteza hover:bg-miga focus:outline-none transition duration-150">
                         {{ Auth::user()->name }}
@@ -178,6 +178,8 @@
                     <x-dropdown-link :href="route('profile.edit')">
                         Mi perfil
                     </x-dropdown-link>
+
+                    <x-theme-switcher class="my-1 border-y border-miga px-4 py-3" />
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

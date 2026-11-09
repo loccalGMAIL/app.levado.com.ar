@@ -27,7 +27,7 @@
         <div class="space-y-6 mt-4">
 
             {{-- Header --}}
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-superficie rounded-lg shadow p-6">
                 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div class="min-w-0 space-y-1">
                         <h2 class="text-base font-semibold text-corteza">
@@ -70,7 +70,7 @@
             </div>
 
             {{-- Renglones --}}
-            <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="bg-superficie rounded-lg shadow overflow-hidden">
                 <div class="flex items-center justify-between gap-3 p-6 pb-0">
                     <h3 class="text-sm font-semibold text-corteza">Renglones</h3>
                     @can('manage-costs')

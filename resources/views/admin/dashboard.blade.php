@@ -10,23 +10,23 @@
 
             {{-- Widgets --}}
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                <div class="bg-white rounded-lg shadow p-5 text-center">
+                <div class="bg-superficie rounded-lg shadow p-5 text-center">
                     <div class="text-3xl font-bold text-corteza">{{ $totalTenants }}</div>
                     <div class="text-sm text-masa-madre mt-1">Tenants totales</div>
                 </div>
-                <div class="bg-white rounded-lg shadow p-5 text-center">
+                <div class="bg-superficie rounded-lg shadow p-5 text-center">
                     <div class="text-3xl font-bold text-green-600">{{ $activeTenants }}</div>
                     <div class="text-sm text-masa-madre mt-1">Activos</div>
                 </div>
-                <div class="bg-white rounded-lg shadow p-5 text-center">
+                <div class="bg-superficie rounded-lg shadow p-5 text-center">
                     <div class="text-3xl font-bold text-gray-400">{{ $inactiveTenants }}</div>
                     <div class="text-sm text-masa-madre mt-1">Inactivos</div>
                 </div>
-                <div class="bg-white rounded-lg shadow p-5 text-center">
+                <div class="bg-superficie rounded-lg shadow p-5 text-center">
                     <div class="text-3xl font-bold text-corteza">{{ $totalUsers }}</div>
                     <div class="text-sm text-masa-madre mt-1">Usuarios totales</div>
                 </div>
-                <div class="bg-white rounded-lg shadow p-5 text-center">
+                <div class="bg-superficie rounded-lg shadow p-5 text-center">
                     <div class="text-3xl font-bold text-membrillo">{{ $recentlyActiveTenants }}</div>
                     <div class="text-sm text-masa-madre mt-1">Activos últimos 7 días</div>
                 </div>
@@ -39,7 +39,7 @@
             @endif
 
             {{-- Feed de auditoría --}}
-            <div class="bg-white shadow rounded-lg p-6">
+            <div class="bg-superficie shadow rounded-lg p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-base font-semibold text-corteza">Últimas acciones del backoffice</h3>
                     <a href="{{ route('admin.audit-logs.index') }}" class="text-sm text-horno hover:underline">Ver todo →</a>

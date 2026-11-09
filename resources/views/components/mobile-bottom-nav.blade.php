@@ -10,7 +10,7 @@
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
         @click="open = false"
-        class="fixed inset-0 z-40 bg-corteza/60"
+        class="fixed inset-0 z-40 bg-velo/60"
         style="display: none;"
     ></div>
 
@@ -23,7 +23,7 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="translate-y-0 opacity-100"
         x-transition:leave-end="translate-y-full opacity-0"
-        class="fixed bottom-16 inset-x-0 z-50 bg-white rounded-t-2xl shadow-2xl border-t border-miga max-h-[70vh] overflow-y-auto"
+        class="fixed bottom-16 inset-x-0 z-50 bg-superficie rounded-t-2xl shadow-2xl border-t border-miga max-h-[70vh] overflow-y-auto"
         style="display: none;"
     >
         <div class="flex justify-center pt-3 pb-1">
@@ -136,6 +136,8 @@
         @endauth
 
         <div class="px-4 pb-4 border-t border-miga pt-3">
+            <x-theme-switcher class="px-1 pb-3" />
+
             <a href="{{ route('profile.edit') }}" @click="open = false"
                 class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
                     {{ request()->routeIs('profile.*') ? 'bg-horno/10 text-horno' : 'text-corteza hover:bg-miga' }}">
@@ -160,12 +162,12 @@
     </div>
 
     {{-- Barra inferior fija --}}
-    <nav class="fixed bottom-0 inset-x-0 z-40 bg-masa-madre border-t border-white/10 flex items-stretch h-16">
+    <nav class="fixed bottom-0 inset-x-0 z-40 bg-barra border-t border-white/10 flex items-stretch h-16">
 
         {{-- Inicio --}}
         <a href="{{ route('dashboard') }}"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs('dashboard') ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs('dashboard') ? 'text-horno' : 'text-sobre-barra/55 hover:text-sobre-barra' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
@@ -176,7 +178,7 @@
         @foreach($barShortcuts as $shortcut)
         <a href="{{ route($shortcut->routeName()) }}"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs(...$shortcut->activePatterns()) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs(...$shortcut->activePatterns()) ? 'text-horno' : 'text-sobre-barra/55 hover:text-sobre-barra' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                 {!! $shortcut->iconPath() !!}
             </svg>
@@ -187,7 +189,7 @@
         {{-- Más --}}
         <button @click="open = !open"
             class="flex-1 flex flex-col items-center justify-center gap-1 transition-colors
-                {{ request()->routeIs($moreActivePatterns) ? 'text-horno' : 'text-harina/55 hover:text-harina' }}">
+                {{ request()->routeIs($moreActivePatterns) ? 'text-horno' : 'text-sobre-barra/55 hover:text-sobre-barra' }}">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>

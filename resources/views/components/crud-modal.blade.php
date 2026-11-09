@@ -10,7 +10,7 @@
 ])
 
 <x-modal :name="$name" :max-width="$maxWidth" :show="$show" :z="$z" :focusable="$focusable">
-    <div class="bg-white rounded-lg">
+    <div class="bg-superficie rounded-lg">
         <div class="flex items-center justify-between px-6 py-4 border-b border-miga">
             <h3 class="text-base font-semibold text-corteza">{{ $title }}</h3>
             <button type="button"

@@ -47,7 +47,7 @@
                         placeholder="Buscar por nombre o email..."
                         class="flex-1 max-w-sm border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
                     <button type="submit"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         Buscar
                     </button>
                     @if(request('search'))
@@ -58,7 +58,7 @@
                 </form>
 
                 <button @click="showCreate = true"
-                    class="px-4 py-2 bg-horno text-white text-sm rounded-md hover:bg-corteza transition-colors whitespace-nowrap">
+                    class="px-4 py-2 bg-horno text-white text-sm rounded-md hover:bg-tinta transition-colors whitespace-nowrap">
                     + Crear usuario
                 </button>
             </div>
@@ -69,7 +69,7 @@
             @endphp
 
             {{-- Tabla --}}
-            <div class="bg-white shadow rounded-lg overflow-x-auto">
+            <div class="bg-superficie shadow rounded-lg overflow-x-auto">
                 <table class="min-w-[700px] w-full text-sm text-left">
                     <thead class="bg-miga text-masa-madre border-b border-miga">
                         <tr>
@@ -199,7 +199,7 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
             @keydown.escape.window="showCreate = false">
 
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
+            <div class="bg-superficie rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
                 @click.outside="showCreate = false">
 
                 <div class="flex items-center justify-between mb-5">
@@ -283,7 +283,7 @@
                             Cancelar
                         </button>
                         <button type="submit"
-                            class="px-4 py-2 text-sm bg-horno text-white rounded-md hover:bg-corteza transition-colors">
+                            class="px-4 py-2 text-sm bg-horno text-white rounded-md hover:bg-tinta transition-colors">
                             Crear usuario
                         </button>
                     </div>
@@ -296,7 +296,7 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
             @keydown.escape.window="closeEdit()">
 
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
+            <div class="bg-superficie rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
                 @click.outside="closeEdit()">
 
                 <div class="flex items-center justify-between mb-5">
@@ -346,7 +346,7 @@
                                 Cancelar
                             </button>
                             <button type="submit"
-                                class="px-4 py-2 text-sm bg-horno text-white rounded-md hover:bg-corteza transition-colors">
+                                class="px-4 py-2 text-sm bg-horno text-white rounded-md hover:bg-tinta transition-colors">
                                 Guardar cambios
                             </button>
                         </div>
@@ -390,7 +390,7 @@
                                 </div>
 
                                 <button type="submit"
-                                    class="px-3 py-2 text-sm bg-corteza text-white rounded-md hover:bg-horno transition-colors">
+                                    class="px-3 py-2 text-sm bg-tinta text-white rounded-md hover:bg-horno transition-colors">
                                     Guardar
                                 </button>
                             </form>

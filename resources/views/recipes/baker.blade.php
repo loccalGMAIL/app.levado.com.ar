@@ -84,14 +84,14 @@
                 <h1 class="text-lg sm:text-xl font-semibold text-corteza leading-tight truncate">% panadero — {{ $recipe->name }}</h1>
             </div>
             <a :href="printHref"
-                class="shrink-0 px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-white transition-colors whitespace-nowrap">
+                class="shrink-0 px-2 sm:px-3 py-1.5 text-sm border border-miga rounded-md text-masa-madre hover:text-corteza hover:bg-superficie transition-colors whitespace-nowrap">
                 <span x-text="scaled ? 'Imprimir escalada' : 'Imprimir'"></span>
             </a>
         </div>
 
         <div x-show="error" x-cloak x-text="error" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm"></div>
 
-        <div x-show="rows.length === 0" class="bg-white rounded-lg shadow px-4 py-4 text-sm text-masa-madre">
+        <div x-show="rows.length === 0" class="bg-superficie rounded-lg shadow px-4 py-4 text-sm text-masa-madre">
             Esta receta todavía no tiene ingredientes.
         </div>
 
@@ -107,30 +107,30 @@
 
             {{-- Resumen --}}
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="bg-white rounded-lg shadow px-4 py-3">
+                <div class="bg-superficie rounded-lg shadow px-4 py-3">
                     <div class="text-xs text-masa-madre">Harina total</div>
                     <div class="font-mono text-lg text-corteza" x-text="fmt(flourGrams, 1) + ' gr'"></div>
                 </div>
-                <div class="bg-white rounded-lg shadow px-4 py-3">
+                <div class="bg-superficie rounded-lg shadow px-4 py-3">
                     <div class="text-xs text-masa-madre">Masa total</div>
                     <div class="font-mono text-lg text-corteza" x-text="fmt(doughGrams, 1) + ' gr'"></div>
                 </div>
-                <div class="bg-white rounded-lg shadow px-4 py-3">
+                <div class="bg-superficie rounded-lg shadow px-4 py-3">
                     <div class="text-xs text-masa-madre">Suma de %</div>
                     <div class="font-mono text-lg text-corteza" x-text="hasFlour ? fmt(totalPercent, 1) + ' %' : '—'"></div>
                 </div>
             </div>
 
             {{-- Calculadora de escalado --}}
-            <div class="bg-white rounded-lg shadow px-4 py-3" x-show="hasFlour">
+            <div class="bg-superficie rounded-lg shadow px-4 py-3" x-show="hasFlour">
                 <h3 class="text-sm font-semibold text-corteza mb-2">Escalar receta</h3>
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="inline-flex rounded-md border border-miga overflow-hidden text-sm">
                         <button type="button" @click="mode = 'flour'"
-                            :class="mode === 'flour' ? 'bg-corteza text-white' : 'text-masa-madre hover:bg-harina'"
+                            :class="mode === 'flour' ? 'bg-tinta text-white' : 'text-masa-madre hover:bg-harina'"
                             class="px-3 py-1.5 transition-colors">Harina (kg)</button>
                         <button type="button" @click="mode = 'dough'"
-                            :class="mode === 'dough' ? 'bg-corteza text-white' : 'text-masa-madre hover:bg-harina'"
+                            :class="mode === 'dough' ? 'bg-tinta text-white' : 'text-masa-madre hover:bg-harina'"
                             class="px-3 py-1.5 transition-colors">Masa total (kg)</button>
                     </div>
                     <input type="number" x-model="amountKg" min="0" step="any" inputmode="decimal"
@@ -143,7 +143,7 @@
             </div>
 
             {{-- Ingredientes --}}
-            <div class="bg-white rounded-lg shadow">
+            <div class="bg-superficie rounded-lg shadow">
                 <div class="px-4 py-3 border-b border-miga">
                     <h3 class="text-sm font-semibold text-corteza">Ingredientes</h3>
                 </div>
@@ -223,7 +223,7 @@
             </div>
 
             {{-- Sub-recetas --}}
-            <div class="bg-white rounded-lg shadow" x-show="subrecipeRows.length > 0">
+            <div class="bg-superficie rounded-lg shadow" x-show="subrecipeRows.length > 0">
                 <div class="px-4 py-3 border-b border-miga">
                     <h3 class="text-sm font-semibold text-corteza">Sub-recetas</h3>
                     <p class="text-xs text-masa-madre mt-0.5">Se cuentan como un ingrediente más, sin desglosar su harina.</p>

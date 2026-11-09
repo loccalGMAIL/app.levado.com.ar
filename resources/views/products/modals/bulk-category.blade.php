@@ -29,7 +29,7 @@
                 Cancelar
             </button>
             <button type="submit" :disabled="selectedIds.length === 0"
-                class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 Asignar
             </button>
         </div>

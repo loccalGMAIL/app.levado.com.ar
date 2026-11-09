@@ -6,13 +6,13 @@
     }
 @endphp
 
-<aside class="hidden sm:flex flex-col w-52 shrink-0 bg-masa-madre min-h-full">
+<aside class="hidden sm:flex flex-col w-52 shrink-0 bg-barra min-h-full">
 
     {{-- Navigation --}}
     <nav class="flex-1 py-3 overflow-y-auto">
 
         {{-- Principal --}}
-        <div class="px-5 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-widest text-harina/35">
+        <div class="px-5 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-widest text-sobre-barra/35">
             Principal
         </div>
 
@@ -184,7 +184,7 @@
         {{-- Backoffice (super admin) --}}
         @auth
         @if(Auth::user()->isSuperAdmin())
-        <div class="px-5 pt-4 pb-1 text-[9.5px] font-semibold uppercase tracking-widest text-harina/35">
+        <div class="px-5 pt-4 pb-1 text-[9.5px] font-semibold uppercase tracking-widest text-sobre-barra/35">
             Sistema
         </div>
         @include('components.sidebar-item', [
@@ -199,7 +199,7 @@
     </nav>
 
     {{-- Footer --}}
-    <div class="px-5 py-3 border-t border-white/10 text-[11px] text-harina/40">
+    <div class="px-5 py-3 border-t border-white/10 text-[11px] text-sobre-barra/40">
         v{{ config('app.version') }}
     </div>
 

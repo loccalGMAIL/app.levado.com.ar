@@ -30,7 +30,7 @@
 <div class="data-table"
     @if($toggle) x-data="{ mobileExpanded: false }" :data-view="mobileExpanded ? 'table' : 'cards'" @else data-view="cards" @endif>
 
-    <div class="data-table__surface bg-white rounded-lg shadow overflow-x-auto">
+    <div class="data-table__surface bg-superficie rounded-lg shadow overflow-x-auto">
         @if($toggle)
             <div x-show="mobileExpanded" class="md:hidden px-4 py-2 border-b border-miga">
                 <button type="button" @click="mobileExpanded = false"

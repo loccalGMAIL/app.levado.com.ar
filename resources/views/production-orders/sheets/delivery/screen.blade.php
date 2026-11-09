@@ -23,11 +23,11 @@
                 </a>
                 <div class="flex items-center gap-2">
                     <a href="{{ route('production-orders.delivery-sheet.pdf', array_filter(['productionOrder' => $productionOrder, 'group' => $group])) }}"
-                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        class="px-4 py-2 bg-superficie border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                         Descargar PDF
                     </a>
                     <button type="button" onclick="window.print()"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         Imprimir
                     </button>
                 </div>
@@ -36,19 +36,19 @@
             @if(count($sheet['groups']) > 1 || $group)
                 <div class="print:hidden flex items-center gap-1 flex-wrap text-sm">
                     <a href="{{ route('production-orders.delivery-sheet', $productionOrder) }}"
-                        class="px-3 py-1 rounded-full {{ ! $group ? 'bg-corteza text-white' : 'border border-gray-300 text-corteza hover:bg-harina' }}">
+                        class="px-3 py-1 rounded-full {{ ! $group ? 'bg-tinta text-white' : 'border border-gray-300 text-corteza hover:bg-harina' }}">
                         Todos
                     </a>
                     @foreach($sheet['groups'] as $entry)
                         <a href="{{ route('production-orders.delivery-sheet', [$productionOrder, 'group' => $entry['key']]) }}"
-                            class="px-3 py-1 rounded-full {{ $group === $entry['key'] ? 'bg-corteza text-white' : 'border border-gray-300 text-corteza hover:bg-harina' }}">
+                            class="px-3 py-1 rounded-full {{ $group === $entry['key'] ? 'bg-tinta text-white' : 'border border-gray-300 text-corteza hover:bg-harina' }}">
                             {{ $entry['title'] }}
                         </a>
                     @endforeach
                 </div>
             @endif
 
-            <div class="bg-white rounded-lg shadow p-8 print:shadow-none print:rounded-none print:p-0">
+            <div class="bg-superficie rounded-lg shadow p-8 print:shadow-none print:rounded-none print:p-0">
                 @include('production-orders.sheets.delivery._document', ['sheet' => $document])
             </div>
 

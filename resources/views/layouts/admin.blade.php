@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @if ($userTheme = auth()->user()?->theme) data-theme="{{ $userTheme->value }}" @endif>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,7 +11,7 @@
         <link rel="icon" type="image/x-icon" href="/favicon.ico">
 
         <link rel="manifest" href="/manifest.webmanifest">
-        <meta name="theme-color" content="#FAF7F2">
+        <x-theme-head />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="mobile-web-app-capable" content="yes">
@@ -27,7 +27,7 @@
     <body class="font-sans antialiased bg-harina text-corteza">
 
         {{-- Barra superior del backoffice --}}
-        <nav class="bg-corteza text-white">
+        <nav class="bg-tinta text-white">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-14 items-center">
                     <div class="flex items-center gap-6">
@@ -68,7 +68,7 @@
         </nav>
 
         @isset($header)
-            <header class="bg-white border-b border-miga">
+            <header class="bg-superficie border-b border-miga">
                 <div class="max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
                     {{ $header }}
                 </div>

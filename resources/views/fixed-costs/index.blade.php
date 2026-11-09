@@ -34,23 +34,23 @@
 
             <x-list-header title="Gastos" subtitle="Costos operativos mensuales del negocio: alquiler, servicios, personal y otros.">
                 <a href="{{ route('fixed-costs.history') }}"
-                    class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                    class="px-4 py-2 bg-superficie border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                     Historial
                 </a>
                 <button type="button"
                     @click="$dispatch('open-modal', 'fixed-cost-report')"
-                    class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                    class="px-4 py-2 bg-superficie border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                     Imprimir
                 </button>
                 @can('manage-costs')
                     <button type="button"
                         @click="$dispatch('open-modal', 'fixed-cost-categories')"
-                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        class="px-4 py-2 bg-superficie border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                         Categorías
                     </button>
                     <button type="button" id="btn-nuevo-gasto"
                         @click="$dispatch('open-modal', 'fixed-cost-create')"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nuevo gasto
                     </button>
                 @endcan
@@ -79,7 +79,7 @@
                     <option value="active"   @selected(request('status') === 'active')>Activos</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactivos</option>
                 </select>
-                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
                 @if(request('search') || request('status') || request('category'))

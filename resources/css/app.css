@@ -5,6 +5,296 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────
+   Tokens de color
+
+   La paleta de tailwind.config.js no tiene valores: cada color
+   apunta a una variable de acá (`rgb(var(--c-…) / <alpha-value>)`).
+   Así un tema es sólo otro bloque que redefine estas variables, sin
+   generar una clase `dark:` por cada utilidad: los tres temas
+   cuestan ~1 KB de CSS en vez de duplicar las reglas de color.
+
+   Los valores van como canales RGB sueltos ("61 43 31") y no como
+   hex porque Tailwind necesita insertar la opacidad
+   (`text-corteza/40` → `rgb(var(--c-corteza) / 0.4)`).
+
+   Los nombres son roles, no colores literales: `harina` es el fondo
+   de la app y `corteza` el texto principal, aunque en un tema oscuro
+   el fondo sea oscuro y el texto claro.
+   ───────────────────────────────────────────────────────────── */
+@layer base {
+    /* [data-theme="claro"] además de :root: las miniaturas del selector de
+       Perfil muestran cada tema poniendo data-theme en un elemento. */
+    :root,
+    [data-theme="claro"] {
+        --c-harina:     250 247 242; /* #FAF7F2 fondo */
+        --c-superficie: 255 255 255; /* #FFFFFF cards, header, modales, inputs */
+        --c-miga:       242 234 216; /* #F2EAD8 superficie alternativa, bordes suaves */
+        --c-corteza:    61 43 31;    /* #3D2B1F texto principal */
+        --c-masa-madre: 107 91 69;   /* #6B5B45 texto secundario */
+        --c-horno:      200 98 42;   /* #C8622A acento */
+        --c-membrillo:  232 168 32;  /* #E8A820 acento secundario */
+
+        /* Fondos oscuros con texto claro encima en todos los temas. Tienen el
+           mismo valor que corteza / masa-madre / harina en el tema claro, pero
+           no el mismo rol: en el oscuro el texto (corteza) se aclara y un
+           botón (tinta) no puede aclararse con él. */
+        --c-tinta:       61 43 31;    /* #3D2B1F botones primarios, chips activos */
+        --c-barra:       107 91 69;   /* #6B5B45 sidebar y barra inferior mobile */
+        --c-sobre-barra: 250 247 242; /* #FAF7F2 texto e íconos sobre la barra */
+        --c-velo:        107 114 128; /* #6B7280 fondo detrás de modales (con opacidad) */
+
+        --c-brown-50:  250 246 241; /* #FAF6F1 */
+        --c-brown-100: 239 227 213; /* #EFE3D5 */
+        --c-brown-200: 222 196 168; /* #DEC4A8 */
+        --c-brown-300: 196 146 114; /* #C49272 */
+        --c-brown-400: 184 121 79;  /* #B8794F */
+        --c-brown-500: 155 98 64;   /* #9B6240 */
+        --c-brown-700: 107 61 30;   /* #6B3D1E */
+        --c-brown-900: 26 17 10;    /* #1A110A */
+
+        /* Sólo para los gráficos del dashboard (resources/js/dashboard-charts.js). */
+        --c-grafico-suave: 160 136 115; /* #A08873 etiquetas secundarias */
+        --c-grafico-ok:    44 155 106;  /* #2C9B6A margen alto, fin del degradé del gauge */
+
+        /* Escalas de Tailwind (estados, badges, inputs heredados de Breeze), con
+           los valores de Tailwind 3. Sólo los tonos que usa la app: ver
+           `scale()` en tailwind.config.js. */
+        --c-gray-50:     249 250 251;
+        --c-gray-100:    243 244 246;
+        --c-gray-200:    229 231 235;
+        --c-gray-300:    209 213 219;
+        --c-gray-400:    156 163 175;
+        --c-gray-500:    107 114 128;
+        --c-gray-600:    75 85 99;
+        --c-gray-700:    55 65 81;
+        --c-gray-800:    31 41 55;
+        --c-gray-900:    17 24 39;
+
+        --c-red-50:      254 242 242;
+        --c-red-100:     254 226 226;
+        --c-red-200:     254 202 202;
+        --c-red-300:     252 165 165;
+        --c-red-400:     248 113 113;
+        --c-red-500:     239 68 68;
+        --c-red-600:     220 38 38;
+        --c-red-700:     185 28 28;
+        --c-red-800:     153 27 27;
+
+        --c-green-50:    240 253 244;
+        --c-green-100:   220 252 231;
+        --c-green-200:   187 247 208;
+        --c-green-300:   134 239 172;
+        --c-green-500:   34 197 94;
+        --c-green-600:   22 163 74;
+        --c-green-700:   21 128 61;
+        --c-green-800:   22 101 52;
+
+        --c-amber-50:    255 251 235;
+        --c-amber-100:   254 243 199;
+        --c-amber-200:   253 230 138;
+        --c-amber-300:   252 211 77;
+        --c-amber-400:   251 191 36;
+        --c-amber-500:   245 158 11;
+        --c-amber-600:   217 119 6;
+        --c-amber-700:   180 83 9;
+        --c-amber-800:   146 64 14;
+        --c-amber-900:   120 53 15;
+
+        --c-yellow-50:   254 252 232;
+        --c-yellow-300:  253 224 71;
+        --c-yellow-600:  202 138 4;
+        --c-yellow-700:  161 98 7;
+        --c-yellow-800:  133 77 14;
+        --c-yellow-900:  113 63 18;
+
+        --c-orange-100:  255 237 213;
+        --c-orange-200:  254 215 170;
+        --c-orange-400:  251 146 60;
+        --c-orange-600:  234 88 12;
+        --c-orange-700:  194 65 12;
+
+        --c-blue-50:     239 246 255;
+        --c-blue-100:    219 234 254;
+        --c-blue-200:    191 219 254;
+        --c-blue-300:    147 197 253;
+        --c-blue-700:    29 78 216;
+        --c-blue-800:    30 64 175;
+
+        --c-indigo-50:   238 242 255;
+        --c-indigo-100:  224 231 255;
+        --c-indigo-400:  129 140 248;
+        --c-indigo-500:  99 102 241;
+        --c-indigo-700:  67 56 202;
+        --c-indigo-800:  55 48 163;
+
+        --c-violet-100:  237 233 254;
+        --c-violet-600:  124 58 237;
+        --c-violet-700:  109 40 217;
+
+        --c-sky-50:      240 249 255;
+        --c-sky-100:     224 242 254;
+        --c-sky-700:     3 105 161;
+    }
+
+    /* Los temas van dentro de `screen`: al imprimir, la página usa siempre los
+       valores de :root (claro), elija el usuario el tema que elija. */
+    @media screen {
+        [data-theme="oscuro"] {
+            /* Las escalas se invierten: los tonos bajos (50–200) son fondos y
+               bordes oscuros teñidos y los altos (600–900), texto claro. Así
+               `bg-red-50 text-red-700` sigue siendo «fondo suave, texto fuerte».
+               orange-200 no se invierte: sólo se usa como texto sobre la barra
+               del backoffice (bg-tinta), que es oscura en todos los temas.
+               Tiene que redefinir TODAS las variables de :root (lo verifica
+               tests/Unit/ThemeTokensTest.php): una que falte quedaría clara. */
+            /* Scrollbars, date pickers y demás controles nativos en oscuro. Claro
+               no declara `color-scheme: light`: es lo que el navegador ya usa y,
+               declarado, Chromium cambia el suavizado del texto en mobile. */
+            color-scheme: dark;
+
+            --c-harina:       22 16 11;
+            --c-superficie:   33 25 18;
+            --c-miga:         45 35 26;
+            --c-corteza:      242 234 216;
+            --c-masa-madre:   196 179 156;
+            --c-horno:        200 98 42;
+            --c-membrillo:    240 184 58;
+
+            --c-tinta:        90 70 54;
+            --c-barra:        42 32 24;
+            --c-sobre-barra:  242 234 216;
+            --c-velo:         0 0 0;
+
+            --c-brown-50:     30 22 16;
+            --c-brown-100:    58 44 33;
+            --c-brown-200:    92 69 51;
+            --c-brown-300:    126 94 69;
+            --c-brown-400:    160 115 79;
+            --c-brown-500:    192 138 94;
+            --c-brown-700:    226 195 165;
+            --c-brown-900:    250 240 230;
+
+            --c-grafico-suave: 156 139 120;
+            --c-grafico-ok:   63 181 126;
+
+            --c-gray-50:      31 24 19;
+            --c-gray-100:     42 34 27;
+            --c-gray-200:     58 48 39;
+            --c-gray-300:     84 71 58;
+            --c-gray-400:     125 110 96;
+            --c-gray-500:     163 148 132;
+            --c-gray-600:     191 178 163;
+            --c-gray-700:     214 203 190;
+            --c-gray-800:     232 224 214;
+            --c-gray-900:     245 240 234;
+
+            --c-red-50:       44 21 21;
+            --c-red-100:      61 26 26;
+            --c-red-200:      94 37 37;
+            --c-red-300:      130 48 48;
+            --c-red-400:      181 64 64;
+            --c-red-500:      201 68 68;
+            --c-red-600:      226 85 85;
+            --c-red-700:      245 154 154;
+            --c-red-800:      250 194 194;
+
+            --c-green-50:     17 36 26;
+            --c-green-100:    22 48 33;
+            --c-green-200:    31 74 49;
+            --c-green-300:    42 99 66;
+            --c-green-500:    58 168 102;
+            --c-green-600:    76 193 122;
+            --c-green-700:    134 217 166;
+            --c-green-800:    176 232 197;
+
+            --c-amber-50:     42 32 12;
+            --c-amber-100:    58 44 16;
+            --c-amber-200:    87 65 21;
+            --c-amber-300:    122 90 26;
+            --c-amber-400:    201 154 46;
+            --c-amber-500:    217 166 55;
+            --c-amber-600:    235 181 76;
+            --c-amber-700:    245 201 110;
+            --c-amber-800:    249 218 152;
+            --c-amber-900:    252 232 191;
+
+            --c-yellow-50:    41 36 12;
+            --c-yellow-300:   122 106 26;
+            --c-yellow-600:   232 197 71;
+            --c-yellow-700:   240 211 106;
+            --c-yellow-800:   245 224 143;
+            --c-yellow-900:   250 237 184;
+
+            --c-orange-100:   58 32 16;
+            --c-orange-200:   254 215 170;
+            --c-orange-400:   194 101 42;
+            --c-orange-600:   240 138 75;
+            --c-orange-700:   246 167 115;
+
+            --c-blue-50:      17 29 46;
+            --c-blue-100:     20 37 64;
+            --c-blue-200:     29 58 99;
+            --c-blue-300:     43 82 136;
+            --c-blue-700:     141 184 245;
+            --c-blue-800:     181 208 250;
+
+            --c-indigo-50:    23 26 51;
+            --c-indigo-100:   30 34 69;
+            --c-indigo-400:   79 87 184;
+            --c-indigo-500:   124 133 232;
+            --c-indigo-700:   165 172 245;
+            --c-indigo-800:   197 202 250;
+
+            --c-violet-100:   42 29 69;
+            --c-violet-600:   167 139 250;
+            --c-violet-700:   196 177 253;
+
+            --c-sky-50:       15 34 48;
+            --c-sky-100:      18 41 59;
+            --c-sky-700:      124 200 240;
+        }
+
+        [data-theme="centeno"] {
+            /* Neutro frío con acento oliva. Es un tema claro: hereda de :root
+               las escalas de estado, los grises y el velo. `brown` es la escala
+               de los gráficos, así que acá pasa a ser salvia. */
+
+            --c-harina:       242 243 239;
+            --c-superficie:   255 255 255;
+            --c-miga:         228 231 223;
+            --c-corteza:      38 44 42;
+            --c-masa-madre:   86 96 91;
+            --c-horno:        85 112 47;
+            --c-membrillo:    160 122 34;
+
+            --c-tinta:        38 44 42;
+            --c-barra:        74 85 80;
+            --c-sobre-barra:  242 243 239;
+
+            --c-brown-50:     244 246 241;
+            --c-brown-100:    226 232 218;
+            --c-brown-200:    199 211 184;
+            --c-brown-300:    163 181 140;
+            --c-brown-400:    134 160 106;
+            --c-brown-500:    107 134 80;
+            --c-brown-700:    69 88 47;
+            --c-brown-900:    28 36 20;
+
+            --c-grafico-suave: 138 148 142;
+        }
+    }
+
+    /* @tailwindcss/forms les pone fondo `#fff` literal a inputs, selects y
+       textareas: sin esto quedan blancos en el tema oscuro. En claro y centeno
+       superficie vale #fff, así que ahí no cambia nada. */
+    input:where(:not([type=button], [type=submit], [type=reset], [type=image], [type=range], [type=color], [type=file])),
+    select,
+    textarea {
+        background-color: rgb(var(--c-superficie));
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
    Cifras de las cards de resumen
 
    Un importe de 8 o 9 dígitos ("$ 123.456.789") mide 7,8em en
@@ -79,7 +369,7 @@
        porque también pone `border-bottom-width: 0`, y en modo card eso le
        comería el borde inferior a todas las cards menos la primera. */
     .data-table tbody > tr + tr {
-        border-top: 1px solid #f2ead8;
+        border-top: 1px solid rgb(var(--c-miga));
     }
 
     /* Ícono de línea del sprite (public/icons/sprite.svg). Reemplaza los
@@ -105,20 +395,20 @@
         padding: 0.375rem;
         border-radius: 0.25rem;
         font-size: 0.875rem;
-        color: #6b5b45;
+        color: rgb(var(--c-masa-madre));
         transition: color 0.15s, background-color 0.15s, border-color 0.15s;
     }
 
     .dt-action:hover {
-        color: #3d2b1f;
-        background-color: #f2ead8;
+        color: rgb(var(--c-corteza));
+        background-color: rgb(var(--c-miga));
     }
 
-    .dt-action--danger { color: #ef4444; }
-    .dt-action--danger:hover { color: #b91c1c; background-color: #fef2f2; }
+    .dt-action--danger { color: rgb(var(--c-red-500)); }
+    .dt-action--danger:hover { color: rgb(var(--c-red-700)); background-color: rgb(var(--c-red-50)); }
 
-    .dt-action--success { color: #16a34a; }
-    .dt-action--success:hover { color: #15803d; background-color: #f0fdf4; }
+    .dt-action--success { color: rgb(var(--c-green-600)); }
+    .dt-action--success:hover { color: rgb(var(--c-green-700)); background-color: rgb(var(--c-green-50)); }
 
     /* Contenido que sólo tiene sentido en la card: el texto del botón de acción
        (en la tabla alcanza el ícono) o la unidad de un importe (en la tabla ya
@@ -136,7 +426,7 @@
     }
 
     /* Celda sin valor: la tabla muestra «—», la card la omite (más abajo). */
-    .data-table td[data-empty] { color: #6b5b45; }
+    .data-table td[data-empty] { color: rgb(var(--c-masa-madre)); }
 
     @media (max-width: 767.98px) {
         .data-table[data-view="cards"] .data-table__surface {
@@ -162,8 +452,8 @@
             column-gap: 0.5rem;
             row-gap: 0.25rem;
             padding: 1rem;
-            background-color: #fff;
-            border: 1px solid #f2ead8;
+            background-color: rgb(var(--c-superficie));
+            border: 1px solid rgb(var(--c-miga));
             border-radius: 0.5rem;
             box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
         }
@@ -187,7 +477,7 @@
             order: 10;
             flex: 1 1 0;
             font-weight: 500;
-            color: #3d2b1f;
+            color: rgb(var(--c-corteza));
         }
 
         .data-table[data-view="cards"] td[data-role="badge"] {
@@ -210,7 +500,7 @@
             order: 30;
             flex: 0 1 auto;
             font-size: 0.75rem;
-            color: #6b5b45;
+            color: rgb(var(--c-masa-madre));
         }
 
         .data-table[data-view="cards"] td[data-role="figure"] { order: 40; }
@@ -218,14 +508,14 @@
         .data-table[data-view="cards"] td[data-role="meta"] {
             order: 50;
             font-size: 0.75rem;
-            color: #6b5b45;
+            color: rgb(var(--c-masa-madre));
         }
 
         .data-table[data-view="cards"] td[data-role="actions"] {
             order: 60;
             margin-top: 0.25rem;
             padding-top: 0.75rem;
-            border-top: 1px solid #f2ead8;
+            border-top: 1px solid rgb(var(--c-miga));
         }
 
         /* Los subtítulos van en una línea separados por «·». El separador va al
@@ -258,12 +548,12 @@
         .data-table[data-view="cards"] .dt-action {
             width: 100%;
             padding: 0.375rem 0.75rem;
-            border: 1px solid #d1d5db;
-            color: #3d2b1f;
+            border: 1px solid rgb(var(--c-gray-300));
+            color: rgb(var(--c-corteza));
         }
 
-        .data-table[data-view="cards"] .dt-action--danger { border-color: #fca5a5; color: #dc2626; }
-        .data-table[data-view="cards"] .dt-action--success { border-color: #86efac; color: #16a34a; }
+        .data-table[data-view="cards"] .dt-action--danger { border-color: rgb(var(--c-red-300)); color: rgb(var(--c-red-600)); }
+        .data-table[data-view="cards"] .dt-action--success { border-color: rgb(var(--c-green-300)); color: rgb(var(--c-green-600)); }
 
         .data-table[data-view="cards"] .dt-card-only { display: inline; }
     }
@@ -273,34 +563,34 @@
 .ts-wrapper { position: relative; }
 
 .ts-control {
-    border: 1px solid #d1d5db;
+    border: 1px solid rgb(var(--c-gray-300));
     border-radius: 0.375rem;
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     padding: 0.35rem 0.625rem;
     font-size: 0.875rem;
     line-height: 1.5rem;
-    color: #3D2B1F;
-    background-color: #fff;
+    color: rgb(var(--c-corteza));
+    background-color: rgb(var(--c-superficie));
     cursor: pointer;
     min-height: unset;
 }
 
 .ts-wrapper.single.input-active .ts-control,
 .ts-wrapper.multi.input-active .ts-control {
-    border-color: #C8622A;
-    box-shadow: 0 0 0 3px rgb(200 98 42 / 0.15);
+    border-color: rgb(var(--c-horno));
+    box-shadow: 0 0 0 3px rgb(var(--c-horno) / 0.15);
     outline: none;
 }
 
 .ts-control input {
     font-size: 0.875rem;
-    color: #3D2B1F;
+    color: rgb(var(--c-corteza));
     line-height: 1.5;
 }
 
 .ts-control .item {
     font-size: 0.875rem;
-    color: #3D2B1F;
+    color: rgb(var(--c-corteza));
 }
 
 /* Dropdown panel. Con dropdownParent: 'body' (ver app.js) este panel cuelga
@@ -308,7 +598,7 @@
    modal — incluido uno anidado (x-modal admite :z, el más alto en uso hoy
    es 60 en suppliers/modals/quick-create.blade.php). */
 .ts-dropdown {
-    border: 1px solid #d1d5db;
+    border: 1px solid rgb(var(--c-gray-300));
     border-radius: 0.375rem;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     font-size: 0.875rem;
@@ -323,36 +613,77 @@
 .ts-dropdown .option,
 .ts-dropdown .optgroup-header {
     padding: 0.375rem 0.75rem;
-    color: #3D2B1F;
+    color: rgb(var(--c-corteza));
 }
 
 .ts-dropdown .option:hover,
 .ts-dropdown .option.active {
-    background-color: #F2EAD8;
-    color: #3D2B1F;
+    background-color: rgb(var(--c-miga));
+    color: rgb(var(--c-corteza));
 }
 
 .ts-dropdown .option.selected,
 .ts-dropdown .option.selected.active {
-    background-color: #C8622A;
-    color: #fff;
+    background-color: rgb(var(--c-horno));
+    color: white;
 }
 
 .ts-dropdown .optgroup-header {
     font-size: 0.7rem;
     font-weight: 600;
-    color: #6B5B45;
+    color: rgb(var(--c-masa-madre));
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding-top: 0.5rem;
     padding-bottom: 0.25rem;
-    background: #fafafa;
+    background: rgb(var(--c-gray-50));
 }
 
 /* Caret arrow for single selects */
 .ts-wrapper.single .ts-control::after {
-    border-color: #6B5B45 transparent transparent;
+    border-color: rgb(var(--c-masa-madre)) transparent transparent;
 }
 .ts-wrapper.single.dropdown-active .ts-control::after {
-    border-color: transparent transparent #6B5B45;
+    border-color: transparent transparent rgb(var(--c-masa-madre));
+}
+
+/* El CSS por defecto de Tom Select fija blanco y gris oscuro. El fondo del
+   panel vale lo mismo que superficie en los temas claros; el resto se pisa
+   sólo en el oscuro para no tocar cómo se ve hoy. */
+.ts-dropdown {
+    background: rgb(var(--c-superficie));
+}
+
+[data-theme="oscuro"] .ts-dropdown {
+    color: rgb(var(--c-corteza));
+}
+
+[data-theme="oscuro"] .ts-wrapper.disabled .ts-control {
+    background-color: rgb(var(--c-gray-100));
+}
+
+/* Shepherd (tour de onboarding) trae su propio CSS, que se carga después de
+   éste; el prefijo [data-theme] le gana por especificidad. */
+[data-theme="oscuro"] .shepherd-element,
+[data-theme="oscuro"] .shepherd-arrow:before {
+    background: rgb(var(--c-superficie));
+}
+
+[data-theme="oscuro"] .shepherd-has-title .shepherd-content .shepherd-header,
+[data-theme="oscuro"] .shepherd-element.shepherd-has-title[data-popper-placement^=bottom] > .shepherd-arrow:before {
+    background: rgb(var(--c-miga));
+}
+
+[data-theme="oscuro"] .shepherd-title,
+[data-theme="oscuro"] .shepherd-text {
+    color: rgb(var(--c-corteza));
+}
+
+[data-theme="oscuro"] .shepherd-cancel-icon {
+    color: rgb(var(--c-masa-madre));
+}
+
+[data-theme="oscuro"] .shepherd-button.shepherd-button-secondary {
+    background: rgb(var(--c-miga));
+    color: rgb(var(--c-corteza));
 }

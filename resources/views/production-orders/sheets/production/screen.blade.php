@@ -23,17 +23,17 @@
                 </a>
                 <div class="flex items-center gap-2">
                     <a href="{{ route('production-orders.production-sheet.pdf', $productionOrder) }}"
-                        class="px-4 py-2 bg-white border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
+                        class="px-4 py-2 bg-superficie border border-gray-300 text-corteza text-sm rounded-md hover:bg-harina transition-colors">
                         Descargar PDF
                     </a>
                     <button type="button" onclick="window.print()"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         Imprimir
                     </button>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow p-8 print:shadow-none print:rounded-none print:p-0">
+            <div class="bg-superficie rounded-lg shadow p-8 print:shadow-none print:rounded-none print:p-0">
                 @include('production-orders.sheets.production._document', ['sheet' => $sheet])
             </div>
 

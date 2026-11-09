@@ -48,7 +48,7 @@
                         @endforeach
                     </select>
                 @endif
-                <button type="submit" class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                <button type="submit" class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                     Filtrar
                 </button>
                 @if(request('search') || request('type') || request('category'))
@@ -65,7 +65,7 @@
                     @endif
                 </x-empty-state>
             @else
-                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                <div class="bg-superficie rounded-lg shadow overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-miga text-masa-madre border-b border-miga">
                             <tr>

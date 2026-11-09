@@ -19,7 +19,7 @@
                 @can('manage-costs')
                     <button type="button"
                         @click="$dispatch('open-modal', 'credit-note-create')"
-                        class="px-4 py-2 bg-corteza text-white text-sm rounded-md hover:bg-horno transition-colors">
+                        class="px-4 py-2 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">
                         + Nueva nota de crédito
                     </button>
                 @endcan

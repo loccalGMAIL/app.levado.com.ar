@@ -177,7 +177,7 @@
                         <button type="button"
                             @click="createCategory()"
                             :disabled="newCatLoading || !newCatName.trim()"
-                            class="px-3 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
+                            class="px-3 py-1.5 text-xs bg-tinta text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
                             <span x-text="newCatLoading ? 'Creando…' : 'Crear'"></span>
                         </button>
                     </div>
@@ -273,7 +273,7 @@
                 <button type="button"
                     @click="scanReceipt()"
                     :disabled="scanning || scanned"
-                    class="px-3 py-1.5 text-xs bg-corteza text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
+                    class="px-3 py-1.5 text-xs bg-tinta text-white rounded-md hover:bg-horno transition-colors disabled:opacity-50 whitespace-nowrap">
                     <span x-text="scanning ? 'Leyendo el comprobante…' : (scanned ? 'Leído ✓' : 'Leer con IA')"></span>
                 </button>
                 <span class="text-xs text-masa-madre" x-show="!scanned && !scanning">
