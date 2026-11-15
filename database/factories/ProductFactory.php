@@ -61,6 +61,16 @@ class ProductFactory extends Factory
         return $this->state(['type' => ProductType::Resale->value]);
     }
 
+    /** Combo sin componentes: las líneas se agregan con comboLines()->create(). */
+    public function combo(): static
+    {
+        return $this->state([
+            'type' => ProductType::Combo->value,
+            'unit' => Unit::Unidad->value,
+            'cost_per_unit' => null,
+        ]);
+    }
+
     public function inactive(): static
     {
         return $this->state(['active' => false]);

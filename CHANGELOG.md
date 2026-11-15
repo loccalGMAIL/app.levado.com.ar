@@ -295,6 +295,28 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.22.0] — 2026-11-15
+
+Sobre v0.21.1. **Combos**: artículos que agrupan a otros bajo un código y un precio propios. Requiere `migrate`.
+
+### Agregado
+
+- **Pestaña Combos** en Artículos: armá un combo con dos o más artículos, elaborados o de reventa, en cualquier combinación. Cada combo tiene su **código de barras** (se genera solo si no cargás uno) y su **precio propio** por lista, con las mismas políticas de margen o recargo que cualquier artículo.
+- El **costo** del combo es la suma del costo de sus componentes y se actualiza solo cuando cambia el de alguno; los precios con política se recalculan.
+- La columna **Disponibles** muestra cuántos combos se pueden armar con el stock actual de los componentes.
+- Los combos aparecen en la **Matriz de precios** (con filtro por tipo).
+
+### Comportamiento
+
+- El combo **no tiene stock propio**: no aparece en Existencias, Producción ni Compras. Cuando exista Ventas, vender un combo va a descontar el stock de cada componente; el descuento ya está implementado y probado, pero **todavía ninguna pantalla lo dispara**.
+- No se puede desactivar un artículo que forma parte de un combo activo, ni cambiarle la unidad. Un combo no puede contener otro combo.
+
+### Técnico
+
+- `ProductType::Combo`, tabla `product_combo_lines`, `ProductComboLine`, `ProductComboController`, `SaveProductComboRequest`.
+- `ComboExploder`: `explode()`, `registerSale()` (movimientos `sale` por componente, en una transacción) y `availability()`. `StockService` rechaza cualquier movimiento a nombre de un combo.
+- `Product::currentCost()`/`fullCost()` resuelven el combo desde sus componentes; `ArticlePriceRecalculator::recompute()` propaga a los combos que contienen al artículo.
+
 ## [0.21.1] — 2026-11-15
 
 Sobre v0.21.0. **Revisión integral del código**: correcciones de seguridad, de cálculo de costos y precios, y de coherencia entre pantallas que salieron de un análisis funcional completo. Sin migraciones.

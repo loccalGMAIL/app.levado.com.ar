@@ -15,7 +15,7 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'version' => '0.21.1',
+    'version' => '0.22.0',
 
     /*
     | Umbral (ms) a partir del cual LogSlowRequests registra un request lento.

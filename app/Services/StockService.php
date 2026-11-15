@@ -52,6 +52,7 @@ class StockService
     ): StockMovement {
         abort_unless(! $type->requiresReason() || filled($reason), 422, 'El motivo es obligatorio para ajustes.');
         abort_unless($location->tenant_id === $item->tenant_id, 422, 'La sucursal no pertenece al tenant del ítem.');
+        $this->guardStockable($item);
 
         return DB::transaction(function () use ($item, $location, $type, $quantity, $unitCost, $reason, $user, $reference, $referenceType, $referenceId, $reverses) {
             $level = $this->lockedLevelRow($item, $location);
@@ -84,6 +85,15 @@ class StockService
 
             return $movement;
         });
+    }
+
+    /**
+     * Un combo no tiene stock propio: lo que se mueve son sus componentes
+     * (ComboExploder). Cualquier fila a su nombre sería stock fantasma.
+     */
+    private function guardStockable(Ingredient|Packaging|Product $item): void
+    {
+        abort_if($item instanceof Product && $item->isCombo(), 422, 'Un combo no lleva stock propio: se descuenta de sus componentes.');
     }
 
     /**
@@ -291,6 +301,8 @@ class StockService
 
     public function setMinQuantity(Ingredient|Packaging|Product $item, Location $location, ?float $minQuantity): void
     {
+        $this->guardStockable($item);
+
         DB::transaction(function () use ($item, $location, $minQuantity) {
             $this->lockedLevelRow($item, $location)->update(['min_quantity' => $minQuantity]);
         });

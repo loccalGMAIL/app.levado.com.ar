@@ -43,7 +43,7 @@ class StockController extends Controller
             CatalogItemType::Ingredient => $tenant->ingredients()->active(),
             CatalogItemType::Packaging => $tenant->packagings()->active(),
             // El elaborado deriva su costo de la receta (Product::currentCost()): eager-load para valuar sin N+1.
-            CatalogItemType::Product => $tenant->products()->active()->with('recipe'),
+            CatalogItemType::Product => $tenant->products()->active()->stockable()->with('recipe'),
         };
 
         $items = $itemsQuery
@@ -226,7 +226,7 @@ class StockController extends Controller
         return match (CatalogItemType::from($type)) {
             CatalogItemType::Ingredient => $tenant->ingredients()->findOrFail($id),
             CatalogItemType::Packaging => $tenant->packagings()->findOrFail($id),
-            CatalogItemType::Product => $tenant->products()->findOrFail($id),
+            CatalogItemType::Product => $tenant->products()->stockable()->findOrFail($id),
         };
     }
 

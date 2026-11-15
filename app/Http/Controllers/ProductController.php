@@ -52,6 +52,8 @@ class ProductController extends Controller
                         ->orWhere('barcode', 'like', $pattern);
                 });
             })
+            // Los combos tienen su propia pestaña (ProductComboController).
+            ->stockable()
             ->when(request('type') === ProductType::Manufactured->value, fn ($q) => $q->where('type', ProductType::Manufactured->value))
             ->when(request('type') === ProductType::Resale->value, fn ($q) => $q->where('type', ProductType::Resale->value))
             // 'sin' es un valor especial (no un id): aísla lo que hoy cuela el gate
@@ -106,7 +108,7 @@ class ProductController extends Controller
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
 
         $products = $tenant->products()
-            ->with(['recipe', 'category'])
+            ->with(['recipe', 'category', 'comboLines.component.recipe'])
             ->active()
             ->when(request('search'), function ($q, $search) {
                 $pattern = $this->containsPattern($search);
@@ -117,8 +119,7 @@ class ProductController extends Controller
                         ->orWhere('barcode', 'like', $pattern);
                 });
             })
-            ->when(request('type') === ProductType::Manufactured->value, fn ($q) => $q->where('type', ProductType::Manufactured->value))
-            ->when(request('type') === ProductType::Resale->value, fn ($q) => $q->where('type', ProductType::Resale->value))
+            ->when(ProductType::tryFrom((string) request('type')), fn ($q, ProductType $type) => $q->where('type', $type->value))
             ->when(request('category'), fn ($q, $category) => $q->where('product_category_id', $category))
             ->orderBy('name', $dir)
             ->paginate($this->perPage())
@@ -165,6 +166,7 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
         $this->authorize('update', $product);
+        abort_if($product->isCombo(), 404);
 
         // Un elaborado no puede ser línea de receta: pasar a elaborado un artículo
         // usado como insumo dejaría esas recetas apuntando a algo sin costo propio.
@@ -181,7 +183,7 @@ class ProductController extends Controller
 
         if ($request->validated('unit') !== $product->unit->value && $this->unitIsLocked($product)) {
             return back()->withErrors([
-                'unit' => 'No podés cambiar la unidad de un artículo que ya tiene recetas, compras o movimientos de stock: '
+                'unit' => 'No podés cambiar la unidad de un artículo que ya tiene recetas, combos, compras o movimientos de stock: '
                     .'sus cantidades y su costo quedarían en la unidad anterior.',
             ])->withInput();
         }
@@ -244,6 +246,30 @@ class ProductController extends Controller
             }
         }
 
+        if ($product->active) {
+            $combos = $product->comboNamesUsingAsComponent(onlyActive: true);
+
+            if ($combos !== []) {
+                return back()->withErrors([
+                    'toggle' => 'No podés desactivar este artículo porque forma parte de: '
+                        .implode(', ', $combos).'. Quitalo de esos combos primero.',
+                ]);
+            }
+        } elseif ($product->isCombo()) {
+            $inactive = $product->comboLines()
+                ->join('products as components', 'components.id', '=', 'product_combo_lines.product_id')
+                ->where('components.active', false)
+                ->orderBy('components.name')
+                ->pluck('components.name')
+                ->all();
+
+            if ($inactive !== []) {
+                return back()->withErrors([
+                    'toggle' => 'No podés activar el combo: tiene componentes desactivados ('.implode(', ', $inactive).').',
+                ]);
+            }
+        }
+
         $product->update(['active' => ! $product->active]);
         $action = $product->active ? 'product.activated' : 'product.deactivated';
 
@@ -267,6 +293,7 @@ class ProductController extends Controller
     private function unitIsLocked(Product $product): bool
     {
         return $product->recipeLines()->exists()
+            || $product->comboMemberships()->exists()
             || $product->stockMovements()->exists()
             || DB::table('purchase_lines')
                 ->where('purchaseable_type', CatalogItemType::Product->value)

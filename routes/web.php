@@ -30,6 +30,7 @@ use App\Http\Controllers\PerceptionConceptController;
 use App\Http\Controllers\PriceListController;
 use App\Http\Controllers\ProductBulkCategoryController;
 use App\Http\Controllers\ProductCategoryController;
+use App\Http\Controllers\ProductComboController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductCostHistoryController;
 use App\Http\Controllers\ProductionController;
@@ -139,6 +140,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::get('products/matrix', [ProductController::class, 'matrix'])->name('products.matrix');
     Route::get('products/history', [ProductionHistoryController::class, 'index'])->name('products.history');
+    Route::get('products/combos', [ProductComboController::class, 'index'])->name('products.combos.index');
     Route::get('products/{product}/cost-history', [ProductCostHistoryController::class, 'index'])->name('products.cost-history');
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
@@ -284,6 +286,8 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('products', [ProductController::class, 'store'])->name('products.store');
     // Antes de products/{product}: bulk-category no es un id de producto.
     Route::patch('products/bulk-category', ProductBulkCategoryController::class)->name('products.bulk-category');
+    Route::post('products/combos', [ProductComboController::class, 'store'])->name('products.combos.store');
+    Route::put('products/combos/{combo}', [ProductComboController::class, 'update'])->name('products.combos.update');
     Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::patch('products/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('products.toggle-active');
     Route::patch('products/{product}/prices/{priceList}', [ProductPriceController::class, 'update'])->name('products.prices.update');

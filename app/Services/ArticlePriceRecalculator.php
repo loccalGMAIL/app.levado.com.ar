@@ -14,10 +14,31 @@ use App\Models\Tenant;
  */
 class ArticlePriceRecalculator
 {
+    /**
+     * Recalcula el artículo y, si es componente de algún combo, también esos
+     * combos: su costo es la suma del de sus componentes.
+     */
     public function recompute(Product $product, ?float $overheadPerHour = null): void
     {
-        $product->loadMissing('recipe', 'tenant');
+        $product->loadMissing('tenant');
         $overheadPerHour ??= $product->tenant->overheadPerHour() ?? 0.0;
+
+        $this->recomputeOne($product, $overheadPerHour);
+
+        if ($product->isCombo()) {
+            return;
+        }
+
+        Product::query()
+            ->with('comboLines.component.recipe')
+            ->whereHas('comboLines', fn ($query) => $query->where('product_id', $product->id))
+            ->get()
+            ->each(fn (Product $combo) => $this->recomputeOne($combo, $overheadPerHour));
+    }
+
+    private function recomputeOne(Product $product, float $overheadPerHour): void
+    {
+        $product->loadMissing('recipe');
         $cost = $product->fullCost($overheadPerHour);
 
         ProductPrice::where('product_id', $product->id)
@@ -49,7 +70,7 @@ class ArticlePriceRecalculator
         $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
 
         $tenant->products()
-            ->with('recipe')
+            ->with(['recipe', 'comboLines.component.recipe'])
             ->whereExists(function ($query) {
                 $query->selectRaw('1')
                     ->from('product_prices')
@@ -57,6 +78,6 @@ class ArticlePriceRecalculator
                     ->where('product_prices.policy_type', '!=', PricingPolicy::Manual->value);
             })
             ->get()
-            ->each(fn (Product $product) => $this->recompute($product, $overheadPerHour));
+            ->each(fn (Product $product) => $this->recomputeOne($product, $overheadPerHour));
     }
 }

@@ -26,7 +26,8 @@ class StoreProductRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', Rule::enum(ProductType::class)],
+            // Los combos se dan de alta desde su propia pantalla (SaveProductComboRequest).
+            'type' => ['required', Rule::enum(ProductType::class)->except([ProductType::Combo])],
             // Un producto elaborado necesita su receta; uno de reventa no lleva.
             'recipe_id' => [
                 Rule::requiredIf(fn () => $this->input('type') === ProductType::Manufactured->value),

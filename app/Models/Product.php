@@ -126,6 +126,26 @@ class Product extends Model
     }
 
     /**
+     * Combo: se vende como una unidad con código y precio propios, pero su
+     * stock y su costo son los de sus componentes.
+     */
+    public function isCombo(): bool
+    {
+        return $this->type === ProductType::Combo;
+    }
+
+    /**
+     * Artículos con stock propio. El combo queda afuera: su existencia es la
+     * de sus componentes, así que no entra en Existencias, Producción ni Compras.
+     *
+     * @param  Builder<Product>  $query
+     */
+    public function scopeStockable(Builder $query): void
+    {
+        $query->where('type', '!=', ProductType::Combo->value);
+    }
+
+    /**
      * Costo directo de producción por unidad del artículo (única fuente de verdad).
      * Elaborado: cache unit_cost de la receta (insumos + descartables + mano de obra + sub-recetas,
      * mantenido por RecipeCostPropagator; sin overhead de gastos fijos).
@@ -134,6 +154,10 @@ class Product extends Model
      */
     public function currentCost(): ?float
     {
+        if ($this->isCombo()) {
+            return $this->comboCost(fn (Product $component) => $component->currentCost());
+        }
+
         if (! $this->isManufactured()) {
             return $this->cost_per_unit !== null ? (float) $this->cost_per_unit : null;
         }
@@ -146,7 +170,40 @@ class Product extends Model
     /** Origen del costo vigente, para etiquetar en la UI. */
     public function currentCostSource(): string
     {
-        return $this->isManufactured() ? 'receta' : 'compra';
+        return match ($this->type) {
+            ProductType::Manufactured => 'receta',
+            ProductType::Combo => 'combo',
+            default => 'compra',
+        };
+    }
+
+    /**
+     * Costo de un combo: suma del costo de cada componente por su cantidad.
+     * Null si no tiene componentes o alguno todavía no tiene costo.
+     *
+     * @param  \Closure(Product): ?float  $componentCost
+     */
+    private function comboCost(\Closure $componentCost): ?float
+    {
+        $this->loadMissing('comboLines.component.recipe');
+
+        if ($this->comboLines->isEmpty()) {
+            return null;
+        }
+
+        $total = 0.0;
+
+        foreach ($this->comboLines as $line) {
+            $cost = $componentCost($line->component);
+
+            if ($cost === null) {
+                return null;
+            }
+
+            $total += $cost * (float) $line->quantity;
+        }
+
+        return $total;
     }
 
     /**
@@ -156,6 +213,10 @@ class Product extends Model
      */
     public function fullCost(float $overheadPerHour): ?float
     {
+        if ($this->isCombo()) {
+            return $this->comboCost(fn (Product $component) => $component->fullCost($overheadPerHour));
+        }
+
         $direct = $this->currentCost();
 
         if ($direct === null || ! $this->isManufactured()) {
@@ -216,6 +277,42 @@ class Product extends Model
             ->distinct()
             ->orderBy('recipes.name')
             ->pluck('recipes.name')
+            ->all();
+    }
+
+    /**
+     * Componentes del combo (vacía en cualquier otro tipo de artículo).
+     *
+     * @return HasMany<ProductComboLine, $this>
+     */
+    public function comboLines(): HasMany
+    {
+        return $this->hasMany(ProductComboLine::class, 'combo_id');
+    }
+
+    /**
+     * Líneas de combo en las que este artículo participa como componente.
+     *
+     * @return HasMany<ProductComboLine, $this>
+     */
+    public function comboMemberships(): HasMany
+    {
+        return $this->hasMany(ProductComboLine::class, 'product_id');
+    }
+
+    /**
+     * Nombres de los combos que incluyen este artículo.
+     *
+     * @return list<string>
+     */
+    public function comboNamesUsingAsComponent(bool $onlyActive = false): array
+    {
+        return $this->comboMemberships()
+            ->join('products as combos', 'combos.id', '=', 'product_combo_lines.combo_id')
+            ->when($onlyActive, fn ($query) => $query->where('combos.active', true))
+            ->distinct()
+            ->orderBy('combos.name')
+            ->pluck('combos.name')
             ->all();
     }
 
