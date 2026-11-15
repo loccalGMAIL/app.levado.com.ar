@@ -244,7 +244,7 @@ class StockService
      */
     public function syncCreditNoteLineExit(
         CreditNoteLine $line,
-        Ingredient|Packaging $item,
+        Ingredient|Packaging|Product $item,
         float $quantityInItemUnits,
         float $unitCost,
         ?User $user = null,

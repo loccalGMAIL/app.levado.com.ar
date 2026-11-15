@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\CatalogItemType;
 use App\Enums\ProductType;
 use App\Enums\Unit;
+use App\Exceptions\IncompatibleUnitsException;
 use App\Http\Requests\StorePurchaseLineRequest;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseLineRequest;
@@ -76,8 +77,8 @@ class PurchaseController extends Controller
             ->withSum('perceptions as perceptions_total', 'amount')
             ->when(request('search'), function ($q, $s) {
                 $q->where(function ($q2) use ($s) {
-                    $q2->where('invoice_number', 'like', "%{$s}%")
-                        ->orWhereHas('supplier', fn ($sq) => $sq->where('name', 'like', "%{$s}%"));
+                    $q2->where('invoice_number', 'like', $this->containsPattern($s))
+                        ->orWhereHas('supplier', fn ($sq) => $sq->where('name', 'like', $this->containsPattern($s)));
                 });
             })
             ->when(request('supplier_id'), fn ($q, $id) => $q->where('supplier_id', $id))
@@ -358,7 +359,7 @@ class PurchaseController extends Controller
 
     public function invoiceImage(Purchase $purchase): StreamedResponse
     {
-        $this->authorize('update', $purchase);
+        $this->authorize('view', $purchase);
 
         $disk = blank($purchase->invoice_image_path) ? null : $this->invoiceDiskFor($purchase->invoice_image_path);
 
@@ -686,12 +687,10 @@ class PurchaseController extends Controller
                     $this->linkMemory->remember($line);
                 });
                 $applied++;
-            } catch (HttpException $e) {
-                if (str_contains($e->getMessage(), 'unidades no son compatibles')) {
-                    $skipped++;
-                } else {
-                    $failed++;
-                }
+            } catch (IncompatibleUnitsException) {
+                $skipped++;
+            } catch (HttpException) {
+                $failed++;
             }
         }
 

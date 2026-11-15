@@ -3,14 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProductType;
+use App\Enums\Unit;
 use App\Http\Requests\StoreRecipeRequest;
 use App\Http\Requests\UpdateRecipeRequest;
 use App\Models\ProductPrice;
 use App\Models\Recipe;
+use App\Models\RecipeSubrecipeLine;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\RecipeCostPropagator;
 use App\Services\RecipeShowViewModel;
+use App\Services\UnitConverter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +32,7 @@ class RecipeController extends Controller
         private readonly AdminActivityRecorder $recorder,
         private readonly RecipeCostPropagator $propagator,
         private readonly RecipeShowViewModel $showViewModel,
+        private readonly UnitConverter $converter,
     ) {}
 
     public function index(): View
@@ -45,6 +49,7 @@ class RecipeController extends Controller
             ->join('products', 'products.id', '=', 'product_prices.product_id')
             ->whereColumn('products.recipe_id', 'recipes.id')
             ->where('products.type', ProductType::Manufactured->value)
+            ->whereNull('products.recipe_quantity')
             ->where('product_prices.price_list_id', $priceList->id)
             ->limit(1);
 
@@ -66,6 +71,7 @@ class RecipeController extends Controller
         $priceRows = ProductPrice::query()
             ->join('products', 'products.id', '=', 'product_prices.product_id')
             ->where('products.type', ProductType::Manufactured->value)
+            ->whereNull('products.recipe_quantity')
             ->where('product_prices.price_list_id', $priceList->id)
             ->whereIn('products.recipe_id', $recipes->pluck('id'))
             ->get(['product_prices.price', 'product_prices.policy_type', 'product_prices.policy_value', 'products.recipe_id']);
@@ -106,7 +112,7 @@ class RecipeController extends Controller
 
     public function show(Recipe $recipe): View
     {
-        $this->authorize('update', $recipe);
+        $this->authorize('view', $recipe);
 
         return view('recipes.show', $this->showViewModel->build($recipe, app(Tenant::class)));
     }
@@ -136,6 +142,25 @@ class RecipeController extends Controller
     public function update(UpdateRecipeRequest $request, Recipe $recipe): RedirectResponse
     {
         $this->authorize('update', $recipe);
+
+        $newYieldUnit = Unit::from($request->validated('yield_unit'));
+
+        if ($newYieldUnit !== $recipe->yield_unit) {
+            $incompatibleParents = $recipe->parentSubrecipeLines()
+                ->with('recipe:id,name')
+                ->get()
+                ->reject(fn (RecipeSubrecipeLine $line) => $this->converter->compatible($line->unit, $newYieldUnit))
+                ->map(fn (RecipeSubrecipeLine $line) => $line->recipe->name)
+                ->unique()
+                ->values();
+
+            if ($incompatibleParents->isNotEmpty()) {
+                return back()->withErrors([
+                    'yield_unit' => 'No podés cambiar la unidad de rendimiento: estas recetas la usan como sub-receta '
+                        .'en una unidad incompatible: '.$incompatibleParents->implode(', ').'.',
+                ])->withInput();
+            }
+        }
 
         $recipe->update($request->validated());
         $this->propagator->propagateFrom($recipe);

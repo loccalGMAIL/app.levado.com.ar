@@ -201,7 +201,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     // Antes de variable-expenses/{variableExpense} para que "scan" no se
     // interprete como un id de gasto (route-model binding). Mismo throttle que
     // el escaneo de facturas y por lo mismo: cada lectura es una llamada paga a
-    // la API de Anthropic que además bloquea un worker hasta 60 s.
+    // la API de Anthropic que además bloquea un worker hasta 45 s.
     Route::post('variable-expenses/scan', [VariableExpenseScanController::class, 'scan'])
         ->middleware('throttle:10,1')
         ->name('variable-expenses.scan');

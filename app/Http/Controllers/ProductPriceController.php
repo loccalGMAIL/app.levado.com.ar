@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MarginLevel;
 use App\Enums\PricingPolicy;
 use App\Models\PriceList;
 use App\Models\Product;
@@ -23,8 +24,8 @@ class ProductPriceController extends Controller
 
     public function update(Request $request, Product $product, PriceList $priceList): JsonResponse
     {
-        $this->authorize('view', $product);
-        $this->authorize('view', $priceList);
+        $this->authorize('update', $product);
+        $this->authorize('update', $priceList);
         abort_unless($priceList->active, 422, 'La lista de precios está inactiva.');
 
         $validated = $request->validate([
@@ -39,6 +40,12 @@ class ProductPriceController extends Controller
             $this->writer->set($product, $priceList, isset($validated['price']) ? (float) $validated['price'] : null);
         } else {
             abort_if(! isset($validated['policy_value']), 422, 'Indicá el porcentaje de la política.');
+            // precio = costo ÷ (1 − margen): con 100% o más no hay precio posible.
+            abort_if(
+                $policy === PricingPolicy::Margin && (float) $validated['policy_value'] >= 100,
+                422,
+                'El margen sobre el precio tiene que ser menor a 100%.',
+            );
             $this->writer->setPolicy($product, $priceList, $policy, (float) $validated['policy_value']);
         }
 
@@ -50,12 +57,10 @@ class ProductPriceController extends Controller
 
         $margin = null;
         $marginPct = null;
-        $marginColor = 'text-masa-madre';
 
         if ($sellingPrice !== null && $cost !== null && $sellingPrice > 0) {
             $margin = $sellingPrice - $cost;
             $marginPct = $margin / $sellingPrice * 100;
-            $marginColor = $marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500');
         }
 
         return response()->json([
@@ -67,7 +72,7 @@ class ProductPriceController extends Controller
             'margin_formatted' => $margin !== null ? number_format($margin, 2, ',', '.') : null,
             'margin_pct' => $marginPct,
             'margin_pct_formatted' => $marginPct !== null ? number_format($marginPct, 1, ',', '.') : null,
-            'margin_color' => $marginColor,
+            'margin_color' => MarginLevel::textClassFor($marginPct),
         ]);
     }
 }

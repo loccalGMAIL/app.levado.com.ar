@@ -85,6 +85,20 @@ class Product extends Model
                 ->orWhereHas('category', fn (Builder $sub) => $sub->where('producible', true)));
     }
 
+    /**
+     * Nombre del artículo base que ya tiene la receta, si existe (ignorando $exceptId).
+     */
+    public static function baseArticleNameFor(int $tenantId, int $recipeId, ?int $exceptId = null): ?string
+    {
+        return static::query()
+            ->where('tenant_id', $tenantId)
+            ->where('recipe_id', $recipeId)
+            ->where('type', ProductType::Manufactured->value)
+            ->whereNull('recipe_quantity')
+            ->when($exceptId !== null, fn (Builder $query) => $query->whereKeyNot($exceptId))
+            ->value('name');
+    }
+
     public function isManufactured(): bool
     {
         return $this->type === ProductType::Manufactured;
@@ -113,7 +127,7 @@ class Product extends Model
 
     /**
      * Costo directo de producción por unidad del artículo (única fuente de verdad).
-     * Elaborado: cache unit_cost de la receta (insumos + mano de obra + sub-recetas,
+     * Elaborado: cache unit_cost de la receta (insumos + descartables + mano de obra + sub-recetas,
      * mantenido por RecipeCostPropagator; sin overhead de gastos fijos).
      * Reventa: cost_per_unit (último costo, alimentado por Compras).
      * Devuelve null si todavía no hay costo determinable.

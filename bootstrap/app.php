@@ -7,7 +7,9 @@ use App\Http\Middleware\SetTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -33,5 +35,14 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Las reglas de dominio cortan con abort(422, 'mensaje'). En un fetch eso
+        // ya viaja como JSON; en un formulario común terminaba en la página de
+        // error 422 pelada. Acá vuelve a la pantalla anterior con el mensaje.
+        $exceptions->render(function (HttpException $e, Request $request) {
+            if ($e->getStatusCode() !== 422 || $request->expectsJson() || $e->getMessage() === '') {
+                return null;
+            }
+
+            return back()->withInput()->with('error', $e->getMessage());
+        });
     })->create();

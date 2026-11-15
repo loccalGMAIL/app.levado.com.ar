@@ -22,6 +22,8 @@ const scale = (name, shades) => Object.fromEntries(shades.map((shade) => [shade,
 export default {
     content: [
         './resources/views/**/*.blade.php',
+        // Los colores de margen se resuelven en PHP: sin esto se purgarían.
+        './app/Enums/MarginLevel.php',
     ],
 
     theme: {

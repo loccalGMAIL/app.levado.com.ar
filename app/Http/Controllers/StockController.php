@@ -55,9 +55,9 @@ class StockController extends Controller
             })
             ->select("{$table}.*")
             ->when(request('search'), function ($q, $search) use ($table) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+                $pattern = $this->containsPattern($search);
 
-                return $q->where("{$table}.name", 'like', "%{$escaped}%");
+                return $q->where("{$table}.name", 'like', $pattern);
             })
             ->tap(fn (Builder $q) => $this->sortListing($q, [
                 'name' => "{$table}.name",

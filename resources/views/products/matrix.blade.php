@@ -118,11 +118,10 @@
                                             }
 
                                             $marginPct = null;
-                                            $marginColor = 'text-masa-madre';
                                             if ($cellPrice !== null && $costPerUnit !== null && $cellPrice > 0) {
                                                 $marginPct = (($cellPrice - $costPerUnit) / $cellPrice) * 100;
-                                                $marginColor = $marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500');
                                             }
+                                            $marginColor = \App\Enums\MarginLevel::textClassFor($marginPct);
                                             $policy = $productPolicies[$list->id] ?? ['type' => 'manual', 'value' => null];
                                         @endphp
                                         <td class="px-4 py-3 text-right font-mono text-corteza whitespace-nowrap align-top">

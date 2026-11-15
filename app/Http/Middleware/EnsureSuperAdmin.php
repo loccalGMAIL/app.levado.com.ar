@@ -14,7 +14,7 @@ class EnsureSuperAdmin
             return redirect()->route('login');
         }
 
-        if (! $request->user()->isSuperAdmin()) {
+        if ($request->user()->active === false || ! $request->user()->isSuperAdmin()) {
             abort(403);
         }
 

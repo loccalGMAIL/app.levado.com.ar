@@ -43,7 +43,9 @@ class RecipeLineController extends Controller
         $data = $request->validate([
             'ingredient_id' => [
                 'required', 'integer',
-                Rule::exists('ingredients', 'id')->where('tenant_id', app(Tenant::class)->id),
+                Rule::exists('ingredients', 'id')
+                    ->where('tenant_id', app(Tenant::class)->id)
+                    ->where('active', true),
             ],
             'quantity' => ['required', 'numeric', 'min:0.001'],
             'unit' => ['required', Rule::enum(Unit::class)],

@@ -326,7 +326,6 @@ class ProductionOrderService
             DB::table('tenants')->where('id', $tenant->id)->lockForUpdate()->first();
 
             $order = $this->orderForDate($tenant, $attributes['scheduled_for'], $user);
-            abort_unless($order->isEditable(), 422, 'La orden de ese día ya no se puede editar.');
 
             $lines = $attributes['lines'] ?? [];
 
@@ -525,8 +524,22 @@ class ProductionOrderService
         abort_if($aggregated->isEmpty(), 422, 'La orden no tiene líneas para producir.');
 
         DB::transaction(function () use ($order, $aggregated, $user) {
+            // Lock de la orden y re-chequeo del estado adentro: dos "Producir"
+            // casi simultáneos (doble clic) pasaban ambos el chequeo de arriba
+            // y fabricaban dos veces.
+            $locked = ProductionOrder::withTemplates()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            abort_unless(
+                $locked->status->canTransitionTo(ProductionOrderStatus::Done),
+                422,
+                'La orden no está en un estado que permita producir.',
+            );
+
+            // El stock se mueve en la sucursal de la orden: la misma contra la
+            // que preview() muestra la disponibilidad.
+            $location = $order->loadMissing('location')->location;
+
             foreach ($aggregated as $entry) {
-                $production = $this->productions->produce($entry['product'], $entry['quantity'], null, $user);
+                $production = $this->productions->produce($entry['product'], $entry['quantity'], null, $user, $location);
                 $production->update(['production_order_id' => $order->id]);
             }
 
@@ -601,7 +614,13 @@ class ProductionOrderService
         }
 
         DB::transaction(function () use ($order, $user) {
-            foreach ($order->productions as $production) {
+            $locked = ProductionOrder::withTemplates()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->isCancelled()) {
+                return;
+            }
+
+            foreach ($order->productions()->get() as $production) {
                 $this->productions->cancel($production, $user);
             }
 

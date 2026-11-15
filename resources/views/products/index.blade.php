@@ -199,7 +199,7 @@
                             $cost = $product->fullCost($overheadPerHour);
                             $price = isset($priceMap[$product->id]) ? (float) $priceMap[$product->id] : null;
                             $marginPct = ($price !== null && $cost !== null && $price > 0) ? ($price - $cost) / $price * 100 : null;
-                            $marginColor = $marginPct === null ? 'text-masa-madre' : ($marginPct >= 30 ? 'text-green-600' : ($marginPct >= 15 ? 'text-amber-600' : 'text-red-500'));
+                            $marginColor = \App\Enums\MarginLevel::textClassFor($marginPct);
                             $initPriceFormatted = $price !== null ? number_format($price, 2, ',', '.') : '';
                             $initMarginPctFormatted = $marginPct !== null ? number_format($marginPct, 1, ',', '.') : '';
                             $policy = $policyMap[$product->id] ?? ['type' => 'manual', 'value' => null];
