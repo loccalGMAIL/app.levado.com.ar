@@ -24,3 +24,5 @@
 - [Porcentaje panadero](feature-porcentaje-panadero.md) — `is_flour` por línea, `BakerPercentages`, vista `recipes.baker` con escalado y columna % en la hoja imprimible (v0.20.0)
 - [Larastan](project-larastan.md) — Larastan nivel 5, baseline de 9 errores, `composer analyse`, helpers de tests en Pest.php (v0.14.1)
 - [Temas claro/oscuro/centeno](plan-temas.md) — Variables CSS (`rgb(var(--c-…) / <alpha-value>)`) en vez de `dark:` por peso; nombres de marca como roles, tokens nuevos, preferencia `users.theme`, fases y paletas. Fases 1–3 ✅
+- [Pendientes de la revisión v0.21.1](pendientes-revision-v0211.md) — Decisiones abiertas que la revisión integral no implementó: horas de sub-recetas en el overhead, `isSuperAdmin()` sin tenant HQ, revertir costo al reasociar; preguntar antes de tocarlas
+- [Composer en sesiones cloud](entorno-cloud-composer.md) — `vendor/` no se instala con dist (zip de GitHub bloqueados): `--prefer-source` + phpstan desde un clon git; cómo correr analyse y tests ahí

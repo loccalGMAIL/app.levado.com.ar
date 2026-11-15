@@ -245,7 +245,10 @@ test('una orden terminada rechaza agregar un pedido', function () {
             'destination_type' => 'location',
             'destination_id' => $tenant->defaultLocation()->id,
         ])
-        ->assertStatus(422);
+        ->assertRedirect()
+        ->assertSessionHas('error');
+
+    expect($order->productionOrderRequests()->count())->toBe(0);
 });
 
 test('el pedido admite un cliente como destino', function () {

@@ -154,7 +154,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
         // Matches patterns like: "X 25 Kg", "x5lts", "× 200 ml", "X 1.5 L", "X5KG"
         parseDesc(desc) {
             if (!desc) return null;
-            const re = /[xX×]\s*(\d+(?:[.,]\d+)?)\s*(kg|kgs?|kilo[s]?|kilogramo[s]?|gr[s]?|gramo[s]?|g|l(?:t[s]?|itro[s]?)?|ml[s]?|cc)/i;
+            const re = /[xX×]\s*(\d+(?:[.,]\d+)?)\s*(kg|kgs?|kilo[s]?|kilogramo[s]?|gr[s]?|gramo[s]?|g|l(?:t[s]?|itro[s]?)?|ml[s]?|cc)\b/i;
             const m = desc.match(re);
             if (!m) return null;
             const qty = parseFloat(m[1].replace(',', '.'));

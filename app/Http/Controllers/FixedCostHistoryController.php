@@ -6,6 +6,7 @@ use App\Http\Requests\StoreFixedCostPeriodRequest;
 use App\Models\FixedCost;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\ArticlePriceRecalculator;
 use App\Services\FixedCostHistory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
@@ -17,6 +18,7 @@ class FixedCostHistoryController extends Controller
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly FixedCostHistory $history,
+        private readonly ArticlePriceRecalculator $priceRecalculator,
     ) {}
 
     public function index(): View
@@ -70,6 +72,12 @@ class FixedCostHistoryController extends Controller
                 }
             }
         });
+
+        // El mes en curso pisa monthly_amount, que es lo que alimenta el overhead:
+        // los precios con política (margen/recargo) dependen de él.
+        if ($isCurrentMonth && $amounts->isNotEmpty()) {
+            $this->priceRecalculator->recomputeForTenant($tenant);
+        }
 
         $this->recorder->record(
             actor: $request->user(),

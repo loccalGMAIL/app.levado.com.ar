@@ -295,6 +295,55 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.21.1] — 2026-11-15
+
+Sobre v0.21.0. **Revisión integral del código**: correcciones de seguridad, de cálculo de costos y precios, y de coherencia entre pantallas que salieron de un análisis funcional completo. Sin migraciones.
+
+### Seguridad
+
+- **Equipo**: ya no se puede asignar el rol `super_admin` desde «Mi equipo» (antes sólo lo ocultaba la pantalla, y un administrador podía volverse super admin global). Además: nadie modifica su propia membresía, sólo un propietario puede nombrar, degradar o desactivar a otro propietario, y el comercio no puede quedarse sin un propietario activo.
+- **Usuarios desactivados**: pierden la sesión abierta en el siguiente request (antes el flag sólo se miraba al iniciar sesión) y no pueden volver a entrar aceptando una invitación.
+- La imagen de un escaneo de factura rechaza rutas con `..`.
+
+### Corregido
+
+- **Notas de crédito**: devolver un **artículo de reventa** ya no da error 500, y varias notas sobre el mismo renglón no pueden devolver, entre todas, más de lo comprado.
+- **Dashboard y Recetas**: el precio de venta de una receta es siempre el de su **artículo base**; antes podía colarse el de un pack (presentación) y falsear el margen. Una receta ya no admite un segundo artículo base.
+- **Gastos fijos**: cargar los importes del mes en curso desde el histórico ahora recalcula los precios con política de margen o recargo.
+- **Compras**:
+  - Corregir un renglón ya imputado de un artículo con **promedio ponderado** ya no promedia dos veces la misma compra.
+  - Guardar un renglón sin cambios ya no suma entradas repetidas al historial de costo de insumos y descartables.
+  - El divisor leído de la descripción ya no confunde «x 3 gustos» con 3 gramos ni «x 6 latas» con 6 litros.
+- **Insumos**: editar un insumo con unidades por envase ya no registra un «cambio de costo» en cada guardado.
+- **Producción**: un doble clic en «Producir» (o en «Anular») ya no ejecuta la operación dos veces; la orden mueve el stock en su propia sucursal, la misma contra la que muestra la disponibilidad.
+- **Alertas**: el stock bajo ahora también avisa por **artículos** (antes sólo insumos y descartables).
+- **Dashboard**: en la dona de costos, lo que aporta una sub-receta se reparte en sus insumos, descartables y mano de obra reales en vez de sumarse entero a «descartables».
+- Los precios que se recalculan solos (por política) ahora quedan en el **historial de precios**.
+- Las búsquedas de Compras y Notas de crédito escapan `%` y `_` como el resto de los listados.
+
+### Cambiado
+
+- **Una sola escala de margen** en toda la app (Alta ≥ 60 %, Media ≥ 40 %, Regular ≥ 20 %, Baja): el catálogo de artículos, la matriz de precios y la ficha de receta usaban otra (30 % / 15 %) y la celda del dashboard cambiaba de color al editar un precio.
+- La política de precio «Margen sobre costo» pasa a llamarse **«Margen sobre precio»**, que es lo que calcula (precio = costo ÷ (1 − margen)). Un margen de 100 % o más se rechaza con un mensaje en vez de dejar el precio vacío.
+- **No se puede cambiar la unidad** de un insumo o artículo que ya tiene recetas, compras o movimientos de stock, ni la unidad de rendimiento de una receta si quedaría incompatible con las recetas que la usan como sub-receta (antes esas líneas dejaban de costearse en silencio).
+- Una línea de receta sólo admite **insumos activos** (igual que los artículos de reventa).
+- Cuando una regla del negocio rechaza una acción en un formulario, se vuelve a la pantalla con el mensaje en vez de mostrar la página de error 422.
+
+### Técnico
+
+- `App\Enums\MarginLevel`: umbrales, etiquetas y clases de color del margen, con `alpineExpression()` para generar la misma escala en los `:class` de Alpine. `tailwind.config.js` escanea ese archivo.
+- `TeamController::blockedReason()` concentra la jerarquía del equipo. `SetTenantContext` y `EnsureSuperAdmin` cortan a un usuario con `active = false`.
+- `App\Exceptions\IncompatibleUnitsException` reemplaza la clasificación por texto del mensaje en «Aplicar sugerencias». `bootstrap/app.php` renderiza los `abort(422, …)` de requests no-JSON como `back()->with('error', …)`.
+- `ProductionOrderService::produce()` / `cancel()` toman lock de la fila de la orden y re-chequean el estado adentro; `ProductionService::produce()` acepta la sucursal.
+- `RecipeCostPropagator`: si no obtiene el lock en 5 s recalcula igual (y lo deja en el log) en vez de cortar con 500 y dejar los caches de costo viejos.
+- `StockService::syncCreditNoteLineExit()` acepta `Product`. `ArticlePriceRecalculator` escribe `product_price_logs`. `Product::baseArticleNameFor()` + `after()` en los form requests de artículo.
+- Los listados usan `containsPattern()` en vez de 16 escapes de `LIKE` escritos a mano. Autorizaciones alineadas con lo que hace cada acción (`view` para leer, `update` para escribir).
+- Tests nuevos: `TeamMembershipTest`, `CostingConsistencyTest`.
+
+#### Al deployar
+
+- `npm run build`. Sin migraciones.
+
 ## [0.21.0] — 2026-11-07
 
 Rama `v0.21.0-temas`, sobre v0.20.3. **Temas visuales**: además del claro de siempre, un tema **oscuro** cálido y **centeno** (neutro frío con acento oliva). Cada usuario elige el suyo o lo deja en **Automático**, que sigue la configuración del dispositivo.

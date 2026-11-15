@@ -7,12 +7,23 @@ use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class SetTenantContext
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // El login ya rechaza a un usuario desactivado, pero una sesión abierta
+        // (o el "recordarme") sobreviviría a la baja sin este corte.
+        if ($request->user() instanceof User && $request->user()->active === false) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors(['email' => 'Tu cuenta está desactivada.']);
+        }
+
         $tenant = $this->resolveTenant($request);
 
         if ($tenant === null) {

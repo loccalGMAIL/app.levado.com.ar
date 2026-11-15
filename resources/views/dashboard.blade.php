@@ -510,9 +510,7 @@
                                 @php
                                     $recipe = $row['recipe'];
                                     $pct = $row['margin_pct'];
-                                    $initMarginColor = $pct !== null
-                                        ? ($pct >= 60 ? 'text-green-600' : ($pct >= 40 ? 'text-amber-600' : ($pct >= 20 ? 'text-orange-600' : 'text-red-500')))
-                                        : 'text-masa-madre';
+                                    $initMarginColor = \App\Enums\MarginLevel::textClassFor($pct);
                                     $initPriceInput     = $row['selling_price'] !== null ? number_format($row['selling_price'], 2, '.', '') : '';
                                     $initPriceFormatted = $row['selling_price'] !== null ? number_format($row['selling_price'], 2, ',', '.') : '';
                                     $initMarginFormatted    = $row['margin'] !== null ? number_format($row['margin'], 2, ',', '.') : '';
@@ -601,7 +599,7 @@
                                                 <div class="h-1.5 rounded-full bg-miga overflow-hidden">
                                                     <div
                                                         class="h-full rounded-full transition-all duration-500"
-                                                        :class="marginPct === null ? 'bg-miga' : (marginPct >= 60 ? 'bg-green-500' : (marginPct >= 40 ? 'bg-amber-500' : (marginPct >= 20 ? 'bg-orange-400' : 'bg-red-500')))"
+                                                        :class="{!! \App\Enums\MarginLevel::alpineExpression('marginPct', 'barClass', 'bg-miga') !!}"
                                                         :style="'width: ' + Math.min(Math.max(marginPct ?? 0, 0), 100) + '%'">
                                                     </div>
                                                 </div>
@@ -617,9 +615,9 @@
                                             {{-- Badge estado --}}
                                             <span
                                                 x-show="marginPct !== null"
-                                                :class="marginPct === null ? 'bg-miga text-masa-madre' : (marginPct >= 60 ? 'bg-green-100 text-green-700' : (marginPct >= 40 ? 'bg-amber-100 text-amber-700' : (marginPct >= 20 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700')))"
+                                                :class="{!! \App\Enums\MarginLevel::alpineExpression('marginPct', 'badgeClass', 'bg-miga text-masa-madre') !!}"
                                                 class="hidden lg:inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold"
-                                                x-text="marginPct === null ? '—' : (marginPct >= 60 ? 'Alta' : (marginPct >= 40 ? 'Media' : (marginPct >= 20 ? 'Regular' : 'Baja')))">
+                                                x-text="{!! \App\Enums\MarginLevel::alpineExpression('marginPct', 'label', '—') !!}">
                                             </span>
                                         </div>
                                     </td>

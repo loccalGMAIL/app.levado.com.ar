@@ -941,12 +941,12 @@
                             <div class="flex justify-between text-xs">
                                 <span class="text-masa-madre">Margen actual</span>
                                 <span class="font-mono font-medium"
-                                    :class="currentMarginPct >= 30 ? 'text-green-600' : currentMarginPct >= 15 ? 'text-amber-600' : 'text-red-500'"
+                                    :class="{!! \App\Enums\MarginLevel::alpineExpression('currentMarginPct', 'textClass', 'text-masa-madre') !!}"
                                     x-text="currentMarginPct !== null ? fmt(currentMarginPct) + ' %' : '—'"></span>
                             </div>
                             <div class="w-full bg-miga rounded-full h-1.5 overflow-hidden">
                                 <div class="h-1.5 rounded-full transition-all"
-                                    :class="currentMarginPct >= 30 ? 'bg-green-500' : currentMarginPct >= 15 ? 'bg-amber-400' : 'bg-red-500'"
+                                    :class="{!! \App\Enums\MarginLevel::alpineExpression('currentMarginPct', 'barClass', 'bg-miga') !!}"
                                     :style="'width:' + Math.max(0, Math.min(100, currentMarginPct ?? 0)) + '%'">
                                 </div>
                             </div>

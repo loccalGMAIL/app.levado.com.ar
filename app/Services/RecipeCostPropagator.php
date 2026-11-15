@@ -7,9 +7,11 @@ use App\Models\RecipeIngredientLine;
 use App\Models\RecipeLaborLine;
 use App\Models\RecipePackagingLine;
 use App\Models\RecipeProductLine;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RecipeCostPropagator
 {
@@ -61,8 +63,16 @@ class RecipeCostPropagator
         $locks = array_map(fn (int $id) => Cache::lock("recipe-propagation:{$id}", 10), $closure);
 
         try {
-            foreach ($locks as $lock) {
-                $lock->block(5);
+            try {
+                foreach ($locks as $lock) {
+                    $lock->block(5);
+                }
+            } catch (LockTimeoutException) {
+                // El cambio que disparó esto ya está guardado: cortar acá dejaría
+                // los caches de costo viejos hasta la próxima propagación. Recalcular
+                // sin el lock es el mal menor (a lo sumo se pisa con otra propagación
+                // que lee los mismos datos).
+                Log::warning('recipe propagation: lock timeout, propagating without lock', ['recipes' => $closure]);
             }
 
             $this->propagateClosure($closure);

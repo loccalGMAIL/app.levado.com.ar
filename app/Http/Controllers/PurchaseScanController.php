@@ -323,7 +323,7 @@ class PurchaseScanController extends Controller
      */
     private function safeImagePath(?string $path, Tenant $tenant): ?string
     {
-        if (blank($path) || ! str_starts_with($path, "purchases/{$tenant->id}/")) {
+        if (blank($path) || str_contains($path, '..') || ! str_starts_with($path, "purchases/{$tenant->id}/")) {
             return null;
         }
 

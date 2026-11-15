@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CatalogItemType;
+use App\Enums\Unit;
 use App\Http\Requests\StoreIngredientRequest;
 use App\Http\Requests\UpdateIngredientRequest;
 use App\Models\Ingredient;
@@ -36,9 +37,9 @@ class IngredientController extends Controller
             ->with('supplier')
             ->notConverted()
             ->when(request('search'), function ($q, $search) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+                $pattern = $this->containsPattern($search);
 
-                return $q->where('name', 'like', "%{$escaped}%");
+                return $q->where('name', 'like', $pattern);
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))
@@ -77,11 +78,11 @@ class IngredientController extends Controller
         $tenant = app(Tenant::class);
         $data = $request->validated();
 
-        if (($data['unit'] ?? '') !== 'u') {
+        if (($data['unit'] ?? '') !== Unit::Unidad->value) {
             $data['grams_per_unit'] = null;
         }
 
-        if (! empty($data['subdivisions']) && ($data['unit'] ?? '') === 'u') {
+        if (! empty($data['subdivisions']) && ($data['unit'] ?? '') === Unit::Unidad->value) {
             $data['cost_per_package'] = $data['cost_per_unit'];
             $data['cost_per_unit'] = $data['cost_per_unit'] / $data['subdivisions'];
         }
@@ -111,18 +112,27 @@ class IngredientController extends Controller
 
         $data = $request->validated();
 
-        if (($data['unit'] ?? $ingredient->unit->value) !== 'u') {
+        if ($data['unit'] !== $ingredient->unit->value && $this->unitIsLocked($ingredient)) {
+            return back()->withErrors([
+                'unit' => 'No podés cambiar la unidad de un insumo que ya tiene recetas, compras o movimientos de stock: '
+                    .'sus cantidades y su costo quedarían en la unidad anterior. Creá un insumo nuevo y usá «Reemplazar».',
+            ])->withInput();
+        }
+
+        if ($data['unit'] !== Unit::Unidad->value) {
             $data['grams_per_unit'] = null;
         }
 
-        if (! empty($data['subdivisions']) && ($data['unit'] ?? $ingredient->unit->value) === 'u') {
+        if (! empty($data['subdivisions']) && $data['unit'] === Unit::Unidad->value) {
             $data['cost_per_package'] = $data['cost_per_unit'];
             $data['cost_per_unit'] = $data['cost_per_unit'] / $data['subdivisions'];
         } else {
             $data['cost_per_package'] = null;
         }
 
-        $costChanged = (float) $ingredient->cost_per_unit !== (float) $data['cost_per_unit'];
+        // A la precisión de la columna (decimal 4): el costo por sub-unidad sale de
+        // una división y comparado crudo "cambiaba" en cada guardado.
+        $costChanged = round((float) $ingredient->cost_per_unit, 4) !== round((float) $data['cost_per_unit'], 4);
 
         if ($costChanged) {
             $ingredient->priceLogs()->create([
@@ -147,6 +157,20 @@ class IngredientController extends Controller
         );
 
         return back(fallback: route('ingredients.index'))->with('status', 'Ingrediente actualizado.');
+    }
+
+    /**
+     * La unidad de un insumo en uso no se puede cambiar: las líneas de receta,
+     * el stock y el costo quedarían expresados en la unidad anterior.
+     */
+    private function unitIsLocked(Ingredient $ingredient): bool
+    {
+        return DB::table('recipe_ingredient_lines')->where('ingredient_id', $ingredient->id)->exists()
+            || $ingredient->stockMovements()->exists()
+            || DB::table('purchase_lines')
+                ->where('purchaseable_type', CatalogItemType::Ingredient->value)
+                ->where('purchaseable_id', $ingredient->id)
+                ->exists();
     }
 
     public function toggleActive(Ingredient $ingredient): RedirectResponse

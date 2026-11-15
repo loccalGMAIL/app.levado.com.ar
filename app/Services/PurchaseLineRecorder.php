@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\CatalogItemType;
 use App\Enums\CostingMethod;
 use App\Enums\CostLogSource;
 use App\Enums\StockMovementType;
 use App\Enums\Unit;
+use App\Exceptions\IncompatibleUnitsException;
 use App\Models\Ingredient;
 use App\Models\Packaging;
 use App\Models\Product;
@@ -135,7 +137,9 @@ class PurchaseLineRecorder
                 $pkgQty = $pkgQtyOverride
                     ?? $this->rememberedPkgQty($line)
                     ?? $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
-                abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del ingrediente.');
+                if ($pkgQty === null || $pkgQty <= 0) {
+                    throw new IncompatibleUnitsException('Las unidades no son compatibles con las del ingrediente.');
+                }
                 $costPerUnit = (float) $line->unit_price / $pkgQty;
                 $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
             }
@@ -173,7 +177,9 @@ class PurchaseLineRecorder
                 $pkgQty = $pkgQtyOverride
                     ?? $this->rememberedPkgQty($line)
                     ?? $this->parseDescPkgQty($line->raw_name ?? '', $item->unit);
-                abort_if($pkgQty === null || $pkgQty <= 0, 422, 'Las unidades no son compatibles con las del producto.');
+                if ($pkgQty === null || $pkgQty <= 0) {
+                    throw new IncompatibleUnitsException('Las unidades no son compatibles con las del producto.');
+                }
                 $costPerUnit = (float) $line->unit_price / $pkgQty;
                 $stockQuantity = (float) $line->quantity_purchased * $pkgQty;
             } elseif ($purchaseUnit === Unit::Unidad && $item->unit === Unit::Unidad) {
@@ -331,8 +337,16 @@ class PurchaseLineRecorder
     private function applyIngredientCost(Ingredient $item, float $costPerUnit, PurchaseLine $line, bool $propagate = true): void
     {
         $oldCost = (float) $item->cost_per_unit;
-        $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
         $item->update(['cost_per_unit' => $costPerUnit, 'cost_per_package' => $item->cost_per_package]);
+
+        // Reimputar el mismo renglón sin que cambie el costo (recompute() al
+        // reabrir una factura) no es un precio nuevo y no suma al historial. Una
+        // compra nueva al mismo precio sí: es lo que mantiene al día la fecha del
+        // último costo (alerta de costo desactualizado).
+        if (! $line->isApplied() || $item->wasChanged('cost_per_unit')) {
+            $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
+        }
+
         if ($propagate) {
             $this->propagator->propagateFromIngredient($item->id);
         }
@@ -342,8 +356,16 @@ class PurchaseLineRecorder
     private function applyPackagingCost(Packaging $item, float $costPerUnit, PurchaseLine $line, bool $propagate = true): void
     {
         $oldCost = (float) $item->cost_per_unit;
-        $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
         $item->update(['cost_per_unit' => $costPerUnit, 'cost_per_package' => $item->cost_per_package]);
+
+        // Reimputar el mismo renglón sin que cambie el costo (recompute() al
+        // reabrir una factura) no es un precio nuevo y no suma al historial. Una
+        // compra nueva al mismo precio sí: es lo que mantiene al día la fecha del
+        // último costo (alerta de costo desactualizado).
+        if (! $line->isApplied() || $item->wasChanged('cost_per_unit')) {
+            $item->priceLogs()->create(['cost_per_unit' => $costPerUnit, 'recorded_at' => now()]);
+        }
+
         if ($propagate) {
             $this->propagator->propagateFromPackaging($item->id);
         }
@@ -375,8 +397,27 @@ class PurchaseLineRecorder
             // por-negocio por decisión (decision-multi-sucursal): un promedio
             // tenant-wide entre sucursales es justo el diseño que quedó diferido.
             $qty = (float) ($this->stock->levelFor($item, $tenant->defaultLocation())->quantity ?? 0);
+            $baseCost = $oldCost;
+
+            // Reimputación (recompute() sobre un renglón ya aplicado): el stock y el
+            // costo vigente ya incluyen la entrada anterior de este mismo renglón.
+            // Se la descuenta de ambos para no promediar dos veces la misma compra.
+            $previous = $this->stock->activePurchaseEntryFor($line);
+            if ($previous !== null
+                && $previous->stockable_type === CatalogItemType::Product->value
+                && $previous->stockable_id === $item->id) {
+                $previousQty = (float) $previous->quantity;
+                $remaining = $qty - $previousQty;
+
+                if ($remaining > 0) {
+                    $baseCost = max(0.0, ($qty * $oldCost - $previousQty * (float) $previous->unit_cost) / $remaining);
+                }
+
+                $qty = $remaining;
+            }
+
             if ($qty > 0) {
-                $newCost = ($qty * $oldCost + $purchasedQty * $costPerUnit) / ($qty + $purchasedQty);
+                $newCost = ($qty * $baseCost + $purchasedQty * $costPerUnit) / ($qty + $purchasedQty);
             }
         }
 
@@ -464,12 +505,13 @@ class PurchaseLineRecorder
      *
      * Mirrors the JS parseDesc() + pkgQty logic in match.blade.php.
      * Matches patterns like "X 25 Kg", "x5lts", "× 200 ml", "X 1.5 L", "X5KG".
+     * El \b final evita leer "x 3 gustos" como 3 g o "x 6 latas" como 6 L.
      *
      * Returns the package quantity expressed in $ingredientUnit, or null if not parseable.
      */
     private function parseDescPkgQty(string $desc, Unit $ingredientUnit): ?float
     {
-        $pattern = '/[xX×]\s*(\d+(?:[.,]\d+)?)\s*(kg|kgs?|kilo[s]?|kilogramo[s]?|gr[s]?|gramo[s]?|g|l(?:t[s]?|itro[s]?)?|ml[s]?|cc)/i';
+        $pattern = '/[xX×]\s*(\d+(?:[.,]\d+)?)\s*(kg|kgs?|kilo[s]?|kilogramo[s]?|gr[s]?|gramo[s]?|g|l(?:t[s]?|itro[s]?)?|ml[s]?|cc)\b/i';
 
         if (! preg_match($pattern, $desc, $matches)) {
             return null;

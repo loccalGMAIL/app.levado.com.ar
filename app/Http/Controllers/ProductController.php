@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CatalogItemType;
 use App\Enums\CostLogSource;
 use App\Enums\ProductType;
 use App\Http\Requests\StoreProductRequest;
@@ -43,12 +44,12 @@ class ProductController extends Controller
         $products = $tenant->products()
             ->with(['recipe', 'category', 'latestCostLog'])
             ->when(request('search'), function ($q, $search) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+                $pattern = $this->containsPattern($search);
 
-                return $q->where(function ($sub) use ($escaped) {
-                    $sub->where('name', 'like', "%{$escaped}%")
-                        ->orWhere('sku', 'like', "%{$escaped}%")
-                        ->orWhere('barcode', 'like', "%{$escaped}%");
+                return $q->where(function ($sub) use ($pattern) {
+                    $sub->where('name', 'like', $pattern)
+                        ->orWhere('sku', 'like', $pattern)
+                        ->orWhere('barcode', 'like', $pattern);
                 });
             })
             ->when(request('type') === ProductType::Manufactured->value, fn ($q) => $q->where('type', ProductType::Manufactured->value))
@@ -108,12 +109,12 @@ class ProductController extends Controller
             ->with(['recipe', 'category'])
             ->active()
             ->when(request('search'), function ($q, $search) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+                $pattern = $this->containsPattern($search);
 
-                return $q->where(function ($sub) use ($escaped) {
-                    $sub->where('name', 'like', "%{$escaped}%")
-                        ->orWhere('sku', 'like', "%{$escaped}%")
-                        ->orWhere('barcode', 'like', "%{$escaped}%");
+                return $q->where(function ($sub) use ($pattern) {
+                    $sub->where('name', 'like', $pattern)
+                        ->orWhere('sku', 'like', $pattern)
+                        ->orWhere('barcode', 'like', $pattern);
                 });
             })
             ->when(request('type') === ProductType::Manufactured->value, fn ($q) => $q->where('type', ProductType::Manufactured->value))
@@ -176,6 +177,13 @@ class ProductController extends Controller
                         .implode(', ', $usedIn).'.',
                 ])->withInput();
             }
+        }
+
+        if ($request->validated('unit') !== $product->unit->value && $this->unitIsLocked($product)) {
+            return back()->withErrors([
+                'unit' => 'No podés cambiar la unidad de un artículo que ya tiene recetas, compras o movimientos de stock: '
+                    .'sus cantidades y su costo quedarían en la unidad anterior.',
+            ])->withInput();
         }
 
         $product->update($this->normalizeByType($request->validated()));
@@ -251,6 +259,19 @@ class ProductController extends Controller
         $label = $product->active ? 'activado' : 'desactivado';
 
         return back()->with('status', "Producto {$label}.");
+    }
+
+    /**
+     * Mismo criterio que IngredientController::unitIsLocked().
+     */
+    private function unitIsLocked(Product $product): bool
+    {
+        return $product->recipeLines()->exists()
+            || $product->stockMovements()->exists()
+            || DB::table('purchase_lines')
+                ->where('purchaseable_type', CatalogItemType::Product->value)
+                ->where('purchaseable_id', $product->id)
+                ->exists();
     }
 
     /**

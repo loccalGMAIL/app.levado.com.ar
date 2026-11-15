@@ -38,8 +38,8 @@ class CreditNoteController extends Controller
             ->withSum('lines as net_total', 'subtotal')
             ->when(request('search'), function ($q, $s) {
                 $q->where(function ($q2) use ($s) {
-                    $q2->where('note_number', 'like', "%{$s}%")
-                        ->orWhereHas('supplier', fn ($sq) => $sq->where('name', 'like', "%{$s}%"));
+                    $q2->where('note_number', 'like', $this->containsPattern($s))
+                        ->orWhereHas('supplier', fn ($sq) => $sq->where('name', 'like', $this->containsPattern($s)));
                 });
             })
             ->when(request('supplier_id'), fn ($q, $id) => $q->where('supplier_id', $id));

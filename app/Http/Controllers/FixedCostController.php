@@ -31,9 +31,9 @@ class FixedCostController extends Controller
         $fixedCosts = $tenant->fixedCosts()
             ->with('category')
             ->when(request('search'), function ($q, $search) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+                $pattern = $this->containsPattern($search);
 
-                return $q->where('name', 'like', "%{$escaped}%");
+                return $q->where('name', 'like', $pattern);
             })
             ->when(request('status') === 'active', fn ($q) => $q->active())
             ->when(request('status') === 'inactive', fn ($q) => $q->where('active', false))

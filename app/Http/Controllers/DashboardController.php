@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CatalogItemType;
+use App\Enums\MarginLevel;
 use App\Models\Notification;
 use App\Models\ProductPrice;
 use App\Models\Tenant;
 use App\Services\NotificationService;
 use App\Services\ProductionOrderService;
 use App\Services\RecipeCostCalculator;
-use App\Services\UnitConverter;
+use App\Services\RecipeExploder;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -16,6 +18,8 @@ class DashboardController extends Controller
     public function __construct(
         private readonly NotificationService $notifications,
         private readonly ProductionOrderService $productionOrders,
+        private readonly RecipeCostCalculator $calculator,
+        private readonly RecipeExploder $exploder,
     ) {}
 
     /**
@@ -61,8 +65,10 @@ class DashboardController extends Controller
         // (con sus bindings) porque MySQL no permite reusar alias del SELECT
         // dentro de expresiones nuevas del SELECT.
         // El precio de venta vive en el artículo elaborado (product_prices), no en la receta.
+        // Sólo el artículo base (recipe_quantity null): una presentación (pack) tiene
+        // precio propio y compararlo contra el costo de 1 unidad falsearía el margen.
         $priceSql = '(select pp.price from product_prices pp '
-            ."inner join products p on p.id = pp.product_id and p.type = 'manufactured' "
+            ."inner join products p on p.id = pp.product_id and p.type = 'manufactured' and p.recipe_quantity is null "
             .'where p.recipe_id = recipes.id and pp.price_list_id = ? limit 1)';
         $costSql = '(case when recipes.unit_cost is null or recipes.yield_quantity <= 0 then null '
             .'else recipes.unit_cost + (coalesce(recipes.labor_hours, 0) * ? / recipes.yield_quantity) end)';
@@ -95,17 +101,21 @@ class DashboardController extends Controller
         [$sortExpr, $sortBindings] = $sortExpressions[$sort];
 
         $marginFilter = request('margin_filter');
+        // Constantes del enum, embebidas como literal entero: bindeadas viajan como
+        // texto y SQLite compara real contra texto (siempre falso).
+        $highFrom = (int) MarginLevel::High->threshold();
+        $lowBelow = (int) MarginLevel::Fair->threshold();
 
         $recipeRows = $tenant->recipes()
             ->active()
             ->with('manufacturedProduct')
             ->when(request('search'), function ($q, $search) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+                $pattern = $this->containsPattern($search);
 
-                return $q->where('recipes.name', 'like', "%{$escaped}%");
+                return $q->where('recipes.name', 'like', $pattern);
             })
-            ->when($marginFilter === 'high', fn ($q) => $q->whereRaw("({$marginPctSql}) >= 60", $marginPctBindings))
-            ->when($marginFilter === 'low', fn ($q) => $q->whereRaw("({$marginPctSql}) < 20", $marginPctBindings))
+            ->when($marginFilter === 'high', fn ($q) => $q->whereRaw("({$marginPctSql}) >= {$highFrom}", $marginPctBindings))
+            ->when($marginFilter === 'low', fn ($q) => $q->whereRaw("({$marginPctSql}) < {$lowBelow}", $marginPctBindings))
             ->select('recipes.*')
             ->selectRaw("{$priceSql} as dashboard_selling_price", $priceBindings)
             ->orderByRaw("({$sortExpr}) is null", $sortBindings)
@@ -169,28 +179,42 @@ class DashboardController extends Controller
         // Se recorren las recetas activas una vez con sus líneas para obtener el
         // desglose por componente (ingredientes / mano de obra / descartables)
         // que la dona necesita y que el cache no almacena.
-        $calculator = new RecipeCostCalculator(new UnitConverter);
         $prices = $tenant->recipes()
             ->join('products', function ($join) {
-                $join->on('products.recipe_id', '=', 'recipes.id')->where('products.type', 'manufactured');
+                $join->on('products.recipe_id', '=', 'recipes.id')
+                    ->where('products.type', 'manufactured')
+                    ->whereNull('products.recipe_quantity');
             })
             ->join('product_prices', function ($join) use ($priceList) {
                 $join->on('product_prices.product_id', '=', 'products.id')->where('product_prices.price_list_id', $priceList->id);
             })
             ->pluck('product_prices.price', 'recipes.id');
 
-        $statRows = $tenant->recipes()
-            ->active()
-            ->with([
-                'ingredientLines.ingredient',
-                'productLines.product',
-                'packagingLines.packaging',
-                'laborLines.laborType',
-                'subrecipeLines.childRecipe',
-            ])
-            ->get()
-            ->map(function ($recipe) use ($calculator, $prices, $overheadPerHour) {
-                $costs = $calculator->calculate($recipe);
+        $lineRelations = [
+            'ingredientLines.ingredient',
+            'productLines.product',
+            'packagingLines.packaging',
+            'laborLines.laborType',
+            'subrecipeLines.childRecipe',
+        ];
+
+        // Todas las recetas (no sólo las activas) en una carga, y cada sub-receta
+        // re-vinculada a esa misma instancia: así RecipeExploder recorre el árbol
+        // completo sin consultas extra, aunque una sub-receta esté inactiva.
+        $allRecipes = $tenant->recipes()->with($lineRelations)->get()->keyBy('id');
+        foreach ($allRecipes as $loaded) {
+            foreach ($loaded->subrecipeLines as $line) {
+                if ($child = $allRecipes->get($line->child_recipe_id)) {
+                    $line->setRelation('childRecipe', $child);
+                }
+            }
+        }
+
+        $statRows = $allRecipes
+            ->where('active', true)
+            ->values()
+            ->map(function ($recipe) use ($prices, $overheadPerHour) {
+                $costs = $this->calculator->calculate($recipe);
                 $fixedCost = $overheadPerHour !== null ? $costs['total_labor_hours'] * $overheadPerHour : 0.0;
                 $totalCost = $costs['total_cost'] + $fixedCost;
                 $yieldQty = (float) $recipe->yield_quantity;
@@ -202,11 +226,19 @@ class DashboardController extends Controller
                     $marginPct = ($sellingPrice - $costPerUnit) / $sellingPrice * 100;
                 }
 
+                // Desglose para la dona con el BOM explotado: el costo de una
+                // sub-receta se reparte en sus insumos, descartables y mano de
+                // obra reales en vez de caer entero en "descartables".
+                $exploded = $this->exploder->explodeWithLabor($recipe, 1.0);
+                [$packagingItems, $ingredientItems] = $exploded['items']
+                    ->partition(fn (array $entry) => $entry['type'] === CatalogItemType::Packaging);
+                $lineCost = fn (array $entry) => $entry['quantity'] * (float) $entry['item']->cost_per_unit;
+
                 return [
                     'recipe' => $recipe,
-                    'ingredient_cost' => $costs['ingredient_cost'],
-                    'packaging_cost' => $costs['packaging_cost'],
-                    'labor_cost' => $costs['labor_cost'],
+                    'ingredient_cost' => $ingredientItems->sum($lineCost),
+                    'packaging_cost' => $packagingItems->sum($lineCost),
+                    'labor_cost' => $exploded['labor_cost'],
                     'fixed_cost' => $fixedCost,
                     'total_cost' => $totalCost,
                     'margin_pct' => $marginPct,
@@ -216,11 +248,11 @@ class DashboardController extends Controller
         $rowsWithMargin = $statRows->filter(fn ($r) => $r['margin_pct'] !== null);
         $avgMarginPct = $rowsWithMargin->count() > 0 ? $rowsWithMargin->avg('margin_pct') : null;
         $bestRecipeRow = $rowsWithMargin->sortByDesc('margin_pct')->first();
-        $lowMarginCount = $rowsWithMargin->filter(fn ($r) => $r['margin_pct'] < 20)->count();
+        $lowMarginCount = $rowsWithMargin->filter(fn ($r) => MarginLevel::for($r['margin_pct']) === MarginLevel::Low)->count();
 
         // Distribución de costos para la dona: [ingredientes, mano de obra,
-        // gastos fijos, descartables]. Los descartables absorben el resto para
-        // que la suma cierre en 100%.
+        // gastos fijos, descartables]. Los descartables absorben sólo el resto
+        // del redondeo, para que la suma cierre en 100%.
         $grandTotalCost = $statRows->sum('total_cost');
         if ($grandTotalCost > 0) {
             $ingredientPct = (int) round($statRows->sum('ingredient_cost') / $grandTotalCost * 100);

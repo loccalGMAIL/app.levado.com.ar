@@ -23,12 +23,22 @@ class ArticlePriceRecalculator
         ProductPrice::where('product_id', $product->id)
             ->where('policy_type', '!=', PricingPolicy::Manual->value)
             ->get()
-            ->each(function (ProductPrice $pp) use ($cost) {
+            ->each(function (ProductPrice $pp) use ($cost, $product) {
                 $value = $pp->policy_value !== null ? (float) $pp->policy_value : null;
                 $newPrice = $pp->policy_type->priceFor($cost, $value);
 
                 if ($pp->price === null ? $newPrice !== null : (float) $pp->price !== (float) $newPrice) {
                     $pp->update(['price' => $newPrice]);
+
+                    // Mismo rastro que deja ProductPriceWriter: sin esto el historial
+                    // de precios tenía huecos justo cuando el precio se movía solo.
+                    if ($newPrice !== null) {
+                        $product->priceLogs()->create([
+                            'price_list_id' => $pp->price_list_id,
+                            'price' => $newPrice,
+                            'recorded_at' => now(),
+                        ]);
+                    }
                 }
             });
     }

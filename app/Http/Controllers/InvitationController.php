@@ -85,6 +85,12 @@ class InvitationController extends Controller
             return redirect()->route('login')->withErrors(['email' => 'La invitación no es válida.']);
         }
 
+        // Aceptar una invitación inicia sesión sin contraseña: no puede ser la
+        // puerta de vuelta de una cuenta dada de baja.
+        if (User::where('email', $invitation->email)->where('active', false)->exists()) {
+            return redirect()->route('login')->withErrors(['email' => 'Tu cuenta está desactivada.']);
+        }
+
         $user = User::firstOrCreate(
             ['email' => $invitation->email],
             [

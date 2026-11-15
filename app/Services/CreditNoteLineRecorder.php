@@ -84,8 +84,16 @@ class CreditNoteLineRecorder
         $entry = $this->stock->activePurchaseEntryFor($purchaseLine);
         abort_unless($entry !== null, 422, 'El renglón de compra de origen no tiene una entrada de stock vigente.');
 
+        // El tope es acumulado: varias notas de crédito sobre el mismo renglón
+        // no pueden devolver, entre todas, más de lo que se compró.
+        $alreadyReturned = (float) CreditNoteLine::query()
+            ->where('purchase_line_id', $purchaseLine->id)
+            ->whereKeyNot($line->id)
+            ->whereNotNull('stock_applied_at')
+            ->sum('quantity');
+
         abort_if(
-            (float) $line->quantity > (float) $purchaseLine->quantity_purchased + 0.0001,
+            $alreadyReturned + (float) $line->quantity > (float) $purchaseLine->quantity_purchased + 0.0001,
             422,
             'La cantidad devuelta no puede superar la cantidad comprada.',
         );

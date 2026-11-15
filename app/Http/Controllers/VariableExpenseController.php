@@ -29,13 +29,13 @@ class VariableExpenseController extends Controller
 
         $filtered = $tenant->variableExpenses()
             ->when(request('search'), function ($q, $search) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+                $pattern = $this->containsPattern($search);
 
                 // El closure agrupa el OR: suelto, se mezclaría con los filtros de
                 // categoría, proveedor y fechas y la búsqueda los ignoraría.
-                return $q->where(function ($q2) use ($escaped) {
-                    $q2->where('name', 'like', "%{$escaped}%")
-                        ->orWhere('description', 'like', "%{$escaped}%");
+                return $q->where(function ($q2) use ($pattern) {
+                    $q2->where('name', 'like', $pattern)
+                        ->orWhere('description', 'like', $pattern);
                 });
             })
             ->when(request('category'), fn ($q, $categoryIds) => $q->whereIn('variable_expense_category_id', (array) $categoryIds))

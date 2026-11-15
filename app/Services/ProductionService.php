@@ -108,13 +108,14 @@ class ProductionService
 
     /**
      * Fabrica $quantity unidades del producto: descuenta insumos y suma el elaborado,
-     * todo en una transacción. Devuelve el cabezal de la producción.
+     * todo en una transacción. Devuelve el cabezal de la producción. Sin $location
+     * se produce en la sucursal default (producción suelta); una orden pasa la suya.
      */
-    public function produce(Product $product, float $quantity, ?string $notes, User $user): Production
+    public function produce(Product $product, float $quantity, ?string $notes, User $user, ?Location $location = null): Production
     {
         $recipe = $this->guardProducible($product, $quantity);
         $factor = $this->factorFor($product, $recipe, $quantity);
-        $location = $product->tenant->defaultLocation();
+        $location ??= $product->tenant->defaultLocation();
 
         $exploded = $this->exploder->explodeWithLabor($recipe, $factor);
         $base = $exploded['items'];

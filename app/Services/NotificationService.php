@@ -52,11 +52,12 @@ class NotificationService
         // está en alerta, no todo el stock del tenant para descartar en PHP.
         $levels = StockLevel::where('tenant_id', $tenant->id)->inAlert()->get();
 
-        // find() por fila → 2 queries agrupadas por tipo (ingredient/packaging).
+        // find() por fila → una query por tipo (ingredient/packaging/product).
         $byType = $levels->groupBy('stockable_type');
         $items = [
             'ingredient' => Ingredient::whereIn('id', $byType->get('ingredient', collect())->pluck('stockable_id'))->get()->keyBy('id'),
             'packaging' => Packaging::whereIn('id', $byType->get('packaging', collect())->pluck('stockable_id'))->get()->keyBy('id'),
+            'product' => Product::whereIn('id', $byType->get('product', collect())->pluck('stockable_id'))->get()->keyBy('id'),
         ];
 
         $candidates = [];

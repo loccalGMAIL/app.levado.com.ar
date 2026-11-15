@@ -27,10 +27,10 @@ class UserController extends Controller
         $users = User::with(['tenantUsers.tenant'])
             ->withCount('tenantUsers')
             ->when(request('search'), function ($q, $search) {
-                $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+                $pattern = $this->containsPattern($search);
 
-                return $q->where('name', 'like', "%{$escaped}%")
-                    ->orWhere('email', 'like', "%{$escaped}%");
+                return $q->where('name', 'like', $pattern)
+                    ->orWhere('email', 'like', $pattern);
             })
             ->tap(fn (Builder $q) => $this->sortListing($q, [
                 'name' => 'name',

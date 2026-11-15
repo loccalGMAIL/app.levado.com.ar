@@ -19,7 +19,7 @@ enum PricingPolicy: string
     {
         return match ($this) {
             self::Manual => 'Manual',
-            self::Margin => 'Margen sobre costo',
+            self::Margin => 'Margen sobre precio',
             self::Markup => 'Recargo sobre costo',
         };
     }
