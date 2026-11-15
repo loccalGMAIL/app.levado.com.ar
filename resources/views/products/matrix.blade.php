@@ -38,6 +38,7 @@
                     <option value="">Todos los tipos</option>
                     <option value="manufactured" @selected(request('type') === 'manufactured')>Elaborados</option>
                     <option value="resale"       @selected(request('type') === 'resale')>Reventa</option>
+                    <option value="combo"        @selected(request('type') === 'combo')>Combos</option>
                 </select>
                 @if($categories->isNotEmpty())
                     <select name="category"
