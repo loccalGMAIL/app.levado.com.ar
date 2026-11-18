@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ContainerType;
 use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Models\Concerns\BelongsToTenant;
@@ -29,6 +30,8 @@ class Recipe extends Model
         'description',
         'yield_quantity',
         'yield_unit',
+        'container_type',
+        'units_per_container',
         'active',
         'is_semi_elaborate',
         'unit_cost',
@@ -40,11 +43,22 @@ class Recipe extends Model
         return [
             'yield_quantity' => 'decimal:3',
             'yield_unit' => Unit::class,
+            'container_type' => ContainerType::class,
+            'units_per_container' => 'float',
             'active' => 'boolean',
             'is_semi_elaborate' => 'boolean',
             'unit_cost' => 'decimal:4',
             'labor_hours' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Lo que rinde se pide en bandejas o latas: tiene recipiente y cuánto
+     * entra en uno (en la unidad de rendimiento).
+     */
+    public function usesContainer(): bool
+    {
+        return $this->container_type !== null && (float) $this->units_per_container > 0;
     }
 
     public function scopeActive(Builder $query): void

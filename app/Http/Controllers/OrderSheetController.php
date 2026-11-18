@@ -42,19 +42,17 @@ class OrderSheetController extends Controller
         $week = $sheet !== null ? $this->weeks->weekFor($sheet, $start) : null;
 
         $lines = $week !== null
-            ? $week->lines->map(fn (OrderSheetLine $line) => [
-                'product_id' => $line->product_id,
-                'name' => $line->product->name,
-                'unit' => $line->product->unit->short(),
-                'q' => $line->quantities(),
-            ])->values()->all()
+            ? $week->lines->map(fn (OrderSheetLine $line) => $this->weeks->presentLine($line))->values()->all()
             : [];
 
-        $products = Product::query()->producible()->orderBy('name')->get(['id', 'name', 'unit'])
+        $products = Product::query()->producible()->orderBy('name')
+            ->with('recipe')
+            ->get(['id', 'name', 'unit', 'recipe_id', 'recipe_quantity'])
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'name' => $product->name,
                 'unit' => $product->unit->short(),
+                'container' => $product->containerPayload(),
             ])->values()->all();
 
         return view('pedidos.index', [

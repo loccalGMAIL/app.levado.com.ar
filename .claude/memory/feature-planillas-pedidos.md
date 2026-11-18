@@ -28,6 +28,24 @@ anterior, y pueden planificar varias semanas adelante.
 ## Permisos
 Ver `/pedidos` lo ve cualquier rol del negocio; editar y configurar planillas es owner/admin (`manage-costs`).
 
+## Bandejas y latas (v0.23.1, rama `v0.23.1-pedidos-bandejas`)
+Las panaderías piden mucho por bandejas o latas. Decisiones del usuario (no re-litigar):
+- El rinde vive **en la receta** (`recipes.container_type` bandeja|lata + `units_per_container`, en la unidad de
+  rendimiento). Primero se hizo en el artículo; el usuario lo pasó a la receta (2026-11-18) porque es un dato de la masa,
+  lo comparten el base y sus presentaciones (`Product::unitsPerContainer()` = rinde ÷ `recipe_quantity`) y es lo que va a
+  usar producción cuando se retome. **Requiere `recipe` cargada** (preventLazyLoading): las queries de productos de
+  pedidos hacen `with('recipe')`.
+- UI: en «Editar receta», misma fila que Rendimiento y Unidad, etiqueta **«Unidad prod.»** (pedido del usuario: corta,
+  sin texto de ayuda) + «Cuánto entra en una». El alta de receta no lo trae.
+- **Cada receta elige** bandeja o lata. **Automático**: con rinde cargado se pide en recipientes en cualquier planilla;
+  sin switch por planilla (las tortas simplemente no tienen rinde).
+- **Se guardan las bandejas tipeadas** (`order_sheet_lines.container_type` = medida de la fila). Si el rinde cambia, las
+  bandejas se respetan y las unidades se recalculan. De a cuartos (`App\Rules\TrayQuantity`).
+- `OrderSheetWeekService::presentLine()` muestra cada fila en la medida ACTUAL del artículo: si ganó rinde convierte
+  unidades→recipientes (redondeo a cuartos); si lo perdió no puede convertir y avisa (al guardar se toma como unidades).
+- El usuario pidió **sacar el orden de las planillas** (ni número ni flechas): quedan por orden de creación; `position`
+  sigue en la base y se llena sola, por si se retoma con otra UI.
+
 ## Siguiente etapa (anotada por el usuario, no empezada)
 **Pedidos de clientes dentro de la sección Clientes** (Reparto): lo que pide cada cliente, separado de las planillas de
 producción; después puede alimentar la planilla de Reparto. Clientes y repartidores quedaron intactos para eso.

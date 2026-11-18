@@ -295,6 +295,19 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.23.1] — 2026-11-18
+
+### Agregado
+
+- **Pedidos en bandejas o latas** (opcional, por receta). En «Editar receta», junto a Rendimiento y Unidad, se elige la **Unidad prod.** (unidades, bandejas o latas) y cuánto entra en una, en la unidad de rendimiento. Lo heredan el artículo base y sus presentaciones: un pack x6 de una bandeja de 24 se pide de a 4 packs por bandeja.
+- En las planillas, un artículo con bandeja/lata se carga **de a cuartos** (1 · 1,25 · 1,5 · 1,75). Debajo de cada celda se ven las unidades equivalentes y el total de la semana muestra los dos («3,75 band. · 45 u»). Lo que no tiene rinde, como las tortas, se sigue cargando en unidades.
+- Se guardan las bandejas/latas tipeadas: si después cambia el rinde, se respetan y las unidades se recalculan. Si la receta gana rinde, lo cargado antes en unidades se muestra convertido; si lo pierde, la grilla avisa en la fila.
+
+### Técnico
+
+- `ContainerType` (bandeja/lata); columnas `recipes.container_type` y `units_per_container`, y `order_sheet_lines.container_type` (la medida en que se guardó cada fila; viaja con la copia de semanas).
+- `Product::containerPayload()` deriva el recipiente de la receta (rinde ÷ `recipe_quantity`). `OrderSheetWeekService::presentLine()` arma cada fila en la medida actual. `App\Rules\TrayQuantity` valida los cuartos.
+
 ## [0.23.0] — 2026-11-18
 
 Se retira el módulo de producción y la capa vieja de pedidos, y los pedidos arrancan de cero como **planillas semanales** por negocio. Las ramas `v0.22.0-ciclo-produccion-bandejas` y `v0.22.0-produccion-preproduccion-horneado` quedan sin mergear, solo como referencia.

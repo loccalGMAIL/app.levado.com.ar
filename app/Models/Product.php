@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CatalogItemType;
+use App\Enums\ContainerType;
 use App\Enums\CostingMethod;
 use App\Enums\ProductType;
 use App\Enums\Unit;
@@ -54,6 +55,51 @@ class Product extends Model
     public function effectiveCostingMethod(CostingMethod $tenantDefault): CostingMethod
     {
         return $this->costing_method ?? $tenantDefault;
+    }
+
+    /**
+     * Recipiente en que se pide (bandeja/lata), heredado de su receta, o null
+     * si se pide en unidades. Requiere la relación `recipe` cargada.
+     */
+    public function containerType(): ?ContainerType
+    {
+        return $this->recipe?->usesContainer() ? $this->recipe->container_type : null;
+    }
+
+    /**
+     * Cuántos de este artículo entran en una bandeja/lata: el rinde de la receta
+     * dividido por lo que contiene el artículo (un pack x6 entra 6 veces menos).
+     * Requiere la relación `recipe` cargada.
+     */
+    public function unitsPerContainer(): ?float
+    {
+        if ($this->containerType() === null) {
+            return null;
+        }
+
+        return (float) $this->recipe->units_per_container / (float) ($this->recipe_quantity ?? 1);
+    }
+
+    /**
+     * Datos del recipiente para la grilla de pedidos, o null si se pide en
+     * unidades. Requiere la relación `recipe` cargada.
+     *
+     * @return array{type: string, label: string, short: string, per: float}|null
+     */
+    public function containerPayload(): ?array
+    {
+        $type = $this->containerType();
+
+        if ($type === null) {
+            return null;
+        }
+
+        return [
+            'type' => $type->value,
+            'label' => $type->label(),
+            'short' => $type->short(),
+            'per' => round((float) $this->unitsPerContainer(), 3),
+        ];
     }
 
     public function scopeActive(Builder $query): void

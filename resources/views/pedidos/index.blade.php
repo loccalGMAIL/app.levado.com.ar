@@ -110,21 +110,26 @@
                                 <tbody x-ref="rows" class="divide-y divide-miga">
                                     <template x-for="(line, i) in lines" :key="line.product_id">
                                         <tr>
-                                            <td class="px-4 py-2 text-corteza sticky left-0 bg-superficie z-10">
+                                            <td class="px-4 py-2 text-corteza sticky left-0 bg-superficie z-10 align-top">
                                                 <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.product_id">
                                                 <span x-text="line.name"></span>
-                                                <span class="text-xs text-masa-madre" x-text="line.unit"></span>
+                                                <span x-show="! line.container" class="text-xs text-masa-madre" x-text="line.unit"></span>
+                                                <span x-show="line.container" x-cloak class="block text-xs text-masa-madre" x-text="line.container ? containerLabel(line) : ''"></span>
+                                                <span x-show="line.warning" x-cloak class="block text-xs text-amber-700 max-w-56 whitespace-normal" x-text="line.warning"></span>
                                             </td>
                                             @foreach($days as $d => $day)
-                                                <td class="px-1.5 py-2 {{ $day->isToday() ? 'bg-horno/5' : '' }}">
-                                                    <input type="number" step="any" min="0" inputmode="decimal"
+                                                <td class="px-1.5 py-2 align-top {{ $day->isToday() ? 'bg-horno/5' : '' }}">
+                                                    <input type="number" min="0" inputmode="decimal"
+                                                        :step="line.container ? 0.25 : 'any'"
                                                         x-model="line.q[{{ $d }}]"
                                                         :name="`lines[${i}][quantities][{{ $d }}]`"
                                                         @if(! $canEdit) readonly @endif
                                                         class="w-20 text-right border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno read-only:bg-transparent read-only:border-transparent read-only:shadow-none">
+                                                    <span x-show="line.container" x-cloak class="block text-[11px] text-right text-masa-madre font-mono mt-0.5"
+                                                        x-text="line.container ? equivalent(line, {{ $d }}) : ''"></span>
                                                 </td>
                                             @endforeach
-                                            <td class="px-3 py-2 text-right font-mono text-corteza whitespace-nowrap" x-text="rowTotal(line)"></td>
+                                            <td class="px-3 py-2 text-right font-mono text-corteza whitespace-nowrap align-top" x-text="rowTotal(line)"></td>
                                             @if($canEdit)
                                                 <td class="px-2 py-2 text-right">
                                                     <button type="button" @click="removeLine(i)" tabindex="-1" title="Quitar artículo"

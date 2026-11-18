@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\ContainerType;
 use App\Models\OrderSheet;
 use App\Models\OrderSheetLine;
 use App\Models\OrderSheetWeek;
+use App\Models\Product;
+use App\Rules\TrayQuantity;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -60,21 +63,60 @@ class OrderSheetWeekService
     /**
      * Reemplaza el contenido de una semana. Cada fila trae el artículo y sus
      * siete cantidades (lunes a domingo); el orden del arreglo es el orden de
-     * la grilla.
+     * la grilla. Cada fila se guarda en la medida actual de su artículo (la de
+     * su receta): bandejas/latas si tiene rinde, unidades si no.
      *
      * @param  array<int, array{product_id: int, quantities: array<int, float|int|string|null>}>  $lines
      */
     public function save(OrderSheetWeek $week, array $lines): void
     {
-        DB::transaction(function () use ($week, $lines) {
+        $containers = Product::query()
+            ->whereIn('id', array_map(fn (array $line): int => (int) $line['product_id'], $lines))
+            ->with('recipe')
+            ->get(['id', 'recipe_id', 'recipe_quantity'])
+            ->mapWithKeys(fn (Product $product) => [$product->id => $product->containerType()]);
+
+        DB::transaction(function () use ($week, $lines, $containers) {
             $week->lines()->delete();
 
             foreach (array_values($lines) as $position => $line) {
-                $week->lines()->create($this->lineAttributes($position, (int) $line['product_id'], $line['quantities']));
+                $productId = (int) $line['product_id'];
+                $week->lines()->create($this->lineAttributes($position, $productId, $line['quantities'], $containers[$productId] ?? null));
             }
 
             $week->touch();
         });
+    }
+
+    /**
+     * Una fila lista para la grilla, en la medida ACTUAL del artículo (la de su
+     * receta). Si se guardó en otra medida (la receta ganó rinde después), se
+     * convierte con el rinde actual. Si la receta perdió el rinde no hay con qué convertir:
+     * se muestran las cantidades guardadas con un aviso.
+     *
+     * @return array{product_id: int, name: string, unit: string, container: array{type: string, label: string, short: string, per: float}|null, q: array<int, float>, warning: string|null}
+     */
+    public function presentLine(OrderSheetLine $line): array
+    {
+        $product = $line->product;
+        $container = $product->containerPayload();
+        $quantities = $line->quantities();
+        $warning = null;
+
+        if ($container !== null && $line->container_type === null) {
+            $quantities = array_map(fn (float $units): float => TrayQuantity::roundToStep($units / $container['per']), $quantities);
+        } elseif ($container === null && $line->container_type !== null) {
+            $warning = "Se cargó en {$line->container_type->plural()}, pero la receta ya no tiene rinde: al guardar se toma como unidades.";
+        }
+
+        return [
+            'product_id' => $product->id,
+            'name' => $product->name,
+            'unit' => $product->unit->short(),
+            'container' => $container,
+            'q' => $quantities,
+            'warning' => $warning,
+        ];
     }
 
     /**
@@ -94,7 +136,7 @@ class OrderSheetWeekService
 
     private function find(OrderSheet $sheet, CarbonImmutable $monday): ?OrderSheetWeek
     {
-        return $sheet->weeks()->whereDate('starts_on', $monday->toDateString())->with('lines.product')->first();
+        return $sheet->weeks()->whereDate('starts_on', $monday->toDateString())->with('lines.product.recipe')->first();
     }
 
     /**
@@ -144,17 +186,17 @@ class OrderSheetWeekService
         }
 
         foreach ($from->lines as $line) {
-            $to->lines()->create($this->lineAttributes($line->position, $line->product_id, $line->quantities()));
+            $to->lines()->create($this->lineAttributes($line->position, $line->product_id, $line->quantities(), $line->container_type));
         }
     }
 
     /**
      * @param  array<int, float|int|string|null>  $quantities
-     * @return array<string, int|float>
+     * @return array<string, int|float|ContainerType|null>
      */
-    private function lineAttributes(int $position, int $productId, array $quantities): array
+    private function lineAttributes(int $position, int $productId, array $quantities, ?ContainerType $container): array
     {
-        $attributes = ['product_id' => $productId, 'position' => $position];
+        $attributes = ['product_id' => $productId, 'position' => $position, 'container_type' => $container];
 
         foreach (range(1, OrderSheetLine::DAYS) as $day) {
             $attributes["day_{$day}"] = max(0.0, (float) ($quantities[$day - 1] ?? 0));

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ContainerType;
 use Database\Factories\OrderSheetLineFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Fila de la grilla semanal: un artículo y su cantidad por día
  * (day_1 = lunes … day_7 = domingo). No lleva tenant_id propio: siempre se
  * llega por su OrderSheetWeek, que sí es del negocio.
+ *
+ * `container_type` dice en qué medida se guardaron las cantidades: null =
+ * unidades del artículo; bandeja/lata = cantidad de recipientes (lo que se
+ * tipeó: si el rinde del artículo cambia, las bandejas se respetan).
  */
 class OrderSheetLine extends Model
 {
@@ -24,6 +29,7 @@ class OrderSheetLine extends Model
         'order_sheet_week_id',
         'product_id',
         'position',
+        'container_type',
         'day_1',
         'day_2',
         'day_3',
@@ -37,6 +43,7 @@ class OrderSheetLine extends Model
     {
         return [
             'position' => 'integer',
+            'container_type' => ContainerType::class,
             'day_1' => 'float',
             'day_2' => 'float',
             'day_3' => 'float',
