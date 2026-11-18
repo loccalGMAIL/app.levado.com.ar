@@ -12,7 +12,6 @@ use App\Models\LaborType;
 use App\Models\Packaging;
 use App\Models\PriceList;
 use App\Models\Product;
-use App\Models\Production;
 use App\Models\ProductPrice;
 use App\Models\Purchase;
 use App\Models\Recipe;
@@ -184,17 +183,6 @@ test('artículos se ordenan por código: el de barras y, si no hay, el SKU', fun
     Product::factory()->for($tenant)->create(['name' => 'Bizcocho', 'barcode' => '7790001']);
 
     expectRowsInOrder(listingRows($this->actingAs($user)->get(route('products.index', ['sort' => 'code']))), ['Bizcocho', 'Alfajor']);
-});
-
-test('el historial de producción se ordena por artículo', function () {
-    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
-    $zapallo = Product::factory()->for($tenant)->create(['name' => 'Pan de zapallo']);
-    $alfajor = Product::factory()->for($tenant)->create(['name' => 'Alfajor de maicena']);
-    Production::factory()->for($tenant)->create(['product_id' => $alfajor->id, 'produced_at' => now()->subDay()]);
-    Production::factory()->for($tenant)->create(['product_id' => $zapallo->id, 'produced_at' => now()]);
-
-    expectRowsInOrder(listingRows($this->actingAs($user)->get(route('products.history'))), ['Pan de zapallo', 'Alfajor de maicena']);
-    expectRowsInOrder(listingRows($this->actingAs($user)->get(route('products.history', ['sort' => 'product']))), ['Alfajor de maicena', 'Pan de zapallo']);
 });
 
 // --- Compras, notas de crédito y stock ---

@@ -1,4 +1,4 @@
-<x-crud-modal name="recipe-edit-info" title="Editar receta" :show="$errorsInEdit">
+<x-crud-modal name="recipe-edit-info" title="Editar receta" max-width="2xl" :show="$errorsInEdit">
     <form method="POST" action="{{ route('recipes.update', $recipe) }}" class="space-y-4">
         @csrf
         @method('PUT')
@@ -21,7 +21,10 @@
             <x-input-error :messages="$errors->get('description')" class="mt-2" />
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        {{-- Rendimiento y, opcional, la unidad de producción: si lo que rinde se
+             pide en bandejas o latas en las planillas de pedidos. --}}
+        <div class="grid grid-cols-2 sm:grid-cols-[1fr_0.8fr_1.25fr_1fr] gap-3"
+            x-data="{ container: @js(old('container_type', $recipe->container_type?->value ?? '')) }">
             <div>
                 <x-input-label for="edit_recipe_yield" value="Rendimiento" />
                 <x-text-input id="edit_recipe_yield" name="yield_quantity" type="number"
@@ -43,6 +46,26 @@
                     @endforeach
                 </select>
                 <x-input-error :messages="$errors->get('yield_unit')" class="mt-2" />
+            </div>
+            <div>
+                <x-input-label for="edit_recipe_container_type" value="Unidad prod." class="whitespace-nowrap" />
+                <select id="edit_recipe_container_type" name="container_type" x-model="container"
+                    class="mt-1 block w-full border-gray-300 focus:border-corteza focus:ring-corteza rounded-md shadow-sm text-sm">
+                    <option value="">Unidades</option>
+                    @foreach(\App\Enums\ContainerType::cases() as $containerType)
+                        <option value="{{ $containerType->value }}">{{ ucfirst($containerType->plural()) }}</option>
+                    @endforeach
+                </select>
+                <x-input-error :messages="$errors->get('container_type')" class="mt-2" />
+            </div>
+            <div x-show="container" x-cloak>
+                <x-input-label for="edit_recipe_units_per_container" value="Cuánto entra en una" class="whitespace-nowrap" />
+                <x-text-input id="edit_recipe_units_per_container" name="units_per_container" type="number"
+                    step="0.001" min="0.001"
+                    class="mt-1 block w-full"
+                    :value="old('units_per_container', $recipe->units_per_container)"
+                    x-bind:required="container !== ''" />
+                <x-input-error :messages="$errors->get('units_per_container')" class="mt-2" />
             </div>
         </div>
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CatalogItemType;
+use App\Enums\ContainerType;
 use App\Enums\CostingMethod;
 use App\Enums\ProductType;
 use App\Enums\Unit;
@@ -56,18 +57,63 @@ class Product extends Model
         return $this->costing_method ?? $tenantDefault;
     }
 
+    /**
+     * Recipiente en que se pide (bandeja/lata), heredado de su receta, o null
+     * si se pide en unidades. Requiere la relación `recipe` cargada.
+     */
+    public function containerType(): ?ContainerType
+    {
+        return $this->recipe?->usesContainer() ? $this->recipe->container_type : null;
+    }
+
+    /**
+     * Cuántos de este artículo entran en una bandeja/lata: el rinde de la receta
+     * dividido por lo que contiene el artículo (un pack x6 entra 6 veces menos).
+     * Requiere la relación `recipe` cargada.
+     */
+    public function unitsPerContainer(): ?float
+    {
+        if ($this->containerType() === null) {
+            return null;
+        }
+
+        return (float) $this->recipe->units_per_container / (float) ($this->recipe_quantity ?? 1);
+    }
+
+    /**
+     * Datos del recipiente para la grilla de pedidos, o null si se pide en
+     * unidades. Requiere la relación `recipe` cargada.
+     *
+     * @return array{type: string, label: string, short: string, per: float}|null
+     */
+    public function containerPayload(): ?array
+    {
+        $type = $this->containerType();
+
+        if ($type === null) {
+            return null;
+        }
+
+        return [
+            'type' => $type->value,
+            'label' => $type->label(),
+            'short' => $type->short(),
+            'per' => round((float) $this->unitsPerContainer(), 3),
+        ];
+    }
+
     public function scopeActive(Builder $query): void
     {
         $query->where('active', true);
     }
 
     /**
-     * Elaborados que se pueden producir hoy: activos, con receta, y que NO
+     * Elaborados que se pueden planificar hoy: activos, con receta, y que NO
      * estén en una categoría marcada explícitamente "no se produce". Sin
      * categoría = producible (el default es incluir); la categoría sólo
      * sirve para EXCLUIR un área que se costea pero no se fabrica desde acá
-     * (ej. cafetería). Único filtro compartido por la orden instantánea y
-     * las órdenes de producción — no repetir la cadena en dos lugares.
+     * (ej. cafetería). Lo usan las planillas de pedidos — no repetir la
+     * cadena en otro lugar.
      *
      * @param  Builder<Product>  $query
      */
@@ -344,8 +390,7 @@ class Product extends Model
 
     /**
      * Historial del COSTO de compra (sólo reventa). El elaborado no registra
-     * logs acá — su costo vigente vive en la receta; su historial de
-     * fabricaciones es productions(), no esto.
+     * logs acá — su costo vigente vive en la receta.
      *
      * @return HasMany<ProductCostLog, $this>
      */
@@ -365,19 +410,6 @@ class Product extends Model
     public function latestCostLog(): HasOne
     {
         return $this->hasOne(ProductCostLog::class)->latestOfMany('recorded_at');
-    }
-
-    /**
-     * Fabricaciones de este elaborado (vacía en la reventa). Es el historial
-     * de "cuánto costó cada vez que se produjo" — no confundir con costLogs():
-     * el costo VIGENTE de un elaborado sigue saliendo de la receta (currentCost()),
-     * esto solo lista lo que pasó en cada evento de producción.
-     *
-     * @return HasMany<Production, $this>
-     */
-    public function productions(): HasMany
-    {
-        return $this->hasMany(Production::class);
     }
 
     /**

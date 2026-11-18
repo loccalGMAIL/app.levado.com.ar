@@ -6,8 +6,6 @@ use App\Models\Ingredient;
 use App\Models\Packaging;
 use App\Models\PriceList;
 use App\Models\Product;
-use App\Models\Production;
-use App\Models\ProductionOrder;
 use App\Models\Purchase;
 use App\Models\Tenant;
 use App\Models\TenantUser;
@@ -41,8 +39,6 @@ dataset('migrated listings', [
     'stock' => ['stock.index', fn (Tenant $t) => Ingredient::factory()->for($t)->count(3)->create()],
     'artículos' => ['products.index', fn (Tenant $t) => Product::factory()->for($t)->count(3)->create()],
     'compras' => ['purchases.index', fn (Tenant $t) => Purchase::factory()->for($t)->count(3)->create()],
-    'órdenes de producción' => ['production-orders.index', fn (Tenant $t) => ProductionOrder::factory()->for($t)->count(3)->create()],
-    'historial de producción' => ['products.history', fn (Tenant $t) => Production::factory()->for($t)->count(3)->create()],
 ]);
 
 test('cada registro es una sola fila, sin el doble render de card + tabla', function (string $routeName, Closure $seed) {

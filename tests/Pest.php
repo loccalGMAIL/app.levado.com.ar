@@ -4,12 +4,8 @@ use App\Enums\ProductType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
-use App\Models\Location;
 use App\Models\Packaging;
 use App\Models\Product;
-use App\Models\ProductionOrder;
-use App\Models\ProductionOrderLine;
-use App\Models\ProductionOrderRequest;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\Recipe;
@@ -17,8 +13,6 @@ use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
-use App\Services\ProductionOrderService;
-use App\Services\ProductionService;
 use App\Services\PurchaseLineRecorder;
 use App\Services\RecipeCostPropagator;
 use App\Services\StockService;
@@ -136,44 +130,6 @@ function productionSetup(TenantUserRole $role = TenantUserRole::Owner): array
     $product->update(['product_category_id' => $category->id]);
 
     return [$user, $tenant, $product, $harina];
-}
-
-function ordersService(): ProductionOrderService
-{
-    return app(ProductionOrderService::class);
-}
-
-function productionOrderService(): ProductionOrderService
-{
-    return app(ProductionOrderService::class);
-}
-
-/** Orden con un pedido y una línea artículo+cantidad, lista para producir. */
-function orderWithLine(Product $product, float $quantity, $tenant, ?Location $destination = null): ProductionOrder
-{
-    $order = ProductionOrder::factory()->for($tenant)->confirmed()->create([
-        'location_id' => $tenant->defaultLocation()->id,
-    ]);
-
-    $request = ProductionOrderRequest::factory()->for($tenant)->create([
-        'production_order_id' => $order->id,
-        'destination_type' => 'location',
-        'destination_id' => ($destination ?? Location::factory()->for($tenant)->create())->id,
-    ]);
-
-    ProductionOrderLine::factory()->create([
-        'production_order_request_id' => $request->id,
-        'product_id' => $product->id,
-        'quantity' => $quantity,
-        'unit' => $product->unit->value,
-    ]);
-
-    return $order->fresh();
-}
-
-function productionService(): ProductionService
-{
-    return app(ProductionService::class);
 }
 
 /** Producto elaborado (unidad u) ligado a una receta, en el tenant dado. */

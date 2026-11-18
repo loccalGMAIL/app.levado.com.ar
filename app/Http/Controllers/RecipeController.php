@@ -162,7 +162,15 @@ class RecipeController extends Controller
             }
         }
 
-        $recipe->update($request->validated());
+        $data = $request->validated();
+
+        // Volver a "Unidades" no deja un rinde por bandeja suelto.
+        if (array_key_exists('container_type', $data) && empty($data['container_type'])) {
+            $data['container_type'] = null;
+            $data['units_per_container'] = null;
+        }
+
+        $recipe->update($data);
         $this->propagator->propagateFrom($recipe);
 
         $this->recorder->record(

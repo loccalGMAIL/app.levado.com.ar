@@ -158,13 +158,11 @@ test('los combos no aparecen en existencias ni en el catálogo, y sí en su pest
         ->assertSee('1 u Café');
 });
 
-test('un combo no se puede producir', function () {
+test('un combo no es un artículo producible', function () {
     [, $tenant] = tenantUserAs(TenantUserRole::Owner);
     [$combo] = comboDesayuno($tenant);
 
-    expect(Product::query()->producible()->whereKey($combo->id)->exists())->toBeFalse()
-        ->and(fn () => productionService()->preview($combo, 1))
-        ->toThrow(HttpException::class);
+    expect(Product::query()->producible()->whereKey($combo->id)->exists())->toBeFalse();
 });
 
 // --- ABM ---

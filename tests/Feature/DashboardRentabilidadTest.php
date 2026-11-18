@@ -283,14 +283,11 @@ test('aislamiento: recetas de otro tenant no aparecen en el dashboard', function
         ->assertDontSee('RecetaAjena');
 });
 
-test('dashboard muestra los botones y modales de pedidos de producción para un owner', function () {
+test('dashboard muestra el acceso a Pedidos para un owner', function () {
     [$user] = ownerForDashboard();
 
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('Nuevo pedido')
-        ->assertSee('Orden instantánea')
-        ->assertSee('production-request-create', false)
-        ->assertSee('production-instant-create', false);
+        ->assertSee(route('pedidos.index'), false);
 });

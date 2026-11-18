@@ -10,7 +10,6 @@ use App\Models\IngredientPriceLog;
 use App\Models\Notification;
 use App\Models\Packaging;
 use App\Models\Product;
-use App\Models\Production;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\StockLevel;
@@ -232,44 +231,6 @@ class NotificationService
             subjectType: $line->purchaseable_type,
             subjectId: $item->id,
             meta: ['old_cost' => $oldCost, 'new_cost' => $newCost, 'pct' => round($pct, 2)],
-        );
-    }
-
-    /**
-     * Alerta de evento: fabricar salió más caro que la producción anterior del
-     * mismo artículo, por encima del umbral. Mismo umbral y toggle que
-     * raiseCostSpike() (alerts.cost_spike.*) — no hay setting propio para
-     * producción. Sin baseline (primera producción del artículo) no alerta.
-     */
-    public function raiseProductionCostSpike(Production $production, Product $product, float $oldCost, float $newCost): void
-    {
-        if ($oldCost <= 0) {
-            return;
-        }
-
-        $tenant = $product->tenant;
-
-        if (! $this->enabled($tenant, NotificationType::CostSpike)) {
-            return;
-        }
-
-        $threshold = (float) $tenant->getSetting('alerts.cost_spike.threshold_pct', '15');
-        $pct = ($newCost - $oldCost) / $oldCost * 100;
-
-        if ($pct < $threshold) {
-            return;
-        }
-
-        $this->raise(
-            tenant: $tenant,
-            type: NotificationType::CostSpike,
-            dedupeKey: "cost_spike:production:{$production->id}",
-            title: "Salto de costo: {$product->name}",
-            body: 'Fabricarlo costó '.$this->num($pct, 1)."% más que la última vez (de \${$this->num($oldCost)} a \${$this->num($newCost)}).",
-            actionUrl: route('production.show', $production),
-            subjectType: 'product',
-            subjectId: $product->id,
-            meta: ['old_cost' => $oldCost, 'new_cost' => $newCost, 'pct' => round($pct, 2), 'production_id' => $production->id],
         );
     }
 

@@ -9,12 +9,10 @@ use App\Enums\Unit;
 use App\Exceptions\IncompatibleUnitsException;
 use App\Models\FixedCost;
 use App\Models\Ingredient;
-use App\Models\Location;
 use App\Models\Notification;
 use App\Models\Product;
 use App\Models\ProductPriceLog;
 use App\Models\Recipe;
-use App\Models\StockMovement;
 use App\Services\CreditNoteLineRecorder;
 use App\Services\NotificationService;
 use App\Services\ProductPriceWriter;
@@ -188,29 +186,6 @@ test('una receta no admite un segundo artículo base', function () {
     $this->actingAs($user)->post(route('products.store'), $payload + ['recipe_quantity' => 6])->assertSessionHasNoErrors();
 
     expect($tenant->products()->where('recipe_id', $product->recipe_id)->count())->toBe(2);
-});
-
-test('la orden produce en su propia sucursal, la misma que muestra el preview', function () {
-    [$user, $tenant, $product, $harina] = productionSetup();
-    $other = Location::factory()->for($tenant)->create();
-    $order = orderWithLine($product, 12, $tenant);
-    $order->update(['location_id' => $other->id]);
-
-    productionOrderService()->produce($order->fresh(), $user);
-
-    expect(StockMovement::where('tenant_id', $tenant->id)->where('type', StockMovementType::Production->value)->pluck('location_id')->unique()->all())
-        ->toBe([$other->id]);
-});
-
-test('producir dos veces la misma orden no duplica la producción', function () {
-    [$user, $tenant, $product] = productionSetup();
-    $order = orderWithLine($product, 12, $tenant);
-    $stale = $order->fresh();
-
-    productionOrderService()->produce($order, $user);
-
-    expect(fn () => productionOrderService()->produce($stale, $user))->toThrow(HttpException::class);
-    expect($tenant->productions()->count())->toBe(1);
 });
 
 test('un artículo por debajo de su mínimo genera alerta de stock bajo', function () {

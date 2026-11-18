@@ -8,10 +8,9 @@ window.TomSelect = TomSelect;
 
 import './pricing/price-cell';
 import './pricing/price-editor';
+import './orders/sheet-grid';
 import './inline-edit';
 import './theme-picker';
-import './production/consumption-preview';
-import './production/order-lines';
 
 Alpine.start();
 
