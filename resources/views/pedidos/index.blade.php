@@ -128,6 +128,8 @@
                                                         :name="`lines[${i}][quantities][{{ $d }}]`"
                                                         @if(! $canEdit) readonly @endif
                                                         class="w-20 text-right border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno read-only:bg-transparent read-only:border-transparent read-only:shadow-none">
+                                                    <span x-show="clientsOf(line, {{ $d }}) > 0" x-cloak class="block text-[11px] text-right text-horno font-mono mt-0.5"
+                                                        x-text="clientsLabel(line, {{ $d }})"></span>
                                                     <span x-show="line.container" x-cloak class="block text-[11px] text-right text-masa-madre font-mono mt-0.5"
                                                         x-text="line.container ? equivalent(line, {{ $d }}) : ''"></span>
                                                 </td>

@@ -92,6 +92,20 @@
             </div>
         </div>
 
+        <div x-show="editing.type === 'manufactured'" x-cloak>
+            <x-input-label for="edit_product_order_sheet" value="Planilla de pedidos (opcional)" />
+            <select id="edit_product_order_sheet" name="order_sheet_id"
+                x-model="editing.order_sheet_id"
+                class="mt-1 block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm">
+                <option value="">— No suma en ninguna —</option>
+                @foreach($orderSheets as $orderSheet)
+                    <option value="{{ $orderSheet->id }}">{{ $orderSheet->name }}</option>
+                @endforeach
+            </select>
+            <p class="mt-1 text-xs text-masa-madre">Lo que pidan los clientes de reparto de este artículo se suma en esa planilla de Pedidos.</p>
+            <x-input-error :messages="$errors->get('order_sheet_id')" class="mt-2" />
+        </div>
+
         <div class="grid grid-cols-2 gap-4" x-show="editing.type === 'resale'" x-cloak>
             <div>
                 <x-input-label for="edit_product_cost" value="Costo por unidad" />

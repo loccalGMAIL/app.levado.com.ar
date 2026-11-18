@@ -80,6 +80,7 @@ class ProductController extends Controller
         // ya dada de baja o el select caería en vacío y guardar la perdería en silencio.
         $recipes = $tenant->recipes()->orderBy('name')->get();
         $categories = $tenant->productCategories()->orderBy('name')->get();
+        $orderSheets = $tenant->orderSheets()->ordered()->get();
         $showCategories = session('reopen_categories', false);
 
         $overheadPerHour = $tenant->overheadPerHour() ?? 0.0;
@@ -89,7 +90,7 @@ class ProductController extends Controller
         $priceMap = $priceRows->pluck('price', 'product_id');
         $policyMap = $priceRows->mapWithKeys(fn (ProductPrice $row) => [$row->product_id => $row->policyPayload()]);
 
-        return view('products.index', compact('products', 'recipes', 'categories', 'showCategories', 'priceLists', 'priceList', 'overheadPerHour', 'priceMap', 'policyMap'));
+        return view('products.index', compact('products', 'recipes', 'categories', 'orderSheets', 'showCategories', 'priceLists', 'priceList', 'overheadPerHour', 'priceMap', 'policyMap'));
     }
 
     /**

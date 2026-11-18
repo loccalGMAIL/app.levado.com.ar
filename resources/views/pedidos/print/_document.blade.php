@@ -35,7 +35,7 @@
         </tr>
     </table>
 
-    @if(! $sheet['has_week'] || empty($sheet['rows']))
+    @if(empty($sheet['rows']))
         <div class="empty">Sin pedidos cargados para esta semana.</div>
     @else
         <table class="data orders-grid">

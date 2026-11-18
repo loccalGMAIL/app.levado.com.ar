@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
@@ -25,6 +26,7 @@ class Customer extends Model
         'notes',
         'active',
         'delivery_person_id',
+        'route_position',
         'legal_name',
         'tax_id',
         'condicion_iva',
@@ -34,6 +36,7 @@ class Customer extends Model
     {
         return [
             'active' => 'boolean',
+            'route_position' => 'integer',
             'condicion_iva' => CondicionIva::class,
         ];
     }
@@ -59,5 +62,15 @@ class Customer extends Model
     public function deliveryPerson(): BelongsTo
     {
         return $this->belongsTo(DeliveryPerson::class);
+    }
+
+    /**
+     * Semanas de pedidos de este cliente.
+     *
+     * @return HasMany<CustomerOrderWeek, $this>
+     */
+    public function orderWeeks(): HasMany
+    {
+        return $this->hasMany(CustomerOrderWeek::class);
     }
 }

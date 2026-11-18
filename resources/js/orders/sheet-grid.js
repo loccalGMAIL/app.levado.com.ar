@@ -17,9 +17,14 @@ const formatNumber = (value) => Number(Number(value).toFixed(3)).toLocaleString(
  * viajan ya renderizadas en el HTML, así que acá `products` solo se usa para
  * resolver nombre, unidad y recipiente del artículo elegido.
  *
+ * En la planilla de pedidos, cada fila puede traer además `clients`: lo que
+ * piden los clientes de reparto cada día (solo lectura, en la misma medida de la
+ * fila). Se muestra bajo la celda y suma al total del día y de la semana; no
+ * forma parte de lo que se guarda.
+ *
  * Init esperado:
  *   { products: [{id, name, unit, container}],
- *     lines: [{product_id, name, unit, container, q: [7 números], warning}] }
+ *     lines: [{product_id, name, unit, container, q: [7 números], clients?: [7 números], warning}] }
  *   container = null | {type, label, short, per}
  */
 Alpine.data('orderSheetGrid', (init = {}) => ({
@@ -27,6 +32,7 @@ Alpine.data('orderSheetGrid', (init = {}) => ({
     lines: (init.lines ?? []).map(line => ({
         ...line,
         q: line.q.map(value => (Number(value) === 0 ? '' : value)),
+        clients: (line.clients ?? []).map(value => Number(value) || 0),
     })),
     baseline: '',
     submitting: false,
@@ -50,8 +56,24 @@ Alpine.data('orderSheetGrid', (init = {}) => ({
         return !this.submitting && this.snapshot() !== this.baseline;
     },
 
+    /** Lo que piden los clientes un día (0 si la fila no trae pedidos de clientes). */
+    clientsOf(line, day) {
+        return Number(line.clients?.[day]) || 0;
+    },
+
+    /** Lo cargado a mano más lo de los clientes en un día. */
+    dayTotal(line, day) {
+        return (Number(line.q[day]) || 0) + this.clientsOf(line, day);
+    },
+
+    /** «+36 = 84» bajo la celda cuando hay pedidos de clientes ese día. */
+    clientsLabel(line, day) {
+        const clients = this.clientsOf(line, day);
+        return clients > 0 ? `+${formatNumber(clients)} clientes = ${formatNumber(this.dayTotal(line, day))}` : '';
+    },
+
     sum(line) {
-        return line.q.reduce((total, value) => total + (Number(value) || 0), 0);
+        return line.q.reduce((total, value, day) => total + this.dayTotal(line, day), 0);
     },
 
     /** «Bandeja de 30 u» bajo el nombre del artículo. */
@@ -61,7 +83,7 @@ Alpine.data('orderSheetGrid', (init = {}) => ({
 
     /** Unidades equivalentes a lo cargado en un día (solo filas con recipiente). */
     equivalent(line, day) {
-        const value = Number(line.q[day]) || 0;
+        const value = this.dayTotal(line, day);
         return value > 0 ? `${formatNumber(value * line.container.per)} ${line.unit}` : '';
     },
 
@@ -97,6 +119,8 @@ Alpine.data('orderSheetGrid', (init = {}) => ({
             unit: product.unit,
             container: product.container,
             warning: null,
+            no_destination: product.no_destination ?? false,
+            clients: [],
             q: ['', '', '', '', '', '', ''],
         });
         this.resetPicker(pickerEl);

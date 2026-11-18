@@ -11,8 +11,10 @@ use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\CatalogReplacementController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerOrderWeekController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryPersonController;
+use App\Http\Controllers\DeliveryRouteSheetController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\FixedCostHistoryController;
@@ -334,6 +336,15 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('reparto/clientes', [CustomerController::class, 'store'])->name('reparto.clientes.store');
     Route::put('reparto/clientes/{customer}', [CustomerController::class, 'update'])->name('reparto.clientes.update');
     Route::patch('reparto/clientes/{customer}/toggle-active', [CustomerController::class, 'toggleActive'])->name('reparto.clientes.toggle-active');
+
+    // Pedidos de clientes (semana por cliente) y hoja diaria del repartidor.
+    Route::get('reparto/pedidos', [CustomerOrderWeekController::class, 'index'])->name('reparto.pedidos.index');
+    Route::put('reparto/pedidos/{customer}/semana', [CustomerOrderWeekController::class, 'update'])->name('reparto.pedidos.semana.update');
+    Route::post('reparto/pedidos/{customer}/semana/recopiar', [CustomerOrderWeekController::class, 'recopy'])->name('reparto.pedidos.semana.recopy');
+    Route::get('reparto/hoja', [DeliveryRouteSheetController::class, 'show'])->name('reparto.hoja');
+    Route::get('reparto/hoja/pdf', [DeliveryRouteSheetController::class, 'pdf'])
+        ->middleware('throttle:20,1')
+        ->name('reparto.hoja.pdf');
 });
 
 // Mi equipo (requiere auth + tenant resuelto + rol manage-team)

@@ -2,12 +2,12 @@
     <x-slot name="title">Reparto</x-slot>
 
     @php
-        $customerFields = ['name', 'phone', 'email', 'address', 'city', 'notes', 'delivery_person_id', 'legal_name', 'tax_id', 'condicion_iva'];
+        $customerFields = ['name', 'phone', 'email', 'address', 'city', 'notes', 'delivery_person_id', 'route_position', 'legal_name', 'tax_id', 'condicion_iva'];
         $errorsInCreate = $errors->hasAny($customerFields) && old('_form') === 'create';
         $errorsInEdit   = $errors->hasAny($customerFields) && old('_form') === 'edit';
         $editingDefault = [
             'id' => null, 'name' => '', 'phone' => '', 'email' => '', 'address' => '', 'city' => '',
-            'notes' => '', 'delivery_person_id' => '', 'legal_name' => '', 'tax_id' => '', 'condicion_iva' => '',
+            'notes' => '', 'delivery_person_id' => '', 'route_position' => '', 'legal_name' => '', 'tax_id' => '', 'condicion_iva' => '',
         ];
         $editingOnError = $errorsInEdit ? [
             'id' => old('customer_id'),
@@ -18,6 +18,7 @@
             'city' => old('city'),
             'notes' => old('notes'),
             'delivery_person_id' => old('delivery_person_id', ''),
+            'route_position' => old('route_position', ''),
             'legal_name' => old('legal_name'),
             'tax_id' => old('tax_id'),
             'condicion_iva' => old('condicion_iva', ''),
@@ -79,6 +80,7 @@
                                         'city' => $customer->city ?? '',
                                         'notes' => $customer->notes ?? '',
                                         'delivery_person_id' => $customer->delivery_person_id ?? '',
+                                        'route_position' => $customer->route_position ?? '',
                                         'legal_name' => $customer->legal_name ?? '',
                                         'tax_id' => $customer->tax_id ?? '',
                                         'condicion_iva' => $customer->condicion_iva?->value ?? '',

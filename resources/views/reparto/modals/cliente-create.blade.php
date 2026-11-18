@@ -62,6 +62,16 @@
         </div>
 
         <div>
+            <x-input-label for="create_route_position" value="Orden en el recorrido (opcional)" />
+            <x-text-input id="create_route_position" name="route_position" type="number" min="1" max="9999"
+                class="mt-1 block w-full sm:w-40"
+                value="{{ old('route_position') }}"
+                placeholder="1, 2, 3…" />
+            <p class="mt-1 text-xs text-masa-madre">Define en qué lugar aparece en la hoja de su repartidor.</p>
+            <x-input-error :messages="$errors->get('route_position')" class="mt-2" />
+        </div>
+
+        <div>
             <x-input-label for="create_notes" value="Notas" />
             <textarea id="create_notes" name="notes" rows="2"
                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-horno focus:ring-horno text-sm">{{ old('notes') }}</textarea>

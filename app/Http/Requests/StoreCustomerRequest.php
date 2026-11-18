@@ -34,6 +34,7 @@ class StoreCustomerRequest extends FormRequest
                 'nullable', 'integer',
                 Rule::exists('delivery_people', 'id')->where('tenant_id', $tenant->id),
             ],
+            'route_position' => ['nullable', 'integer', 'min:1', 'max:9999'],
             'legal_name' => ['nullable', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:20'],
             'condicion_iva' => ['nullable', Rule::enum(CondicionIva::class)],
