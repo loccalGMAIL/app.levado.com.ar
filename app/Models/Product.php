@@ -28,6 +28,7 @@ class Product extends Model
         'recipe_id',
         'recipe_quantity',
         'product_category_id',
+        'order_sheet_id',
         'unit',
         'cost_per_unit',
         'costing_method',
@@ -298,6 +299,17 @@ class Product extends Model
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
+    }
+
+    /**
+     * Planilla de pedidos a la que suma lo que piden los clientes de este
+     * artículo (null = no suma en ninguna).
+     *
+     * @return BelongsTo<OrderSheet, $this>
+     */
+    public function orderSheet(): BelongsTo
+    {
+        return $this->belongsTo(OrderSheet::class);
     }
 
     /**

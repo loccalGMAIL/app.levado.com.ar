@@ -46,9 +46,15 @@ Las panaderías piden mucho por bandejas o latas. Decisiones del usuario (no re-
 - El usuario pidió **sacar el orden de las planillas** (ni número ni flechas): quedan por orden de creación; `position`
   sigue en la base y se llena sola, por si se retoma con otra UI.
 
-## Siguiente etapa (anotada por el usuario, no empezada)
-**Pedidos de clientes dentro de la sección Clientes** (Reparto): lo que pide cada cliente, separado de las planillas de
-producción; después puede alimentar la planilla de Reparto. Clientes y repartidores quedaron intactos para eso.
+## Pedidos de clientes y reparto (v0.24.0, rama `v0.24.0-reparto-pedidos-clientes`)
+Decisiones del usuario (2026-11-18, no re-litigar):
+- **Semana por cliente** (`customer_order_weeks/lines`, espejo de las planillas): grilla artículos × Lun–Dom en Reparto › Pedidos; semana nueva copia la anterior; bandejas/latas igual que en planillas.
+- **Destino por artículo**: `products.order_sheet_id` (select en «Editar artículo», elaborados). Lo que piden los clientes suma en esa planilla. NO es por cliente ni por línea.
+- **En la planilla se suman las dos cosas**: manual + clientes = total. Solo se edita lo manual; `save()` nunca toca lo de clientes. Se muestra «+N clientes = total» bajo la celda; la planilla impresa lleva el total. Los artículos con pedidos de clientes que no están en la lista aparecen como fila nueva.
+- **Hoja diaria del repartidor**: día + repartidor (o sin repartidor) → clientes en filas por `customers.route_position` (nulos al final, por nombre), artículos en columnas, fila CARGAR. Vista + PDF.
+- Se suma en unidades y solo de clientes activos (`CustomerOrderTotals`); lo de clientes no se redondea a cuartos. Lo común de las grillas está en el trait `BuildsWeeklyGrid`.
+- Fuera de alcance: que el repartidor vea solo su hoja desde el celular; remitos, cobranza, precios por cliente, entregado vs pedido.
+- Las rutas de Reparto son owner/admin/super_admin (un viewer no entra a Reparto › Pedidos).
 
 ## Gotchas de la limpieza
 - `MobileShortcut::ProductionOrders` pasó a `OrderSheets` (`order_sheets`, ruta `pedidos.index`); tenants con el valor

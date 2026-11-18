@@ -64,6 +64,16 @@
         </div>
 
         <div>
+            <x-input-label for="edit_route_position" value="Orden en el recorrido (opcional)" />
+            <x-text-input id="edit_route_position" name="route_position" type="number" min="1" max="9999"
+                class="mt-1 block w-full sm:w-40"
+                x-model="editing.route_position"
+                placeholder="1, 2, 3…" />
+            <p class="mt-1 text-xs text-masa-madre">Define en qué lugar aparece en la hoja de su repartidor.</p>
+            <x-input-error :messages="$errors->get('route_position')" class="mt-2" />
+        </div>
+
+        <div>
             <x-input-label for="edit_notes" value="Notas" />
             <textarea id="edit_notes" name="notes" rows="2"
                 x-model="editing.notes"

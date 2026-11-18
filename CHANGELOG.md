@@ -295,6 +295,27 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.24.0] — 2026-11-18
+
+### Agregado
+
+- **Pedidos de clientes (Reparto › Pedidos).** Cada cliente activo tiene su grilla semanal (artículos × Lun–Dom), con el mismo comportamiento que las planillas: la semana nueva copia la última cargada, se puede volver a copiar, y los artículos con rinde se piden en bandejas/latas de a cuartos. El selector de cliente viene agrupado por repartidor.
+- **Planilla de destino por artículo.** En «Editar artículo» (elaborados) hay un select **Planilla de pedidos**: lo que pidan los clientes de ese artículo suma en esa planilla. Los artículos que ya estaban en la lista de una sola planilla arrancan apuntando a ella. En la grilla de un cliente, un artículo sin destino avisa «No suma en ninguna planilla de Pedidos».
+- **Las planillas de Pedidos muestran lo de los clientes.** En cada celda, debajo de lo cargado a mano, aparece «+36 clientes = 84». Solo se edita lo manual; lo de clientes se lee de sus semanas y nunca se pisa al guardar. Un artículo que piden los clientes y todavía no está en la lista de la planilla aparece como fila nueva. La planilla impresa (vista y PDF) lleva el **total** (manual + clientes).
+- **Hoja diaria del repartidor.** En Reparto › Pedidos, se elige un día y un repartidor (o «Sin repartidor») y se abre la hoja: sus clientes con pedido ese día en orden de recorrido (con dirección), los artículos en columnas y una fila **CARGAR** con los totales. Vista para imprimir y PDF en A4 apaisada.
+- **Orden en el recorrido.** Campo opcional en el cliente que define su lugar en la hoja de su repartidor (sin número, queda al final, por nombre).
+
+### Corregido
+
+- Un artículo que se agrega a la lista de una planilla y no tiene destino pasa a sumar ahí lo que pidan los clientes (si ya apunta a otra planilla se respeta). Antes quedaba con el aviso «No suma en ninguna planilla». Una migración completa el destino de los artículos que ya estaban en la lista de una sola planilla.
+
+### Técnico
+
+- Tablas `customer_order_weeks` y `customer_order_lines` (espejo de las de planillas); columnas `products.order_sheet_id` y `customers.route_position`.
+- `BuildsWeeklyGrid` (trait) concentra lo común de las grillas semanales (lunes, medida actual del artículo, atributos de fila); lo usan `OrderSheetWeekService` y el nuevo `CustomerOrderWeekService`.
+- `CustomerOrderTotals` suma lo pedido en **unidades** (bandejas × lo que entra hoy en una) solo de clientes activos, y arma el recorrido del día. Lo de clientes se muestra sin redondear a cuartos (solo a 3 decimales): es lo pedido, no lo tipeado. `DeliveryRouteSheet` arma la hoja como arrays planos para dompdf.
+- Rutas `reparto.pedidos.*`, `reparto.hoja` y `reparto.hoja.pdf` (esta con `throttle:20,1`), en el grupo de Reparto (owner, admin y super_admin). `npm run build`.
+
 ## [0.23.2] — 2026-11-18
 
 ### Agregado

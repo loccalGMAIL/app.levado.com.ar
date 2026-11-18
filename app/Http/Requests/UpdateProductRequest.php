@@ -41,6 +41,12 @@ class UpdateProductRequest extends FormRequest
                 'integer',
                 Rule::exists('product_categories', 'id')->where('tenant_id', $tenantId),
             ],
+            // Planilla de pedidos a la que suma lo que piden los clientes de este artículo.
+            'order_sheet_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('order_sheets', 'id')->where('tenant_id', $tenantId),
+            ],
             'unit' => ['required', Rule::enum(Unit::class)],
             'cost_per_unit' => [
                 Rule::requiredIf(fn () => $this->input('type') === ProductType::Resale->value),

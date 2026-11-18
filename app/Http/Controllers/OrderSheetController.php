@@ -9,6 +9,7 @@ use App\Models\OrderSheetLine;
 use App\Models\Product;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
+use App\Services\CustomerOrderTotals;
 use App\Services\OrderSheetWeekService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ class OrderSheetController extends Controller
     public function __construct(
         private readonly OrderSheetWeekService $weeks,
         private readonly AdminActivityRecorder $recorder,
+        private readonly CustomerOrderTotals $customerTotals,
     ) {}
 
     public function index(Request $request): View
@@ -42,6 +44,10 @@ class OrderSheetController extends Controller
         $lines = $week !== null
             ? $week->lines->map(fn (OrderSheetLine $line) => $this->weeks->presentLine($line))->values()->all()
             : [];
+
+        if ($sheet !== null) {
+            $lines = $this->customerTotals->overlay($sheet, $start, $lines);
+        }
 
         $products = Product::query()->producible()->orderBy('name')
             ->with('recipe')

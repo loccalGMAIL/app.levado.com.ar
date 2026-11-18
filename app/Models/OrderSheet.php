@@ -66,4 +66,14 @@ class OrderSheet extends Model
     {
         return $this->hasMany(OrderSheetWeek::class);
     }
+
+    /**
+     * Artículos cuyos pedidos de clientes suman en esta planilla.
+     *
+     * @return HasMany<Product, $this>
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
 }
