@@ -24,6 +24,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MobileShortcutSettingsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderSheetController;
+use App\Http\Controllers\OrderSheetPrintController;
 use App\Http\Controllers\OrderSheetWeekController;
 use App\Http\Controllers\PackagingController;
 use App\Http\Controllers\PackagingCostController;
@@ -143,6 +144,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
 
     // Pedidos: planillas semanales. Verlas es para todos los roles con tenant.
     Route::get('pedidos', [OrderSheetController::class, 'index'])->name('pedidos.index');
+    Route::get('pedidos/{orderSheet}/imprimir', [OrderSheetPrintController::class, 'show'])->name('pedidos.imprimir');
+    Route::get('pedidos/{orderSheet}/imprimir/pdf', [OrderSheetPrintController::class, 'pdf'])
+        ->middleware('throttle:20,1')
+        ->name('pedidos.imprimir.pdf');
 
     // Centro de alertas (feed) — visible y accionable para todos los roles con tenant.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');

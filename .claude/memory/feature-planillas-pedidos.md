@@ -58,3 +58,9 @@ producción; después puede alimentar la planilla de Reparto. Clientes y reparti
 - La BD de dev tenía tablas huérfanas de las ramas sin mergear (bakings, preproductions, waste_reasons…); se borraron a
   mano junto con sus filas de `migrations`. Si otra máquina las tiene, `migrate` falla con 3730 hasta limpiarlas igual.
 - `ThemeTokensTest` (2 casos) falla en Windows por rutas con `/` y `\` mezclados; no tiene que ver con este cambio.
+
+## Imprimir (v0.23.2, rama `v0.23.2-pedidos-imprimir`)
+Botón «Imprimir» en `/pedidos`: imprime SOLO la planilla de la pestaña abierta y la semana vista (vista A4 apaisada + PDF), siempre lo guardado. Decisiones del usuario:
+- Aclaraciones (kg, «Lata de 12 kg») en la misma línea que el nombre; equivalentes por día **entre paréntesis** junto a la cantidad (si no entra o se ve apretado en el PDF, volver a `display:block` en `.equiv` de `pedidos/print/_document.blade.php`).
+- Imprimir nunca crea semanas (`OrderSheetWeekService::existingWeek()`); sin semana sale vacía.
+- Gotcha: no usar la clase `grid` en la tabla (Tailwind la vuelve `display:grid`).
