@@ -11,6 +11,7 @@ use App\Rules\TrayQuantity;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * Semanas de una planilla de pedidos. Una semana nueva (actual o futura) nace
@@ -24,6 +25,27 @@ class OrderSheetWeekService
     public function mondayOf(CarbonImmutable $date): CarbonImmutable
     {
         return $date->startOfWeek(CarbonImmutable::MONDAY)->startOfDay();
+    }
+
+    /** El lunes de la semana pedida (o de la actual si no viene una fecha válida). */
+    public function mondayFromInput(string $date): CarbonImmutable
+    {
+        try {
+            $base = $date !== '' ? CarbonImmutable::parse($date) : CarbonImmutable::now();
+        } catch (Throwable) {
+            $base = CarbonImmutable::now();
+        }
+
+        return $this->mondayOf($base);
+    }
+
+    /**
+     * La semana indicada solo si ya existe. A diferencia de weekFor() nunca
+     * crea nada: es lo que usa imprimir.
+     */
+    public function existingWeek(OrderSheet $sheet, CarbonImmutable $date): ?OrderSheetWeek
+    {
+        return $this->find($sheet, $this->mondayOf($date));
     }
 
     /**

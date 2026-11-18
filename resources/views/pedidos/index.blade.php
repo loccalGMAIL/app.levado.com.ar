@@ -59,6 +59,9 @@
                         Semana del {{ $start->format('d/m/Y') }} al {{ $start->addDays(6)->format('d/m/Y') }}
                     </p>
                     <div class="flex items-center gap-2">
+                        <a href="{{ route('pedidos.imprimir', ['orderSheet' => $sheet, 'start' => $start->toDateString()]) }}"
+                            title="Imprime la última versión guardada"
+                            class="px-3 py-1.5 border border-miga text-sm text-masa-madre rounded-md hover:bg-miga transition-colors">Imprimir</a>
                         <a href="{{ $weekUrl($start->subWeek()) }}"
                             class="px-3 py-1.5 border border-miga text-sm text-masa-madre rounded-md hover:bg-miga transition-colors">← Anterior</a>
                         <a href="{{ route('pedidos.index', ['sheet' => $sheet->id]) }}"

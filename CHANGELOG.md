@@ -295,6 +295,19 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.23.2] — 2026-11-18
+
+### Agregado
+
+- **Imprimir la planilla de pedidos.** En Pedidos hay un botón **Imprimir** junto al navegador de semana: abre la planilla y la semana que se está viendo en una vista para imprimir (A4 apaisada) o descargar en PDF. Muestra el encabezado del negocio, la grilla Lun–Dom y el total de la semana; el recipiente va al lado del nombre del artículo y, en las bandejas/latas, las unidades equivalentes de cada día van entre paréntesis.
+- Imprime lo **guardado** (no los cambios sin guardar de la grilla). Una semana sin cargar sale vacía con el aviso «Sin pedidos cargados para esta semana»: imprimir nunca crea semanas. Lo pueden imprimir todos los roles que ven Pedidos.
+
+### Técnico
+
+- Rutas `pedidos.imprimir` y `pedidos.imprimir.pdf` (esta con `throttle:20,1`), `OrderSheetPrintController` y `OrderSheetPrintSheet`, que arma los datos como arrays planos para que dompdf no dispare lazy loads. Vistas en `resources/views/pedidos/print/`, con el mismo patrón que la impresión de recetas.
+- `OrderSheetWeekService::mondayFromInput()` (antes `weekStart()` privado del controller) y `existingWeek()`, que busca la semana sin crearla.
+- La tabla de impresión no puede llevar la clase `grid`: en Tailwind es `display: grid` y la parte en columnas.
+
 ## [0.23.1] — 2026-11-18
 
 ### Agregado

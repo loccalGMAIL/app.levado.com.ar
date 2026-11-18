@@ -10,12 +10,10 @@ use App\Models\Product;
 use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\OrderSheetWeekService;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
-use Throwable;
 
 /**
  * Pedidos: las planillas semanales (lunes a domingo) que arma cada negocio,
@@ -38,7 +36,7 @@ class OrderSheetController extends Controller
         $sheets = $allSheets->where('active', true)->values();
         $sheet = $sheets->firstWhere('id', $request->integer('sheet')) ?? $sheets->first();
 
-        $start = $this->weekStart($request->string('start')->toString());
+        $start = $this->weeks->mondayFromInput($request->string('start')->toString());
         $week = $sheet !== null ? $this->weeks->weekFor($sheet, $start) : null;
 
         $lines = $week !== null
@@ -150,17 +148,5 @@ class OrderSheetController extends Controller
         $orderSheet->delete();
 
         return redirect()->route('pedidos.index')->with('status', 'Planilla borrada.');
-    }
-
-    /** El lunes de la semana pedida (o de la actual si no viene una fecha válida). */
-    private function weekStart(string $date): CarbonImmutable
-    {
-        try {
-            $base = $date !== '' ? CarbonImmutable::parse($date) : CarbonImmutable::now();
-        } catch (Throwable) {
-            $base = CarbonImmutable::now();
-        }
-
-        return $this->weeks->mondayOf($base);
     }
 }
