@@ -8,10 +8,8 @@ use App\Models\Ingredient;
 use App\Models\Product;
 use App\Models\Recipe;
 use App\Models\RecipeIngredientLine;
-use App\Services\ProductionService;
 use App\Services\ProductPriceWriter;
 use App\Services\RecipeCostPropagator;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 // tenantUserAs() es un helper global de la suite (definido en IngredientCrudTest).
 
@@ -80,13 +78,6 @@ test('las presentaciones no son producibles', function () {
     ]);
 
     expect(Product::producible()->pluck('id')->all())->toContain($base->id)->not->toContain($pack->id);
-});
-
-test('producir una presentación se rechaza con 422', function () {
-    [$user, $tenant] = tenantUserAs(TenantUserRole::Owner);
-    $pack = Product::factory()->presentationOf(facturasRecipe($tenant), 6)->create();
-
-    expect(fn () => app(ProductionService::class)->produce($pack, 1, null, $user))->toThrow(HttpException::class);
 });
 
 test('al cambiar el costo de la receta se recalcula el precio con política del pack', function () {

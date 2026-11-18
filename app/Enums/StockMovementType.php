@@ -10,8 +10,7 @@ enum StockMovementType: string
     case Adjustment = 'adjustment';
     case Count = 'count';
 
-    // Reservados para etapas futuras (producción, ventas, transferencias entre sucursales).
-    case Production = 'production';
+    // Reservados para etapas futuras (ventas, transferencias entre sucursales).
     case Sale = 'sale';
     case Transfer = 'transfer';
 
@@ -23,7 +22,6 @@ enum StockMovementType: string
             self::Return => 'Devolución',
             self::Adjustment => 'Ajuste',
             self::Count => 'Recuento',
-            self::Production => 'Producción',
             self::Sale => 'Venta',
             self::Transfer => 'Transferencia',
         };

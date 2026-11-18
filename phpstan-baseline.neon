@@ -29,16 +29,3 @@ parameters:
 			identifier: argument.type
 			count: 2
 			path: app/Services/FixedCostHistory.php
-
-		-
-			message: '#^Method App\\Services\\ProductionOrderSheets\:\:groupRequests\(\) should return Illuminate\\Support\\Collection\<int, array\{key\: string, kind\: string, title\: string, subtitle\: string\|null, requests\: list\<array\<string, mixed\>\>, totals\: list\<array\<string, mixed\>\>\}\> but returns Illuminate\\Support\\Collection\<int, array\{key\: string, kind\: string, title\: string, subtitle\: string\|null, requests\: array\<int, array\<string, mixed\>\>, totals\: list\<array\{product\: string, quantity\: float, unit\: string\}\>\}\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/ProductionOrderSheets.php
-
-		-
-			message: '#^Parameter \#1 \$relations of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\ProductionOrderRequest\>\:\:with\(\) expects array\<array\|\(Closure\(Illuminate\\Database\\Eloquent\\Relations\\Relation\<\*, \*, \*\>\)\: mixed\)\|string\>\|string, array\{0\: ''lines\.product'', destination\: Closure\(Illuminate\\Database\\Eloquent\\Relations\\MorphTo\)\: Illuminate\\Database\\Eloquent\\Relations\\MorphTo\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/ProductionOrderSheets.php
-

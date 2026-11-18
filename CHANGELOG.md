@@ -295,6 +295,29 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.23.0] — 2026-11-18
+
+Se retira el módulo de producción y la capa vieja de pedidos, y los pedidos arrancan de cero como **planillas semanales** por negocio. Las ramas `v0.22.0-ciclo-produccion-bandejas` y `v0.22.0-produccion-preproduccion-horneado` quedan sin mergear, solo como referencia.
+
+### Agregado
+
+- **Pedidos**: cada negocio arma sus planillas (ej. Secos, Diarios, Tortas, Reparto). Cada una es una grilla de **lunes a domingo** con un artículo por fila y la cantidad a elaborar cada día.
+- Cada planilla tiene su **propia lista de artículos**. Al abrir una semana actual o futura que no existe, se crea como **copia de la última semana cargada** y desde ahí se edita sola; se puede planificar semanas adelante. «Volver a copiar la semana anterior» restituye lo de la semana previa.
+- **Configurar planillas**: alta, renombrado, orden, pausa y borrado (solo si no tiene semanas cargadas). Cualquier usuario ve las planillas; editarlas es para owner y admin.
+- El Dashboard tiene un acceso a **Pedidos** y el atajo mobile `Pedidos` reemplaza a `Órdenes de producción`.
+
+### Eliminado
+
+- **Producción**: producir, orden instantánea, historial de fabricaciones (pestaña Historial de Artículos), hoja de producción, alerta de salto de costo al fabricar y las filas de producción del historial de costo.
+- **Pedidos viejos**: órdenes diarias, pedidos por destino, pedidos recurrentes y planilla de reparto de la orden.
+- Los clientes y repartidores (Reparto), recetas, artículos, stock y costos **no se tocan**.
+
+### Técnico
+
+- Migración `drop_production_and_legacy_orders`: borra `productions`, `production_orders`, `production_order_requests`, `production_order_lines` y los recurrentes, más tres columnas de `tenants`. Aborta si hay movimientos de stock con referencia `production`. **No reversible.**
+- Tablas nuevas `order_sheets`, `order_sheet_weeks` y `order_sheet_lines` (`day_1`…`day_7`, 1 = lunes). `OrderSheetWeekService` concentra la copia de semanas.
+- El morph map queda solo con `CatalogItemType`. `StockMovementType::Production` se retiró.
+
 ## [0.22.0] — 2026-11-15
 
 Sobre v0.21.1. **Combos**: artículos que agrupan a otros bajo un código y un precio propios. Requiere `migrate`.

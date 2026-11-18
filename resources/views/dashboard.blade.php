@@ -25,10 +25,7 @@
         $errorsInPurchaseCreate = $errors->hasAny(['supplier_id', 'invoice_number', 'invoice_date', 'notes', 'invoice']) && old('_form') === 'create';
     @endphp
 
-    {{-- products viaja una sola vez acá (root x-data) y los modales "+ Nuevo
-         pedido" / "Orden instantánea" lo leen por referencia — mismo patrón
-         que production-orders/index.blade.php. --}}
-    <div class="py-6 px-6 lg:px-8 space-y-5" x-data="{ products: @js($products) }">
+    <div class="py-6 px-6 lg:px-8 space-y-5">
 
         {{-- ═══════════════════════════════════════════════
              GREETING + QUICK ACTIONS
@@ -43,29 +40,18 @@
                     &nbsp;·&nbsp; Actualizado al {{ now()->format('d/m/Y') }}
                 </p>
             </div>
-            {{-- grid 2x2 en mobile: los 4 botones quedan del mismo tamaño en vez de
-                 envolver según el largo de cada texto (ver flex-wrap original,
-                 dejaba "Nuevo pedido"/"Orden instantánea" solos en su fila y
-                 "Nueva receta"+"Compra" apareados, descompaginado). A partir de
-                 sm vuelve a fila única con ancho natural. --}}
+            {{-- grid 2 columnas en mobile: los botones quedan del mismo tamaño en vez de
+                 envolver según el largo de cada texto. A partir de sm vuelve a fila
+                 única con ancho natural. --}}
             <div class="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:flex-wrap">
                 @can('manage-costs')
-                    <button type="button"
-                        @click="$dispatch('open-modal', 'production-request-create')"
+                    <a href="{{ route('pedidos.index') }}"
                         class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-superficie hover:bg-miga hover:text-corteza transition-colors">
                         <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z"/>
                         </svg>
-                        Nuevo pedido
-                    </button>
-                    <button type="button"
-                        @click="$dispatch('open-modal', 'production-instant-create')"
-                        class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-superficie hover:bg-miga hover:text-corteza transition-colors">
-                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
-                        </svg>
-                        Orden instantánea
-                    </button>
+                        Pedidos
+                    </a>
                     <button type="button"
                         @click="$dispatch('open-modal', 'recipe-create')"
                         class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-masa-madre border border-miga rounded-lg bg-superficie hover:bg-miga hover:text-corteza transition-colors">
@@ -657,8 +643,6 @@
         {{-- fin tabla --}}
 
         @can('manage-costs')
-            @include('production-orders.modals.request-create')
-            @include('production-orders.modals.instant-create')
             @include('recipes.modals.create', ['errorsInCreate' => $errorsInRecipeCreate])
             @include('purchases.modals.create', ['errorsInCreate' => $errorsInPurchaseCreate])
             @include('suppliers.modals.quick-create')

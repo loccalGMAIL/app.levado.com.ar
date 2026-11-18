@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\StockMovementType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
@@ -10,11 +9,10 @@ use App\Models\RecipeProductLine;
 use App\Models\Tenant;
 use App\Services\RecipeCostCalculator;
 use App\Services\RecipeCostPropagator;
-use App\Services\StockService;
 use Illuminate\Database\QueryException;
 
 // tenantUserAs(), stockPurchaseFor(), stockLineFor(), lineRecorder(), manufacturedProduct(),
-// seedStock() y productionService() son helpers globales (tests/Pest.php).
+// seedStock() es un helper global (tests/Pest.php).
 
 function chocolatada(Tenant $tenant, array $overrides = []): Product
 {
@@ -201,46 +199,6 @@ test('editar a mano el costo del artículo de reventa propaga a las recetas', fu
 
     expect((float) $product->fresh()->cost_per_unit)->toBe(1400.0)
         ->and((float) $recipe->fresh()->unit_cost)->toBe(700.0);
-});
-
-// --- Producción ---
-
-test('producir descuenta el stock del artículo de reventa y lo costea como material', function () {
-    [$user, $tenant] = stockTenantUser();
-    $product = chocolatada($tenant, ['cost_per_unit' => 1000]);
-    $recipe = milkshakeRecipe($tenant);
-    $recipe->yield_quantity = 2;
-    $recipe->save();
-    $recipe->productLines()->create(['product_id' => $product->id, 'quantity' => 500, 'unit' => Unit::Mililitro->value]);
-    $milkshake = manufacturedProduct($tenant, $recipe);
-    seedStock($product, 10, $user);
-
-    $production = productionService()->produce($milkshake, 4, null, $user); // factor 2 → 1 L
-
-    $stock = app(StockService::class);
-    $location = $tenant->defaultLocation();
-
-    expect((float) $stock->levelFor($product, $location)->quantity)->toBe(9.0)
-        ->and((float) $stock->levelFor($milkshake, $location)->quantity)->toBe(4.0)
-        ->and((float) $production->material_cost)->toBe(1000.0);
-
-    $movement = $product->stockMovements()->where('type', StockMovementType::Production->value)->sole();
-    expect((float) $movement->quantity)->toBe(-1.0);
-});
-
-test('el preview de producción muestra el artículo con su propia unidad', function () {
-    [, $tenant] = stockTenantUser();
-    $product = chocolatada($tenant);
-    $recipe = milkshakeRecipe($tenant);
-    $recipe->productLines()->create(['product_id' => $product->id, 'quantity' => 0.25, 'unit' => Unit::Litro->value]);
-    $milkshake = manufacturedProduct($tenant, $recipe);
-
-    $preview = productionService()->preview($milkshake, 1, $tenant->defaultLocation());
-
-    expect($preview['lines'])->toHaveCount(1)
-        ->and($preview['lines'][0]['name'])->toBe($product->name)
-        ->and($preview['lines'][0]['unit'])->toBe('L')
-        ->and($preview['lines'][0]['quantity'])->toBe(0.25);
 });
 
 // --- Guardas ---

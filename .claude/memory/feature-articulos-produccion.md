@@ -7,6 +7,10 @@ metadata:
 
 # Módulo Artículos (Productos) + Producción
 
+> ⚠️ **v0.23.0 retiró Producción (producir, orden instantánea, historial) y los pedidos P5 (órdenes, pedidos por destino,
+> recurrentes).** Lo que sigue sobre esas partes es **historia**, no el estado actual; ver [[feature-planillas-pedidos]].
+> Siguen vigentes: Artículos, precios, costos, Stock, Compras y `RecipeExploder` (lo usa el Dashboard).
+
 Rama: `v0.13.0/articulos-produccion` (sobre `master`). En curso desde 21/07/2026.
 Plan completo en el archivo de plan de la sesión. Ver [[project-roadmap]], [[feature-existencias]].
 

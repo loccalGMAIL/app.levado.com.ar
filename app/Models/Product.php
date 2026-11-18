@@ -62,12 +62,12 @@ class Product extends Model
     }
 
     /**
-     * Elaborados que se pueden producir hoy: activos, con receta, y que NO
+     * Elaborados que se pueden planificar hoy: activos, con receta, y que NO
      * estén en una categoría marcada explícitamente "no se produce". Sin
      * categoría = producible (el default es incluir); la categoría sólo
      * sirve para EXCLUIR un área que se costea pero no se fabrica desde acá
-     * (ej. cafetería). Único filtro compartido por la orden instantánea y
-     * las órdenes de producción — no repetir la cadena en dos lugares.
+     * (ej. cafetería). Lo usan las planillas de pedidos — no repetir la
+     * cadena en otro lugar.
      *
      * @param  Builder<Product>  $query
      */
@@ -344,8 +344,7 @@ class Product extends Model
 
     /**
      * Historial del COSTO de compra (sólo reventa). El elaborado no registra
-     * logs acá — su costo vigente vive en la receta; su historial de
-     * fabricaciones es productions(), no esto.
+     * logs acá — su costo vigente vive en la receta.
      *
      * @return HasMany<ProductCostLog, $this>
      */
@@ -365,19 +364,6 @@ class Product extends Model
     public function latestCostLog(): HasOne
     {
         return $this->hasOne(ProductCostLog::class)->latestOfMany('recorded_at');
-    }
-
-    /**
-     * Fabricaciones de este elaborado (vacía en la reventa). Es el historial
-     * de "cuánto costó cada vez que se produjo" — no confundir con costLogs():
-     * el costo VIGENTE de un elaborado sigue saliendo de la receta (currentCost()),
-     * esto solo lista lo que pasó en cada evento de producción.
-     *
-     * @return HasMany<Production, $this>
-     */
-    public function productions(): HasMany
-    {
-        return $this->hasMany(Production::class);
     }
 
     /**

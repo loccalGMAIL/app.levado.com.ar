@@ -7,7 +7,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * Arma los datos de la receta imprimible (sin costos ni precios: es la hoja
- * que se le entrega a quien produce). Como ProductionOrderSheets, devuelve
+ * que se le entrega a quien produce). Devuelve
  * sólo arrays/escalares -la vista se renderiza también para dompdf, y un
  * lazy load ahí adentro deja un PDF corrupto en vez de un error legible-.
  */

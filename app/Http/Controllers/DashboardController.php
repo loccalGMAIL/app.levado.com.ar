@@ -8,7 +8,6 @@ use App\Models\Notification;
 use App\Models\ProductPrice;
 use App\Models\Tenant;
 use App\Services\NotificationService;
-use App\Services\ProductionOrderService;
 use App\Services\RecipeCostCalculator;
 use App\Services\RecipeExploder;
 use Illuminate\View\View;
@@ -17,7 +16,6 @@ class DashboardController extends Controller
 {
     public function __construct(
         private readonly NotificationService $notifications,
-        private readonly ProductionOrderService $productionOrders,
         private readonly RecipeCostCalculator $calculator,
         private readonly RecipeExploder $exploder,
     ) {}
@@ -168,10 +166,6 @@ class DashboardController extends Controller
         $activeRecipeCount = $tenant->recipes()->active()->count();
         $packagingCount = $tenant->packagings()->active()->count();
 
-        // Para los botones "+ Nuevo pedido" / "⚡ Orden instantánea": mismos
-        // modales de production-orders/index.blade.php, mismos datos.
-        [$locations, $customers, $products] = $this->productionOrders->destinationAndCatalogData($tenant);
-
         // Para el modal "+ Nueva compra" (mismo dato que junta PurchaseController::index()).
         $suppliers = $tenant->suppliers()->active()->orderBy('name')->get();
 
@@ -291,9 +285,6 @@ class DashboardController extends Controller
             'lowMarginCount',
             'costDistributionForChart',
             'topRecipesForChart',
-            'locations',
-            'customers',
-            'products',
             'suppliers',
         ));
     }

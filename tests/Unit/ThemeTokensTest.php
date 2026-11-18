@@ -19,7 +19,6 @@ const VISTAS_CON_COLORES_LITERALES = [
     'emails/',
     'errors/minimal.blade.php',
     'fixed-costs/report/_styles.blade.php',
-    'production-orders/sheets/_styles.blade.php',
 ];
 
 /**
