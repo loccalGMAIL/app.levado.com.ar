@@ -213,3 +213,32 @@ it('descarta una sugerencia de reventa si el negocio no tiene catálogo de reven
 
     expect($line['matched_type'])->toBeNull();
 });
+
+it('normaliza los descuentos: importe en positivo, tipo deducido y line_index fuera de rango a null', function () {
+    fakeModelResponse([
+        'lines' => [
+            ['raw_name' => 'HARINA', 'quantity' => 1, 'unit' => 'u', 'unit_price' => 100],
+            ['raw_name' => 'AZUCAR', 'quantity' => 1, 'unit' => 'u', 'unit_price' => 100],
+        ],
+        'discounts' => [
+            ['description' => 'Bonif.', 'kind' => 'percent', 'rate' => 10, 'amount' => -25.5, 'line_index' => 1],
+            ['description' => 'Desc. pie', 'kind' => 'invento', 'rate' => 5, 'amount' => null, 'line_index' => 9],
+            ['description' => 'Sin números', 'kind' => 'amount'],
+            'basura',
+        ],
+    ]);
+
+    $draft = app(InvoiceExtractor::class)->extract('b64', 'image/jpeg', collect(), collect(), collect());
+
+    expect($draft['discounts'])->toHaveCount(2)
+        ->and($draft['discounts'][0])->toMatchArray(['kind' => 'amount', 'amount' => 25.5, 'line_index' => 1])
+        ->and($draft['discounts'][1])->toMatchArray(['kind' => 'percent', 'rate' => 5.0, 'amount' => null, 'line_index' => null]);
+});
+
+it('devuelve una lista de descuentos vacía si el modelo no manda ninguno', function () {
+    fakeModelResponse(['lines' => []]);
+
+    $draft = app(InvoiceExtractor::class)->extract('b64', 'image/jpeg', collect(), collect(), collect());
+
+    expect($draft['discounts'])->toBe([]);
+});

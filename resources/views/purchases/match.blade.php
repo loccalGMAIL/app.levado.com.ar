@@ -222,6 +222,9 @@
                                                             <option value="excluded" @selected($currentValue === 'excluded')>
                                                                 Consumo personal / No imputable
                                                             </option>
+                                                            <option value="discount">
+                                                                Es un descuento de la factura
+                                                            </option>
                                                         </optgroup>
                                                         @if($ingredients->isNotEmpty())
                                                             <optgroup label="Insumos">
@@ -350,8 +353,20 @@
                                                         </button>
                                                     </div>
 
+                                                    {{-- Descuento de la factura impreso como un renglón: se convierte en un
+                                                         descuento por monto y el renglón desaparece. No toca costos. --}}
+                                                    <div x-show="isDiscount" x-cloak class="flex items-center gap-2 flex-wrap">
+                                                        <span class="text-xs text-masa-madre">
+                                                            El renglón pasa a ser un descuento de toda la factura (editable luego en «Descuentos»).
+                                                        </span>
+                                                        <button type="submit"
+                                                            class="px-3 py-1.5 bg-tinta text-white text-sm rounded hover:bg-horno transition-colors whitespace-nowrap">
+                                                            Convertir en descuento
+                                                        </button>
+                                                    </div>
+
                                                     {{-- Botón cuando aún no hay catálogUnit (selección recién elegida sin calcular) --}}
-                                                    <div x-show="selected && !catalogUnit && !incompatiblePkg && !isExcluded" x-cloak>
+                                                    <div x-show="selected && !catalogUnit && !incompatiblePkg && !isExcluded && !isDiscount" x-cloak>
                                                         <button type="submit"
                                                             class="px-3 py-1.5 bg-tinta text-white text-sm rounded hover:bg-horno transition-colors">
                                                             Asociar

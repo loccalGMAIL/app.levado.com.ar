@@ -476,3 +476,29 @@ Percepciones en notas de crédito, libro IVA compras / reportes fiscales, padron
 - «Leer factura» es el botón principal (relleno); «+ Nueva compra» queda con borde. `x-list-header` fuerza `inline-flex` en sus hijos (`[&>*]:inline-flex`): para ocultar uno por breakpoint hay que usar `!hidden` / `sm:!hidden`.
 - En el celular «Leer factura» es un `<label>` con `<input capture="environment">`: abre la cámara en el acto y deja la foto en IndexedDB (`resources/js/invoice-handoff.js`); `scan/create.blade.php` la recoge con `?desde=camara`. En el modo mobile de DevTools `capture` se ignora (abre el selector de archivos): hace falta un celular real.
 - El modal `purchase-create` va con `:focusable="false"` para que no se abra solo el desplegable de proveedor.
+
+## Descuentos de compra (v0.25.0)
+
+**El problema:** un cliente recibe facturas con descuentos a toda la factura (al pie) o impresos como un renglón más entre los productos, porcentuales o por monto.
+
+### Decisiones del usuario (no se deducen solas)
+
+- **Afecta sólo el total a pagar, nunca el costo.** `PurchaseLineRecorder` no sabe de descuentos: sin price log, propagación a recetas ni cambio de stock. Test-ancla: *«un descuento no cambia el costo del insumo al imputar el renglón»*.
+- **Antes del IVA:** baja el neto, el IVA y la base de las percepciones automáticas.
+- **Global por defecto; atable a un renglón.** Fuera de alcance: la columna «% Bonif.» por renglón.
+
+### Modelo
+
+`purchase_discounts`: `purchase_id`, `purchase_line_id` (nullable = toda la factura; `cascadeOnDelete`), `description`, `kind` (`DiscountKind`: percent/amount), `rate`, `amount`, `iva_amount`. Igual que las percepciones, `amount` e `iva_amount` se **persisten siempre** porque el índice suma por SQL.
+
+- `PurchaseDiscountSync` (espejo de `PurchasePerceptionSync`): `store/update/refresh`. Porcentaje = base × tasa, con base = subtotal del renglón destino o Σ de **todos** los renglones (excluidos y sin cargo incluidos). Por monto: fijo, nunca se recalcula. IVA: alícuota del renglón destino, o la efectiva de la factura si es global.
+- **Orden obligatorio:** `discountSync->refresh()` **antes** de `perceptionSync->refresh()` en cada lugar que cambia renglones (`storeLine`, `updateLine`, `updateLinePrice`, `destroyLine`, el match que convierte en descuento). Si se agrega otro camino que cambie renglones, hay que llamar a los dos.
+- `Purchase::discountedLines()` prorratea los descuentos globales entre los renglones; de ahí salen `taxedNet()` y `baseFor()`. `totalAmount()` **no cambia** (neto antes de descuentos).
+
+### Escaneo y conversión
+
+- `InvoiceExtractor` devuelve `discounts[]`. El tipo se **deduce** (importe presente → monto), no se confía en el que diga el modelo: el importe impreso manda sobre el %, para cerrar contra el papel.
+- `PurchaseScanController::store()` guarda un mapa índice del formulario → renglón creado: por eso se sacó el `->values()` de `$rows`. Un descuento cuyo renglón no se importó queda global.
+- Centinela `PurchaseController::DISCOUNT_MATCH = 'discount'` en `matchLine()` (junto a `EXCLUDED_MATCH`): borra el renglón (revirtiendo su stock) y crea un descuento global por monto con |subtotal|.
+
+Ver [[feature-compras]] (percepciones v0.17.0) y [[feature-existencias]].

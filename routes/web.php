@@ -40,6 +40,7 @@ use App\Http\Controllers\ProductCostHistoryController;
 use App\Http\Controllers\ProductPriceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PurchaseDiscountController;
 use App\Http\Controllers\PurchasePerceptionController;
 use App\Http\Controllers\PurchaseScanController;
 use App\Http\Controllers\RecipeBakerController;
@@ -257,6 +258,10 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::post('purchases/{purchase}/perceptions', [PurchasePerceptionController::class, 'store'])->name('purchases.perceptions.store');
     Route::patch('purchases/{purchase}/perceptions/{perception}', [PurchasePerceptionController::class, 'update'])->scopeBindings()->name('purchases.perceptions.update');
     Route::delete('purchases/{purchase}/perceptions/{perception}', [PurchasePerceptionController::class, 'destroy'])->scopeBindings()->name('purchases.perceptions.destroy');
+
+    Route::post('purchases/{purchase}/discounts', [PurchaseDiscountController::class, 'store'])->name('purchases.discounts.store');
+    Route::patch('purchases/{purchase}/discounts/{discount}', [PurchaseDiscountController::class, 'update'])->scopeBindings()->name('purchases.discounts.update');
+    Route::delete('purchases/{purchase}/discounts/{discount}', [PurchaseDiscountController::class, 'destroy'])->scopeBindings()->name('purchases.discounts.destroy');
 
     Route::post('perception-concepts', [PerceptionConceptController::class, 'store'])->name('perception-concepts.store');
     Route::put('perception-concepts/{perceptionConcept}', [PerceptionConceptController::class, 'update'])->name('perception-concepts.update');

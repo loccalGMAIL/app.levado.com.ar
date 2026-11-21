@@ -295,6 +295,21 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.25.0] — 2026-11-21
+
+### Agregado
+
+- **Descuentos en las compras.** Cada compra tiene su listado de **Descuentos**, porcentuales o por monto, aplicados a **toda la factura** o a **un renglón puntual**. Se descuentan del neto **antes del IVA**: bajan el IVA y la base de las percepciones automáticas. Un descuento por monto es fijo (cierra contra el papel); uno porcentual se recalcula si cambian los renglones. El detalle muestra Neto − Descuentos + IVA + Percepciones, y el índice resta los descuentos del total.
+- **Un descuento afecta sólo el total a pagar, no el costo.** No cambia el costo de los insumos, el historial de precios, las recetas ni el stock.
+- **Lectura con IA.** La factura escaneada separa los descuentos (al pie o impresos como un renglón más) de los renglones de producto, y la pantalla de revisión los muestra para corregirlos, con el renglón al que se aplican.
+- **«Es un descuento de la factura»** en la pantalla de asociación: convierte un renglón ya cargado en un descuento global por monto (revierte su stock si estaba aplicado). Resuelve las facturas viejas y los descuentos que la IA no detectó.
+
+### Técnico
+
+- Tabla `purchase_discounts` (`purchase_line_id` nullable con `cascadeOnDelete`; `amount` e `iva_amount` siempre persistidos), enum `DiscountKind`, modelo `PurchaseDiscount`, servicio `PurchaseDiscountSync` (espejo de `PurchasePerceptionSync`) y rutas `purchases.discounts.*`.
+- Todo lugar que cambia renglones llama a `discountSync->refresh()` **antes** de `perceptionSync->refresh()`: la base de las percepciones sale ya descontada (`Purchase::discountedLines()`).
+- `InvoiceExtractor` devuelve `discounts[]` (fail-closed: el importe impreso manda sobre el porcentaje; `line_index` fuera de rango pasa a toda la factura). `php artisan migrate` y `npm run build`.
+
 ## [0.24.0] — 2026-11-18
 
 ### Agregado

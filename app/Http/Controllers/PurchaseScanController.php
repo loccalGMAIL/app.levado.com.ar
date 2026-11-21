@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CatalogItemType;
+use App\Enums\DiscountKind;
 use App\Enums\PerceptionBase;
 use App\Enums\ProductType;
 use App\Enums\Unit;
@@ -14,6 +15,7 @@ use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceExtractor;
 use App\Services\InvoiceImagePreparer;
 use App\Services\ProductLinkMemory;
+use App\Services\PurchaseDiscountSync;
 use App\Services\PurchaseLineRecorder;
 use App\Services\PurchasePerceptionSync;
 use App\Services\SupplierMatcher;
@@ -37,6 +39,7 @@ class PurchaseScanController extends Controller
         private readonly SupplierMatcher $supplierMatcher,
         private readonly ProductLinkMemory $linkMemory,
         private readonly PurchasePerceptionSync $perceptionSync,
+        private readonly PurchaseDiscountSync $discountSync,
     ) {}
 
     public function create(): View
@@ -188,8 +191,7 @@ class PurchaseScanController extends Controller
             ->filter(fn ($row) => ($row['include'] ?? false)
                 && filled($row['quantity_purchased'] ?? null)
                 && filled($row['purchase_unit'] ?? null)
-                && filled($row['unit_price'] ?? null))
-            ->values();
+                && filled($row['unit_price'] ?? null));
 
         if ($rows->isEmpty()) {
             return back()->withInput()->with('error', 'Marcá al menos un renglón para guardar la compra.');
@@ -215,14 +217,18 @@ class PurchaseScanController extends Controller
                 'default_iva_rate' => $data['default_iva_rate'] ?? null,
             ]);
 
-            foreach ($rows as $row) {
+            // Índice del renglón en el formulario de revisión → renglón creado. Los
+            // descuentos atados a un renglón lo usan para encontrar su destino.
+            $createdLineIds = [];
+
+            foreach ($rows as $index => $row) {
                 $hit = $recalled[$this->linkMemory->fold((string) ($row['raw_name'] ?? ''))] ?? null;
 
                 [$type, $id] = $hit !== null
                     ? [$hit['purchaseable_type'], $hit['purchaseable_id']]
                     : $this->validSuggestion($row, $ingredientIds, $packagingIds, $productIds);
 
-                $this->lineRecorder->storePending($purchase, [
+                $createdLineIds[$index] = $this->lineRecorder->storePending($purchase, [
                     'raw_name' => $row['raw_name'] ?? null,
                     'purchaseable_type' => $type,
                     'purchaseable_id' => $id,
@@ -230,6 +236,26 @@ class PurchaseScanController extends Controller
                     'purchase_unit' => $row['purchase_unit'],
                     'unit_price' => $row['unit_price'],
                     'iva_rate' => $row['iva_rate'] ?? 0.21,
+                ])->id;
+            }
+
+            // Los descuentos van antes que las percepciones: la base automática de
+            // una percepción es el neto ya descontado. Un descuento cuyo renglón
+            // destino no se importó queda como descuento de toda la factura.
+            foreach ($data['discounts'] ?? [] as $discount) {
+                $kind = $discount['kind'] ?? DiscountKind::Amount->value;
+                $hasValue = $kind === DiscountKind::Percent->value
+                    ? filled($discount['rate'] ?? null)
+                    : filled($discount['amount'] ?? null);
+
+                if (! $hasValue) {
+                    continue;
+                }
+
+                $this->discountSync->store($purchase, [
+                    ...$discount,
+                    'kind' => $kind,
+                    'purchase_line_id' => $createdLineIds[(int) ($discount['line_index'] ?? -1)] ?? null,
                 ]);
             }
 

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\CatalogItemType;
+use App\Enums\DiscountKind;
 use App\Enums\Jurisdiction;
 use App\Enums\PerceptionType;
 use App\Enums\Unit;
@@ -32,7 +33,8 @@ class InvoiceExtractor
      * @return array{
      *     header: array{supplier_name: ?string, cuit: ?string, invoice_number: ?string, invoice_date: ?string, total: ?float},
      *     lines: array<int, array{raw_name: ?string, quantity: ?float, unit: ?string, unit_price: ?float, matched_type: ?string, matched_id: ?int}>,
-     *     perceptions: array<int, array{type: string, jurisdiction: ?string, description: string, base: ?float, rate: ?float, amount: ?float}>
+     *     perceptions: array<int, array{type: string, jurisdiction: ?string, description: string, base: ?float, rate: ?float, amount: ?float}>,
+     *     discounts: array<int, array{description: string, kind: string, rate: ?float, amount: ?float, line_index: ?int}>
      * }
      */
     public function extract(string $base64, string $mimeType, Collection $ingredients, Collection $packagings, Collection $products): array
@@ -178,6 +180,18 @@ class InvoiceExtractor
             - amount: el IMPORTE impreso en pesos. Copialo, NO lo calcules.
             El IVA discriminado (21%, 10,5%) NO es una percepción: no lo incluyas acá.
 
+            discounts: los descuentos y bonificaciones que RESTAN del total. Pueden venir al pie de la factura
+            ("Descuento", "Bonif.", "Desc. 10%") o como un renglón más entre los productos (con importe negativo,
+            o con una descripción tipo "DESCUENTO" / "BONIFICACION" que no es un producto).
+            Un descuento va SOLO acá: NO lo incluyas en "lines". Una entrada por cada uno; lista vacía si no hay ninguno.
+            - description: el texto tal como figura.
+            - kind: "percent" si figura como porcentaje, "amount" si figura como importe en pesos.
+            - rate: el porcentaje si figura (10 para "10%"), sino null.
+            - amount: el IMPORTE impreso en pesos, SIEMPRE en positivo (aunque figure con signo menos). Copialo, NO lo calcules. null si sólo figura el porcentaje.
+            - line_index: el índice (empezando en 0) del renglón de "lines" al que se refiere, SOLO si el descuento
+              es inequívocamente de un producto puntual. Si es de toda la factura o no estás seguro, null.
+              El índice cuenta únicamente los renglones que devolvés en "lines" (sin los descuentos).
+
             Ejemplos de transcripción fiel (sin cálculos):
             - "HARINA 3/0 X 25 Kg" · Cantidad 200 · Unitario 13.891,40
               → {"raw_name":"HARINA 3/0 X 25 Kg","quantity":200,"unit":"u","unit_price":13891.40,...}
@@ -193,6 +207,9 @@ class InvoiceExtractor
               "total": number|null,
               "perceptions": [
                 { "type": string, "jurisdiction": string|null, "description": string, "base": number|null, "rate": number|null, "amount": number|null }
+              ],
+              "discounts": [
+                { "description": string, "kind": "percent"|"amount", "rate": number|null, "amount": number|null, "line_index": number|null }
               ],
               "lines": [
                 {
@@ -284,7 +301,48 @@ class InvoiceExtractor
             ],
             'lines' => $lines,
             'perceptions' => $this->normalizePerceptions($data['perceptions'] ?? []),
+            'discounts' => $this->normalizeDiscounts($data['discounts'] ?? [], count($lines)),
         ];
+    }
+
+    /**
+     * Fail-closed: el tipo se deduce de lo que haya (importe → monto, sólo porcentaje →
+     * porcentaje) sin confiar en el que diga el modelo; se descartan las filas sin importe ni porcentaje;
+     * el importe se toma en positivo (es lo impreso, no un cálculo) y un line_index
+     * fuera de rango pasa a null, o sea «toda la factura».
+     *
+     * @return array<int, array{description: string, kind: string, rate: ?float, amount: ?float, line_index: ?int}>
+     */
+    private function normalizeDiscounts(mixed $raw, int $linesCount): array
+    {
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        return collect($raw)
+            ->filter(fn ($row) => is_array($row))
+            ->map(function (array $row) use ($linesCount) {
+                $rate = $this->toFloat($row['rate'] ?? null);
+                $amount = $this->toFloat($row['amount'] ?? null);
+                $amount = $amount !== null ? abs($amount) : null;
+                $rate = $rate !== null ? abs($rate) : null;
+
+                // El importe impreso manda sobre el porcentaje: así la factura cierra contra el papel.
+                $kind = $amount !== null ? DiscountKind::Amount : DiscountKind::Percent;
+
+                $index = is_numeric($row['line_index'] ?? null) ? (int) $row['line_index'] : null;
+
+                return [
+                    'description' => filled($row['description'] ?? null) ? (string) $row['description'] : 'Descuento',
+                    'kind' => $kind->value,
+                    'rate' => $rate,
+                    'amount' => $amount,
+                    'line_index' => $index !== null && $index >= 0 && $index < $linesCount ? $index : null,
+                ];
+            })
+            ->filter(fn (array $row) => $row['amount'] !== null || $row['rate'] !== null)
+            ->values()
+            ->all();
     }
 
     /**

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 /**
  * Atributo agregado por un join en NotificationService.
@@ -83,16 +84,51 @@ class Purchase extends Model
     }
 
     /**
-     * Base automática de las percepciones: el neto de los renglones gravados con
-     * IVA. Una compra sin ningún renglón gravado (sin factura, exenta) cae al neto total.
+     * @return HasMany<PurchaseDiscount, $this>
+     */
+    public function discounts(): HasMany
+    {
+        return $this->hasMany(PurchaseDiscount::class);
+    }
+
+    /**
+     * Renglones con su neto ya descontado. Un descuento de renglón resta de ese
+     * renglón; uno global se prorratea entre todos según su subtotal. Es la base
+     * de las percepciones automáticas: el descuento va antes del IVA.
+     *
+     * @return Collection<int, array{net: float, iva_rate: float}>
+     */
+    private function discountedLines(): Collection
+    {
+        $lines = $this->relationLoaded('lines') ? $this->lines : $this->lines()->get(['id', 'subtotal', 'iva_rate']);
+        $discounts = $this->relationLoaded('discounts') ? $this->discounts : $this->discounts()->get(['purchase_line_id', 'amount']);
+
+        $byLine = $discounts->whereNotNull('purchase_line_id')
+            ->groupBy('purchase_line_id')
+            ->map(fn ($group) => (float) $group->sum('amount'));
+        $global = (float) $discounts->whereNull('purchase_line_id')->sum('amount');
+        $total = (float) $lines->sum(fn ($l) => (float) $l->subtotal);
+
+        return $lines->map(function ($line) use ($byLine, $global, $total) {
+            $subtotal = (float) $line->subtotal;
+            $allocated = ($byLine[$line->id] ?? 0.0) + ($total > 0 ? $global * $subtotal / $total : 0.0);
+
+            return ['net' => $subtotal - $allocated, 'iva_rate' => (float) $line->iva_rate];
+        });
+    }
+
+    /**
+     * Base automática de las percepciones: el neto (ya descontado) de los renglones
+     * gravados con IVA. Una compra sin ningún renglón gravado (sin factura, exenta)
+     * cae al neto total.
      */
     public function taxedNet(): float
     {
-        $lines = $this->relationLoaded('lines') ? $this->lines : $this->lines()->get(['subtotal', 'iva_rate']);
+        $lines = $this->discountedLines();
 
-        $taxed = $lines->filter(fn ($l) => (float) $l->iva_rate > 0)->sum(fn ($l) => (float) $l->subtotal);
+        $taxed = $lines->filter(fn ($l) => $l['iva_rate'] > 0)->sum('net');
 
-        return (float) ($taxed > 0 ? $taxed : $lines->sum(fn ($l) => (float) $l->subtotal));
+        return (float) ($taxed > 0 ? $taxed : $lines->sum('net'));
     }
 
     /**
@@ -105,12 +141,26 @@ class Purchase extends Model
             return $this->taxedNet();
         }
 
-        $lines = $this->relationLoaded('lines') ? $this->lines : $this->lines()->get(['subtotal', 'iva_rate']);
+        $lines = $this->discountedLines();
 
         return (float) match ($base) {
-            PerceptionBase::NetTotal => $lines->sum(fn ($l) => (float) $l->subtotal),
-            PerceptionBase::Gross => $lines->sum(fn ($l) => (float) $l->subtotal * (1 + (float) $l->iva_rate)),
+            PerceptionBase::NetTotal => $lines->sum('net'),
+            PerceptionBase::Gross => $lines->sum(fn ($l) => $l['net'] * (1 + $l['iva_rate'])),
         };
+    }
+
+    public function discountsTotal(): float
+    {
+        return (float) ($this->relationLoaded('discounts')
+            ? $this->discounts->sum('amount')
+            : $this->discounts()->sum('amount'));
+    }
+
+    public function discountsIva(): float
+    {
+        return (float) ($this->relationLoaded('discounts')
+            ? $this->discounts->sum('iva_amount')
+            : $this->discounts()->sum('iva_amount'));
     }
 
     /**
