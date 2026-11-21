@@ -177,6 +177,89 @@
                     </div>
                 </div>
 
+                {{-- Descuentos: bajan el total a pagar (antes del IVA), no el costo de los insumos --}}
+                @php
+                    $initialDiscounts = old('discounts', collect($draft['discounts'] ?? [])->map(fn ($d) => [
+                        'description' => $d['description'],
+                        'kind' => $d['kind'],
+                        'rate' => $d['rate'] ?? '',
+                        'amount' => $d['amount'] ?? '',
+                        'line_index' => $d['line_index'] ?? '',
+                    ])->all());
+                    $discountLineOptions = collect($draft['lines'] ?? [])->map(fn ($l, $i) => ['index' => $i, 'name' => $l['raw_name'] ?: 'Renglón '.($i + 1)])->values();
+                @endphp
+                <div class="bg-superficie rounded-lg shadow p-5"
+                    x-data="{
+                        rows: @js($initialDiscounts),
+                        add() { this.rows.push({ description: '', kind: 'percent', rate: '', amount: '', line_index: '' }); },
+                        remove(i) { this.rows.splice(i, 1); },
+                    }">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-sm font-semibold text-corteza">Descuentos</p>
+                        <button type="button" @click="add()"
+                            class="text-sm text-horno hover:text-corteza underline">+ Agregar descuento</button>
+                    </div>
+
+                    <p x-show="rows.length === 0" class="text-sm text-masa-madre">
+                        No se leyeron descuentos. Si la factura trae una bonificación (al pie o como un renglón más), agregala acá y no la marques como renglón.
+                    </p>
+
+                    <div class="space-y-3">
+                        <template x-for="(row, i) in rows" :key="i">
+                            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                                <div class="sm:col-span-3">
+                                    <label class="text-xs text-masa-madre">Descripción</label>
+                                    <input type="text" :name="`discounts[${i}][description]`" x-model="row.description"
+                                        class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <label class="text-xs text-masa-madre">Se aplica a</label>
+                                    <select :name="`discounts[${i}][line_index]`" x-model="row.line_index"
+                                        class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
+                                        <option value="">Toda la factura</option>
+                                        @foreach($discountLineOptions as $opt)
+                                            <option value="{{ $opt['index'] }}">{{ $opt['name'] }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="text-xs text-masa-madre">Tipo</label>
+                                    <select :name="`discounts[${i}][kind]`" x-model="row.kind"
+                                        class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm">
+                                        @foreach(\App\Enums\DiscountKind::cases() as $kind)
+                                            <option value="{{ $kind->value }}">{{ $kind->label() }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <template x-if="row.kind === 'percent'">
+                                        <div>
+                                            <label class="text-xs text-masa-madre">Porcentaje %</label>
+                                            <input type="number" :name="`discounts[${i}][rate]`" x-model="row.rate"
+                                                step="0.01" min="0" max="100"
+                                                class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm text-right">
+                                        </div>
+                                    </template>
+                                    <template x-if="row.kind === 'amount'">
+                                        <div>
+                                            <label class="text-xs text-masa-madre">Importe $</label>
+                                            <input type="number" :name="`discounts[${i}][amount]`" x-model="row.amount"
+                                                step="0.01" min="0"
+                                                class="block w-full border-gray-300 focus:border-horno focus:ring-horno rounded-md shadow-sm text-sm text-right">
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="sm:col-span-1 text-right">
+                                    <button type="button" @click="remove(i)" class="text-sm text-red-600 hover:underline" aria-label="Quitar">Quitar</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <p class="mt-3 text-xs text-masa-madre">
+                        El descuento se resta del neto antes del IVA. Si el renglón destino no se guarda, el descuento pasa a toda la factura.
+                    </p>
+                </div>
+
                 {{-- Percepciones e impuestos: listado propio, no por renglón --}}
                 @php
                     $initialPerceptions = old('perceptions', collect($draft['perceptions'] ?? [])->map(fn ($p) => [

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\CatalogItemType;
+use App\Enums\DiscountKind;
 use App\Enums\Jurisdiction;
 use App\Enums\PerceptionBase;
 use App\Enums\PerceptionType;
@@ -55,6 +56,14 @@ class StoreScannedPurchaseRequest extends FormRequest
             'perceptions.*.base_type' => ['nullable', Rule::enum(PerceptionBase::class)],
             'perceptions.*.rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'perceptions.*.amount' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+
+            'discounts' => ['array', 'max:20'],
+            'discounts.*.description' => ['nullable', 'string', 'max:255'],
+            'discounts.*.kind' => ['nullable', Rule::enum(DiscountKind::class)],
+            'discounts.*.rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'discounts.*.amount' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+            // Índice del renglón en el formulario de revisión; vacío = toda la factura.
+            'discounts.*.line_index' => ['nullable', 'integer', 'min:0'],
         ];
     }
 

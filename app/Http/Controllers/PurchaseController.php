@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CatalogItemType;
+use App\Enums\DiscountKind;
 use App\Enums\ProductType;
 use App\Enums\Unit;
 use App\Exceptions\IncompatibleUnitsException;
@@ -20,6 +21,7 @@ use App\Models\Tenant;
 use App\Services\AdminActivityRecorder;
 use App\Services\InvoiceImagePreparer;
 use App\Services\ProductLinkMemory;
+use App\Services\PurchaseDiscountSync;
 use App\Services\PurchaseLineRecorder;
 use App\Services\PurchasePerceptionSync;
 use App\Services\RecipeCostPropagator;
@@ -45,6 +47,9 @@ class PurchaseController extends Controller
      */
     public const EXCLUDED_MATCH = 'excluded';
 
+    /** Centinela del select de asociación: el renglón es un descuento de la factura. */
+    public const DISCOUNT_MATCH = 'discount';
+
     public function __construct(
         private readonly AdminActivityRecorder $recorder,
         private readonly PurchaseLineRecorder $lineRecorder,
@@ -53,6 +58,7 @@ class PurchaseController extends Controller
         private readonly ProductLinkMemory $linkMemory,
         private readonly RecipeCostPropagator $propagator,
         private readonly PurchasePerceptionSync $perceptionSync,
+        private readonly PurchaseDiscountSync $discountSync,
     ) {}
 
     public function index(): View
@@ -75,6 +81,8 @@ class PurchaseController extends Controller
             // invoice_total, que es lo que leyó la IA y puede venir mal.
             ->withSum('lines as lines_gross_total', DB::raw('subtotal * (1 + iva_rate)'))
             ->withSum('perceptions as perceptions_total', 'amount')
+            ->withSum('discounts as discounts_gross_total', DB::raw('amount + iva_amount'))
+            ->withSum('discounts as discounts_net_total', 'amount')
             ->when(request('search'), function ($q, $s) {
                 $q->where(function ($q2) use ($s) {
                     $q2->where('invoice_number', 'like', $this->containsPattern($s))
@@ -97,8 +105,8 @@ class PurchaseController extends Controller
             )->orderByDesc('purchases.id'),
             'items' => $query->orderBy('lines_count', $sortDir)->orderByDesc('id'),
             'total' => ($includeIva
-                ? $query->orderByRaw('(coalesce(lines_gross_total, 0) + coalesce(perceptions_total, 0)) '.$sortDir)
-                : $query->orderBy('net_total', $sortDir))->orderByDesc('id'),
+                ? $query->orderByRaw('(coalesce(lines_gross_total, 0) - coalesce(discounts_gross_total, 0) + coalesce(perceptions_total, 0)) '.$sortDir)
+                : $query->orderByRaw('(coalesce(net_total, 0) - coalesce(discounts_net_total, 0)) '.$sortDir))->orderByDesc('id'),
             default => $query->orderBy('invoice_date', $sortDir)->orderByDesc('id'),
         };
 
@@ -204,7 +212,7 @@ class PurchaseController extends Controller
         $this->authorize('view', $purchase);
         $tenant = app(Tenant::class);
 
-        $purchase->load(['supplier', 'lines', 'creditNotes.lines', 'perceptions']);
+        $purchase->load(['supplier', 'lines', 'creditNotes.lines', 'perceptions', 'discounts']);
 
         $perceptionConcepts = $tenant->perceptionConcepts()->active()->orderBy('name')->get();
 
@@ -272,6 +280,7 @@ class PurchaseController extends Controller
         ]);
 
         $line->refresh();
+        $this->discountSync->refresh($purchase);
         $this->perceptionSync->refresh($purchase);
 
         $this->recorder->record(
@@ -291,14 +300,20 @@ class PurchaseController extends Controller
         $totalIva = (float) $totals->total_iva;
         $perceptions = $purchase->perceptions()->get(['id', 'amount']);
         $totalPercepcion = (float) $perceptions->sum('amount');
+        $discounts = $purchase->discounts()->get(['id', 'amount', 'iva_amount']);
+        $totalDiscount = (float) $discounts->sum('amount');
+        $totalDiscountIva = (float) $discounts->sum('iva_amount');
 
         return response()->json([
             'unit_price' => (float) $line->unit_price,
             'total_subtotal' => $totalSubtotal,
             'total_iva' => $totalIva,
             'total_percepcion' => $totalPercepcion,
+            'total_discount' => $totalDiscount,
+            'total_discount_iva' => $totalDiscountIva,
             'perceptions' => $perceptions->map(fn ($p) => ['id' => $p->id, 'amount' => (float) $p->amount])->all(),
-            'grand_total' => $totalSubtotal + $totalIva + $totalPercepcion,
+            'discounts' => $discounts->map(fn ($d) => ['id' => $d->id, 'amount' => (float) $d->amount])->all(),
+            'grand_total' => $totalSubtotal - $totalDiscount + $totalIva - $totalDiscountIva + $totalPercepcion,
         ]);
     }
 
@@ -309,6 +324,7 @@ class PurchaseController extends Controller
         // Detail = faithful digitised invoice. Adding a line just records what's
         // on the invoice; the cost is imputed later in the match step.
         $line = $this->lineRecorder->storePending($purchase, $request->validated());
+        $this->discountSync->refresh($purchase);
         $this->perceptionSync->refresh($purchase);
 
         $this->recorder->record(
@@ -376,6 +392,7 @@ class PurchaseController extends Controller
         $line->setRelation('purchase', $purchase->loadMissing('tenant'));
 
         $this->lineRecorder->recompute($line, $request->validated());
+        $this->discountSync->refresh($purchase);
         $this->perceptionSync->refresh($purchase);
 
         $this->recorder->record(
@@ -402,6 +419,7 @@ class PurchaseController extends Controller
             $line->delete();
         });
 
+        $this->discountSync->refresh($purchase);
         $this->perceptionSync->refresh($purchase);
 
         $this->recorder->record(
@@ -544,6 +562,33 @@ class PurchaseController extends Controller
             });
 
             return back()->with('status', 'Renglón marcado como pendiente.');
+        }
+
+        // Centinela del select: el renglón es en realidad un descuento de la factura
+        // ("BONIF. 10%" impreso como un renglón más). Se convierte en un descuento
+        // global por monto y el renglón desaparece: un descuento no es un ítem.
+        if ($match === self::DISCOUNT_MATCH) {
+            DB::transaction(function () use ($line, $request, $tenant, $purchase) {
+                if ($line->isApplied()) {
+                    $this->stock->reversePurchaseLineEntry($line, $request->user());
+                }
+
+                $description = $line->raw_name;
+                $amount = abs((float) $line->subtotal);
+
+                $this->linkMemory->forget($tenant, $purchase->supplier_id, $line->raw_name);
+                $line->delete();
+
+                $this->discountSync->store($purchase, [
+                    'description' => $description,
+                    'kind' => DiscountKind::Amount->value,
+                    'amount' => $amount,
+                ]);
+                $this->discountSync->refresh($purchase);
+                $this->perceptionSync->refresh($purchase);
+            });
+
+            return back()->with('status', 'Renglón convertido en descuento de la factura.');
         }
 
         // Centinela del select: el renglón no corresponde a ningún ítem del catálogo

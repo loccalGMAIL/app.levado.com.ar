@@ -34,6 +34,11 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
             return this.needsPkgQty || this.packDivisible;
         },
 
+        // Centinela del select: el renglón en realidad es un descuento de la factura.
+        get isDiscount() {
+            return this.selected === 'discount';
+        },
+
         // Centinela del select: el renglón no es un insumo del catálogo.
         get isExcluded() {
             return this.selected === 'excluded';
@@ -66,7 +71,7 @@ window.matchRow = function matchRow(selected, unitPrice, purchaseUnit, descripti
 
             // No es un insumo: no hay costo que calcular. unitCost en 0 deja el hidden
             // unit_cost vacío, y catalogUnit vacío mantiene oculto el bloque de cálculo.
-            if (this.isExcluded) {
+            if (this.isExcluded || this.isDiscount) {
                 this.unitCost = 0;
                 return;
             }

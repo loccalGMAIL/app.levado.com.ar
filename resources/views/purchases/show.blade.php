@@ -18,6 +18,19 @@
             'base_type' => $c->base_type->value,
         ]]);
 
+        $errorsInDiscount = $errors->hasAny(['kind', 'rate', 'amount', 'description', 'purchase_line_id']) && old('_form') === 'discount';
+        $editingDiscount = null;
+        if ($errorsInDiscount) {
+            $editingDiscount = [
+                'id'               => old('discount_id') ?: null,
+                'description'      => old('description', ''),
+                'kind'             => old('kind', 'percent'),
+                'rate'             => old('rate', ''),
+                'amount'           => old('amount', ''),
+                'purchase_line_id' => old('purchase_line_id', ''),
+            ];
+        }
+
         $editingPerception = null;
         if ($errorsInPerception) {
             $editingPerception = [
@@ -54,7 +67,9 @@
         $totalSubtotal   = $purchase->lines->sum(fn ($l) => (float) $l->subtotal);
         $totalIva        = $purchase->lines->sum(fn ($l) => (float) $l->subtotal * (float) $l->iva_rate);
         $totalPercepcion = $purchase->perceptionsTotal();
-        $grandTotal      = $totalSubtotal + $totalIva + $totalPercepcion;
+        $totalDiscount   = $purchase->discountsTotal();
+        $totalDiscountIva = $purchase->discountsIva();
+        $grandTotal      = $totalSubtotal - $totalDiscount + $totalIva - $totalDiscountIva + $totalPercepcion;
     @endphp
 
     <div class="py-8 px-6 lg:px-8"
@@ -73,7 +88,15 @@
             tfootSubtotal: {{ $totalSubtotal }},
             tfootIva: {{ $totalIva }},
             tfootPercepcion: {{ $totalPercepcion }},
+            tfootDiscount: {{ $totalDiscount }},
+            tfootDiscountIva: {{ $totalDiscountIva }},
             tfootGrandTotal: {{ $grandTotal }},
+            editingDiscount: {{ Js::from($editingDiscount) }},
+            openDiscount(discount) {
+                this.editingDiscount = discount;
+                $dispatch('open-modal', 'discount-form');
+            },
+            discountAmounts: {{ Js::from($purchase->discounts->mapWithKeys(fn ($d) => [$d->id => (float) $d->amount])) }},
             perceptionAmounts: {{ Js::from($purchase->perceptions->mapWithKeys(fn ($p) => [$p->id => (float) $p->amount])) }},
             fmt(n) { return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
         }"
@@ -81,8 +104,11 @@
             tfootSubtotal   = $event.detail.total_subtotal;
             tfootIva        = $event.detail.total_iva;
             tfootPercepcion = $event.detail.total_percepcion;
+            tfootDiscount   = $event.detail.total_discount;
+            tfootDiscountIva = $event.detail.total_discount_iva;
             tfootGrandTotal = $event.detail.grand_total;
             ($event.detail.perceptions || []).forEach(p => perceptionAmounts[p.id] = p.amount);
+            ($event.detail.discounts || []).forEach(d => discountAmounts[d.id] = d.amount);
         ">
 
         {{-- Botón volver --}}
@@ -153,7 +179,7 @@
                         {{-- Con IVA o percepciones el protagonista es el total del comprobante;
                              el neto de los renglones pasa a ser el dato secundario. Sin ninguno de
                              los dos, el total de renglones es el único importe y queda destacado. --}}
-                        @if($totalIva > 0 || $totalPercepcion > 0)
+                        @if($totalIva > 0 || $totalPercepcion > 0 || $totalDiscount > 0)
                             <div>
                                 <p class="text-xs text-masa-madre">Total factura{{ $totalIva > 0 ? ' (con IVA)' : '' }}</p>
                                 <p class="text-lg sm:text-xl font-mono font-semibold text-corteza [overflow-wrap:anywhere]"
@@ -572,6 +598,90 @@
                 @endif
             </div>
 
+            {{-- Descuentos: listado propio de la compra. Bajan el total a pagar, no el costo de los insumos. --}}
+            <div class="bg-superficie rounded-lg shadow p-6">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-corteza">Descuentos</h3>
+                        <p class="text-xs text-masa-madre mt-0.5">Se descuentan del neto antes del IVA. No modifican el costo de los insumos.</p>
+                    </div>
+                    @can('manage-costs')
+                        <button type="button"
+                            @click="openDiscount(null)"
+                            class="px-3 py-1.5 border border-corteza text-corteza text-sm rounded-md hover:bg-miga transition-colors shrink-0">
+                            + Agregar descuento
+                        </button>
+                    @endcan
+                </div>
+
+                @if($purchase->discounts->isEmpty())
+                    <p class="text-sm text-masa-madre mt-4">Esta compra no tiene descuentos.</p>
+                @else
+                    <div class="mt-4 overflow-x-auto">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-miga text-masa-madre border-b border-miga">
+                                <tr>
+                                    <th class="px-4 py-2 font-medium">Concepto</th>
+                                    <th class="px-4 py-2 font-medium">Se aplica a</th>
+                                    <th class="px-4 py-2 font-medium text-right whitespace-nowrap">Porcentaje</th>
+                                    <th class="px-4 py-2 font-medium text-right whitespace-nowrap">Importe</th>
+                                    @can('manage-costs')
+                                        <th class="px-4 py-2"></th>
+                                    @endcan
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-miga">
+                                @foreach($purchase->discounts as $discount)
+                                    @php $targetLine = $discount->purchase_line_id ? $purchase->lines->firstWhere('id', $discount->purchase_line_id) : null; @endphp
+                                    <tr>
+                                        <td class="px-4 py-2.5 text-corteza">{{ $discount->description }}</td>
+                                        <td class="px-4 py-2.5 text-masa-madre">{{ $targetLine ? ($targetLine->raw_name ?: 'Renglón #'.$targetLine->id) : 'Toda la factura' }}</td>
+                                        <td class="px-4 py-2.5 text-right font-mono text-masa-madre whitespace-nowrap">
+                                            {{ $discount->rate !== null ? rtrim(rtrim(number_format((float) $discount->rate, 4, ',', '.'), '0'), ',').'%' : '—' }}
+                                        </td>
+                                        <td class="px-4 py-2.5 text-right font-mono font-semibold text-corteza whitespace-nowrap">
+                                            <span x-text="'− $ ' + fmt(discountAmounts[{{ $discount->id }}] ?? {{ (float) $discount->amount }})">
+                                                − $ {{ number_format((float) $discount->amount, 2, ',', '.') }}
+                                            </span>
+                                        </td>
+                                        @can('manage-costs')
+                                            <td class="px-4 py-2.5">
+                                                <div class="flex items-center justify-end gap-3">
+                                                    <button type="button"
+                                                        @click="openDiscount({{ Js::from([
+                                                            'id' => $discount->id,
+                                                            'description' => $discount->description,
+                                                            'kind' => $discount->kind->value,
+                                                            'rate' => $discount->rate !== null ? (float) $discount->rate : '',
+                                                            'amount' => $discount->kind->value === 'amount' ? (float) $discount->amount : '',
+                                                            'purchase_line_id' => $discount->purchase_line_id ?? '',
+                                                        ]) }})"
+                                                        class="p-1 text-masa-madre hover:text-corteza transition-colors" title="Editar">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.25 2.25 0 1 1 3.182 3.182L7.5 19.213l-4 1 1-4 12.362-12.726z" />
+                                                        </svg>
+                                                    </button>
+                                                    <form method="POST" action="{{ route('purchases.discounts.destroy', [$purchase, $discount]) }}"
+                                                        onsubmit="return confirm('¿Eliminar este descuento?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="p-1 text-red-400 hover:text-red-600 transition-colors" title="Eliminar">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        @endcan
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+
             {{-- Percepciones e impuestos: listado propio de la compra (no por renglón) --}}
             <div class="bg-superficie rounded-lg shadow p-6">
                 <div class="flex items-center justify-between gap-3">
@@ -663,16 +773,22 @@
                     </div>
                 @endif
 
-                {{-- Resumen: neto + IVA + percepciones = total del comprobante --}}
-                @if($totalIva > 0 || $totalPercepcion > 0)
+                {{-- Resumen: neto − descuentos + IVA + percepciones = total del comprobante --}}
+                @if($totalIva > 0 || $totalPercepcion > 0 || $totalDiscount > 0)
                     <dl class="mt-4 pt-3 border-t border-miga space-y-1 text-sm max-w-xs ml-auto">
                         <div class="flex justify-between gap-6">
                             <dt class="text-masa-madre">Neto</dt>
                             <dd class="font-mono text-masa-madre" x-text="'$ ' + fmt(tfootSubtotal)"></dd>
                         </div>
+                        @if($totalDiscount > 0)
+                            <div class="flex justify-between gap-6">
+                                <dt class="text-masa-madre">Descuentos</dt>
+                                <dd class="font-mono text-masa-madre" x-text="'− $ ' + fmt(tfootDiscount)"></dd>
+                            </div>
+                        @endif
                         <div class="flex justify-between gap-6">
                             <dt class="text-masa-madre">IVA</dt>
-                            <dd class="font-mono text-masa-madre" x-text="'$ ' + fmt(tfootIva)"></dd>
+                            <dd class="font-mono text-masa-madre" x-text="'$ ' + fmt(tfootIva - tfootDiscountIva)"></dd>
                         </div>
                         <div class="flex justify-between gap-6">
                             <dt class="text-masa-madre">Percepciones</dt>
@@ -751,6 +867,7 @@
             @include('purchases.modals.edit-line')
             @include('purchases.modals.edit-purchase')
             @include('purchases.modals.add-line')
+            @include('purchases.modals.discount')
             @include('purchases.modals.perception')
             @include('purchases.modals.perception-concepts')
             @include('purchases.modals.perception-concepts-manage')

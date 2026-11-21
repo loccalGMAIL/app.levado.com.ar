@@ -118,8 +118,8 @@
                     @foreach($purchases as $purchase)
                         @php
                             $rowTotal = $includeIva
-                                ? ($purchase->lines_gross_total ?? 0) + ($purchase->perceptions_total ?? 0)
-                                : ($purchase->net_total ?? 0);
+                                ? ($purchase->lines_gross_total ?? 0) - ($purchase->discounts_gross_total ?? 0) + ($purchase->perceptions_total ?? 0)
+                                : ($purchase->net_total ?? 0) - ($purchase->discounts_net_total ?? 0);
                             $allResolved = $purchase->lines_count > 0 && $purchase->resolved_count >= $purchase->lines_count;
                         @endphp
                         <x-data-table.row>
