@@ -49,6 +49,14 @@
                 'icon'   => '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75c0-3.728 3.358-6.75 7.5-6.75s7.5 3.022 7.5 6.75c0 1.243-1.12 2.25-2.5 2.25h-10c-1.38 0-2.5-1.007-2.5-2.25zM6 15v2.25A1.75 1.75 0 007.75 19h8.5A1.75 1.75 0 0018 17.25V15M9.5 9.5l1 1m3-1l1 1" />',
             ])
 
+            @include('components.sidebar-item', [
+                'href'   => route('produccion.camara.index'),
+                'label'  => 'Cierre de cámara',
+                'active' => request()->routeIs('produccion.camara.*'),
+                'id'     => 'sidebar-cierre-camara',
+                'icon'   => '<path stroke-linecap="round" stroke-linejoin="round" d="M5 4.5h14A1.5 1.5 0 0120.5 6v12a1.5 1.5 0 01-1.5 1.5H5A1.5 1.5 0 013.5 18V6A1.5 1.5 0 015 4.5zM3.5 9.5h17M3.5 14.5h17M8 7h.01M8 12h.01M8 17h.01" />',
+            ])
+
             @can('manage-costs')
                 @include('components.sidebar-item', [
                     'href'   => route('reparto.clientes.index'),

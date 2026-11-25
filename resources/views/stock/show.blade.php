@@ -161,6 +161,9 @@
                                         @elseif($movement->reference_type === \App\Models\DoughBatch::REFERENCE_TYPE)
                                             <a href="{{ route('produccion.amasados.show', $movement->reference_id) }}"
                                                 class="text-corteza underline hover:text-horno transition-colors">{{ $movement->reason ?? 'Amasado' }}</a>
+                                        @elseif($movement->reference_type === \App\Models\ChamberClosing::REFERENCE_TYPE)
+                                            <a href="{{ route('produccion.camara.show', $movement->reference_id) }}"
+                                                class="text-corteza underline hover:text-horno transition-colors">{{ $movement->reason ?? 'Cierre de cámara' }}</a>
                                         @elseif($movement->reason)
                                             {{ $movement->reason }}
                                         @elseif($movement->isFromPurchaseLine())

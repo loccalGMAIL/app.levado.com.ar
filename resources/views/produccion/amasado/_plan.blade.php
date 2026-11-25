@@ -10,6 +10,19 @@
     ];
 @endphp
 
+@if(! empty($plan['chamber']) || $plan['last_closing'] !== null)
+    @if($plan['last_closing'] !== null && $plan['last_closing']['same_day'])
+        <p class="text-xs text-masa-madre">Último cierre de cámara: {{ $plan['last_closing']['at']->isToday() ? 'hoy' : $plan['last_closing']['at']->format('d/m') }} {{ $plan['last_closing']['at']->format('H:i') }}.</p>
+    @else
+        <p class="text-sm text-amber-800 bg-amber-50 rounded-md px-4 py-2">
+            La cámara no se cerró {{ $plan['date']->isToday() ? 'hoy' : 'el '.$plan['date']->format('d/m') }}: lo «en cámara» puede estar desactualizado.
+            @if($plan['last_closing'] !== null)
+                Último cierre: {{ $plan['last_closing']['at']->format('d/m H:i') }}.
+            @endif
+        </p>
+    @endif
+@endif
+
 @foreach($sections as $section)
     <section class="bg-superficie rounded-lg shadow">
         <header class="px-4 py-3 border-b border-miga flex items-baseline justify-between gap-2">

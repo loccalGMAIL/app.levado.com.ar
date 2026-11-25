@@ -30,6 +30,7 @@ class DoughPlanner
     public function __construct(
         private readonly DailyDemand $demand,
         private readonly UnitConverter $converter,
+        private readonly ChamberClosingService $closings,
     ) {}
 
     /**
@@ -40,6 +41,7 @@ class DoughPlanner
      *     direct: list<array<string, mixed>>,
      *     masses: list<array{recipe_id: int, name: string, quantity: float, unit: string, articles: list<string>}>,
      *     without_mass: list<string>,
+     *     last_closing: array{at: CarbonImmutable, same_day: bool}|null,
      * }
      */
     public function forDate(Location $kitchen, CarbonImmutable $date): array
@@ -69,6 +71,7 @@ class DoughPlanner
             'direct' => $directRows,
             'masses' => $masses,
             'without_mass' => $withoutMass,
+            'last_closing' => $this->lastClosing($kitchen, $date),
         ];
     }
 
@@ -113,6 +116,27 @@ class DoughPlanner
                 ? TrayQuantity::ceilToStep($toMake / $container['per'])
                 : null,
         ];
+    }
+
+    /**
+     * Cuándo se cerró la cámara por última vez y si fue el día de la
+     * planilla: el orden del día es cierre de cámara → planilla → amasado,
+     * así que sin cierre ese día lo «en cámara» puede estar desactualizado.
+     * Solo avisa; no bloquea.
+     *
+     * @return array{at: CarbonImmutable, same_day: bool}|null
+     */
+    private function lastClosing(Location $kitchen, CarbonImmutable $date): ?array
+    {
+        $closing = $this->closings->lastConfirmed($kitchen->loadMissing('tenant')->tenant);
+
+        if ($closing === null || $closing->confirmed_at === null) {
+            return null;
+        }
+
+        $at = CarbonImmutable::parse($closing->confirmed_at);
+
+        return ['at' => $at, 'same_day' => $at->isSameDay($date)];
     }
 
     /**

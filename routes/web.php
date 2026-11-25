@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AlertSettingsController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\CatalogReplacementController;
+use App\Http\Controllers\ChamberClosingController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerOrderWeekController;
@@ -161,6 +162,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         ->middleware('throttle:20,1')
         ->name('produccion.amasado.imprimir.pdf');
     Route::get('produccion/amasados/{doughBatch}', [DoughBatchController::class, 'show'])->name('produccion.amasados.show');
+    Route::get('produccion/camara', [ChamberClosingController::class, 'index'])->name('produccion.camara.index');
+    Route::get('produccion/camara/cierres/{chamberClosing}', [ChamberClosingController::class, 'show'])->name('produccion.camara.show');
 
     // Centro de alertas (feed) — visible y accionable para todos los roles con tenant.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -362,12 +365,17 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
         ->name('reparto.hoja.pdf');
 });
 
-// Producción — registrar (owner, admin y super_admin): amasados.
+// Producción — registrar (owner, admin y super_admin): amasados y cierres de cámara.
 Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
     Route::post('produccion/amasados', [DoughBatchController::class, 'store'])->name('produccion.amasados.store');
     Route::put('produccion/amasados/{doughBatch}', [DoughBatchController::class, 'update'])->name('produccion.amasados.update');
     Route::post('produccion/amasados/{doughBatch}/anular', [DoughBatchController::class, 'cancel'])->name('produccion.amasados.cancel');
     Route::delete('produccion/amasados/{doughBatch}', [DoughBatchController::class, 'destroy'])->name('produccion.amasados.destroy');
+
+    Route::post('produccion/camara/cierres', [ChamberClosingController::class, 'store'])->name('produccion.camara.store');
+    Route::put('produccion/camara/cierres/{chamberClosing}', [ChamberClosingController::class, 'update'])->name('produccion.camara.update');
+    Route::post('produccion/camara/cierres/{chamberClosing}/anular', [ChamberClosingController::class, 'cancel'])->name('produccion.camara.cancel');
+    Route::delete('produccion/camara/cierres/{chamberClosing}', [ChamberClosingController::class, 'destroy'])->name('produccion.camara.destroy');
 });
 
 // Mi equipo (requiere auth + tenant resuelto + rol manage-team)
