@@ -15,6 +15,7 @@ use App\Http\Controllers\CustomerOrderWeekController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryPersonController;
 use App\Http\Controllers\DeliveryRouteSheetController;
+use App\Http\Controllers\DoughPlanController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\FixedCostHistoryController;
@@ -151,6 +152,13 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('pedidos/{orderSheet}/imprimir/pdf', [OrderSheetPrintController::class, 'pdf'])
         ->middleware('throttle:20,1')
         ->name('pedidos.imprimir.pdf');
+
+    // Producción › Amasado: la planilla del día. Verla es para todos los roles con tenant.
+    Route::get('produccion/amasado', [DoughPlanController::class, 'index'])->name('produccion.amasado.index');
+    Route::get('produccion/amasado/imprimir', [DoughPlanController::class, 'print'])->name('produccion.amasado.imprimir');
+    Route::get('produccion/amasado/imprimir/pdf', [DoughPlanController::class, 'pdf'])
+        ->middleware('throttle:20,1')
+        ->name('produccion.amasado.imprimir.pdf');
 
     // Centro de alertas (feed) — visible y accionable para todos los roles con tenant.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');

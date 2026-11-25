@@ -24,6 +24,15 @@ class TrayQuantity implements ValidationRule
         return round($value / self::STEP) * self::STEP;
     }
 
+    /**
+     * Redondea hacia arriba al cuarto (lo que hay que amasar: si faltan 2,1
+     * latas se arman 2,25). El redondeo previo evita que 2,0000001 suba a 2,25.
+     */
+    public static function ceilToStep(float $value): float
+    {
+        return ceil(round($value / self::STEP, 6)) * self::STEP;
+    }
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if ($value === null || $value === '') {

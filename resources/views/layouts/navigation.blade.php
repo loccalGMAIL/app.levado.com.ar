@@ -47,6 +47,9 @@
                 } elseif (request()->routeIs('pedidos.*')) {
                     $crumbs[] = ['label' => 'Producción', 'href' => null];
                     $crumbs[] = ['label' => 'Pedidos', 'href' => null];
+                } elseif (request()->routeIs('produccion.amasado.*', 'produccion.amasados.*')) {
+                    $crumbs[] = ['label' => 'Producción', 'href' => null];
+                    $crumbs[] = ['label' => 'Amasado', 'href' => null];
                 } elseif (request()->routeIs('reparto.clientes.*')) {
                     $crumbs[] = ['label' => 'Producción', 'href' => null];
                     $crumbs[] = ['label' => 'Reparto', 'href' => route('reparto.clientes.index')];
