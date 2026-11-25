@@ -8,7 +8,7 @@ metadata:
 Rama `v0.23.0-planillas-pedidos` (desde `master`, 2026-11-18). El usuario decidió **quitar todo lo de producción y
 la capa vieja de pedidos** (órdenes → pedidos por destino → líneas, recurrentes) y **arrancar de cero desde los pedidos**.
 Las ramas `v0.22.0-ciclo-produccion-bandejas` y `v0.22.0-produccion-preproduccion-horneado` quedan sin mergear, como
-referencia (preproducción en bandejas, cámara de leudado, horneado por tandas). **Producción se retoma después**, sobre
+referencia (preproducción en bandejas, cámara de leudado, horneado por tandas). **Producción se retomó en v0.26.0–v0.28.0: ver [[feature-produccion-dos-etapas]]**, sobre
 pedidos ya resueltos; ver [[feature-articulos-produccion]] para lo que existió hasta v0.22.0.
 
 ## Cómo trabajan (dicho por el usuario)

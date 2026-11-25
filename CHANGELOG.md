@@ -295,6 +295,34 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.28.0] — 2026-11-25
+
+Producción en dos etapas, parte 3: el horneado, registrado como cierre de cámara.
+
+### Agregado
+
+- **Producción › Cierre de cámara.** «Cerrar cámara» abre un cierre con cada artículo que hay en cámara y lo **esperado** (lo que había al abrir, en latas y unidades). El hornero carga lo que **quedó** (en latas o bandejas de a cuartos, o en unidades) y, opcional y plegada, la **merma de horno** (quemado, aplastado, mal apilado u otro, con texto). La pantalla muestra en vivo lo **horneado** = esperado − quedó − merma.
+- **Confirmar el cierre:** lo horneado pasa de la cámara a terminado en la sucursal **al mismo costo**, la merma sale de la cámara y se descuentan los **descartables** solo de lo horneado (lo quemado no se envasa). No consume insumos: eso pasó al amasar.
+- Si se cuenta **más de lo esperado**, el horneado da negativo: se acepta y se marca («¿faltó registrar un amasado?»).
+- Detalle del cierre con el resumen por artículo (esperado, quedó, merma, horneado), la merma valorizada y los movimientos de stock. **Anular** revierte todo. Un cierre abierto se puede descartar.
+- **La planilla de amasado avisa** «La cámara no se cerró hoy: lo «en cámara» puede estar desactualizado», o muestra «Último cierre de cámara: hoy 10:42». No bloquea.
+- Acceso rápido mobile **Cierre de cámara** y link desde el kardex al cierre que originó cada movimiento.
+
+### Corregido
+
+- El diálogo «¿Confirmar?» de amasados y cierres no aparecía (el botón `confirm` tapaba la función del navegador) y se confirmaba sin preguntar.
+- La planilla de amasado impresa ya no escribe colores literales: usa las clases de `fixed-costs/report/_styles`. (`ThemeTokensTest` sigue fallando por las planillas impresas de Pedidos y Reparto, que ya estaban así en `master`.)
+
+### Técnico
+
+- Tablas `chamber_closings` (número por negocio, `opened_at`, soft deletes) y `chamber_closing_lines` (`expected_units` = **snapshot** del stock en cámara al abrir; `baked_units` y `unit_cost` se fijan al confirmar).
+- `ChamberClosingService` (`open`, `saveDraft`, `confirm`, `cancel`, `deleteDraft`, `lastConfirmed`). Por renglón: `bake` −horneado en cámara y +horneado en la sucursal (suma cero), `waste` −merma en cámara con el motivo en `reason`, y `bake` negativos por los descartables (`RecipeExploder::explodeByStage()['packaging']`). Todo con `reference_type = 'chamber_closing'`.
+- **Por qué el snapshot:** los movimientos se calculan contra lo esperado al abrir, así que un amasado confirmado mientras el hornero cuenta no se toma como horneado.
+- **Costo del traspaso:** el de la última entrada vigente del amasado a cámara (no el `currentCost()` actual): si la receta cambia entre el amasado y el horno, el traspaso respeta el costo con que entró el crudo.
+- `Concerns\NumbersPerTenant` numera amasados y cierres por negocio (con reintento ante choque del unique). `MobileShortcut::ChamberClosing`. Rutas `produccion.camara.*`.
+- **Antes de usar en producción**, revisar por negocio cuántas recetas producibles llevan descartables y si esos descartables tienen compras cargadas: si no entran por Compras, cada cierre los deja en negativo y disparan la alerta de stock (consulta en el plan de implementación, `stockable_type = 'packaging'`).
+- `php artisan migrate` y `npm run build`.
+
 ## [0.27.0] — 2026-11-25
 
 Producción en dos etapas, parte 2: registrar el amasado. Acá se consumen los insumos y entra lo amasado al stock.
