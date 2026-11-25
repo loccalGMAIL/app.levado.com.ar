@@ -31,7 +31,7 @@
                 @can('manage-costs')
                     @if($batch->isConfirmed())
                         <form method="POST" action="{{ route('produccion.amasados.cancel', $batch) }}"
-                            onsubmit="return confirm('Se revierten todos los movimientos de este amasado. ¿Anular?')">
+                            onsubmit="return window.confirm('Se revierten todos los movimientos de este amasado. ¿Anular?')">
                             @csrf
                             <button type="submit" class="px-4 py-2 border border-red-200 text-sm text-red-600 rounded-md hover:bg-red-50 transition-colors">Anular</button>
                         </form>

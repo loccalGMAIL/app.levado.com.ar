@@ -189,12 +189,12 @@
                     <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
                         <button type="submit" form="dough-batch-delete"
                             class="text-sm text-red-600 hover:text-red-700"
-                            onclick="return confirm('¿Descartar este borrador?')">Descartar borrador</button>
+                            onclick="return window.confirm('¿Descartar este borrador?')">Descartar borrador</button>
                         <div class="grid grid-cols-2 gap-2 sm:flex">
                             <button type="submit"
                                 class="px-4 py-2.5 border border-miga text-sm text-corteza rounded-md hover:bg-miga transition-colors">Guardar</button>
                             <button type="submit" name="confirm" value="1"
-                                onclick="return confirm('Se van a descontar los insumos y entra lo amasado. ¿Confirmar?')"
+                                onclick="return window.confirm('Se van a descontar los insumos y entra lo amasado. ¿Confirmar?')"
                                 class="px-4 py-2.5 bg-tinta text-white text-sm rounded-md hover:bg-horno transition-colors">Confirmar amasado</button>
                         </div>
                     </div>
