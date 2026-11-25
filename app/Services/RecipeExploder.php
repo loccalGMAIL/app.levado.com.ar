@@ -34,6 +34,26 @@ class RecipeExploder
     }
 
     /**
+     * El mismo BOM partido por etapa de producción, en un solo recorrido:
+     * `supplies` son los insumos (ingredientes y reventa usada como insumo),
+     * que se consumen al AMASAR; `packaging` son los descartables, que se
+     * usan al terminar (HORNEAR). Las sub-recetas se recorren igual que en
+     * explode(): sus descartables también van a `packaging`.
+     *
+     * @return array{supplies: Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>, packaging: Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>}
+     */
+    public function explodeByStage(Recipe $recipe, float $factor): array
+    {
+        [$packaging, $supplies] = $this->explode($recipe, $factor)
+            ->partition(fn (array $entry) => $entry['type'] === CatalogItemType::Packaging);
+
+        return [
+            'supplies' => $supplies->values(),
+            'packaging' => $packaging->values(),
+        ];
+    }
+
+    /**
      * @return array{items: Collection<int, array{type: CatalogItemType, item: Ingredient|Packaging|Product, quantity: float}>, labor_cost: float, labor_hours: float}
      */
     public function explodeWithLabor(Recipe $recipe, float $factor): array

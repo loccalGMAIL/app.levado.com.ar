@@ -104,7 +104,7 @@ class StockService
      * el ledger a $0. Product::currentCost() es la única puerta al costo del
      * artículo; los insumos no la tienen y siguen leyendo su columna.
      */
-    private function unitCostOf(Ingredient|Packaging|Product $item): float
+    public function unitCostOf(Ingredient|Packaging|Product $item): float
     {
         return $item instanceof Product
             // Carga explícita: StockController resuelve el ítem sin eager-loadear
