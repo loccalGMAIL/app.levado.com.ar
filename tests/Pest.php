@@ -5,6 +5,7 @@ use App\Enums\ProductType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
+use App\Models\Location;
 use App\Models\OrderSheet;
 use App\Models\OrderSheetLine;
 use App\Models\OrderSheetWeek;
@@ -295,4 +296,30 @@ function sheetOrder(Tenant $tenant, Product $product, array $quantities, string 
 function seedChamber(Product $product, float $quantity, User $user): void
 {
     app(StockService::class)->registerAdjustment($product, $product->tenant->proofingChamber(), $quantity, 'Carga inicial test', $user);
+}
+
+/**
+ * Amasado de prueba: artículo de 12 por receta que lleva 1.200 g de harina
+ * (a $0,01 el gramo) y una bolsa por unidad (a $5). Devuelve el usuario, el
+ * negocio, el artículo, la harina y la bolsa.
+ *
+ * @return array{0: User, 1: Tenant, 2: Product, 3: Ingredient, 4: Packaging}
+ */
+function bakerySetup(bool $proofing = true, TenantUserRole $role = TenantUserRole::Owner): array
+{
+    [$user, $tenant] = tenantUserAs($role);
+    $harina = Ingredient::factory()->for($tenant)->create(['name' => 'Harina', 'unit' => Unit::Gramo->value, 'cost_per_unit' => 0.01]);
+    $bolsa = Packaging::factory()->for($tenant)->create(['name' => 'Bolsa', 'cost_per_unit' => 5]);
+    $product = doughProduct($tenant, 'Medialunas', proofing: $proofing, yield: 12);
+    $product->recipe->ingredientLines()->create(['ingredient_id' => $harina->id, 'quantity' => 1200, 'unit' => Unit::Gramo->value]);
+    $product->recipe->packagingLines()->create(['packaging_id' => $bolsa->id, 'quantity' => 12]);
+    propagateRecipeCosts($product->recipe);
+
+    return [$user, $tenant, $product->fresh(['recipe']), $harina, $bolsa];
+}
+
+/** Stock de un ítem en una ubicación (0 si no tiene fila). */
+function stockAt(Ingredient|Packaging|Product $item, Location $location): float
+{
+    return (float) (app(StockService::class)->levelFor($item, $location)->quantity ?? 0);
 }
