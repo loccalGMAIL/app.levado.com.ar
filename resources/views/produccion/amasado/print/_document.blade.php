@@ -16,9 +16,10 @@
     .levado-report table.dough td { padding: 5px 6px; font-size: 11px; vertical-align: top; }
     .levado-report table.dough td.num { text-align: right; white-space: nowrap; }
     .levado-report table.dough td.make { text-align: right; font-weight: 700; white-space: nowrap; }
-    .levado-report table.dough .sub { display: block; font-size: 9px; font-weight: 400; color: #6B5B45; }
-    .levado-report table.dough td.check { width: 14%; border-left: 1px solid #F2EAD8; }
-    .levado-report h3.section { font-size: 12px; margin: 14px 0 4px; color: #3B2A1A; }
+    .levado-report table.dough .sub { display: block; font-size: 9px; font-weight: 400; }
+    .levado-report table.dough td.check { width: 14%; }
+    .levado-report table.dough,
+    .levado-report .empty { margin-bottom: 16px; }
     .levado-report table.dough tr { page-break-inside: avoid; }
 </style>
 
@@ -40,7 +41,7 @@
     </table>
 
     @foreach($sections as $section)
-        <h3 class="section">{{ $section['title'] }}</h3>
+        <p class="section-title">{{ $section['title'] }}</p>
         @if(empty($section['rows']))
             <div class="empty">Nada pedido.</div>
         @else
@@ -67,7 +68,7 @@
                             <td class="make">
                                 @if($row['containers'] !== null)
                                     {{ $qty($row['containers']) }} {{ $row['container']['short'] }}
-                                    <span class="sub">{{ $qty($row['to_make']) }} {{ $row['unit'] }}</span>
+                                    <span class="sub muted">{{ $qty($row['to_make']) }} {{ $row['unit'] }}</span>
                                 @else
                                     {{ $qty($row['to_make']) }} {{ $row['unit'] }}
                                 @endif
@@ -80,7 +81,7 @@
         @endif
     @endforeach
 
-    <h3 class="section">Masas a preparar</h3>
+    <p class="section-title">Masas a preparar</p>
     @if(empty($plan['masses']) && empty($plan['without_mass']))
         <div class="empty">Nada para amasar.</div>
     @else
