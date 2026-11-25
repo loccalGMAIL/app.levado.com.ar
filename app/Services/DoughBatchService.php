@@ -15,8 +15,8 @@ use App\Models\Product;
 use App\Models\StockLevel;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Concerns\NumbersPerTenant;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -38,6 +38,8 @@ use Illuminate\Support\Facades\DB;
  */
 class DoughBatchService
 {
+    use NumbersPerTenant;
+
     public function __construct(
         private readonly StockService $stock,
         private readonly RecipeExploder $exploder,
@@ -279,29 +281,12 @@ class DoughBatchService
 
     private function createBatch(Tenant $tenant, Location $kitchen, CarbonImmutable $date): DoughBatch
     {
-        $attempts = 0;
-
-        while (true) {
-            try {
-                return DB::transaction(fn () => DoughBatch::create([
-                    'tenant_id' => $tenant->id,
-                    'number' => $this->nextNumber($tenant),
-                    'kitchen_location_id' => $kitchen->id,
-                    'dough_date' => $date->toDateString(),
-                    'status' => ProductionRecordStatus::Draft,
-                ]));
-            } catch (QueryException $exception) {
-                // Dos altas simultáneas tomaron el mismo número: el unique frenó a una.
-                if (++$attempts >= 3) {
-                    throw $exception;
-                }
-            }
-        }
-    }
-
-    private function nextNumber(Tenant $tenant): int
-    {
-        return (int) DoughBatch::withTrashed()->where('tenant_id', $tenant->id)->max('number') + 1;
+        return $this->createNumbered(DoughBatch::class, [
+            'tenant_id' => $tenant->id,
+            'kitchen_location_id' => $kitchen->id,
+            'dough_date' => $date->toDateString(),
+            'status' => ProductionRecordStatus::Draft,
+        ]);
     }
 
     private function guardLine(DoughBatchLine $line): void
