@@ -26,6 +26,24 @@ class CustomerOrderWeekService
     }
 
     /**
+     * Lo que tendría la semana sin crear nada: la semana si existe; si no, y
+     * es la actual o una futura, la última anterior del cliente (la que se
+     * copiaría al abrirla). Solo lectura, como OrderSheetWeekService::previewWeek().
+     */
+    public function previewWeek(Customer $customer, CarbonImmutable $date): ?CustomerOrderWeek
+    {
+        $monday = $this->mondayOf($date);
+
+        $existing = $this->find($customer, $monday);
+
+        if ($existing !== null || $monday->lt($this->mondayOf(CarbonImmutable::now()))) {
+            return $existing;
+        }
+
+        return $this->previousWeek($customer, $monday)?->load('lines.product.recipe');
+    }
+
+    /**
      * La semana pedida, o null si no existe ni corresponde crearla (una
      * semana pasada sin datos). Si es la actual o una futura y no existe, se
      * crea copiando la última semana anterior del cliente.

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Customer;
 use App\Models\CustomerOrderLine;
 use App\Models\OrderSheet;
 use App\Models\OrderSheetLine;
@@ -148,6 +149,39 @@ class CustomerOrderTotals
             ])->all(),
             'totals_units' => $totalsUnits,
         ];
+    }
+
+    /**
+     * Lo que piden los clientes activos un día, por artículo, en unidades del
+     * artículo pedido (sin pasar a la medida de la fila). Si la semana del
+     * cliente todavía no existe se toma la que tendría al copiarse, sin
+     * crearla (CustomerOrderWeekService::previewWeek()).
+     *
+     * @return array<int, array{product: Product, units: float}>
+     */
+    public function dayUnitsByProduct(int $tenantId, CarbonImmutable $date): array
+    {
+        $day = $date->dayOfWeekIso - 1;
+        $totals = [];
+
+        $customers = Customer::query()->where('tenant_id', $tenantId)->active()->orderBy('id')->get();
+
+        foreach ($customers as $customer) {
+            $week = $this->weeks->previewWeek($customer, $date);
+
+            foreach ($week === null ? [] : $week->lines as $line) {
+                $units = $this->unitsOf($line)[$day];
+
+                if ($units <= 0) {
+                    continue;
+                }
+
+                $totals[$line->product_id] ??= ['product' => $line->product, 'units' => 0.0];
+                $totals[$line->product_id]['units'] += $units;
+            }
+        }
+
+        return $totals;
     }
 
     /**

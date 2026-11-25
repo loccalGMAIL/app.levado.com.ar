@@ -30,6 +30,26 @@ class OrderSheetWeekService
     }
 
     /**
+     * Lo que tendría la semana sin crear nada: la semana si existe; si no, y
+     * es la actual o una futura, la última semana anterior cargada (la que
+     * se copiaría al abrirla). Una semana pasada sin datos da null, igual que
+     * weekFor(). Es solo lectura: lo usa la planilla de amasado, que lee la
+     * demanda de mañana y no debe crear semanas como efecto secundario.
+     */
+    public function previewWeek(OrderSheet $sheet, CarbonImmutable $date): ?OrderSheetWeek
+    {
+        $monday = $this->mondayOf($date);
+
+        $existing = $this->find($sheet, $monday);
+
+        if ($existing !== null || $monday->lt($this->mondayOf(CarbonImmutable::now()))) {
+            return $existing;
+        }
+
+        return $this->previousWeek($sheet, $monday)?->load('lines.product.recipe');
+    }
+
+    /**
      * La semana pedida, o null si no existe ni corresponde crearla (una
      * semana pasada sin datos). Si es la actual o una futura y no existe, se
      * crea copiando la última semana anterior que tenga la planilla.
