@@ -158,6 +158,9 @@
                                                     · {{ $creditNote->supplier->name }}
                                                 @endif
                                             </a>
+                                        @elseif($movement->reference_type === \App\Models\DoughBatch::REFERENCE_TYPE)
+                                            <a href="{{ route('produccion.amasados.show', $movement->reference_id) }}"
+                                                class="text-corteza underline hover:text-horno transition-colors">{{ $movement->reason ?? 'Amasado' }}</a>
                                         @elseif($movement->reason)
                                             {{ $movement->reason }}
                                         @elseif($movement->isFromPurchaseLine())

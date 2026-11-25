@@ -15,6 +15,7 @@ use App\Http\Controllers\CustomerOrderWeekController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryPersonController;
 use App\Http\Controllers\DeliveryRouteSheetController;
+use App\Http\Controllers\DoughBatchController;
 use App\Http\Controllers\DoughPlanController;
 use App\Http\Controllers\FixedCostCategoryController;
 use App\Http\Controllers\FixedCostController;
@@ -159,6 +160,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('produccion/amasado/imprimir/pdf', [DoughPlanController::class, 'pdf'])
         ->middleware('throttle:20,1')
         ->name('produccion.amasado.imprimir.pdf');
+    Route::get('produccion/amasados/{doughBatch}', [DoughBatchController::class, 'show'])->name('produccion.amasados.show');
 
     // Centro de alertas (feed) — visible y accionable para todos los roles con tenant.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -358,6 +360,14 @@ Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin']
     Route::get('reparto/hoja/pdf', [DeliveryRouteSheetController::class, 'pdf'])
         ->middleware('throttle:20,1')
         ->name('reparto.hoja.pdf');
+});
+
+// Producción — registrar (owner, admin y super_admin): amasados.
+Route::middleware(['auth', 'verified', 'tenant', 'role:super_admin,owner,admin'])->group(function () {
+    Route::post('produccion/amasados', [DoughBatchController::class, 'store'])->name('produccion.amasados.store');
+    Route::put('produccion/amasados/{doughBatch}', [DoughBatchController::class, 'update'])->name('produccion.amasados.update');
+    Route::post('produccion/amasados/{doughBatch}/anular', [DoughBatchController::class, 'cancel'])->name('produccion.amasados.cancel');
+    Route::delete('produccion/amasados/{doughBatch}', [DoughBatchController::class, 'destroy'])->name('produccion.amasados.destroy');
 });
 
 // Mi equipo (requiere auth + tenant resuelto + rol manage-team)

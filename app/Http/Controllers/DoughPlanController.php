@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DoughBatch;
 use App\Models\Tenant;
+use App\Services\DoughBatchService;
 use App\Services\DoughPlanner;
 use App\Services\ReportLetterhead;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -22,6 +24,7 @@ class DoughPlanController extends Controller
     public function __construct(
         private readonly DoughPlanner $planner,
         private readonly ReportLetterhead $letterhead,
+        private readonly DoughBatchService $batches,
     ) {}
 
     public function index(Request $request): View
@@ -63,7 +66,16 @@ class DoughPlanController extends Controller
      */
     private function extraIndexData(Tenant $tenant, CarbonImmutable $date): array
     {
-        return [];
+        return [
+            'draft' => $this->batches->draftFor($tenant, $date),
+            'recentBatches' => DoughBatch::query()
+                ->where('tenant_id', $tenant->id)
+                ->with('lines')
+                ->orderByDesc('dough_date')
+                ->orderByDesc('number')
+                ->limit(15)
+                ->get(),
+        ];
     }
 
     /**
