@@ -69,6 +69,28 @@
             </div>
         </div>
 
+        {{-- Producción: lo que pasa por cámara se amasa el día anterior y
+             espera en cámara; lo directo se amasa y hornea el mismo día. --}}
+        <div class="flex flex-wrap items-start gap-x-6 gap-y-3"
+            x-data="{ proofing: @js((bool) old('uses_proofing', $recipe->uses_proofing)) }">
+            <div class="flex items-start gap-3 pt-1">
+                <input type="hidden" name="uses_proofing" value="0">
+                <input id="edit_recipe_proofing" name="uses_proofing" type="checkbox" value="1"
+                    class="mt-0.5 rounded border-gray-300 text-corteza focus:ring-corteza"
+                    x-model="proofing">
+                <x-input-label for="edit_recipe_proofing" value="Pasa por cámara de leudado" />
+            </div>
+            <div x-show="proofing" x-cloak class="flex items-center gap-2">
+                <x-input-label for="edit_recipe_max_proofing_hours" value="Horas máx." class="!mb-0 whitespace-nowrap" />
+                <x-text-input id="edit_recipe_max_proofing_hours" name="max_proofing_hours" type="number"
+                    step="1" min="1" max="999"
+                    class="block w-20"
+                    :value="old('max_proofing_hours', $recipe->max_proofing_hours)" />
+            </div>
+            <x-input-error :messages="$errors->get('uses_proofing')" class="w-full" />
+            <x-input-error :messages="$errors->get('max_proofing_hours')" class="w-full" />
+        </div>
+
         <div class="flex items-start gap-3 pt-1">
             <input type="hidden" name="is_semi_elaborate" value="0">
             <input id="edit_recipe_semi" name="is_semi_elaborate" type="checkbox" value="1"

@@ -38,4 +38,13 @@ class RecipeFactory extends Factory
             'units_per_container' => $perContainer,
         ]);
     }
+
+    /** Lo que rinde pasa por cámara de leudado: se amasa el día anterior. */
+    public function proofing(?int $maxHours = null): static
+    {
+        return $this->state([
+            'uses_proofing' => true,
+            'max_proofing_hours' => $maxHours,
+        ]);
+    }
 }

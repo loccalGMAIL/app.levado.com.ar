@@ -1,9 +1,13 @@
 <?php
 
+use App\Enums\ContainerType;
 use App\Enums\ProductType;
 use App\Enums\TenantUserRole;
 use App\Enums\Unit;
 use App\Models\Ingredient;
+use App\Models\OrderSheet;
+use App\Models\OrderSheetLine;
+use App\Models\OrderSheetWeek;
 use App\Models\Packaging;
 use App\Models\Product;
 use App\Models\Purchase;
@@ -237,4 +241,58 @@ function userForVariableExpense(TenantUserRole $role): array
 function ownerForVariableExpense(): array
 {
     return userForVariableExpense(TenantUserRole::Owner);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Producción en dos etapas (amasado y horneado)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Artículo base elaborado (unidad u) con su receta de $yield unidades. Por
+ * defecto pasa por cámara; $tinPer > 0 hace que se pida en latas de ese rinde.
+ */
+function doughProduct(Tenant $tenant, string $name = 'Medialunas', bool $proofing = true, float $yield = 12, ?float $tinPer = null): Product
+{
+    $recipe = Recipe::factory()->for($tenant)->create([
+        'name' => $name,
+        'yield_quantity' => $yield,
+        'yield_unit' => Unit::Unidad->value,
+        'uses_proofing' => $proofing,
+        'container_type' => $tinPer !== null ? ContainerType::Tin->value : null,
+        'units_per_container' => $tinPer,
+    ]);
+
+    return Product::factory()->for($tenant)->create([
+        'name' => $name,
+        'type' => ProductType::Manufactured->value,
+        'cost_per_unit' => null,
+        'unit' => Unit::Unidad->value,
+        'recipe_id' => $recipe->id,
+    ]);
+}
+
+/**
+ * Carga a mano en una planilla activa de pedidos lo de una semana (lunes a
+ * domingo) para un artículo. Crea la planilla si no se pasa.
+ */
+function sheetOrder(Tenant $tenant, Product $product, array $quantities, string $monday, ?OrderSheet $sheet = null, ?ContainerType $container = null): OrderSheet
+{
+    $sheet ??= OrderSheet::factory()->for($tenant)->create();
+    $week = OrderSheetWeek::query()->where('order_sheet_id', $sheet->id)->whereDate('starts_on', $monday)->first()
+        ?? OrderSheetWeek::factory()->for($sheet)->startingOn($monday)->create();
+
+    OrderSheetLine::factory()->for($week, 'week')->withQuantities($quantities)->create([
+        'product_id' => $product->id,
+        'container_type' => $container,
+    ]);
+
+    return $sheet;
+}
+
+/** Deja stock de un artículo en la cámara de leudado del negocio. */
+function seedChamber(Product $product, float $quantity, User $user): void
+{
+    app(StockService::class)->registerAdjustment($product, $product->tenant->proofingChamber(), $quantity, 'Carga inicial test', $user);
 }

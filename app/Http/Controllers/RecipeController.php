@@ -170,6 +170,10 @@ class RecipeController extends Controller
             $data['units_per_container'] = null;
         }
 
+        if (array_key_exists('uses_proofing', $data) && ! $data['uses_proofing']) {
+            $data['max_proofing_hours'] = null;
+        }
+
         $recipe->update($data);
         $this->propagator->propagateFrom($recipe);
 

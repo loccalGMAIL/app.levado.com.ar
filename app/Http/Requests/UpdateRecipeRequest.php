@@ -26,6 +26,9 @@ class UpdateRecipeRequest extends FormRequest
             // pedidos, con cuánto entra en una (en la unidad de rendimiento).
             'container_type' => ['nullable', new Enum(ContainerType::class)],
             'units_per_container' => ['nullable', 'required_with:container_type', 'numeric', 'gt:0', 'max:99999'],
+            // Producción: si lo que rinde pasa por cámara de leudado (se amasa el día anterior).
+            'uses_proofing' => ['boolean'],
+            'max_proofing_hours' => ['nullable', 'integer', 'min:1', 'max:999'],
         ];
     }
 
@@ -35,6 +38,7 @@ class UpdateRecipeRequest extends FormRequest
         return [
             'container_type' => 'bandeja o lata',
             'units_per_container' => 'cantidad por bandeja o lata',
+            'max_proofing_hours' => 'horas máximas en cámara',
         ];
     }
 }

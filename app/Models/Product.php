@@ -68,6 +68,17 @@ class Product extends Model
     }
 
     /**
+     * Si el artículo pasa por cámara de leudado antes del horno (se amasa el
+     * día anterior) o va directo. Lo hereda de su receta, igual que el
+     * recipiente: el base y sus presentaciones dicen lo mismo. Requiere la
+     * relación `recipe` cargada.
+     */
+    public function usesProofing(): bool
+    {
+        return (bool) $this->recipe?->uses_proofing;
+    }
+
+    /**
      * Cuántos de este artículo entran en una bandeja/lata: el rinde de la receta
      * dividido por lo que contiene el artículo (un pack x6 entra 6 veces menos).
      * Requiere la relación `recipe` cargada.
