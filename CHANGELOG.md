@@ -295,6 +295,35 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.26.0] — 2026-11-25
+
+Producción en dos etapas, parte 1: la planilla de amasado. Solo lee pedidos y stock; todavía no registra nada.
+
+### Agregado
+
+- **Producción › Amasado.** Planilla del día con qué amasar, calculada sola desde los pedidos (planillas + clientes). Se elige el día (por defecto hoy) y se ve en tres bloques:
+  - **Va a cámara (para mañana):** los artículos cuya receta pasa por cámara de leudado. A amasar = lo pedido para **mañana** − lo que ya hay en cámara (nunca menos de 0).
+  - **Directo (para hoy):** los que van directo al horno. A amasar = lo pedido para **hoy**.
+  - **Masas a preparar:** cada sub-receta (masa) con el total a preparar en su unidad de rinde, sumando todos los artículos que la usan. Los que no usan ninguna aparecen en «Sin masa común».
+- Los artículos que se piden en latas o bandejas muestran cuántas armar, **redondeado hacia arriba de a cuartos**.
+- **Imprimir y PDF** de la planilla de amasado (A4 vertical, con una columna «Real» para anotar a mano).
+- **«Pasa por cámara de leudado»** en «Editar receta», con las horas máximas en cámara (opcional; se guardan para más adelante). Lo heredan el artículo base y sus presentaciones.
+- **Cámara de leudado como ubicación.** Las sucursales tienen un **Tipo** (Sucursal o Cámara de leudado). La cámara se crea sola cuando hace falta; no puede ser la principal, hay una sola por negocio y una ubicación con movimientos no cambia de tipo.
+- **Existencias** permite elegir la ubicación cuando hay más de una: la cámara se ve aparte y no se mezcla con el stock de la sucursal.
+
+### Corregido
+
+- Las alertas de stock bajo/negativo se separan por ubicación: un artículo con stock en la sucursal y en la cámara tiene una alerta por cada una (la de la cámara lo dice en el título) en vez de pisarse.
+
+### Técnico
+
+- Columnas `recipes.uses_proofing` y `recipes.max_proofing_hours`; `Product::usesProofing()` (requiere `recipe` cargada).
+- Enum `LocationKind` (`store` | `proofing_chamber`) y columna `locations.kind`. `Tenant::proofingChamber()` (perezosa) y `Tenant::existingProofingChamber()` (nunca crea). `Tenant::defaultLocation()` solo considera sucursales. Compras, notas de crédito y el stock de insumos siguen yendo a la default.
+- `DailyDemand::forDate()`: lo pedido un día por **artículo base** (las presentaciones suman `recipeUnitsPerItem()` al base; latas/bandejas se pasan a unidades), solo producibles, planillas activas y clientes activos. **No crea semanas:** `OrderSheetWeekService::previewWeek()` y `CustomerOrderWeekService::previewWeek()` devuelven la semana o la que se copiaría, sin persistir. Para los clientes esto también aplica a semanas que todavía nadie abrió (la planilla de Pedidos, en cambio, sigue mostrando solo semanas de clientes existentes).
+- `DoughPlanner::forDate()` arma la planilla (arrays planos para dompdf) con un recorrido de un solo nivel de sub-recetas (no usa `RecipeExploder`). `TrayQuantity::ceilToStep()`, `QuantityFormatter`.
+- Rutas `produccion.amasado.index`, `.imprimir` y `.imprimir.pdf` (`throttle:20,1`), visibles para todos los roles con negocio.
+- `php artisan migrate` y `npm run build`.
+
 ## [0.25.0] — 2026-11-21
 
 ### Agregado
