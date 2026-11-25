@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\LocationKind;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateLocationRequest extends FormRequest
 {
@@ -20,6 +22,7 @@ class UpdateLocationRequest extends FormRequest
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
             'is_default' => ['boolean'],
+            'kind' => ['sometimes', new Enum(LocationKind::class)],
         ];
     }
 }

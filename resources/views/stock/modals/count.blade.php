@@ -4,6 +4,9 @@
         x-data="{ counted: {{ Js::from(old('_form') === 'stock-count' ? old('counted_quantity', '') : '') }} }"
         class="space-y-4">
         @csrf
+        @if(! $location->is_default)
+            <input type="hidden" name="location_id" value="{{ $location->id }}">
+        @endif
         <input type="hidden" name="_form" value="stock-count">
         <input type="hidden" name="stock_type" x-bind:value="selected.type">
         <input type="hidden" name="stock_id" x-bind:value="selected.id">

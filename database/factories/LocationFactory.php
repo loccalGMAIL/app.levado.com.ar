@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\LocationKind;
 use App\Models\Location;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -26,6 +27,16 @@ class LocationFactory extends Factory
     public function default(): static
     {
         return $this->state(['is_default' => true]);
+    }
+
+    /** La cámara de leudado del negocio. */
+    public function proofingChamber(): static
+    {
+        return $this->state([
+            'name' => 'Cámara de leudado',
+            'kind' => LocationKind::ProofingChamber->value,
+            'is_default' => false,
+        ]);
     }
 
     public function inactive(): static

@@ -33,7 +33,7 @@
             <div class="flex items-start justify-between gap-4 flex-wrap">
                 <div class="space-y-1">
                     <div class="text-sm text-masa-madre">
-                        <a href="{{ route('stock.index', ['type' => $type]) }}" class="hover:text-corteza transition-colors">← Existencias</a>
+                        <a href="{{ route('stock.index', ['type' => $type] + ($location->is_default ? [] : ['location_id' => $location->id])) }}" class="hover:text-corteza transition-colors">← Existencias</a>
                     </div>
                     <h2 class="text-base font-semibold text-corteza mt-2">{{ $item->name }}</h2>
                     <p class="text-sm text-masa-madre">Kardex en {{ $location->name }}.</p>

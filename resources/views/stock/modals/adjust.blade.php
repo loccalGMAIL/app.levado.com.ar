@@ -3,6 +3,9 @@
         :action="`/stock/${selected.type}/${selected.id}/adjustments`"
         class="space-y-4">
         @csrf
+        @if(! $location->is_default)
+            <input type="hidden" name="location_id" value="{{ $location->id }}">
+        @endif
         <input type="hidden" name="_form" value="stock-adjust">
         <input type="hidden" name="stock_type" x-bind:value="selected.type">
         <input type="hidden" name="stock_id" x-bind:value="selected.id">

@@ -16,6 +16,18 @@
             <x-input-error :messages="$errors->get('name')" class="mt-2" />
         </div>
 
+        <div>
+            <x-input-label for="edit_kind" value="Tipo" />
+            <select id="edit_kind" name="kind" x-model="editing.kind"
+                class="mt-1 block w-full border-gray-300 focus:border-corteza focus:ring-corteza rounded-md shadow-sm text-sm">
+                @foreach(\App\Enums\LocationKind::cases() as $kind)
+                    <option value="{{ $kind->value }}">{{ $kind->label() }}</option>
+                @endforeach
+            </select>
+            <p class="mt-1 text-xs text-masa-madre">No se puede cambiar si la ubicación ya tiene movimientos de stock.</p>
+            <x-input-error :messages="$errors->get('kind')" class="mt-2" />
+        </div>
+
         <div class="grid grid-cols-2 gap-4">
             <div>
                 <x-input-label for="edit_address" value="Dirección" />

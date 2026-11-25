@@ -32,7 +32,9 @@
             'min'  => $level?->min_quantity !== null ? round((float) $level->min_quantity, 4) : null,
         ];
 
-        $tabUrl = fn (string $tab) => route('stock.index', array_filter(['type' => $tab, 'search' => request('search')]));
+        // La sucursal default no viaja en la URL; cualquier otra (la cámara de leudado) sí.
+        $locationParam = $location->is_default ? [] : ['location_id' => $location->id];
+        $tabUrl = fn (string $tab) => route('stock.index', array_filter(['type' => $tab, 'search' => request('search')]) + $locationParam);
 
         $sort = request('sort', 'name');
         $dir  = request('dir', 'asc');
@@ -49,7 +51,28 @@
 
         <div class="space-y-6">
 
-            <x-list-header title="Stock" :subtitle="'Stock de insumos, descartables y productos en '.$location->name.'.'" />
+            <x-list-header title="Stock" :subtitle="'Stock de insumos, descartables y productos en '.$location->name.'.'">
+                @if($locations->count() > 1)
+                    <form method="GET" action="{{ route('stock.index') }}">
+                        <input type="hidden" name="type" value="{{ $type }}">
+                        <label for="stock_location" class="sr-only">Ubicación</label>
+                        <select id="stock_location" name="location_id" onchange="this.form.submit()"
+                            class="border-gray-300 rounded-md shadow-sm text-sm focus:border-horno focus:ring-horno">
+                            @foreach($locations as $option)
+                                <option value="{{ $option->id }}" @selected($option->id === $location->id)>
+                                    {{ $option->name }}{{ $option->is_default ? ' (principal)' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
+                @endif
+            </x-list-header>
+
+            @if($location->isProofingChamber())
+                <p class="text-sm text-masa-madre bg-miga/60 rounded-md px-4 py-2">
+                    Estás viendo la <strong>cámara de leudado</strong>: el crudo amasado que espera el horno. No se suma al stock de la sucursal.
+                </p>
+            @endif
 
             {{-- Tabs insumos / descartables --}}
             <div class="flex gap-1 border-b border-miga">
@@ -69,6 +92,9 @@
 
             <form method="GET" class="flex gap-3 items-end flex-wrap">
                 <input type="hidden" name="type" value="{{ $type }}">
+                @if(! $location->is_default)
+                    <input type="hidden" name="location_id" value="{{ $location->id }}">
+                @endif
                 <input type="hidden" name="sort" value="{{ request('sort') }}">
                 <input type="hidden" name="dir" value="{{ request('dir') }}">
                 <div class="flex-1 min-w-48">
@@ -80,7 +106,7 @@
                     Filtrar
                 </button>
                 @if(request('search'))
-                    <a href="{{ route('stock.index', ['type' => $type]) }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
+                    <a href="{{ route('stock.index', ['type' => $type] + $locationParam) }}" class="text-sm text-masa-madre hover:underline self-center">Limpiar</a>
                 @endif
             </form>
 
@@ -113,13 +139,13 @@
                         @endphp
                         <x-data-table.row>
                             <x-data-table.cell role="title">
-                                <a href="{{ route('stock.show', [$type, $item->id]) }}" class="font-medium text-corteza hover:underline">{{ $item->name }}</a>
+                                <a href="{{ route('stock.show', ['type' => $type, 'id' => $item->id] + $locationParam) }}" class="font-medium text-corteza hover:underline">{{ $item->name }}</a>
                             </x-data-table.cell>
                             <x-data-table.cell role="figure" align="right" label="Stock:" class="font-mono {{ $qty < 0 ? 'text-red-600' : 'text-corteza' }}">
                                 <div class="inline-flex items-center justify-end gap-1.5">
                                     {{ number_format($qty, 2, ',', '.') }}
                                     <span class="text-xs text-masa-madre font-normal">{{ $displayUnit($item) }}</span>
-                                    <a href="{{ route('stock.show', [$type, $item->id]) }}"
+                                    <a href="{{ route('stock.show', ['type' => $type, 'id' => $item->id] + $locationParam) }}"
                                         class="text-masa-madre hover:text-corteza" title="Ver movimientos de stock">
                                         <svg class="ico w-3.5 h-3.5" aria-hidden="true"><use href="{{ $iconSprite }}#i-clock"></use></svg>
                                     </a>

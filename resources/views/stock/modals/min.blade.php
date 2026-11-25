@@ -3,6 +3,9 @@
         :action="`/stock/${selected.type}/${selected.id}/min`"
         class="space-y-4">
         @csrf
+        @if(! $location->is_default)
+            <input type="hidden" name="location_id" value="{{ $location->id }}">
+        @endif
         <input type="hidden" name="_method" value="PATCH">
         <input type="hidden" name="_form" value="stock-min">
         <input type="hidden" name="stock_type" x-bind:value="selected.type">

@@ -2,14 +2,15 @@
     <x-slot name="title">Sucursales</x-slot>
 
     @php
-        $errorsInCreate = $errors->hasAny(['name', 'address', 'city']) && old('_form') === 'create';
-        $errorsInEdit   = $errors->hasAny(['name', 'address', 'city']) && old('_form') === 'edit';
-        $editingDefault = ['id' => null, 'name' => '', 'address' => '', 'city' => '', 'is_default' => false];
+        $errorsInCreate = $errors->hasAny(['name', 'address', 'city', 'kind']) && old('_form') === 'create';
+        $errorsInEdit   = $errors->hasAny(['name', 'address', 'city', 'kind']) && old('_form') === 'edit';
+        $editingDefault = ['id' => null, 'name' => '', 'address' => '', 'city' => '', 'kind' => 'store', 'is_default' => false];
         $editingOnError = $errorsInEdit ? [
             'id'         => old('location_id'),
             'name'       => old('name'),
             'address'    => old('address'),
             'city'       => old('city'),
+            'kind'       => old('kind', 'store'),
             'is_default' => (bool) old('is_default'),
         ] : $editingDefault;
     @endphp
@@ -45,6 +46,9 @@
                                     @if($location->is_default)
                                         <span class="text-[11px] bg-miga text-masa-madre font-medium px-2 py-0.5 rounded-full">principal</span>
                                     @endif
+                                    @if($location->isProofingChamber())
+                                        <span class="text-[11px] bg-miga text-masa-madre font-medium px-2 py-0.5 rounded-full">{{ $location->kind->label() }}</span>
+                                    @endif
                                     @if(!$location->active)
                                         <x-status-badge :active="false" label-inactive="inactiva" />
                                     @endif
@@ -62,6 +66,7 @@
                                         'name'       => $location->name,
                                         'address'    => $location->address ?? '',
                                         'city'       => $location->city ?? '',
+                                        'kind'       => $location->kind->value,
                                         'is_default' => $location->is_default,
                                     ]) }})"
                                     aria-label="Editar sucursal" title="Editar sucursal"

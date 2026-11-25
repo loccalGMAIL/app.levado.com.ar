@@ -49,7 +49,8 @@ class NotificationService
 
         // scopeInAlert() (equivalente en SQL de hasAlert()): solo trae lo que
         // está en alerta, no todo el stock del tenant para descartar en PHP.
-        $levels = StockLevel::where('tenant_id', $tenant->id)->inAlert()->get();
+        $levels = StockLevel::where('tenant_id', $tenant->id)->inAlert()->with('location')->get();
+        $defaultLocationId = $tenant->defaultLocation()->id;
 
         // find() por fila → una query por tipo (ingredient/packaging/product).
         $byType = $levels->groupBy('stockable_type');
@@ -69,7 +70,11 @@ class NotificationService
                 continue;
             }
 
-            $key = "low_stock:{$level->stockable_type}:{$level->stockable_id}";
+            // El mismo artículo puede tener stock en la sucursal y en la cámara
+            // de leudado: cada ubicación que no es la default lleva su alerta.
+            $isDefaultLocation = $level->location_id === $defaultLocationId;
+            $key = "low_stock:{$level->stockable_type}:{$level->stockable_id}"
+                .($isDefaultLocation ? '' : ":location:{$level->location_id}");
             $activeKeys[] = $key;
 
             $qty = (float) $level->quantity;
@@ -84,9 +89,10 @@ class NotificationService
 
             $candidates[] = [
                 'dedupe_key' => $key,
-                'title' => "Stock bajo: {$item->name}",
+                'title' => "Stock bajo: {$item->name}".($isDefaultLocation ? '' : " ({$level->location->name})"),
                 'body' => $body,
-                'action_url' => route('stock.show', ['type' => $level->stockable_type, 'id' => $level->stockable_id]),
+                'action_url' => route('stock.show', ['type' => $level->stockable_type, 'id' => $level->stockable_id]
+                    + ($isDefaultLocation ? [] : ['location_id' => $level->location_id])),
                 'subject_type' => $level->stockable_type,
                 'subject_id' => $level->stockable_id,
             ];

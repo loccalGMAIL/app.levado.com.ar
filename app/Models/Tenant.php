@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CondicionIva;
+use App\Enums\LocationKind;
 use App\Enums\MobileShortcut;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -93,9 +94,39 @@ class Tenant extends Model
      */
     public function defaultLocation(): Location
     {
-        return $this->cachedDefaultLocation ??= $this->locations()->where('is_default', true)->first()
-            ?? $this->locations()->orderBy('id')->first()
+        // Solo sucursales: la cámara de leudado nunca es la default, aunque
+        // sea la única ubicación o la de menor id.
+        return $this->cachedDefaultLocation ??= $this->locations()->stores()->where('is_default', true)->first()
+            ?? $this->locations()->stores()->orderBy('id')->first()
             ?? $this->locations()->create(['name' => 'Casa Central', 'is_default' => true, 'active' => true]);
+    }
+
+    /** La cámara activa si existe; nunca la crea (para lecturas). */
+    public function existingProofingChamber(): ?Location
+    {
+        return $this->locations()
+            ->where('kind', LocationKind::ProofingChamber->value)
+            ->active()
+            ->orderBy('id')
+            ->first();
+    }
+
+    /** @var Location|null Cache por instancia, como la default */
+    private ?Location $cachedProofingChamber = null;
+
+    /**
+     * Cámara de leudado del negocio (una sola, ligada a la default). Perezosa
+     * como defaultLocation(): si no hay una activa la crea.
+     */
+    public function proofingChamber(): Location
+    {
+        return $this->cachedProofingChamber ??= $this->existingProofingChamber()
+            ?? $this->locations()->create([
+                'name' => 'Cámara de leudado',
+                'kind' => LocationKind::ProofingChamber->value,
+                'is_default' => false,
+                'active' => true,
+            ]);
     }
 
     /**
