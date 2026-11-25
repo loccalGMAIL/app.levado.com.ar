@@ -295,6 +295,33 @@ corto dentro del nuevo modelo de Órdenes.
 - `php artisan migrate` (columna en `tenants`, columna + unique en `production_orders`, unique en
   `production_order_requests`, con backfill de los datos existentes en ambas). `npm run build`.
 
+## [0.27.0] — 2026-11-25
+
+Producción en dos etapas, parte 2: registrar el amasado. Acá se consumen los insumos y entra lo amasado al stock.
+
+### Agregado
+
+- **Generar amasado.** Desde Producción › Amasado, «Generar amasado» crea el borrador del día con lo que dice la planilla (lo real arranca igual a lo planeado). Si ya hay un borrador ese día, el botón lo reabre («Seguir amasado #N») en vez de duplicarlo. También hay **amasado manual**, vacío, para lo que se amasó sin planilla.
+- **Borrador pensado para el celular:** por artículo se carga lo **real** y la **merma** (cantidad y motivo: hidratación, leudado, mal formado u otro, con texto). Se pueden agregar o quitar artículos. Las **masas** registran lo que sobró (+) o faltó (−), solo como registro: la masa no tiene stock.
+- **Confirmar el amasado:**
+  - se descuentan los **insumos** de la receta (con sus sub-recetas) por lo real **más la merma**: la merma también gastó masa;
+  - lo que **pasa por cámara** entra como crudo a la **cámara de leudado**; sus descartables se descuentan recién al hornear;
+  - lo **directo** entra como terminado a la sucursal y descuenta también sus **descartables** (amasar y terminar es el mismo acto).
+- **Detalle del amasado confirmado:** renglones con planeado, real, merma (motivo y valor), masas, notas y los **movimientos de stock** que generó. Botón **Anular**, que revierte todo; si ese crudo ya se había horneado, avisa que la cámara quedó en negativo (no bloquea).
+- Listado de amasados en Producción › Amasado (número, fecha, estado y piezas) y link desde el kardex de Existencias al amasado que originó cada movimiento.
+- Acceso rápido mobile **Amasado**.
+
+### Técnico
+
+- `StockMovementType` suma `dough` (Amasado), `bake` (Horneado) y `waste` (Merma, exige motivo). Enum `WasteReason` con `stage()` (`dough` | `oven`); «Otro» exige texto.
+- `RecipeExploder::explodeByStage()` parte el BOM en `supplies` (sin descartables, para amasar) y `packaging` (solo descartables, para hornear) en un solo recorrido; `explode()` no cambió.
+- Tablas `dough_batches` (número por negocio, soft deletes solo para el borrador), `dough_batch_lines` (snapshots `goes_to_chamber` y `unit_cost` al confirmar; la merma se valoriza a `waste_units × unit_cost`) y `dough_batch_masses`. Enum `ProductionRecordStatus` (borrador, confirmado, anulado).
+- `DoughBatchService` (`createFromPlan`, `createAdHoc`, `saveDraft`, `confirm`, `cancel`, `deleteDraft`) es el **único** lugar que descuenta insumos de producción. Emite los movimientos ordenados por ítem y ubicación (locks en orden), todos con `reference_type = 'dough_batch'`; anular usa `reverseMovementsFor()` y es idempotente. `StockService::unitCostOf()` pasó a público para valuar los consumos.
+- **Valuación del crudo:** entra a cámara a `currentCost()` del artículo, que ya incluye los descartables todavía no consumidos. Se acepta: el traspaso a terminado mantiene ese costo y el total cierra.
+- **Descartables de la receta contra la forma de venta:** el descartable se prorratea por rinde. Si la receta lleva «caja x6» y parte se vende suelta, se descuentan cajas que no se usaron. No se corrige en esta versión (no hay descartables por presentación).
+- Rutas `produccion.amasados.*` (registrar: owner, admin y super_admin; ver: todos los roles), `DoughBatchPolicy`, `SaveDoughBatchRequest`, `MobileShortcut::Dough`.
+- `php artisan migrate` y `npm run build`.
+
 ## [0.26.0] — 2026-11-25
 
 Producción en dos etapas, parte 1: la planilla de amasado. Solo lee pedidos y stock; todavía no registra nada.
